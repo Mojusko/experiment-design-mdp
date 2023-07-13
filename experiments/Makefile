@@ -2,6 +2,18 @@ PYTHONPATH=pythonconda
 
 ###########################
 ###########################
+##  BANDITS
+###########################
+###########################
+
+
+bandits_reward:
+	cd bandits && OMP_NUM_THREADS=1 MKL_NUM_THREADS=1 ${PYTHONPATH} run_bandits.py --repeats=5 --save="test.txt" --type=REWARD --cores=1 --seed=1
+bandits_best_arm_linear:
+	cd bandits && OMP_NUM_THREADS=1 MKL_NUM_THREADS=1 ${PYTHONPATH} run_bandits.py --repeats=5 --save="test.txt" --type=BEST_ARM_LINEAR --cores=1 --seed=1
+
+###########################
+###########################
 ##  BELS
 ###########################
 ###########################
