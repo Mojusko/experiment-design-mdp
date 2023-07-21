@@ -158,9 +158,7 @@ class MdpExplore():
             total_density = np.zeros(self.env.states_num)
 
         if actions:
-            # if actions are needed tile extra dimension
-            # total_density = np.tile(total_density, (1, self.env.actions_num))
-            # if actions are needed append extra dimension to total density
+            # if actions are needed expand dimension
             total_density = np.repeat(np.expand_dims(total_density, axis = -1), axis = -1, repeats = self.env.actions_num)
 
         for i, policy in enumerate(self.policies):
@@ -168,7 +166,7 @@ class MdpExplore():
                 d = self._density_oracle_single(policy)
                 self.densities.append(d)
             if actions:
-                # TODO: doesn't work with non-stationary
+                # TODO: doesn't work with non-stationary, JP: added a fix but have not tested fully 
                 if self.solver is not DP:
                     total_density += self.weights[i] * policy.p * np.expand_dims(self.densities[i], axis=1)
                 else:
@@ -345,6 +343,7 @@ class MdpExplore():
             # if type(new_policy) is NonStationaryPolicy:
             #    new_density = new_density.mean(axis=0)
 
+            # empirical gap is calculated by taking the minimum across time-steps h (not sure this is right)
             empirical_gap = np.minimum(np.min(reward @ (new_density - density).T), empirical_gap)
 
             if verbose:
@@ -383,7 +382,7 @@ class MdpExplore():
             SummarizedPolicyType: Type[SummarizedPolicy] = MixturePolicy,
             plot: bool = False,
             save_trajectory: Union[str, None] = None,
-            return_visitations: bool = True,
+            return_visitations: bool = False,
     ) -> Union[Tuple[np.ndarray, np.ndarray, float], None]:
         """Runs the full max-ent procedure
 
