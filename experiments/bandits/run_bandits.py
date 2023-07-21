@@ -12,7 +12,7 @@ import multiprocessing as mp
 from mdpexplore.solvers.min import MinSolver
 from mdpexplore.mdpexplore import MdpExplore
 from mdpexplore.env.bandits import Bandits
-from mdpexplore.utils.reward_functionals import DesignRewardBandit, DesignBestArmLinearBandit
+from mdpexplore.utils.reward_functionals import DesignRewardBandit, DesignBestArmLinearBandit, DesignBestArmLinearBanditNoDenominator
 from mdpexplore.policies.density_policy import DensityPolicy
 
 if __name__ == "__main__":
@@ -51,8 +51,8 @@ if __name__ == "__main__":
         theta_star=theta_star,
         sigma=sigma)
 
-    kernel = KernelFunction(kernel_name='linear')
-    estimator = GaussianProcess(kernel=kernel)
+    kernel = KernelFunction(kernel_name='linear', d = 2)
+    estimator = GaussianProcess(kernel=kernel, s = sigma)
 
     if args.type == 'REWARD':
 
@@ -72,8 +72,8 @@ if __name__ == "__main__":
             objective.mu = estimator.ucb(torch.tensor(action_space)).numpy().squeeze()
 
     elif args.type == 'BEST_ARM_LINEAR':
-
-        design = DesignBestArmLinearBandit(
+        # JP: leaving NoDenominator version as default for now
+        design = DesignBestArmLinearBanditNoDenominator(
             action_space_size=action_space.shape[0],
             lambd=lambd
         )
@@ -107,15 +107,16 @@ if __name__ == "__main__":
             objective=design,
             solver=MinSolver,
             method='frank-wolfe',
-            verbosity=True,
+            verbosity=0,
             callback=callback)
 
-        val, opt_val = me.run(
+        val, opt_val, aggregate_visitations = me.run(
             num_components=1,
             episodes=20,
             SummarizedPolicyType=DensityPolicy,
+            return_visitations=True,
         )
-        return val, opt_val
+        return val, opt_val, aggregate_visitations
 
 
     if args.cores is None:
@@ -123,10 +124,17 @@ if __name__ == "__main__":
     else:
         cores = args.cores
 
+    # JP: multi-processing crashes in my machine, run a single one there:
+    # val, opt_val, aggregate_visitations = run_single(0)
+
+    # real_mu = theta_star @ action_space.T
+    # print('real_mu', theta_star @ action_space.T)
+    # print('final aggregate visitations:', aggregate_visitations[-1])
+
     outputs = process_map(run_single, [repeat for repeat in range(args.repeats)], max_workers=cores)
     vals = []
     for repeat in range(args.repeats):
-        val, opt_val = outputs[repeat]
+        val, opt_val, _ = outputs[repeat]
         vals.append(val)
         if opt_val is not None:
             opt = opt_val
