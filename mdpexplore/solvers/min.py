@@ -11,7 +11,7 @@ class MinSolver(DiscreteSolver):
     '''
 
     def solve(self) -> Policy:
-        action_id = np.random.choice(np.flatnonzero(self.reward == self.reward.min()))
+        action_id = np.random.choice(np.flatnonzero(self.reward == self.reward.max()))
 
         p = np.zeros((self.env.states_num, self.env.actions_num))
         # TODO: For backward compatibility we have more states than 1, this should be changed later.

@@ -249,13 +249,13 @@ class DesignRewardBandit(RewardFunctional):
         self.type = "adaptive"
 
     def eval(self, emissions, distribution, visitations, episodes):
-        return - distribution @ self.mu
+        return distribution @ self.mu
 
     def eval_full(self,
                   emissions: np.ndarray,
                   distribution: np.ndarray,
                   episodes: int = 0) -> float:
-        return - distribution @ self.mu
+        return distribution @ self.mu
 
 
 class DesignBestArmLinearBandit(RewardFunctional):
