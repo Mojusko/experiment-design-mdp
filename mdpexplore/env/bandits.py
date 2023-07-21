@@ -20,7 +20,6 @@ class Bandits(DiscreteEnv, ABC):
         self.max_episode_length = 1
         self.terminal_state = None
         self.visitations = np.zeros(self.states_num)
-        # self.visitations[self.init_state] += 1
 
     def available_actions(self, state):
         return list(range(self.actions_num))
@@ -44,7 +43,7 @@ class Bandits(DiscreteEnv, ABC):
     def reset(self) -> None:
         self.state = self.init_state
 
-class Bandits_Constrained(DiscreteEnv, ABC):
+class Bandits_Left_Right(DiscreteEnv, ABC):
 
     def __init__(self, action_space: np.array, action_space_pre_embedding: np.array, theta_star: np.array, sigma: float, discount_factor: float = 0.99) -> None:
         super().__init__(init_state=0)
