@@ -249,13 +249,13 @@ class DesignRewardBandit(RewardFunctional):
         self.type = "adaptive"
 
     def eval(self, emissions, distribution, visitations, episodes):
-        return distribution @ self.mu - np.max(self.mu)
+        return - distribution @ self.mu
 
     def eval_full(self,
                   emissions: np.ndarray,
                   distribution: np.ndarray,
                   episodes: int = 0) -> float:
-        return distribution @ self.mu - np.max(self.mu)
+        return - distribution @ self.mu
 
 
 class DesignBestArmLinearBandit(RewardFunctional):
@@ -354,3 +354,105 @@ class DesignBestArmLinearBandit(RewardFunctional):
 
         gradient = np.apply_along_axis(partial, 1, emissions)
         return gradient / d
+
+
+class DesignBestArmLinearBanditNoDenominator(RewardFunctional):
+
+    def __init__(self, action_space_size, lambd, variant: int = 0, eps=0.01, sigma=0.01, scale_reg=True, mix_objectives=(False, 0), init_ucb = np.inf):
+
+        super().__init__()
+
+        self.ucbs = np.ones(action_space_size) * init_ucb
+        self.lcbs = -1 * np.ones(action_space_size) * init_ucb
+        self.diff_ucbs = np.ones((action_space_size, action_space_size)) * init_ucb * 2
+        self.diff_lcbs = -1 * np.ones((action_space_size, action_space_size)) * init_ucb * 2
+        self.type = "adaptive"
+        self.lambd = lambd
+        self.variant = variant
+        self.eps = eps
+        self.sigma = sigma
+        self.uniform_alpha = False
+        self.scale_reg = scale_reg
+        # objectives trade-off
+        self.mix_objectives, self.mix_ratio = mix_objectives
+
+    def _restrict_best_action_space(self, emissions):
+
+        best_lcb = np.max(self.lcbs)
+        restriction_mask = self.ucbs >= best_lcb
+
+        return restriction_mask
+
+    def _estimate_building_blocks(self, emissions, V_eta_inv):
+        restriction_mask = self._restrict_best_action_space(emissions)
+        restricted_action_space = emissions[restriction_mask]
+        n, m = restricted_action_space.shape
+
+        # Reshape the arrays to have compatible shapes for broadcasting
+        # and compute differences between all possible row pairs. Choosing
+        # a max over this set upperbounds max_z ||z - z^*||_V_eta_inv
+        arr1_reshaped = restricted_action_space.reshape(n, 1, m)
+        arr2_reshaped = restricted_action_space.reshape(1, n, m)
+        diffs = arr1_reshaped - arr2_reshaped
+        diffs = diffs.reshape((-1, diffs.shape[-1]))
+
+        # Restrict diff UCBs and LCBs
+        restriction_mask_2d = np.outer(restriction_mask, restriction_mask)
+        restricted_diff_ucbs = self.diff_ucbs[restriction_mask_2d].reshape(-1)
+        restricted_diff_lcbs = self.diff_lcbs[restriction_mask_2d].reshape(-1)
+
+        nominators = np.apply_along_axis(lambda x: x @ V_eta_inv @ x.T, 1, diffs)
+        star_id = np.argmax(nominators)
+        diff_star = diffs[star_id]
+
+        val_star = np.max(nominators)
+
+        return None, diff_star, val_star
+
+    def eval(self, emissions, distribution, unrolls, episodes):
+
+        if len(distribution.shape) == 2:
+            distribution = distribution.mean(axis=0).reshape(-1)
+
+        alpha = len(unrolls) / episodes
+        aggregated_unrolls = sum(unrolls) / len(unrolls) if len(unrolls) > 0 else np.zeros(emissions.shape[0])
+
+        new_V_eta = np.multiply(emissions.T, distribution / (self.sigma ** 2)) @ emissions
+        agg_V_eta = np.multiply(emissions.T, aggregated_unrolls / (self.sigma ** 2)) @ emissions
+
+        if self.uniform_alpha:
+            V_eta = 1. / episodes * new_V_eta + \
+                alpha * agg_V_eta
+        else:
+            V_eta = (1 - alpha) * new_V_eta + \
+                alpha * agg_V_eta
+
+        if not self.scale_reg:
+            V_eta_inv = np.linalg.inv(V_eta + (1 - alpha) * self.lambd * np.identity(V_eta.shape[0]))
+        else:
+            V_eta_inv = np.linalg.inv(V_eta + self.lambd * np.identity(V_eta.shape[0]))
+
+        _, _, val_star = self._estimate_building_blocks(emissions, V_eta_inv)
+
+        if self.mix_objectives:
+            return - (1 - self.mix_ratio) * val_star + self.mix_ratio * self.ucbs @ distribution
+        else:
+            return val_star
+
+    def eval_full(self,
+                  emissions: np.ndarray,
+                  distribution: np.ndarray,
+                  episodes: int = 0) -> float:
+        
+        if len(distribution.shape) == 2:
+            distribution = distribution.mean(axis=0).reshape(-1)
+
+        V_eta = emissions.T @ np.diag(distribution) @ emissions
+        V_eta_inv = np.linalg.inv(V_eta + self.lambd * np.identity(V_eta.shape[0]))
+
+        _, _, val_star = self._estimate_building_blocks(emissions, V_eta_inv)
+
+        if self.mix_objectives:
+            return - (1 - self.mix_ratio) * val_star + self.mix_ratio * self.ucbs @ distribution
+        else:
+            return val_star
