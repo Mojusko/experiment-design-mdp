@@ -24,7 +24,7 @@ class DP(DiscreteSolver):
             values[self.env.max_episode_length, self.env.terminal_state] = \
                 self.reward[self.env.terminal_state]
         else:
-            values[self.env.max_episode_length, :] = self.reward[self.env.max_episode_length, :]
+            values[self.env.max_episode_length, :] = self.reward[self.env.max_episode_length - 1, :]
 
         for i in range(self.env.max_episode_length - 1, -1, -1):
             for state in range(self.env.states_num):

@@ -133,7 +133,8 @@ class MdpExplore():
                 p_pi = (self.env.get_transition_matrix() *
                         np.expand_dims(policy.ps[i], axis=2)).sum(axis=1)
                 assert (np.allclose(p_pi.sum(axis=1), 1, rtol=1e-05, atol=1e-05))
-                temp += p_pi.T @ temp
+                # temp += p_pi.T @ temp
+                temp = p_pi.T @ temp
                 v[i + 1] += temp
         # d = v / v.sum()
         return v
@@ -170,7 +171,7 @@ class MdpExplore():
                 if self.solver is not DP:
                     total_density += self.weights[i] * policy.p * np.expand_dims(self.densities[i], axis=1)
                 else:
-                    total_density += self.weights[i] * policy.ps[i] * np.expand_dims(self.densities[i], axis=1)
+                    total_density += self.weights[i] * policy.ps * np.repeat(np.expand_dims(self.densities[i], axis=-1), axis = -1, repeats = self.env.actions_num)
                 # try:
                 #     total_density += self.weights[i] * policy.p * np.expand_dims(self.densities[i], axis=1)
                 # except:
@@ -339,12 +340,8 @@ class MdpExplore():
                 objective = self.objective.eval(self.emissions, density, self.episodes)
 
 
-            # if policy is non-stationary, we take the average new density
-            # if type(new_policy) is NonStationaryPolicy:
-            #    new_density = new_density.mean(axis=0)
 
-            # empirical gap is calculated by taking the minimum across time-steps h (not sure this is right)
-            empirical_gap = np.minimum(np.min(reward @ (new_density - density).T), empirical_gap)
+            empirical_gap = np.minimum((reward * (new_density - density)).sum(), empirical_gap)
 
             if verbose:
                 print(f'component: {counter}, gap: {empirical_gap}, objective: {objective}, stepsize: {step_size}, gradient:{la.norm(reward)}, hess_max:{hess_max}, hess_min:{hess_min}')
