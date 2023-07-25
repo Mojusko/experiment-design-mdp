@@ -2,3 +2,16 @@
 *__pycache__/
 
 
+*data/
+*results/
+*.cache
+*.sh
+*.txt
+*.png
+*.np
+*.html
+.ipynb_checkpoints
+*.csv
+*.pyc
+*.pt
+*.p
