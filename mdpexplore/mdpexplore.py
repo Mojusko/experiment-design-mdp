@@ -11,12 +11,12 @@ from mdpexplore.solvers.solver_base import DiscreteSolver
 from mdpexplore.env.discrete_env import DiscreteEnv
 from mdpexplore.policies.policy_base import Policy, SummarizedPolicy
 from mdpexplore.policies.tracking_policy import TrackingPolicy
-from mdpexplore.policies.simple_policy import SimplePolicy
+from mdpexplore.policies.stationary_policy import StationaryPolicy
 from mdpexplore.policies.non_stationary_policy import NonStationaryPolicy
 from mdpexplore.policies.mixture_policy import MixturePolicy
 from mdpexplore.policies.density_policy import DensityPolicy, ActionDensityPolicy
 from mdpexplore.policies.policy_generator import PolicyGenerator
-from mdpexplore.utils.reward_functionals import *
+from mdpexplore.functionals.reward_functionals import *
 
 from mdpexplore.solvers.dp import DP
 
@@ -115,7 +115,7 @@ class MdpExplore():
             np.ndarray: 1-D array with density for each state
         """
 
-        if type(policy) is SimplePolicy:
+        if type(policy) is StationaryPolicy:
 
             v0 = np.zeros(self.env.states_num)
             v0[self.env.init_state] = 1
@@ -282,6 +282,18 @@ class MdpExplore():
             # update the visitations
             # self.visitations.append(self.env.visitations / self.env.visitations.sum())
             self.visitations.append((self.episode_state_visitations / self.episode_state_visitations.sum(), self.episode_action_visitations / self.episode_action_visitations.sum()))
+
+
+    def _optimize_cvxpy_solver(
+            self,
+            gap = None,
+            verbose = False
+    ):
+        # initialize density as a variable 
+        density_var = np.zeros(self.env.max_episode_length, self.env.states_num, self.env.actions_num)
+        
+        # initialize the objective function
+
 
     def _optimize_frank_wolfe(
             self,

@@ -1,4 +1,4 @@
-PYTHONPATH=pythonconda
+PYTHONPATH=python
 
 ###########################
 ###########################

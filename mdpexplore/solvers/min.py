@@ -2,7 +2,7 @@ import autograd.numpy as np
 
 from mdpexplore.solvers.solver_base import DiscreteSolver
 from mdpexplore.policies.policy_base import Policy
-from mdpexplore.policies.simple_policy import SimplePolicy
+from mdpexplore.policies.stationary_policy import StationaryPolicy
 
 
 class MinSolver(DiscreteSolver):
@@ -18,4 +18,4 @@ class MinSolver(DiscreteSolver):
         for s in range(self.env.states_num):
             p[s, action_id] = 1.
 
-        return SimplePolicy(self.env, p)
+        return StationaryPolicy(self.env, p)

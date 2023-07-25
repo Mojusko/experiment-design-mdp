@@ -11,7 +11,7 @@ from mdpexplore.solvers.lp import LP
 from sklearn.cluster import KMeans
 from scipy.linalg import null_space, orth
 from mdpexplore.env.time_chain import TimeChain
-from mdpexplore.utils.reward_functionals import DesignBayesD, DesignBayesC, DesignC
+from mdpexplore.functionals.reward_functionals import DesignBayesD, DesignBayesC, DesignC
 from mdpexplore.policies.density_policy import DensityPolicy
 from mdpexplore.mdpexplore import MdpExplore
 from scipy.integrate import odeint

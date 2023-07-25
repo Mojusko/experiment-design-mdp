@@ -16,7 +16,7 @@ from mdpexplore.policies.mixture_policy import MixturePolicy
 from mdpexplore.policies.tracking_policy import TrackingPolicy
 
 from mdpexplore.policies.average_policy import AveragePolicy
-from mdpexplore.utils.reward_functionals import DesignBayesD, DesignBayesC, DesignC
+from mdpexplore.functionals.reward_functionals import DesignBayesD, DesignBayesC, DesignC
 from mdpexplore.policies.density_policy import DensityPolicy
 from mdpexplore.mdpexplore import MdpExplore
 from scipy.integrate import odeint

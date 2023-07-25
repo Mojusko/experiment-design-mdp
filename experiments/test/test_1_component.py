@@ -10,7 +10,7 @@ from mdpexplore.env.time_chain import TimeChain
 from mdpexplore.policies.density_policy import DensityPolicy
 from mdpexplore.policies.mixture_policy import MixturePolicy
 from mdpexplore.policies.average_policy import AveragePolicy
-from mdpexplore.utils.reward_functionals import DesignBayesD, DesignBayesC, DesignC, DesignD
+from mdpexplore.functionals.reward_functionals import DesignBayesD, DesignBayesC, DesignC, DesignD
 from mdpexplore.policies.density_policy import DensityPolicy
 from mdpexplore.env.grid_worlds import DummyGridWorld
 from mdpexplore.mdpexplore import MdpExplore
@@ -21,12 +21,12 @@ import argparse
 from mdpexplore.solvers.solver_base import DiscreteSolver
 from mdpexplore.env.discrete_env import DiscreteEnv
 from mdpexplore.policies.policy_base import Policy, SummarizedPolicy
-from mdpexplore.policies.simple_policy import SimplePolicy
+from mdpexplore.policies.stationary_policy import StationaryPolicy
 from mdpexplore.policies.non_stationary_policy import NonStationaryPolicy
 from mdpexplore.policies.mixture_policy import MixturePolicy
 from mdpexplore.policies.density_policy import DensityPolicy
 from mdpexplore.policies.policy_generator import PolicyGenerator
-from mdpexplore.utils.reward_functionals import *
+from mdpexplore.functionals.reward_functionals import *
 
 
 parser = argparse.ArgumentParser(description='Gridworlds Problem.')

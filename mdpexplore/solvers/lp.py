@@ -3,7 +3,7 @@ import autograd.numpy as np
 
 from mdpexplore.solvers.solver_base import DiscreteSolver
 from mdpexplore.policies.policy_base import Policy
-from mdpexplore.policies.simple_policy import SimplePolicy
+from mdpexplore.policies.stationary_policy import StationaryPolicy
 # import mosek
 
 
@@ -54,4 +54,4 @@ class LP(DiscreteSolver):
             p[s, np.argwhere(q_function == np.max(q_function))] = 1. / \
                                                                   np.argwhere(q_function == np.max(q_function)).shape[0]
 
-        return SimplePolicy(self.env, p)
+        return StationaryPolicy(self.env, p)

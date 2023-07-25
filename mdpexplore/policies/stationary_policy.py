@@ -4,7 +4,7 @@ from mdpexplore.env.discrete_env import DiscreteEnv
 from mdpexplore.policies.policy_base import Policy
 
 
-class SimplePolicy(Policy):
+class StationaryPolicy(Policy):
     def __init__(self, env: DiscreteEnv, p: np.ndarray) -> None:
         self.p = p
         super().__init__(env)

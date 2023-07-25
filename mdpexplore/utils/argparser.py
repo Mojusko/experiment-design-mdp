@@ -1,6 +1,6 @@
 import argparse
 
-from mdpexplore.utils.reward_functionals import *
+from mdpexplore.functionals.reward_functionals import *
 from mdpexplore.policies.average_policy import AveragePolicy
 from mdpexplore.policies.density_policy import DensityPolicy
 from mdpexplore.policies.mixture_policy import MixturePolicy

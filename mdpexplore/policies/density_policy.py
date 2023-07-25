@@ -1,7 +1,7 @@
 import autograd.numpy as np
 
 from mdpexplore.policies.policy_base import SummarizedPolicy
-from mdpexplore.policies.simple_policy import SimplePolicy
+from mdpexplore.policies.stationary_policy import StationaryPolicy
 from mdpexplore.policies.non_stationary_policy import NonStationaryPolicy
 from mdpexplore.env.discrete_env import DiscreteEnv
 
@@ -18,7 +18,7 @@ class DensityPolicy(SummarizedPolicy):
             temp = np.tile(self.density.reshape(-1,1), (1,self.density_sa.shape[1]))
             mask = temp > 0
             policy[mask] = self.density_sa[mask] / temp[mask]
-            self.policy = SimplePolicy(env, policy)
+            self.policy = StationaryPolicy(env, policy)
         # if non-stationary reshapings are different and we return a non-stationary policy
         elif len(self.density_sa.shape) == 3:
             policy = np.zeros(shape = self.density_sa.shape)
@@ -45,7 +45,7 @@ class ActionDensityPolicy(SummarizedPolicy):
                 if denom > 0:
                     policy[state, mask] = self.density[mask] / np.sum(self.density[mask])
         
-            self.policy = SimplePolicy(env, policy)
+            self.policy = StationaryPolicy(env, policy)
 
         # if non-stationary reshapings are different and we return a non-stationary policy
         elif len(self.density_sa.shape) == 3:
