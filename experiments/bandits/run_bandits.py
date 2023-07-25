@@ -9,7 +9,7 @@ import argparse
 from tqdm.contrib.concurrent import process_map
 import multiprocessing as mp
 
-from mdpexplore.solvers.min import MinSolver
+from mdpexplore.solvers.min import MaxSolver
 from mdpexplore.mdpexplore import MdpExplore
 from mdpexplore.env.bandits import Bandits
 from mdpexplore.functionals.reward_functionals import DesignRewardBandit, DesignBestArmLinearBandit, DesignBestArmLinearBanditNoDenominator
@@ -105,7 +105,7 @@ if __name__ == "__main__":
         me = MdpExplore(
             env,
             objective=design,
-            solver=MinSolver,
+            solver=MaxSolver,
             method='frank-wolfe',
             verbosity=0,
             callback=callback)

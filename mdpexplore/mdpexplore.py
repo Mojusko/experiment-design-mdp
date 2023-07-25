@@ -293,7 +293,7 @@ class MdpExplore():
         density_var = np.zeros(self.env.max_episode_length, self.env.states_num, self.env.actions_num)
         
         # initialize the objective function
-
+        pass 
 
     def _optimize_frank_wolfe(
             self,

@@ -5,7 +5,7 @@ from mdpexplore.policies.policy_base import Policy
 from mdpexplore.policies.stationary_policy import StationaryPolicy
 
 
-class MinSolver(DiscreteSolver):
+class MaxSolver(DiscreteSolver):
     '''
     Dummy solver for bandit problem.
     '''
