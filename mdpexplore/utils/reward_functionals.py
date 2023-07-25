@@ -150,11 +150,22 @@ class DesignBayesD(RewardFunctional):
         """
 
         """
+
+        # calculate the aggregated action state
+        aggregated_unrolls_actions = 0
+        aggregated_unrolls_states = 0
+        if len(unrolls) > 0:
+            for unroll_state, unroll_action in unrolls:
+                aggregated_unrolls_states += unroll_state
+            aggregated_unrolls_states = aggregated_unrolls_states / len(unrolls)
+
+        else:
+            aggregated_unrolls_states = np.zeros(emissions.shape[0])
+
         alpha = len(unrolls) / episodes
-        aggregated_unrolls = sum(unrolls) / len(unrolls) if len(unrolls) > 0 else np.zeros(emissions.shape[0])
 
         new_z = np.multiply(emissions.T, distribution / (self.Sigma ** 2)) @ emissions
-        agg_z = np.multiply(emissions.T, aggregated_unrolls / (self.Sigma ** 2)) @ emissions
+        agg_z = np.multiply(emissions.T, aggregated_unrolls_states / (self.Sigma ** 2)) @ emissions
 
         # new_z = emissions.T @ np.diag(distribution/(self.Sigma**2)) @ emissions
         # agg_z = emissions.T @ np.diag(aggregated_unrolls/(self.Sigma**2)) @ emissions
@@ -412,13 +423,22 @@ class DesignBestArmLinearBanditNoDenominator(RewardFunctional):
     def eval(self, emissions, distribution, unrolls, episodes):
 
         if len(distribution.shape) == 2:
-            distribution = distribution.mean(axis=0).reshape(-1)
+            distribution = distribution.sum(axis=0).reshape(-1)
 
         alpha = len(unrolls) / episodes
-        aggregated_unrolls = sum(unrolls) / len(unrolls) if len(unrolls) > 0 else np.zeros(emissions.shape[0])
+
+        # calculate the aggregated action state
+        aggregated_unrolls_actions = 0
+        if len(unrolls) > 0:
+            for unroll_state, unroll_action in unrolls:
+                aggregated_unrolls_actions += unroll_action
+            aggregated_unrolls_actions = aggregated_unrolls_actions / len(unrolls)
+
+        else:
+            aggregated_unrolls_actions = np.zeros(emissions.shape[0])
 
         new_V_eta = np.multiply(emissions.T, distribution / (self.sigma ** 2)) @ emissions
-        agg_V_eta = np.multiply(emissions.T, aggregated_unrolls / (self.sigma ** 2)) @ emissions
+        agg_V_eta = np.multiply(emissions.T, aggregated_unrolls_actions / (self.sigma ** 2)) @ emissions
 
         if self.uniform_alpha:
             V_eta = 1. / episodes * new_V_eta + \
@@ -445,7 +465,7 @@ class DesignBestArmLinearBanditNoDenominator(RewardFunctional):
                   episodes: int = 0) -> float:
         
         if len(distribution.shape) == 2:
-            distribution = distribution.mean(axis=0).reshape(-1)
+            distribution = distribution.sum(axis=0).reshape(-1)
 
         V_eta = emissions.T @ np.diag(distribution) @ emissions
         V_eta_inv = np.linalg.inv(V_eta + self.lambd * np.identity(V_eta.shape[0]))

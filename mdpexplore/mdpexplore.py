@@ -14,7 +14,7 @@ from mdpexplore.policies.tracking_policy import TrackingPolicy
 from mdpexplore.policies.simple_policy import SimplePolicy
 from mdpexplore.policies.non_stationary_policy import NonStationaryPolicy
 from mdpexplore.policies.mixture_policy import MixturePolicy
-from mdpexplore.policies.density_policy import DensityPolicy
+from mdpexplore.policies.density_policy import DensityPolicy, ActionDensityPolicy
 from mdpexplore.policies.policy_generator import PolicyGenerator
 from mdpexplore.utils.reward_functionals import *
 
@@ -65,7 +65,12 @@ class MdpExplore():
 
         self.densities = []
         self.objective_values_baseline = []
+        # we keep track of state and action visitations
         self.visitations = []
+        # keep track of state and action visitations per episode
+        self.episode_state_visitations = np.zeros(self.env.states_num)
+        self.episode_action_visitations = np.zeros(self.env.actions_num)
+
         self.optimize_repetitions = optimize_repetitions
         self._precompute_emissions()
 
@@ -73,6 +78,10 @@ class MdpExplore():
         """Resets the max-ent solver to its initial state
         """
         self.env.reset()
+        # reset the episode visitations
+        self.episode_state_visitations = np.zeros(self.env.states_num)
+        self.episode_action_visitations = np.zeros(self.env.actions_num)
+
         if self.initial_policy:
             self.policies = [self.policy_generator.uniform_policy()]
             self.weights = [1]
@@ -83,6 +92,7 @@ class MdpExplore():
         self.densities = []
         self.trajectory = []
         if reset_visitations:
+            # reset visitations if needed
             self.visitations = []
             self.objective_values_baseline = []
 
@@ -243,6 +253,10 @@ class MdpExplore():
                 summarized_policy = SummarizedPolicyType(
                     self.env, self._density_oracle(), self._density_oracle(actions=True)
                 )
+            elif SummarizedPolicyType == ActionDensityPolicy:
+                summarized_policy = SummarizedPolicyType(
+                    self.env, self._density_oracle(), self._density_oracle(actions=True)
+                )
             elif SummarizedPolicyType == TrackingPolicy:
                 summarized_policy = SummarizedPolicyType(
                     self.env, self.policies, self.weights, empirical
@@ -254,13 +268,20 @@ class MdpExplore():
                 )
 
             self.trajectory.append(self.env.init_state)
+            # count episode visitations
+            self.episode_state_visitations[self.env.init_state] += 1
             for _ in range(self.env.max_episode_length):
                 action = summarized_policy.next_action(self.env.state)
                 next_state = self.env.step(action)
                 self.trajectory.append(next_state)
+                # count episode visitations
+                self.episode_state_visitations[next_state] += 1
+                self.episode_action_visitations[action] += 1
 
             self._update_data()
-            self.visitations.append(self.env.visitations / self.env.visitations.sum())
+            # update the visitations
+            # self.visitations.append(self.env.visitations / self.env.visitations.sum())
+            self.visitations.append((self.episode_state_visitations / self.episode_state_visitations.sum(), self.episode_action_visitations / self.episode_action_visitations.sum()))
 
     def _optimize_frank_wolfe(
             self,
@@ -401,7 +422,8 @@ class MdpExplore():
 
             self._reset()
             run_objective_values = []
-            aggregate_distribution = 0
+            aggregate_distribution_states = 0
+            aggregate_distribution_actions = 0
 
             for i in range(episodes):
                 if self.verbosity > 2:
@@ -412,17 +434,18 @@ class MdpExplore():
                 self.optimize(num_components, self.method, accuracy)
 
                 self.evaluate(SummarizedPolicyType, 1)
-                aggregate_distribution = (i * aggregate_distribution + self.visitations[i]) / (i + 1)
+                aggregate_distribution_states = (i * aggregate_distribution_states + self.visitations[i][0]) / (i + 1)
+                aggregate_distribution_actions = (i * aggregate_distribution_actions + self.visitations[i][1]) / (i + 1)
 
                 if save_trajectory is not None:
                     np.savetxt(f"{save_trajectory}{i}.txt",
                                np.array([self.env.convert(state) for state in self.trajectory]))
 
                 objective = self.objective.eval_full(
-                    self.emissions, aggregate_distribution, episodes
+                    self.emissions, aggregate_distribution_states, episodes
                 )
 
-                print (f'episode:{i}, value :{objective}', self.objective.eval(self.emissions, aggregate_distribution,self.visitations, episodes))
+                print (f'episode:{i}, value :{objective}', self.objective.eval(self.emissions, aggregate_distribution_states,self.visitations, episodes))
                 self.objective_values_baseline.append(objective)
                 run_objective_values.append(objective)
 
