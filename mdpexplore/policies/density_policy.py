@@ -19,10 +19,11 @@ class DensityPolicy(SummarizedPolicy):
             mask = temp > 0
             policy[mask] = self.density_sa[mask] / temp[mask]
             self.policy = StationaryPolicy(env, policy)
+
         # if non-stationary reshapings are different and we return a non-stationary policy
         elif len(self.density_sa.shape) == 3:
             policy = np.zeros(shape = self.density_sa.shape)
-            temp = np.tile(np.expand_dims(self.density, -1), (1, 1, self.density_sa.shape[1]))
+            temp = np.tile(np.expand_dims(self.density, -1), (1, 1, self.density_sa.shape[2]))
             mask = temp > 0
             policy[mask] = self.density_sa[mask] / temp[mask]
             self.policy = NonStationaryPolicy(env, policy)
