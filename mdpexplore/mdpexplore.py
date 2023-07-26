@@ -149,7 +149,7 @@ class MdpExplore():
         # d = v / v.sum()
         return v
 
-    def _density_oracle(self, actions: bool = False) -> np.ndarray:
+    def _density_oracle(self, actions: bool = True) -> np.ndarray:
         """Computes the combined state (or state-action) distribution induced by the saved policies
 
         Args:

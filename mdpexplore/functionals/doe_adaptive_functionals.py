@@ -55,7 +55,7 @@ class AdaptiveDesignD(RewardFunctional):
             aggregated_unrolls_states = np.zeros(emissions.shape[0])
 
         alpha = len(unrolls) / episodes
-        distribution = np.sum(distribution, axis = 0)
+        distribution = np.sum(np.sum(distribution, axis = 2), axis = 0)
 
         new_z = np.multiply(emissions.T, distribution / (self.Sigma ** 2)) @ emissions
         agg_z = np.multiply(emissions.T, aggregated_unrolls_states / (self.Sigma ** 2)) @ emissions
