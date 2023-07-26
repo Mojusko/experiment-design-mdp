@@ -68,8 +68,8 @@ class MdpExplore():
         # we keep track of state and action visitations
         self.visitations = []
         # keep track of state and action visitations per episode
-        self.episode_state_visitations = np.zeros(self.env.states_num)
-        self.episode_action_visitations = np.zeros(self.env.actions_num)
+        self.state_visitations = []
+        self.action_visitations = []
 
         self.optimize_repetitions = optimize_repetitions
         self._precompute_emissions()
@@ -79,9 +79,8 @@ class MdpExplore():
         """
         self.env.reset()
         # reset the episode visitations
-        self.episode_state_visitations = np.zeros(self.env.states_num)
-        self.episode_action_visitations = np.zeros(self.env.actions_num)
-
+        self.state_visitations = []
+        self.action_visitations = []
         if self.initial_policy:
             self.policies = [self.policy_generator.uniform_policy()]
             self.weights = [1]
@@ -112,13 +111,15 @@ class MdpExplore():
             policy (Policy): inducing policy
 
         Returns:
-            np.ndarray: 1-D array with density for each state
+            np.ndarray: S x A (stationary) or H x S x A (non-stationary) array with density for each state
         """
 
         if type(policy) is StationaryPolicy:
 
-            v0 = np.zeros(self.env.states_num)
-            v0[self.env.init_state] = 1
+            v0 = np.zeros(self.env.states_num, self.env.actions_num)
+            # initialize with the initial state and corresponding actions
+            for act in self.env.available_actions(self.env.init_state):
+                v0[self.env.init_state, :, act] = policy.p[self.env.init_state, act]
 
             v = np.array(v0)
             temp = np.array(v0)
@@ -133,20 +134,39 @@ class MdpExplore():
 
         elif type(policy) is NonStationaryPolicy:
 
-            v0 = np.zeros((self.env.max_episode_length, self.env.states_num))
-            v0[0, self.env.init_state] = 1
+            v0 = np.zeros((self.env.max_episode_length, self.env.states_num, self.env.actions_num))
+            # initialize with the initial state and corresponding actions
+            for act in self.env.available_actions(self.env.init_state):
+                v0[0, self.env.init_state, act] = policy.ps[0, self.env.init_state, act]
 
             v = np.array(v0)
-            temp = np.array(v0)[0]
+            temp = np.array(v0)[0].sum(axis = -1)
             
             for i in range(self.env.max_episode_length - 1):
+
+                # check that the policy is valid
+                for s in range(self.env.states_num):
+                    for a in range(self.env.actions_num):
+                        if policy.ps[i, s, a] > 0:
+                            assert a in self.env.available_actions(s), 'invalid policy'
+
+                # p_pi = (self.env.get_transition_matrix() *
+                #         np.expand_dims(policy.ps[i], axis=2)).sum(axis=1)
                 p_pi = (self.env.get_transition_matrix() *
                         np.expand_dims(policy.ps[i], axis=2)).sum(axis=1)
                 assert (np.allclose(p_pi.sum(axis=1), 1, rtol=1e-05, atol=1e-05))
                 # temp += p_pi.T @ temp
                 temp = p_pi.T @ temp
-                v[i + 1] += temp
+                v[i + 1] += np.expand_dims(temp, axis=-1) * policy.ps[i + 1]
         # d = v / v.sum()
+
+        # check that the density is valid
+        for h in range(self.env.max_episode_length):
+            for s in range(self.env.states_num):
+                for a in range(self.env.actions_num):
+                    if v[h, s, a] > 0:
+                        assert a in self.env.available_actions(s), 'invalid density'
+
         return v
     
 
@@ -177,16 +197,16 @@ class MdpExplore():
             if i >= len(self.densities):
                 d = self._density_oracle_single(policy)
                 self.densities.append(d)
-            if actions:
-                # TODO: doesn't work with non-stationary, JP: added a fix but have not tested fully 
-                if self.solver is not DP:
-                    total_density += self.weights[i] * policy.p * np.expand_dims(self.densities[i], axis=1)
-                else:
-                    total_density += self.weights[i] * policy.ps * np.repeat(np.expand_dims(self.densities[i], axis=-1), axis = -1, repeats = self.env.actions_num)
-                # try:
-                #     total_density += self.weights[i] * policy.p * np.expand_dims(self.densities[i], axis=1)
-                # except:
-                #     raise TypeError('Non-stationary policies are not supported for state-action distribution')
+            # if actions:
+            #     # TODO: doesn't work with non-stationary, JP: added a fix but have not tested fully 
+            #     if self.solver is not DP:
+            #         total_density += self.weights[i] * policy.p * np.expand_dims(self.densities[i], axis=1)
+            #     else:
+            #         total_density += self.weights[i] * policy.ps * np.repeat(np.expand_dims(self.densities[i], axis=-1), axis = -1, repeats = self.env.actions_num)
+            #     # try:
+            #     #     total_density += self.weights[i] * policy.p * np.expand_dims(self.densities[i], axis=1)
+            #     # except:
+            #     #     raise TypeError('Non-stationary policies are not supported for state-action distribution')
             else:
                 total_density += self.weights[i] * self.densities[i]
         return total_density
@@ -270,19 +290,19 @@ class MdpExplore():
 
             self.trajectory.append(self.env.init_state)
             # count episode visitations
-            self.episode_state_visitations[self.env.init_state] += 1
-            for _ in range(self.env.max_episode_length):
+            self.state_visitations.append(self.env.init_state)
+            for h in range(self.env.max_episode_length):
                 action = summarized_policy.next_action(self.env.state)
                 next_state = self.env.step(action)
                 self.trajectory.append(next_state)
                 # count episode visitations
-                self.episode_state_visitations[next_state] += 1
-                self.episode_action_visitations[action] += 1
-
+                self.state_visitations.append(next_state)
+                self.action_visitations.append(action)
+            
             self._update_data()
             # update the visitations
             # self.visitations.append(self.env.visitations / self.env.visitations.sum())
-            self.visitations.append((self.episode_state_visitations / self.episode_state_visitations.sum(), self.episode_action_visitations / self.episode_action_visitations.sum()))
+            self.visitations.append((self.state_visitations, self.action_visitations))
 
 
     def _optimize_cvxpy_solver(
@@ -459,18 +479,19 @@ class MdpExplore():
                 self.optimize(num_components, self.method, accuracy)
 
                 self.evaluate(SummarizedPolicyType, 1)
-                aggregate_distribution_states = (i * aggregate_distribution_states + self.visitations[i][0]) / (i + 1)
-                aggregate_distribution_actions = (i * aggregate_distribution_actions + self.visitations[i][1]) / (i + 1)
+                
+                # calculate the aggregate distribution
+                aggregate_distribution = self.objective.build_density_from_trajectories(self.visitations)
 
                 if save_trajectory is not None:
                     np.savetxt(f"{save_trajectory}{i}.txt",
                                np.array([self.env.convert(state) for state in self.trajectory]))
 
                 objective = self.objective.eval_full(
-                    self.emissions, aggregate_distribution_states, episodes
+                    self.emissions, aggregate_distribution, episodes
                 )
 
-                print (f'episode:{i}, value :{objective}', self.objective.eval(self.emissions, aggregate_distribution_states,self.visitations, episodes))
+                print (f'episode:{i}, value :{objective}', self.objective.eval(self.emissions, aggregate_distribution, self.visitations, episodes))
                 self.objective_values_baseline.append(objective)
                 run_objective_values.append(objective)
 
@@ -488,7 +509,7 @@ class MdpExplore():
             aggregate_distribution = 0
 
             for i, d in enumerate(self.visitations):
-                aggregate_distribution = (i * aggregate_distribution + d) / (i + 1)
+                aggregate_distribution = (i * aggregate_distribution + self.objective.build_density_from_trajectories(d)) / (i+1)
                 run_objective_values.append(
                     self.objective.eval_full(self.emissions, aggregate_distribution, self.episodes))
 

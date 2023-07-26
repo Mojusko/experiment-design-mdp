@@ -57,7 +57,7 @@ class Bandits_Left_Right(DiscreteEnv, ABC):
         self.actions_num = action_space.shape[0]
         # Emissions are features
         self.emissions = self.action_space
-        self.max_episode_length = 5
+        self.max_episode_length = 10
         self.terminal_state = None
         self.visitations = np.zeros(self.states_num)
         # initialize the transition matrix

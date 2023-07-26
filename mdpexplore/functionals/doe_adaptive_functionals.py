@@ -43,22 +43,17 @@ class AdaptiveDesignD(RewardFunctional):
 
         """
 
-        # calculate the aggregated action state
-        aggregated_unrolls_actions = 0
-        aggregated_unrolls_states = 0
         if len(unrolls) > 0:
-            for unroll_state, unroll_action in unrolls:
-                aggregated_unrolls_states += unroll_state
-            aggregated_unrolls_states = aggregated_unrolls_states / len(unrolls)
-
+            aggregated_density = self.build_density_from_trajectories(unrolls)
         else:
-            aggregated_unrolls_states = np.zeros(emissions.shape[0])
+            aggregated_density = np.zeros((self.env.max_episode_length, self.env.states_num, self.env.actions_num))
 
         alpha = len(unrolls) / episodes
         distribution = np.sum(np.sum(distribution, axis = 2), axis = 0)
+        aggregated_density = np.sum(np.sum(aggregated_density, axis = 2), axis = 0)
 
         new_z = np.multiply(emissions.T, distribution / (self.Sigma ** 2)) @ emissions
-        agg_z = np.multiply(emissions.T, aggregated_unrolls_states / (self.Sigma ** 2)) @ emissions
+        agg_z = np.multiply(emissions.T, aggregated_density / (self.Sigma ** 2)) @ emissions
 
         if self.uniform_alpha:
             z = 1. / episodes * new_z + \
@@ -102,6 +97,8 @@ class AdaptiveDesignD(RewardFunctional):
                   distribution: np.ndarray,
                   episodes: int,
                   ) -> float:
+
+        distribution = np.sum(np.sum(distribution, axis = 2), axis = 0)
 
         z = emissions.T @ np.diag(distribution / (self.Sigma_true ** 2)) @ emissions
 
