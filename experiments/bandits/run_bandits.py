@@ -12,7 +12,7 @@ import multiprocessing as mp
 from mdpexplore.solvers.min import MaxSolver
 from mdpexplore.mdpexplore import MdpExplore
 from mdpexplore.env.bandits import Bandits
-from mdpexplore.functionals.reward_functionals import DesignRewardBandit, DesignBestArmLinearBandit, DesignBestArmLinearBanditNoDenominator
+from mdpexplore.functionals.reward_functional import DesignRewardBandit, DesignBestArmLinearBandit, DesignBestArmLinearBanditNoDenominator
 from mdpexplore.policies.density_policy import DensityPolicy
 
 if __name__ == "__main__":

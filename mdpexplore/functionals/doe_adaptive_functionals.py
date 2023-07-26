@@ -1,12 +1,13 @@
 import autograd.numpy as np
 import autograd.numpy.linalg as la
 import torch
+import cvxpy as cp 
 from typing import List, Union
 from abc import ABC, abstractmethod
 from mdpexplore.env.discrete_env import Environment
 from mdpexplore.functionals.reward_functional import RewardFunctional
 
-class DesignBayesD(RewardFunctional):
+class AdaptiveDesignD(RewardFunctional):
 
     def __init__(self,
                  env: Environment,
@@ -54,12 +55,10 @@ class DesignBayesD(RewardFunctional):
             aggregated_unrolls_states = np.zeros(emissions.shape[0])
 
         alpha = len(unrolls) / episodes
+        distribution = np.sum(distribution, axis = 0)
 
         new_z = np.multiply(emissions.T, distribution / (self.Sigma ** 2)) @ emissions
         agg_z = np.multiply(emissions.T, aggregated_unrolls_states / (self.Sigma ** 2)) @ emissions
-
-        # new_z = emissions.T @ np.diag(distribution/(self.Sigma**2)) @ emissions
-        # agg_z = emissions.T @ np.diag(aggregated_unrolls/(self.Sigma**2)) @ emissions
 
         if self.uniform_alpha:
             z = 1. / episodes * new_z + \
@@ -84,6 +83,20 @@ class DesignBayesD(RewardFunctional):
         else:
             return np.linalg.slogdet(z + self.lambd / episodes)[1]
 
+    def get_eval_cvxpy(self, 
+             emissions: np.ndarray,
+             distribution: cp.Variable,
+             unrolls: List[np.ndarray],
+             episodes: int,
+             )->cp.Expression:
+        
+        alpha = len(unrolls) / episodes
+        z = self.eval_basic(emissions, distribution, unrolls, episodes)
+        if not self.scale_reg:
+            return cp.log_det(z + (1 - alpha) * self.lambd)[1]
+        else:
+            return cp.log_det(z + self.lambd / episodes)[1]
+        
     def eval_full(self,
                   emissions: np.ndarray,
                   distribution: np.ndarray,
@@ -98,7 +111,7 @@ class DesignBayesD(RewardFunctional):
             return np.linalg.slogdet(z + self.lambd / episodes)[1]
 
 
-class DesignBayesC(DesignBayesD):
+class AdaptiveDesignC(AdaptiveDesignD):
     def __init__(self, env: Environment, lambd: float = 1e-3, scale_reg: bool = False, sigma: float = 1.0, C=None):
         super().__init__(env, lambd=lambd, scale_reg=scale_reg, sigma=sigma)
         self.C = C
@@ -127,7 +140,7 @@ class DesignBayesC(DesignBayesD):
             return np.trace(la.inv(self.C @ la.inv(z + (1. / episodes) * self.lambd) @ self.C.T))
 
 
-class DesignBayesA(RewardFunctional):
+class AdaptiveDesignA(RewardFunctional):
     def eval(self,
              emissions: np.ndarray,
              distribution: np.ndarray,

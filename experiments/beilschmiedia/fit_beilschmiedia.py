@@ -15,7 +15,7 @@ from sklearn.cluster import KMeans
 
 from sensepy.benchmarks.bels.bels_problem import BeilschmiediaProblem
 from mdpexplore.env.quad_tree_env import QuadTreeGrid
-from mdpexplore.functionals.reward_functionals import DesignBayesD
+from mdpexplore.functionals.reward_functional import DesignBayesD
 from mdpexplore.policies.density_policy import DensityPolicy
 from mdpexplore.mdpexplore import MdpExplore
 

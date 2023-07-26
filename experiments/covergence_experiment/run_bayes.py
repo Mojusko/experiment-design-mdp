@@ -4,7 +4,7 @@ import os
 
 from mdpexplore.utils.argparser import Parser
 
-from mdpexplore.functionals.reward_functionals import Design_BayesD, DesignD
+from mdpexplore.functionals.reward_functional import Design_BayesD, DesignD
 from mdpexplore.env.env_builder import EnvBuilder
 from mdpexplore.mdpexplore import MdpExplore
 from mdpexplore.policies.average_policy import AveragePolicy

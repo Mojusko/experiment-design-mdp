@@ -1,20 +1,19 @@
+
 import random
 import numpy as np
 import pandas as pd
 import matplotlib.pyplot as plt
 import torch
 from mdpexplore.solvers.lp import LP
-from sklearn.cluster import KMeans
-from scipy.linalg import null_space, orth
+from mdpexplore.solvers.dp import DP 
+
 from mdpexplore.env.time_chain import TimeChain
 from mdpexplore.policies.density_policy import DensityPolicy
 from mdpexplore.policies.mixture_policy import MixturePolicy
 from mdpexplore.policies.average_policy import AveragePolicy
-from mdpexplore.functionals.reward_functional import DesignBayesD, DesignBayesC, DesignC, DesignD
 from mdpexplore.policies.density_policy import DensityPolicy
 from mdpexplore.env.grid_worlds import DummyGridWorld
 from mdpexplore.mdpexplore import MdpExplore
-from scipy.integrate import odeint
 import argparse
 
 
@@ -26,7 +25,7 @@ from mdpexplore.policies.non_stationary_policy import NonStationaryPolicy
 from mdpexplore.policies.mixture_policy import MixturePolicy
 from mdpexplore.policies.density_policy import DensityPolicy
 from mdpexplore.policies.policy_generator import PolicyGenerator
-from mdpexplore.functionals.reward_functional import *
+from mdpexplore.functionals.doe_adaptive_functionals import *
 
 
 parser = argparse.ArgumentParser(description='Gridworlds Problem.')
@@ -59,17 +58,13 @@ else:
     raise ValueError('Invalid policy type')
 
 env = DummyGridWorld(max_episode_length=20)
-
-if args.adaptive == "Bayes":
-    design = DesignBayesD(env, lambd=1e-3)
-else:
-    design = DesignD(env, lambd=1e-3)
+design = AdaptiveDesignD(env, lambd=1e-3)
 
 me = MdpExplore(
     env,
     objective=design,
-    solver=LP,
-    step=args.linesearch,
+    solver=DP,
+    step=None,
     method='frank-wolfe',
     verbosity=args.verbosity,
 )

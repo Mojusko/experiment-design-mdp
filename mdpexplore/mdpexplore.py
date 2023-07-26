@@ -2,11 +2,11 @@ from typing import Callable, Type, Union, Tuple
 from datetime import datetime
 import os
 import autograd.numpy as np
+import cvxpy as cp 
 from autograd import grad, hessian
 import matplotlib.pyplot as plt
 from scipy.optimize import minimize_scalar
-import wandb
-
+import numpy.linalg as la
 from mdpexplore.solvers.solver_base import DiscreteSolver
 from mdpexplore.env.discrete_env import DiscreteEnv
 from mdpexplore.policies.policy_base import Policy, SummarizedPolicy
@@ -16,7 +16,7 @@ from mdpexplore.policies.non_stationary_policy import NonStationaryPolicy
 from mdpexplore.policies.mixture_policy import MixturePolicy
 from mdpexplore.policies.density_policy import DensityPolicy, ActionDensityPolicy
 from mdpexplore.policies.policy_generator import PolicyGenerator
-from mdpexplore.functionals.reward_functionals import *
+from mdpexplore.functionals.reward_functional import RewardFunctional
 
 from mdpexplore.solvers.dp import DP
 
@@ -290,10 +290,20 @@ class MdpExplore():
             verbose = False
     ):
         # initialize density as a variable 
-        density_var = np.zeros(self.env.max_episode_length, self.env.states_num, self.env.actions_num)
+        v = np.zeros(self.env.max_episode_length, self.env.states_num, self.env.actions_num)
         
         # initialize the objective function
-        pass 
+        if hasattr(self.objective)=="get_eval_cvxpy":
+            objective = self.objective.get_eval_cvxpy(self.emissions, v, self.visitations, self.episodes)
+            constraints = [v >= 0, v <= 1, v.sum(axis=1) == 1]
+            
+            P = self.env.get_transition_matrix()
+            print (P.shape)
+            for i in range(self.env.max_episode_length-1):
+                constraints += [cp.sum(v[i+1], axis = 2) == cp.sum(v[i] @ P, axis = 1)]
+        else:
+            raise NotImplementedError("The reward function does not have cvxpy interface implemented. Use different solver.")
+        
 
     def _optimize_frank_wolfe(
             self,
@@ -325,8 +335,10 @@ class MdpExplore():
 
             # gradient of the reward
             reward = self._reward_fn_gradient(density)
+            
             if self.objective.get_type() != "adaptive":
                 self.objective_values_baseline.append(self.objective.eval(self.emissions, density, self.episodes))
+            
             new_policy = self._planning_oracle(reward)
             self.policies.append(new_policy)
             #
