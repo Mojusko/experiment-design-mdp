@@ -22,7 +22,7 @@ class DP(DiscreteSolver):
         if self.env.constrained:
             values[self.env.max_episode_length, :] = -1e10
             values[self.env.max_episode_length, self.env.terminal_state] = \
-                self.reward[self.env.terminal_state]
+                self.reward[self.env.max_episode_length - 1, self.env.terminal_state]
         else:
             values[self.env.max_episode_length, :] = self.reward[self.env.max_episode_length - 1, :]
 
