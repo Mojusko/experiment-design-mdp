@@ -14,7 +14,7 @@ class DP(DiscreteSolver):
         transition_matrix = self.env.get_transition_matrix()
         
         actions = np.zeros((self.env.max_episode_length + 1, self.env.states_num), dtype=int)
-        values = np.zeros((self.env.max_episode_length + 1, self.env.states_num))
+        values = np.zeros((self.env.max_episode_length + 1, self.env.states_num, self.env.actions_num))
 
         actions[self.env.max_episode_length, :] = 0 # pointing to the 'wait' action
 
@@ -22,17 +22,17 @@ class DP(DiscreteSolver):
         # at a specific time step
         
         if self.env.constrained:
-            values[self.env.max_episode_length, :] = -1e10
-            values[self.env.max_episode_length, self.env.terminal_state] = \
-                self.reward[self.env.max_episode_length - 1, self.env.terminal_state]
+            values[self.env.max_episode_length, :, :] = -1e10
+            values[self.env.max_episode_length, self.env.terminal_state, :] = \
+                self.reward[self.env.max_episode_length - 1, self.env.terminal_state, :]
         else:
-            values[self.env.max_episode_length, :] = self.reward[self.env.max_episode_length - 1, :]
+            values[self.env.max_episode_length] = self.reward[self.env.max_episode_length - 1]
 
         for i in range(self.env.max_episode_length - 1, -1, -1):
             for state in range(self.env.states_num):
                 acts = self.env.available_actions(state)
                 new_values = np.array(
-                    [self.reward[i, state] + transition_matrix[state, a] @ values[i+1] for a in acts]
+                    [self.reward[i, state, a] + transition_matrix[state, a] @ values[i+1].max(axis = -1) for a in acts]
                 )
                 optimal_actions = np.argwhere(new_values == np.max(new_values))
                 idx = np.random.choice( 
@@ -40,11 +40,13 @@ class DP(DiscreteSolver):
                 )
                 best_act = acts[idx]
                 actions[i, state] = best_act
-                values[i, state] = new_values[idx]
+                values[i, state, acts] = new_values
 
         ps = np.zeros((self.env.max_episode_length, self.env.states_num, self.env.actions_num))
         for i in range(self.env.max_episode_length):
             for s in range(self.env.states_num):
                 ps[i, s, actions[i, s]] = 1.
+                # check action is valid
+                assert actions[i, s] in self.env.available_actions(s), 'invalid density policy'
 
         return NonStationaryPolicy(self.env, ps)
