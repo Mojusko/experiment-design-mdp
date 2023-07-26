@@ -23,9 +23,20 @@ class DensityPolicy(SummarizedPolicy):
         # if non-stationary reshapings are different and we return a non-stationary policy
         elif len(self.density_sa.shape) == 3:
             policy = np.zeros(shape = self.density_sa.shape)
-            temp = np.tile(np.expand_dims(self.density, -1), (1, 1, self.density_sa.shape[2]))
-            mask = temp > 0
+            # temp = np.tile(np.expand_dims(self.density, -1), (1, 1, self.density_sa.shape[2]))
+            # mask = temp > 0
+            # policy[mask] = self.density_sa[mask] / temp[mask]
+            temp = self.density_sa.sum(axis = -1, keepdims = True).repeat(self.env.actions_num, -1)
+            mask  = temp > 0
             policy[mask] = self.density_sa[mask] / temp[mask]
+
+            # check policy is valid
+            for h in range(self.env.max_episode_length):
+                for s in range(self.env.states_num):
+                    for a in range(self.env.actions_num):
+                        if policy[h, s, a] > 0:
+                            assert a in self.env.available_actions(s), 'invalid policy'
+
             self.policy = NonStationaryPolicy(env, policy)
 
     def next_action(self, state):
