@@ -116,21 +116,23 @@ class MdpExplore():
 
         if type(policy) is StationaryPolicy:
 
-            v0 = np.zeros(self.env.states_num, self.env.actions_num)
+            v0 = np.zeros((self.env.states_num, self.env.actions_num))
             # initialize with the initial state and corresponding actions
             for act in self.env.available_actions(self.env.init_state):
-                v0[self.env.init_state, :, act] = policy.p[self.env.init_state, act]
+                v0[self.env.init_state, act] = policy.p[self.env.init_state, act]
 
             v = np.array(v0)
-            temp = np.array(v0)
+            temp = np.array(v0)[self.env.init_state]
 
             p_pi = (self.env.get_transition_matrix() *
                     np.expand_dims(policy.p, axis=2)).sum(axis=1)
             assert (np.allclose(p_pi.sum(axis=1), 1, rtol=1e-05, atol=1e-05))
 
             for _ in range(self.env.max_episode_length):
+                v += np.expand_dims(temp, axis=-1) * policy.p
                 temp = p_pi.T @ temp
-                v += temp
+            
+            v = v / v.sum()
 
         elif type(policy) is NonStationaryPolicy:
 
@@ -143,13 +145,6 @@ class MdpExplore():
             temp = np.array(v0)[0].sum(axis = -1)
             
             for i in range(self.env.max_episode_length - 1):
-
-                # check that the policy is valid
-                for s in range(self.env.states_num):
-                    for a in range(self.env.actions_num):
-                        if policy.ps[i, s, a] > 0:
-                            assert a in self.env.available_actions(s), 'invalid policy'
-
                 # p_pi = (self.env.get_transition_matrix() *
                 #         np.expand_dims(policy.ps[i], axis=2)).sum(axis=1)
                 p_pi = (self.env.get_transition_matrix() *
@@ -158,14 +153,6 @@ class MdpExplore():
                 # temp += p_pi.T @ temp
                 temp = p_pi.T @ temp
                 v[i + 1] += np.expand_dims(temp, axis=-1) * policy.ps[i + 1]
-        # d = v / v.sum()
-
-        # check that the density is valid
-        for h in range(self.env.max_episode_length):
-            for s in range(self.env.states_num):
-                for a in range(self.env.actions_num):
-                    if v[h, s, a] > 0:
-                        assert a in self.env.available_actions(s), 'invalid density'
 
         return v
     
