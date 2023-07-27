@@ -122,15 +122,15 @@ class MdpExplore():
                 v0[self.env.init_state, act] = policy.p[self.env.init_state, act]
 
             v = np.array(v0)
-            temp = np.array(v0)[self.env.init_state]
+            temp = np.array(v0).sum(axis = -1)
 
             p_pi = (self.env.get_transition_matrix() *
                     np.expand_dims(policy.p, axis=2)).sum(axis=1)
             assert (np.allclose(p_pi.sum(axis=1), 1, rtol=1e-05, atol=1e-05))
 
             for _ in range(self.env.max_episode_length):
-                v += np.expand_dims(temp, axis=-1) * policy.p
                 temp = p_pi.T @ temp
+                v += np.expand_dims(temp, axis=-1) * policy.p
             
             v = v / v.sum()
 
@@ -142,15 +142,13 @@ class MdpExplore():
                 v0[0, self.env.init_state, act] = policy.ps[0, self.env.init_state, act]
 
             v = np.array(v0)
+            # get marginal state distribution for initial temp
             temp = np.array(v0)[0].sum(axis = -1)
             
             for i in range(self.env.max_episode_length - 1):
-                # p_pi = (self.env.get_transition_matrix() *
-                #         np.expand_dims(policy.ps[i], axis=2)).sum(axis=1)
                 p_pi = (self.env.get_transition_matrix() *
                         np.expand_dims(policy.ps[i], axis=2)).sum(axis=1)
                 assert (np.allclose(p_pi.sum(axis=1), 1, rtol=1e-05, atol=1e-05))
-                # temp += p_pi.T @ temp
                 temp = p_pi.T @ temp
                 v[i + 1] += np.expand_dims(temp, axis=-1) * policy.ps[i + 1]
 
