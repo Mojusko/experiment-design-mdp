@@ -14,7 +14,7 @@ from mdpexplore.policies.tracking_policy import TrackingPolicy
 from mdpexplore.policies.stationary_policy import StationaryPolicy
 from mdpexplore.policies.non_stationary_policy import NonStationaryPolicy
 from mdpexplore.policies.mixture_policy import MixturePolicy
-from mdpexplore.policies.density_policy import DensityPolicy, ActionDensityPolicy
+from mdpexplore.policies.density_policy import DensityPolicy, MarginalDensityPolicy
 from mdpexplore.policies.policy_generator import PolicyGenerator
 from mdpexplore.functionals.reward_functional import RewardFunctional
 
@@ -274,7 +274,7 @@ class MdpExplore():
                 summarized_policy = SummarizedPolicyType(
                     self.env, self._density_oracle(), self._density_oracle(actions=True)
                 )
-            elif SummarizedPolicyType == ActionDensityPolicy:
+            elif SummarizedPolicyType == MarginalDensityPolicy:
                 summarized_policy = SummarizedPolicyType(
                     self.env, self._density_oracle(), self._density_oracle(actions=True)
                 )

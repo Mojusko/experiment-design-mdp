@@ -42,7 +42,7 @@ class DensityPolicy(SummarizedPolicy):
     def next_action(self, state):
         return self.policy.next_action(state)
 
-class ActionDensityPolicy(SummarizedPolicy):
+class MarginalDensityPolicy(SummarizedPolicy):
     def __init__(self, env: DiscreteEnv, density: np.ndarray, density_sa: np.ndarray) -> None:
         super().__init__(env)
         self.density = density
