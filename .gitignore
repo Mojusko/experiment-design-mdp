@@ -15,3 +15,7 @@
 *.pyc
 *.pt
 *.p
+*.gif
+*.npy
+*.DS_Store
+*.pyc
