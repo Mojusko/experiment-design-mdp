@@ -65,7 +65,7 @@ me = MdpExplore(
     objective=design,
     solver=DP,
     step=None,
-    method='frank-wolfe',
+    method='cvxpy',
     verbosity=args.verbosity,
 )
 

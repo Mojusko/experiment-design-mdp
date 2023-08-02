@@ -78,19 +78,53 @@ class AdaptiveDesignD(RewardFunctional):
         else:
             return np.linalg.slogdet(z + self.lambd / episodes)[1]
 
+    def eval_basic_cvxpy(self,
+                   emissions: np.ndarray,
+                   distribution: cp.Variable,
+                   unrolls: List[np.ndarray],
+                   episodes: int,
+                   ) -> float:
+        """
+
+        """
+
+        if len(unrolls) > 0:
+            aggregated_density = self.build_density_from_trajectories(unrolls)
+        else:
+            aggregated_density = np.zeros((self.env.max_episode_length, self.env.states_num, self.env.actions_num))
+
+        alpha = len(unrolls) / episodes
+        distribution = cp.sum(distribution, axis = 1)
+        aggregated_density = np.sum(np.sum(aggregated_density, axis = 2), axis = 0)
+
+        new_z = emissions.T @ cp.diag(distribution / (self.Sigma ** 2)) @ emissions
+        agg_z = emissions.T @ np.diag(aggregated_density / (self.Sigma ** 2)) @ emissions
+
+        if self.uniform_alpha:
+            z = 1. / episodes * new_z + \
+                alpha * agg_z
+        else:
+            z = (1 - alpha) * new_z + \
+                alpha * agg_z
+        return z
+
     def get_eval_cvxpy(self, 
              emissions: np.ndarray,
              distribution: cp.Variable,
              unrolls: List[np.ndarray],
              episodes: int,
              )->cp.Expression:
+
+        distribution_summed = 0
+        for h in range(self.env.max_episode_length):
+            distribution_summed += distribution[h]
         
         alpha = len(unrolls) / episodes
-        z = self.eval_basic(emissions, distribution, unrolls, episodes)
+        z = self.eval_basic_cvxpy(emissions, distribution_summed, unrolls, episodes)
         if not self.scale_reg:
-            return cp.log_det(z + (1 - alpha) * self.lambd)[1]
+            return cp.log_det(z + (1 - alpha) * self.lambd)
         else:
-            return cp.log_det(z + self.lambd / episodes)[1]
+            return cp.log_det(z + self.lambd / episodes)
         
     def eval_full(self,
                   emissions: np.ndarray,

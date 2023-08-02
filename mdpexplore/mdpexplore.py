@@ -298,29 +298,43 @@ class MdpExplore():
         # TODO: finish        
         
         # initialize the objective function
-        if hasattr(self.objective)=="get_eval_cvxpy":
-            v = cp.Variable((self.env.max_episode_length, self.env.states_num, self.env.actions_num))
-            objective = self.objective.get_eval_cvxpy(self.emissions, v, self.visitations, self.episodes)
-            constraints = [v >= 0, v <= 1, v.sum(axis=1) == 1]
+        if hasattr(self.objective, "get_eval_cvxpy"):
+            v = {}
+            for h in range(self.env.max_episode_length):
+                v[h] = cp.Variable((self.env.states_num, self.env.actions_num))
+            objective = cp.Maximize(self.objective.get_eval_cvxpy(self.emissions, v, self.visitations, self.episodes))
+            constraints = []
+            # the initial marginal density should be 1 in the initial state and zero elsewhere
+            constraints += [cp.sum(v[0][self.env.init_state, :]) == 1]
+            for h in range(self.env.max_episode_length):
+                constraints += [v[h] >= 0, v[h] <= 1, cp.sum(v[h]) == 1]
             
-            # here we greate a state-action visitiation polytope 
+            # here we create a state-action visitation poly-tope 
             # TODO: this is not checked 
             P = self.env.get_transition_matrix()
             print (P.shape)
             for i in range(self.env.max_episode_length-1):
-                constraints += [cp.sum(v[i+1], axis = 2) == cp.sum(v[i] @ P, axis = 1)]
+                for s in range(self.env.states_num):
+                    constraints += [cp.sum(v[i+1][s]) == cp.sum(cp.multiply(v[i], P[:, :, s]))]
         
-            if verbose:
-                # TODO: add verbose solutiong to the solver 
-                pass 
-            else:
-                prob = cp.Problem(objective, constraints)
-            result = prob.solve(solver = cp.MOSEK)
-            v_val = v.value
+            prob = cp.Problem(objective, constraints)
+            # result = prob.solve(solver = cp.MOSEK, verbose = verbose)
+            result = prob.solve(verbose = verbose)
+            # v_val = v.value
+
+            v_val = np.zeros((self.env.max_episode_length, self.env.states_num, self.env.actions_num))
+            for h in range(self.env.max_episode_length):
+                v_val_h = v[h].value
+                # round anything below 1e-5 to 0
+                v_val_h[v_val_h < 1e-5] = 0
+                # normalize
+                v_val_h = v_val_h / v_val_h.sum()
+                # add to the array
+                v_val[h] = v_val_h
 
             # Now create a density policy 
-            # TODO: check 
-            new_policy = DensityPolicy(self.env, v_val, v_val.sum(axis = 2))
+            # TODO: this is not compatibly with policy summarization, as it tries to summarize the policy twice
+            new_policy = DensityPolicy(self.env, v_val.sum(axis = -1), v_val)
             self.policies.append(new_policy)
 
         else:
@@ -432,6 +446,12 @@ class MdpExplore():
         if method == 'frank-wolfe':
             self._optimize_frank_wolfe(
                 num_components=num_components,
+                gap=accuracy,
+                verbose=self.verbosity > 2,
+            )
+        
+        elif method == 'cvxpy':
+            self._optimize_cvxpy_solver(
                 gap=accuracy,
                 verbose=self.verbosity > 2,
             )
