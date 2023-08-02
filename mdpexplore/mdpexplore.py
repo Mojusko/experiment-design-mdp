@@ -295,18 +295,34 @@ class MdpExplore():
             gap = None,
             verbose = False
     ):
-        # initialize density as a variable 
-        v = np.zeros(self.env.max_episode_length, self.env.states_num, self.env.actions_num)
+        # TODO: finish        
         
         # initialize the objective function
         if hasattr(self.objective)=="get_eval_cvxpy":
+            v = cp.Variable((self.env.max_episode_length, self.env.states_num, self.env.actions_num))
             objective = self.objective.get_eval_cvxpy(self.emissions, v, self.visitations, self.episodes)
             constraints = [v >= 0, v <= 1, v.sum(axis=1) == 1]
             
+            # here we greate a state-action visitiation polytope 
+            # TODO: this is not checked 
             P = self.env.get_transition_matrix()
             print (P.shape)
             for i in range(self.env.max_episode_length-1):
                 constraints += [cp.sum(v[i+1], axis = 2) == cp.sum(v[i] @ P, axis = 1)]
+        
+            if verbose:
+                # TODO: add verbose solutiong to the solver 
+                pass 
+            else:
+                prob = cp.Problem(objective, constraints)
+            result = prob.solve(solver = cp.MOSEK)
+            v_val = v.value
+
+            # Now create a density policy 
+            # TODO: check 
+            new_policy = DensityPolicy(self.env, v_val, v_val.sum(axis = 2))
+            self.policies.append(new_policy)
+
         else:
             raise NotImplementedError("The reward function does not have cvxpy interface implemented. Use different solver.")
         
