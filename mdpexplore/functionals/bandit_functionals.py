@@ -5,7 +5,7 @@ from typing import List, Union
 from abc import ABC, abstractmethod
 from mdpexplore.env.discrete_env import Environment
 from mdpexplore.functionals.reward_functional import RewardFunctional
-
+import cvxpy as cp 
 
 
 
@@ -24,6 +24,9 @@ class DesignRewardBandit(RewardFunctional):
                   emissions: np.ndarray,
                   distribution: np.ndarray,
                   episodes: int = 0) -> float:
+        return distribution @ self.mu
+    
+    def eval_cvxpy(self, emissions, distribution, visitations, episodes):
         return distribution @ self.mu
 
 
@@ -215,6 +218,66 @@ class DesignBestArmLinearBanditNoDenominator(RewardFunctional):
             V_eta_inv = np.linalg.inv(V_eta + self.lambd * np.identity(V_eta.shape[0]))
 
         _, _, val_star = self._estimate_building_blocks(emissions, V_eta_inv)
+
+        if self.mix_objectives:
+            return - (1 - self.mix_ratio) * val_star + self.mix_ratio * self.ucbs @ distribution
+        else:
+            return val_star
+
+    def get_eval_cvxpy(self, emissions, distribution, unrolls, episodes):
+        alpha = len(unrolls) / episodes
+
+        # calculate the aggregated action state
+        aggregated_unrolls = 0
+        if len(unrolls) > 0:
+            # for t in range(len(unrolls)):
+            #     aggregated_unrolls += unrolls[t]
+            # aggregated_unrolls = aggregated_unrolls / len(unrolls)
+            aggregated_unrolls = self.build_density_from_trajectories(unrolls)
+        else:
+            aggregated_unrolls = np.zeros((self.env.max_episode_length, self.env.states_num, self.env.actions_num))
+        
+        distribution_summed = 0
+        for h in range(self.env.max_episode_length):
+            distribution_summed += distribution[h]
+        distribution = cp.sum(distribution_summed, axis = 1)
+        
+        aggregated_unrolls = np.sum(np.sum(aggregated_unrolls, axis = 2), axis = 0)
+
+        new_V_eta = emissions.T @ cp.diag(distribution / (self.sigma ** 2)) @ emissions
+        agg_V_eta = np.multiply(emissions.T, aggregated_unrolls / (self.sigma ** 2)) @ emissions
+
+        if self.uniform_alpha:
+            V_eta = 1. / episodes * new_V_eta + \
+                alpha * agg_V_eta
+        else:
+            V_eta = (1 - alpha) * new_V_eta + \
+                alpha * agg_V_eta
+
+        if not self.scale_reg:
+            V_eta = V_eta + (1 - alpha) * self.lambd * np.identity(V_eta.shape[0])
+        else:
+            V_eta = V_eta + self.lambd * np.identity(V_eta.shape[0])
+
+        restriction_mask = self._restrict_best_action_space(emissions)
+        restricted_action_space = emissions[restriction_mask]
+        n, m = restricted_action_space.shape
+
+        arr1_reshaped = restricted_action_space.reshape(n, 1, m)
+        arr2_reshaped = restricted_action_space.reshape(1, n, m)
+        diffs = arr1_reshaped - arr2_reshaped
+        diffs = diffs.reshape((-1, diffs.shape[-1]))
+
+        # Restrict diff UCBs and LCBs
+        restriction_mask_2d = np.outer(restriction_mask, restriction_mask)
+        restricted_diff_ucbs = self.diff_ucbs[restriction_mask_2d].reshape(-1)
+        restricted_diff_lcbs = self.diff_lcbs[restriction_mask_2d].reshape(-1)
+
+        # take the mean instead of the max
+        nominators = cp.matrix_frac(diffs.T, V_eta) / diffs.shape[0]
+        val_star = cp.max(nominators)
+
+        # _, _, val_star = self._estimate_building_blocks(emissions, V_eta_inv)
 
         if self.mix_objectives:
             return - (1 - self.mix_ratio) * val_star + self.mix_ratio * self.ucbs @ distribution

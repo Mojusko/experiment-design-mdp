@@ -7,9 +7,8 @@ from mdpexplore.env.discrete_env import DiscreteEnv
 
 
 class DensityPolicy(SummarizedPolicy):
-    def __init__(self, env: DiscreteEnv, density: np.ndarray, density_sa: np.ndarray) -> None:
+    def __init__(self, env: DiscreteEnv, density_sa: np.ndarray) -> None:
         super().__init__(env)
-        self.density = density
         self.density_sa = density_sa
 
         # check density shape to determine if policy is stationary or not: density_sa has shape (S,A) or (H, S, A)
@@ -36,9 +35,9 @@ class DensityPolicy(SummarizedPolicy):
         return self.policy.next_action(state)
 
 class MarginalDensityPolicy(SummarizedPolicy):
-    def __init__(self, env: DiscreteEnv, density: np.ndarray, density_sa: np.ndarray) -> None:
+    def __init__(self, env: DiscreteEnv, density_sa: np.ndarray) -> None:
         super().__init__(env)
-        self.density = density
+        self.density = density_sa.sum(axis = -1)
         self.density_sa = density_sa
 
         # check density shape to determine if policy is stationary or not: density_sa has shape (S,A) or (H, S, A)

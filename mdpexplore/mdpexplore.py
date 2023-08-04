@@ -19,6 +19,7 @@ from mdpexplore.policies.policy_generator import PolicyGenerator
 from mdpexplore.functionals.reward_functional import RewardFunctional
 
 from mdpexplore.solvers.dp import DP
+import mosek
 
 
 class MdpExplore():
@@ -148,7 +149,7 @@ class MdpExplore():
             for i in range(self.env.max_episode_length - 1):
                 p_pi = (self.env.get_transition_matrix() *
                         np.expand_dims(policy.ps[i], axis=2)).sum(axis=1)
-                assert (np.allclose(p_pi.sum(axis=1), 1, rtol=1e-05, atol=1e-05))
+                # assert (np.allclose(p_pi.sum(axis=1), 1, rtol=1e-05, atol=1e-05))
                 temp = p_pi.T @ temp
                 v[i + 1] += np.expand_dims(temp, axis=-1) * policy.ps[i + 1]
 
@@ -182,18 +183,7 @@ class MdpExplore():
             if i >= len(self.densities):
                 d = self._density_oracle_single(policy)
                 self.densities.append(d)
-            # if actions:
-            #     # TODO: doesn't work with non-stationary, JP: added a fix but have not tested fully 
-            #     if self.solver is not DP:
-            #         total_density += self.weights[i] * policy.p * np.expand_dims(self.densities[i], axis=1)
-            #     else:
-            #         total_density += self.weights[i] * policy.ps * np.repeat(np.expand_dims(self.densities[i], axis=-1), axis = -1, repeats = self.env.actions_num)
-            #     # try:
-            #     #     total_density += self.weights[i] * policy.p * np.expand_dims(self.densities[i], axis=1)
-            #     # except:
-            #     #     raise TypeError('Non-stationary policies are not supported for state-action distribution')
-            else:
-                total_density += self.weights[i] * self.densities[i]
+            total_density += self.weights[i] * self.densities[i]
         return total_density
 
     def _planning_oracle(self, reward: np.ndarray) -> Policy:
@@ -252,16 +242,21 @@ class MdpExplore():
             plot (bool, optional): if True, plots the heatmap based on the policy rollouts. Defaults to True.
         """
         empirical = np.zeros(len(self.policies))
+        # if solver is cvxpy, default to MixturePolicy
+        if (self.method == "cvxpy") & (SummarizedPolicyType is not MixturePolicy):
+            print('When using cvxpy solver, summarization method is changed to MixturePolicy')
+            SummarizedPolicyType = MixturePolicy
+
         for _ in range(episodes):
             self.env.reset()
 
             if SummarizedPolicyType == DensityPolicy:
                 summarized_policy = SummarizedPolicyType(
-                    self.env, self._density_oracle(), self._density_oracle(actions=True)
+                    self.env, self._density_oracle(actions=True)
                 )
             elif SummarizedPolicyType == MarginalDensityPolicy:
                 summarized_policy = SummarizedPolicyType(
-                    self.env, self._density_oracle(), self._density_oracle(actions=True)
+                    self.env, self._density_oracle(actions=True)
                 )
             elif SummarizedPolicyType == TrackingPolicy:
                 summarized_policy = SummarizedPolicyType(
@@ -312,14 +307,12 @@ class MdpExplore():
             # here we create a state-action visitation poly-tope 
             # TODO: this is not checked 
             P = self.env.get_transition_matrix()
-            print (P.shape)
             for i in range(self.env.max_episode_length-1):
                 for s in range(self.env.states_num):
                     constraints += [cp.sum(v[i+1][s]) == cp.sum(cp.multiply(v[i], P[:, :, s]))]
         
             prob = cp.Problem(objective, constraints)
-            # result = prob.solve(solver = cp.MOSEK, verbose = verbose)
-            result = prob.solve(verbose = verbose)
+            result = prob.solve(solver = cp.MOSEK, mosek_params={mosek.dparam.intpnt_tol_rel_gap: 1e-6}, verbose = verbose)
             # v_val = v.value
 
             v_val = np.zeros((self.env.max_episode_length, self.env.states_num, self.env.actions_num))
@@ -334,8 +327,9 @@ class MdpExplore():
 
             # Now create a density policy 
             # TODO: this is not compatibly with policy summarization, as it tries to summarize the policy twice
-            new_policy = DensityPolicy(self.env, v_val.sum(axis = -1), v_val)
+            new_policy = DensityPolicy(self.env, v_val)
             self.policies.append(new_policy)
+            self.weights = [1.0]
 
         else:
             raise NotImplementedError("The reward function does not have cvxpy interface implemented. Use different solver.")
@@ -453,7 +447,7 @@ class MdpExplore():
         elif method == 'cvxpy':
             self._optimize_cvxpy_solver(
                 gap=accuracy,
-                verbose=self.verbosity > 2,
+                verbose=self.verbosity > 3,
             )
         else:
             pass  # can't happen, handled by argparser

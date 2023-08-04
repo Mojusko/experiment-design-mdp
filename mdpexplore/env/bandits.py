@@ -109,3 +109,6 @@ class Bandits_Left_Right(DiscreteEnv, ABC):
 
     def reset(self) -> None:
         self.state = self.init_state
+    
+    def get_dim(self):
+        return self.action_space.shape[1]
