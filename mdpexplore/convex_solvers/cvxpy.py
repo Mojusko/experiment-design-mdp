@@ -10,6 +10,7 @@ class CVXPY(ConvexSolverBase):
     def __init__(self, env, objective, verbosity = 0, accuracy = 1e-4) -> None:
         super().__init__(env, objective, verbosity = verbosity, accuracy = accuracy)
         self.type = 'cvxpy'
+        self.stationary = False
     
     def optimize(self, emissions, visitations, episodes) -> None: 
         # initialize the objective function

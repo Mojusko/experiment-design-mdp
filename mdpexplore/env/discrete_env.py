@@ -9,6 +9,7 @@ class Environment(ABC):
 class DiscreteEnv(Environment):
     def __init__(self, init_state) -> None:
         super().__init__()
+        self.type = 'discrete'
         self.init_state = init_state
         self.state = init_state
         self.states_num = None

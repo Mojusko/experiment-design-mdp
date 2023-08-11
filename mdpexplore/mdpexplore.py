@@ -11,7 +11,7 @@ from mdpexplore.policies.density_policy import DensityPolicy, MarginalDensityPol
 from mdpexplore.functionals.reward_functional import RewardFunctional
 from mdpexplore.convex_solvers.convex_solvers_base import ConvexSolverBase
 from mdpexplore.feedback.feedback_base import Feedback, EmptyFeedback
-
+from mdpexplore.utils.density_estimators import TabularDensity
 
 class MdpExplore():
     def __init__(
@@ -40,6 +40,12 @@ class MdpExplore():
         self.verbosity = verbosity
         self.convex_solver.verbosity = verbosity
         self.feedback = feedback
+
+        # density estimator
+        if self.env.type == 'discrete':
+            self.density_estimator = TabularDensity(self.env, self.objective)
+        else:
+            raise NotImplementedError
 
         self.densities = []
         self.objective_values_baseline = []
@@ -86,9 +92,9 @@ class MdpExplore():
         Returns:
             np.ndarray: S x A (stationary) or H x S x A (non-stationary) array with density for each state
         """
-        return self.convex_solver._density_oracle_single(policy)
+        return self.density_estimator.density_oracle_single(policy)
     
-    def _density_oracle(self, actions: bool = True) -> np.ndarray:
+    def _density_oracle(self) -> np.ndarray:
         """Computes the combined state (or state-action) distribution induced by the saved policies
 
         Args:
@@ -100,7 +106,7 @@ class MdpExplore():
         Raises:
             TypeError: if the saved policies are non-stationary
         """
-        return self.convex_solver._density_oracle(actions)
+        return self.density_estimator.density_oracle(self.policies, self.weights, self.densities, self.convex_solver.stationary)
 
     def evaluate(
             self,
@@ -126,11 +132,11 @@ class MdpExplore():
 
             if SummarizedPolicyType == DensityPolicy:
                 summarized_policy = SummarizedPolicyType(
-                    self.env, self._density_oracle(actions=True)
+                    self.env, self._density_oracle()
                 )
             elif SummarizedPolicyType == MarginalDensityPolicy:
                 summarized_policy = SummarizedPolicyType(
-                    self.env, self._density_oracle(actions=True)
+                    self.env, self._density_oracle()
                 )
             elif SummarizedPolicyType == TrackingPolicy:
                 summarized_policy = SummarizedPolicyType(

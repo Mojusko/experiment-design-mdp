@@ -6,6 +6,7 @@ from mdpexplore.policies.non_stationary_policy import NonStationaryPolicy
 from mdpexplore.policies.stationary_policy import StationaryPolicy
 from mdpexplore.solvers.solver_base import DiscreteSolver
 from mdpexplore.solvers.dp import DP
+from mdpexplore.utils.density_estimators import TabularDensity
 from scipy.optimize import minimize_scalar
 from autograd import grad, hessian
 import numpy.linalg as la
@@ -21,6 +22,12 @@ class FrankWolfe(ConvexSolverBase):
         self.num_components = num_components
         self.step = step
         self.type = 'frank-wolfe'
+        
+        # density estimator
+        if self.env.type == 'discrete':
+            self.density_estimator = TabularDensity(self.env, self.objective)
+        else:
+            raise NotImplementedError
     
     def _reward_fn_gradient(self, distribution: np.ndarray, emissions, visitations, episodes) -> np.ndarray:
         """Computes the reward functional differentiated wrt to the state distribution
@@ -81,7 +88,7 @@ class FrankWolfe(ConvexSolverBase):
         while counter < self.num_components and empirical_gap > gap:
 
             # calculate the current density
-            density = self._density_oracle()
+            density = self.density_estimator.density_oracle(self.policies, self.weights, self.densities, self.stationary)
 
             # gradient of the reward
             reward = self._reward_fn_gradient(density, emissions, visitations, episodes)
@@ -94,7 +101,7 @@ class FrankWolfe(ConvexSolverBase):
             hess_min = 0
             hess_max = 0
             # new base density to be added
-            new_density = self._density_oracle_single(new_policy)
+            new_density = self.density_estimator.density_oracle_single(new_policy)
 
             if self.step == "line-search" and self.num_components > 1:
                 # line search to determine optimal step-size
