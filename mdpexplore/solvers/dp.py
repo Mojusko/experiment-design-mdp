@@ -14,7 +14,7 @@ class DP(DiscreteSolver):
         transition_matrix = self.env.get_transition_matrix()
         
         actions = np.zeros((self.env.max_episode_length + 1, self.env.states_num), dtype=int)
-        values = np.zeros((self.env.max_episode_length + 1, self.env.states_num, self.env.actions_num))
+        values = np.ones((self.env.max_episode_length + 1, self.env.states_num, self.env.actions_num)) * -1e20
 
         actions[self.env.max_episode_length, :] = 0 # pointing to the 'wait' action
 

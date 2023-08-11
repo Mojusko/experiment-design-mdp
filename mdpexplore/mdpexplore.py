@@ -2,24 +2,14 @@ from typing import Callable, Type, Union, Tuple
 from datetime import datetime
 import os
 import autograd.numpy as np
-import cvxpy as cp 
-from autograd import grad, hessian
 import matplotlib.pyplot as plt
-from scipy.optimize import minimize_scalar
-import numpy.linalg as la
-from mdpexplore.solvers.solver_base import DiscreteSolver
 from mdpexplore.env.discrete_env import DiscreteEnv
 from mdpexplore.policies.policy_base import Policy, SummarizedPolicy
 from mdpexplore.policies.tracking_policy import TrackingPolicy
-from mdpexplore.policies.stationary_policy import StationaryPolicy
-from mdpexplore.policies.non_stationary_policy import NonStationaryPolicy
 from mdpexplore.policies.mixture_policy import MixturePolicy
 from mdpexplore.policies.density_policy import DensityPolicy, MarginalDensityPolicy
-from mdpexplore.policies.policy_generator import PolicyGenerator
 from mdpexplore.functionals.reward_functional import RewardFunctional
-
-from mdpexplore.solvers.dp import DP
-import mosek
+from mdpexplore.convex_solvers.convex_solvers_base import ConvexSolverBase
 
 
 class MdpExplore():
@@ -27,12 +17,9 @@ class MdpExplore():
             self,
             env: DiscreteEnv,
             objective: RewardFunctional,
-            solver: Type[DiscreteSolver],
-            step: Union[float, str] = None,
-            method: str = 'frank-wolfe',
+            convex_solver: Type[ConvexSolverBase],
             verbosity: int = 0,
             optimize_repetitions: bool = False,
-            initial_policy: bool = False,
             callback: Union[Callable, None] = None,
     ) -> None:
 
@@ -48,21 +35,10 @@ class MdpExplore():
         """
         self.env = env
         self.objective = objective
-        self.solver = solver
-        self.step = step
-        self.method = method
+        self.convex_solver = convex_solver
         self.verbosity = verbosity
+        self.convex_solver.verbosity = verbosity
         self.callback = callback
-
-        self.policy_generator = PolicyGenerator(self.env)
-        self.initial_policy = initial_policy
-
-        if self.initial_policy:
-            self.policies = [self.policy_generator.uniform_policy()]
-            self.weights = [1]
-        else:
-            self.policies = []
-            self.weights = []
 
         self.densities = []
         self.objective_values_baseline = []
@@ -79,17 +55,12 @@ class MdpExplore():
         """Resets the max-ent solver to its initial state
         """
         self.env.reset()
+        self.convex_solver.reset()
         # reset the episode visitations
         self.state_visitations = []
         self.action_visitations = []
-        if self.initial_policy:
-            self.policies = [self.policy_generator.uniform_policy()]
-            self.weights = [1]
-        else:
-            self.policies = []
-            self.weights = []
 
-        self.densities = []
+        # self.densities = []
         self.trajectory = []
         if reset_visitations:
             # reset visitations if needed
@@ -114,48 +85,8 @@ class MdpExplore():
         Returns:
             np.ndarray: S x A (stationary) or H x S x A (non-stationary) array with density for each state
         """
-
-        if type(policy) is StationaryPolicy:
-
-            v0 = np.zeros((self.env.states_num, self.env.actions_num))
-            # initialize with the initial state and corresponding actions
-            for act in self.env.available_actions(self.env.init_state):
-                v0[self.env.init_state, act] = policy.p[self.env.init_state, act]
-
-            v = np.array(v0)
-            temp = np.array(v0).sum(axis = -1)
-
-            p_pi = (self.env.get_transition_matrix() *
-                    np.expand_dims(policy.p, axis=2)).sum(axis=1)
-            assert (np.allclose(p_pi.sum(axis=1), 1, rtol=1e-05, atol=1e-05))
-
-            for _ in range(self.env.max_episode_length):
-                temp = p_pi.T @ temp
-                v += np.expand_dims(temp, axis=-1) * policy.p
-            
-            v = v / v.sum()
-
-        elif type(policy) is NonStationaryPolicy:
-
-            v0 = np.zeros((self.env.max_episode_length, self.env.states_num, self.env.actions_num))
-            # initialize with the initial state and corresponding actions
-            for act in self.env.available_actions(self.env.init_state):
-                v0[0, self.env.init_state, act] = policy.ps[0, self.env.init_state, act]
-
-            v = np.array(v0)
-            # get marginal state distribution for initial temp
-            temp = np.array(v0)[0].sum(axis = -1)
-            
-            for i in range(self.env.max_episode_length - 1):
-                p_pi = (self.env.get_transition_matrix() *
-                        np.expand_dims(policy.ps[i], axis=2)).sum(axis=1)
-                # assert (np.allclose(p_pi.sum(axis=1), 1, rtol=1e-05, atol=1e-05))
-                temp = p_pi.T @ temp
-                v[i + 1] += np.expand_dims(temp, axis=-1) * policy.ps[i + 1]
-
-        return v
+        return self.convex_solver._density_oracle_single(policy)
     
-
     def _density_oracle(self, actions: bool = True) -> np.ndarray:
         """Computes the combined state (or state-action) distribution induced by the saved policies
 
@@ -168,61 +99,7 @@ class MdpExplore():
         Raises:
             TypeError: if the saved policies are non-stationary
         """
-
-        # if the first policy is non-stationary, we define a total density with time index
-        if self.solver is DP:
-            total_density = np.zeros((self.env.max_episode_length, self.env.states_num))
-        else:
-            total_density = np.zeros(self.env.states_num)
-
-        if actions:
-            # if actions are needed expand dimension
-            total_density = np.repeat(np.expand_dims(total_density, axis = -1), axis = -1, repeats = self.env.actions_num)
-
-        for i, policy in enumerate(self.policies):
-            if i >= len(self.densities):
-                d = self._density_oracle_single(policy)
-                self.densities.append(d)
-            total_density += self.weights[i] * self.densities[i]
-        return total_density
-
-    def _planning_oracle(self, reward: np.ndarray) -> Policy:
-        """Computes the optimal policy given a reward function and internal environment
-
-        Args:
-            reward (np.ndarray): reward function for each state
-
-        Returns:
-            Policy: policy solving the saved environment with the given reward function
-        """
-        solver = self.solver(self.env, reward)
-        return solver.solve()
-
-    def _reward_fn_gradient(self, distribution: np.ndarray) -> np.ndarray:
-        """Computes the reward functional differentiated wrt to the state distribution
-
-        Args:
-            distribution (np.ndarray): state distribution to compute the reward function
-
-        Returns:
-            np.ndarray: gradient of the functional wrt to the state distribution - i.e. the reward function
-        """
-        grad_fn = getattr(self.objective, "gradient", None)
-        if callable(grad_fn):
-            return grad_fn(self.emissions, distribution)
-
-        if self.objective.get_type() == "adaptive":
-            grad_fn = grad(lambda d: self.objective.eval(self.emissions, d, self.visitations, self.episodes))
-        else:
-            grad_fn = grad(lambda d: self.objective.eval(self.emissions, d, self.episodes))
-        return grad_fn(distribution)
-
-    def _reward_fn_hessian(self, distribution: np.array)->np.array:
-        if self.objective.get_type() == "adaptive":
-            hes_fn = hessian(lambda d: self.objective.eval(self.emissions, d, self.visitations, self.episodes))
-        else:
-            hes_fn = hessian(lambda d: self.objective.eval(self.emissions, d, self.episodes))
-        return hes_fn(distribution)
+        return self.convex_solver._density_oracle(actions)
 
     def _update_data(self):
         if self.callback is not None:
@@ -243,7 +120,7 @@ class MdpExplore():
         """
         empirical = np.zeros(len(self.policies))
         # if solver is cvxpy, default to MixturePolicy
-        if (self.method == "cvxpy") & (SummarizedPolicyType is not MixturePolicy):
+        if (self.convex_solver.type == "cvxpy") & (SummarizedPolicyType is not MixturePolicy):
             print('When using cvxpy solver, summarization method is changed to MixturePolicy')
             SummarizedPolicyType = MixturePolicy
 
@@ -281,182 +158,17 @@ class MdpExplore():
             
             self._update_data()
             # update the visitations
-            # self.visitations.append(self.env.visitations / self.env.visitations.sum())
             self.visitations.append((self.state_visitations, self.action_visitations))
-
-
-    def _optimize_cvxpy_solver(
-            self,
-            gap = None,
-            verbose = False
-    ):
-        # TODO: finish        
-        
-        # initialize the objective function
-        if hasattr(self.objective, "get_eval_cvxpy"):
-            v = {}
-            for h in range(self.env.max_episode_length):
-                v[h] = cp.Variable((self.env.states_num, self.env.actions_num))
-            objective = cp.Maximize(self.objective.get_eval_cvxpy(self.emissions, v, self.visitations, self.episodes))
-            constraints = []
-            # the initial marginal density should be 1 in the initial state and zero elsewhere
-            constraints += [cp.sum(v[0][self.env.init_state, :]) == 1]
-            for h in range(self.env.max_episode_length):
-                constraints += [v[h] >= 0, v[h] <= 1, cp.sum(v[h]) == 1]
-            
-            # here we create a state-action visitation poly-tope 
-            # TODO: this is not checked 
-            P = self.env.get_transition_matrix()
-            for i in range(self.env.max_episode_length-1):
-                for s in range(self.env.states_num):
-                    constraints += [cp.sum(v[i+1][s]) == cp.sum(cp.multiply(v[i], P[:, :, s]))]
-        
-            prob = cp.Problem(objective, constraints)
-            result = prob.solve(solver = cp.MOSEK, mosek_params={mosek.dparam.intpnt_tol_rel_gap: 1e-6}, verbose = verbose)
-            # v_val = v.value
-
-            v_val = np.zeros((self.env.max_episode_length, self.env.states_num, self.env.actions_num))
-            for h in range(self.env.max_episode_length):
-                v_val_h = v[h].value
-                # round anything below 1e-5 to 0
-                v_val_h[v_val_h < 1e-5] = 0
-                # normalize
-                v_val_h = v_val_h / v_val_h.sum()
-                # add to the array
-                v_val[h] = v_val_h
-
-            # Now create a density policy 
-            # TODO: this is not compatibly with policy summarization, as it tries to summarize the policy twice
-            new_policy = DensityPolicy(self.env, v_val)
-            self.policies.append(new_policy)
-            self.weights = [1.0]
-
-        else:
-            raise NotImplementedError("The reward function does not have cvxpy interface implemented. Use different solver.")
         
 
-    def _optimize_frank_wolfe(
-            self,
-            num_components: int,
-            gap=None,
-            verbose=False,
-    ) -> None:
-        """Performs Frank-Wolfe algorithm to maximize the objective function
-
-        Args:
-            num_components (int): limit on number of components to be obtained by the algorithm
-            gap ([type], optional): upper bound on the optimality gap. Defaults to None.
-            verbose (bool, optional): if True, logs optimization progress to terminal. Defaults to True.
+    def optimize(self) -> None:
+        """Optimizes the objective function using the specified method, returns the optimal policies and weights
         """
-
-        # this is to ensure that the first policy has probability 1
-        if self.initial_policy:
-            counter = 1
-        else:
-            counter = 0
-
-        gap = -10e10 if gap is None else gap
-        empirical_gap = 1e10
-
-        while counter < num_components and empirical_gap > gap:
-
-            # calculate the current density
-            density = self._density_oracle()
-
-            # gradient of the reward
-            reward = self._reward_fn_gradient(density)
-            
-            if self.objective.get_type() != "adaptive":
-                self.objective_values_baseline.append(self.objective.eval(self.emissions, density, self.episodes))
-            
-            new_policy = self._planning_oracle(reward)
-            self.policies.append(new_policy)
-            #
-            # hess_min = np.min(np.linalg.eigh(self._reward_fn_hessian(density))[0])
-            # hess_max = np.max(np.linalg.eigh(self._reward_fn_hessian(density))[0])
-            hess_min = 0
-            hess_max = 0
-            # new base density to be added
-            new_density = self._density_oracle_single(new_policy)
-
-            if self.step == "line-search" and num_components > 1:
-                # line search to determine optimal step-size
-
-                def fn(h):
-                    if self.objective.get_type() == "adaptive":
-                        return -self.objective.eval(
-                            self.emissions,
-                            density * (1 - h) + h * new_density,
-                            self.visitations,
-                            self.episodes
-                        )
-                    return -self.objective.eval(
-                        self.emissions,
-                        density * (1 - h) + h * new_density,
-                        self.episodes
-                    )
-
-                res = minimize_scalar(
-                    fn,
-                    bounds=(1e-5, 1. - 1e-5),
-                    method='bounded')
-                step_size = res.x
-
-            elif self.step is not None and isinstance(self.step, float):
-                # fixed step size
-                step_size = self.step
-            else:
-                # greedy simulation
-                step_size = 1.0 / (1 + counter)
-
-            if self.objective.get_type() == "adaptive":
-                objective = self.objective.eval(self.emissions, density, self.visitations, self.episodes)
-            else:
-                objective = self.objective.eval(self.emissions, density, self.episodes)
-
-
-
-            empirical_gap = np.minimum((reward * (new_density - density)).sum(), empirical_gap)
-
-            if verbose:
-                print(f'component: {counter}, gap: {empirical_gap}, objective: {objective}, stepsize: {step_size}, gradient:{la.norm(reward)}, hess_max:{hess_max}, hess_min:{hess_min}')
-            self.weights = [(1 - step_size) * weight for weight in self.weights] + [step_size]
-
-            counter += 1
-
-    def optimize(
-            self,
-            num_components: int,
-            method: str,
-            accuracy: float = None,
-    ) -> None:
-        """Optimizes the objective function using the specified method
-
-        Args:
-            num_components (int): limit on number of components to be obtained by the algorithm
-            method (str): method to be used for optimization (only frank-wolfe available)
-            accuracy (float, optional): optimality gap to be reached. Defaults to None.
-        """
-        if method == 'frank-wolfe':
-            self._optimize_frank_wolfe(
-                num_components=num_components,
-                gap=accuracy,
-                verbose=self.verbosity > 2,
-            )
-        
-        elif method == 'cvxpy':
-            self._optimize_cvxpy_solver(
-                gap=accuracy,
-                verbose=self.verbosity > 3,
-            )
-        else:
-            pass  # can't happen, handled by argparser
+        self.policies, self.weights, self.densities = self.convex_solver.optimize(self.emissions, self.visitations, self.episodes)
 
     def run(
             self,
-            num_components: int,
             episodes: int = 100,
-            accuracy: float = None,
             SummarizedPolicyType: Type[SummarizedPolicy] = MixturePolicy,
             plot: bool = False,
             save_trajectory: Union[str, None] = None,
@@ -482,8 +194,6 @@ class MdpExplore():
 
             self._reset()
             run_objective_values = []
-            aggregate_distribution_states = 0
-            aggregate_distribution_actions = 0
 
             for i in range(episodes):
                 if self.verbosity > 2:
@@ -491,7 +201,7 @@ class MdpExplore():
 
                 self._reset(reset_visitations=False)
 
-                self.optimize(num_components, self.method, accuracy)
+                self.optimize()
 
                 self.evaluate(SummarizedPolicyType, 1)
                 
@@ -515,7 +225,7 @@ class MdpExplore():
         else:
             self._reset()
             self.episodes = episodes
-            self.optimize(num_components, self.method, accuracy)
+            self.optimize()
 
             self.visitations = []
             self.evaluate(SummarizedPolicyType, episodes)

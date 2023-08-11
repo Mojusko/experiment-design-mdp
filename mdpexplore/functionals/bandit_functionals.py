@@ -222,7 +222,7 @@ class DesignBestArmLinearBanditNoDenominator(RewardFunctional):
         if self.mix_objectives:
             return - (1 - self.mix_ratio) * val_star + self.mix_ratio * self.ucbs @ distribution
         else:
-            return val_star
+            return - val_star
 
     def get_eval_cvxpy(self, emissions, distribution, unrolls, episodes):
         alpha = len(unrolls) / episodes
@@ -282,7 +282,7 @@ class DesignBestArmLinearBanditNoDenominator(RewardFunctional):
         if self.mix_objectives:
             return - (1 - self.mix_ratio) * val_star + self.mix_ratio * self.ucbs @ distribution
         else:
-            return val_star
+            return - val_star
 
     def eval_full(self,
                   emissions: np.ndarray,
@@ -299,4 +299,4 @@ class DesignBestArmLinearBanditNoDenominator(RewardFunctional):
         if self.mix_objectives:
             return - (1 - self.mix_ratio) * val_star + self.mix_ratio * self.ucbs @ distribution
         else:
-            return val_star
+            return - val_star
