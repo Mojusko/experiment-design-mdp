@@ -10,6 +10,7 @@ from mdpexplore.policies.mixture_policy import MixturePolicy
 from mdpexplore.policies.density_policy import DensityPolicy, MarginalDensityPolicy
 from mdpexplore.functionals.reward_functional import RewardFunctional
 from mdpexplore.convex_solvers.convex_solvers_base import ConvexSolverBase
+from mdpexplore.feedback.feedback_base import Feedback, EmptyFeedback
 
 
 class MdpExplore():
@@ -20,7 +21,7 @@ class MdpExplore():
             convex_solver: Type[ConvexSolverBase],
             verbosity: int = 0,
             optimize_repetitions: bool = False,
-            callback: Union[Callable, None] = None,
+            feedback: Feedback = EmptyFeedback(),
     ) -> None:
 
         """Class containing components required to run the maximum entropy exploration algorithm
@@ -38,7 +39,7 @@ class MdpExplore():
         self.convex_solver = convex_solver
         self.verbosity = verbosity
         self.convex_solver.verbosity = verbosity
-        self.callback = callback
+        self.feedback = feedback
 
         self.densities = []
         self.objective_values_baseline = []
@@ -101,10 +102,6 @@ class MdpExplore():
         """
         return self.convex_solver._density_oracle(actions)
 
-    def _update_data(self):
-        if self.callback is not None:
-            self.callback(self.trajectory, self.objective)
-
     def evaluate(
             self,
             SummarizedPolicyType: Type[SummarizedPolicy] = MixturePolicy,
@@ -150,13 +147,17 @@ class MdpExplore():
             self.state_visitations.append(self.env.init_state)
             for h in range(self.env.max_episode_length):
                 action = summarized_policy.next_action(self.env.state)
+
+                # feedback the state and action
+                self.feedback.step_single(self.env.state, action)
+
                 next_state = self.env.step(action)
                 self.trajectory.append(next_state)
                 # count episode visitations
                 self.state_visitations.append(next_state)
                 self.action_visitations.append(action)
             
-            self._update_data()
+            self.feedback.step_episode()
             # update the visitations
             self.visitations.append((self.state_visitations, self.action_visitations))
         

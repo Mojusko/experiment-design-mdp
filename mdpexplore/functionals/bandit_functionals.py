@@ -14,20 +14,20 @@ class DesignRewardBandit(RewardFunctional):
     def __init__(self, action_space_size):
         super().__init__()
         # This throws a warning
-        self.mu = np.ones(action_space_size) * np.inf
+        self.ucb = np.ones(action_space_size) * np.inf
         self.type = "adaptive"
 
     def eval(self, emissions, distribution, visitations, episodes):
-        return distribution @ self.mu
+        return distribution @ self.ucb
 
     def eval_full(self,
                   emissions: np.ndarray,
                   distribution: np.ndarray,
                   episodes: int = 0) -> float:
-        return distribution @ self.mu
+        return distribution @ self.ucb
     
     def eval_cvxpy(self, emissions, distribution, visitations, episodes):
-        return distribution @ self.mu
+        return distribution @ self.ucb
 
 
 class DesignBestArmLinearBandit(RewardFunctional):
