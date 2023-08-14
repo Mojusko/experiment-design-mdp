@@ -11,13 +11,13 @@ from mdpexplore.solvers.lp import LP
 from sklearn.cluster import KMeans
 from scipy.linalg import null_space, orth
 from mdpexplore.env.time_chain import TimeChain
-from mdpexplore.policies.density_policy import DensityPolicy
-from mdpexplore.policies.mixture_policy import MixturePolicy
-from mdpexplore.policies.tracking_policy import TrackingPolicy
+from mdpexplore.policies.summary_policies.density_policy import DensityPolicy
+from mdpexplore.policies.summary_policies.mixture_policy import MixturePolicy
+from mdpexplore.policies.summary_policies.tracking_policy import TrackingPolicy
 
-from mdpexplore.policies.average_policy import AveragePolicy
+from mdpexplore.policies.summary_policies.average_policy import AveragePolicy
 from mdpexplore.functionals.reward_functional import DesignBayesD, DesignBayesC, DesignC
-from mdpexplore.policies.density_policy import DensityPolicy
+from mdpexplore.policies.summary_policies.density_policy import DensityPolicy
 from mdpexplore.mdpexplore import MdpExplore
 from scipy.integrate import odeint
 from stpy.helpers.helper import cartesian

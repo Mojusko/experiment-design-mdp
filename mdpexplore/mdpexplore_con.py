@@ -10,10 +10,10 @@ import wandb
 from mdpexplore.solvers.solver_base import DiscreteSolver, ContinuousSolver
 from mdpexplore.env.discrete_env import DiscreteEnv
 from mdpexplore.policies.policy_base import Policy, SummarizedPolicy
-from mdpexplore.policies.stationary_policy import StationaryPolicy
-from mdpexplore.policies.non_stationary_policy import NonStationaryPolicy
-from mdpexplore.policies.mixture_policy import MixturePolicy
-from mdpexplore.policies.density_policy import DensityPolicy
+from mdpexplore.policies.base_policies.stationary_policy import StationaryPolicy
+from mdpexplore.policies.base_policies.non_stationary_policy import NonStationaryPolicy
+from mdpexplore.policies.summary_policies.mixture_policy import MixturePolicy
+from mdpexplore.policies.summary_policies.density_policy import DensityPolicy
 from mdpexplore.policies.policy_generator import ContinuousPolicyGenerator
 from mdpexplore.functionals.reward_functional import *
 from mdpexplore.mdpexplore import MdpExplore

@@ -7,10 +7,10 @@ from mdpexplore.utils.argparser import Parser
 from mdpexplore.functionals.reward_functional import DesignBayesD, DesignD
 from mdpexplore.env.env_builder import EnvBuilder
 from mdpexplore.mdpexplore import MdpExplore
-from mdpexplore.policies.average_policy import AveragePolicy
-from mdpexplore.policies.density_policy import DensityPolicy
-from mdpexplore.policies.mixture_policy import MixturePolicy
-from mdpexplore.policies.tracking_policy import TrackingPolicy
+from mdpexplore.policies.summary_policies.average_policy import AveragePolicy
+from mdpexplore.policies.summary_policies.density_policy import DensityPolicy
+from mdpexplore.policies.summary_policies.mixture_policy import MixturePolicy
+from mdpexplore.policies.summary_policies.tracking_policy import TrackingPolicy
 
 from tqdm.contrib.concurrent import process_map 
 import multiprocessing as mp

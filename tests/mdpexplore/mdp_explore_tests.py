@@ -5,8 +5,8 @@ from mdpexplore.mdpexplore import MdpExplore
 from mdpexplore.functionals.doe_adaptive_functionals import AdaptiveDesignD
 from mdpexplore.convex_solvers.frank_wolfe import FrankWolfe
 
-from mdpexplore.policies.stationary_policy import StationaryPolicy
-from mdpexplore.policies.non_stationary_policy import NonStationaryPolicy
+from mdpexplore.policies.base_policies.stationary_policy import StationaryPolicy
+from mdpexplore.policies.base_policies.non_stationary_policy import NonStationaryPolicy
 
 import pytest
 

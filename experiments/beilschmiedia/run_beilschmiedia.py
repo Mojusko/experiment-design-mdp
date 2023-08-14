@@ -22,11 +22,11 @@ from mdpexplore.solvers.dp import DP
 from sensepy.benchmarks.bels.bels_problem import BeilschmiediaProblem
 from mdpexplore.env.quad_tree_env import QuadTreeGrid
 from mdpexplore.functionals.reward_functional import DesignBayesD, DesignD
-from mdpexplore.policies.density_policy import DensityPolicy
-from mdpexplore.policies.mixture_policy import MixturePolicy
-from mdpexplore.policies.tracking_policy import TrackingPolicy
+from mdpexplore.policies.summary_policies.density_policy import DensityPolicy
+from mdpexplore.policies.summary_policies.mixture_policy import MixturePolicy
+from mdpexplore.policies.summary_policies.tracking_policy import TrackingPolicy
 
-from mdpexplore.policies.average_policy import AveragePolicy
+from mdpexplore.policies.summary_policies.average_policy import AveragePolicy
 from mdpexplore.mdpexplore import MdpExplore
 import argparse
 from tqdm.contrib.concurrent import process_map

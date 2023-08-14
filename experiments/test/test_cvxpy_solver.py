@@ -8,10 +8,10 @@ from mdpexplore.solvers.lp import LP
 from mdpexplore.solvers.dp import DP 
 
 from mdpexplore.env.time_chain import TimeChain
-from mdpexplore.policies.density_policy import DensityPolicy
-from mdpexplore.policies.mixture_policy import MixturePolicy
-from mdpexplore.policies.average_policy import AveragePolicy
-from mdpexplore.policies.density_policy import DensityPolicy
+from mdpexplore.policies.summary_policies.density_policy import DensityPolicy
+from mdpexplore.policies.summary_policies.mixture_policy import MixturePolicy
+from mdpexplore.policies.summary_policies.average_policy import AveragePolicy
+from mdpexplore.policies.summary_policies.density_policy import DensityPolicy
 from mdpexplore.env.grid_worlds import DummyGridWorld
 from mdpexplore.mdpexplore import MdpExplore
 import argparse
@@ -20,10 +20,10 @@ import argparse
 from mdpexplore.solvers.solver_base import DiscreteSolver
 from mdpexplore.env.discrete_env import DiscreteEnv
 from mdpexplore.policies.policy_base import Policy, SummarizedPolicy
-from mdpexplore.policies.stationary_policy import StationaryPolicy
-from mdpexplore.policies.non_stationary_policy import NonStationaryPolicy
-from mdpexplore.policies.mixture_policy import MixturePolicy
-from mdpexplore.policies.density_policy import DensityPolicy
+from mdpexplore.policies.base_policies.stationary_policy import StationaryPolicy
+from mdpexplore.policies.base_policies.non_stationary_policy import NonStationaryPolicy
+from mdpexplore.policies.summary_policies.mixture_policy import MixturePolicy
+from mdpexplore.policies.summary_policies.density_policy import DensityPolicy
 from mdpexplore.policies.policy_generator import PolicyGenerator
 from mdpexplore.functionals.doe_adaptive_functionals import *
 

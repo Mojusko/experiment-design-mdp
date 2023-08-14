@@ -1,9 +1,9 @@
 import argparse
 
 from mdpexplore.functionals.reward_functional import *
-from mdpexplore.policies.average_policy import AveragePolicy
-from mdpexplore.policies.density_policy import DensityPolicy
-from mdpexplore.policies.mixture_policy import MixturePolicy
+from mdpexplore.policies.summary_policies.average_policy import AveragePolicy
+from mdpexplore.policies.summary_policies.density_policy import DensityPolicy
+from mdpexplore.policies.summary_policies.mixture_policy import MixturePolicy
 from mdpexplore.solvers.dp import DP
 from mdpexplore.solvers.lp import LP
 

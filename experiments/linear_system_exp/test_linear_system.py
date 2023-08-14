@@ -5,7 +5,7 @@ from mdpexplore.env.linear_system import LinearSystem
 from mdpexplore.env.linear_system import LinearPolicy
 from mdpexplore.utils.continuous_reward_functionals import ContinuousDesignBayesD
 from mdpexplore.solvers.gradient import GradientSolver
-from mdpexplore.policies.mixture_policy import MixturePolicy
+from mdpexplore.policies.summary_policies.mixture_policy import MixturePolicy
 #from stpy.embeddings.embedding import HermiteEmbedding
 from mdpexplore.utils.embedding import HermiteEmbedding, Embedding
 

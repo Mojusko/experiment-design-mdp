@@ -3,8 +3,8 @@ import autograd.numpy as np
 from mdpexplore.env.discrete_env import DiscreteEnv
 from mdpexplore.env.linear_system import ContinuousEnv
 
-from mdpexplore.policies.stationary_policy import StationaryPolicy
-from mdpexplore.policies.linear_policy import LinearPolicy
+from mdpexplore.policies.base_policies.stationary_policy import StationaryPolicy
+from mdpexplore.policies.base_policies.linear_policy import LinearPolicy
 
 class PolicyGenerator():
     # TODO: add a constrained policy?

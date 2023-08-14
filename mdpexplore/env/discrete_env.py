@@ -16,6 +16,7 @@ class DiscreteEnv(Environment):
         self.actions_num = None
         self.visitations = None
         self.max_episode_length = None
+        self.h = 0
     
     @abstractmethod
     def available_actions(self, state):
@@ -60,3 +61,4 @@ class DiscreteEnv(Environment):
     @abstractmethod
     def reset(self) -> None:
         self.state = self.init_state
+        self.h = 0

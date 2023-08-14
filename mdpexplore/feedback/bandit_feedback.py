@@ -19,8 +19,8 @@ from mdpexplore.env.bandits import Bandits, Bandits_Left_Right, ConstrainedMaxMo
 from mdpexplore.functionals.bandit_functionals import DesignRewardBandit, DesignBestArmLinearBandit, DesignBestArmLinearBanditNoDenominator
 from mdpexplore.functionals.doe_adaptive_functionals import AdaptiveDesignD
 from mdpexplore.functionals.reward_functional import RewardFunctional
-from mdpexplore.policies.density_policy import DensityPolicy, MarginalDensityPolicy
-from mdpexplore.policies.mixture_policy import MixturePolicy
+from mdpexplore.policies.summary_policies.density_policy import DensityPolicy, MarginalDensityPolicy
+from mdpexplore.policies.summary_policies.mixture_policy import MixturePolicy
 
 import matplotlib
 import matplotlib.pyplot as plt
