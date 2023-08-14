@@ -1,8 +1,8 @@
 import autograd.numpy as np
 
 from mdpexplore.policies.policy_base import SummarizedPolicy
-from mdpexplore.policies.stationary_policy import StationaryPolicy
-from mdpexplore.policies.non_stationary_policy import NonStationaryPolicy
+from mdpexplore.policies.base_policies.stationary_policy import StationaryPolicy
+from mdpexplore.policies.base_policies.non_stationary_policy import NonStationaryPolicy
 from mdpexplore.env.discrete_env import DiscreteEnv
 
 

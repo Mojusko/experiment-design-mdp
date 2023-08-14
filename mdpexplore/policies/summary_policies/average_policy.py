@@ -3,7 +3,7 @@ from typing import List
 
 from mdpexplore.env.discrete_env import DiscreteEnv
 from mdpexplore.policies.policy_base import SummarizedPolicy
-from mdpexplore.policies.stationary_policy import StationaryPolicy
+from mdpexplore.policies.base_policies.stationary_policy import StationaryPolicy
 
 
 class AveragePolicy(SummarizedPolicy):
