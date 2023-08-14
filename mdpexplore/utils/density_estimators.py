@@ -2,8 +2,8 @@ from abc import ABC, abstractmethod
 import numpy as np
 
 from mdpexplore.policies.policy_base import Policy
-from mdpexplore.policies.non_stationary_policy import NonStationaryPolicy
-from mdpexplore.policies.stationary_policy import StationaryPolicy
+from mdpexplore.policies.base_policies.non_stationary_policy import NonStationaryPolicy
+from mdpexplore.policies.base_policies.stationary_policy import StationaryPolicy
 
 from mdpexplore.env.discrete_env import DiscreteEnv
 from mdpexplore.functionals.reward_functional import RewardFunctional
@@ -58,16 +58,16 @@ class TabularDensity(DensityEstimator):
 
             elif type(policy) is NonStationaryPolicy:
 
-                v0 = np.zeros((self.env.max_episode_length, self.env.states_num, self.env.actions_num))
+                v0 = np.zeros((self.env.max_episode_length - self.env.h, self.env.states_num, self.env.actions_num))
                 # initialize with the initial state and corresponding actions
-                for act in self.env.available_actions(self.env.init_state):
-                    v0[0, self.env.init_state, act] = policy.ps[0, self.env.init_state, act]
+                for act in self.env.available_actions(self.env.state):
+                    v0[0, self.env.state, act] = policy.ps[0, self.env.state, act]
 
                 v = np.array(v0)
                 # get marginal state distribution for initial temp
                 temp = np.array(v0)[0].sum(axis = -1)
                 
-                for i in range(self.env.max_episode_length - 1):
+                for i in range(self.env.max_episode_length - self.env.h - 1):
                     p_pi = (self.env.get_transition_matrix() *
                             np.expand_dims(policy.ps[i], axis=2)).sum(axis=1)
                     # assert (np.allclose(p_pi.sum(axis=1), 1, rtol=1e-05, atol=1e-05))
@@ -93,7 +93,7 @@ class TabularDensity(DensityEstimator):
         if stationary:
             total_density = np.zeros((self.env.states_num, self.env.actions_num))
         else:
-            total_density = np.zeros((self.env.max_episode_length, self.env.states_num, self.env.actions_num))
+            total_density = np.zeros((self.env.max_episode_length - self.env.h, self.env.states_num, self.env.actions_num))
 
         for i, policy in enumerate(policies):
             if i >= len(densities):
