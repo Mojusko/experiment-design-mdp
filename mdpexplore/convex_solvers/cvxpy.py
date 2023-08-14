@@ -1,8 +1,9 @@
 import numpy as np
-from mdpexplore.policies.density_policy import DensityPolicy
+from mdpexplore.policies.summary_policies.density_policy import DensityPolicy
 # cvxpy imports
 import cvxpy as cp 
 import mosek
+from mdpexplore.policies.summary_policies.mixture_policy import MixturePolicy
 
 from mdpexplore.convex_solvers.convex_solvers_base import ConvexSolverBase
 
@@ -11,6 +12,7 @@ class CVXPY(ConvexSolverBase):
         super().__init__(env, objective, verbosity = verbosity, accuracy = accuracy)
         self.type = 'cvxpy'
         self.stationary = False
+        self.SummarizedPolicyType = MixturePolicy
     
     def optimize(self, emissions, visitations, episodes) -> None: 
         # initialize the objective function
@@ -53,7 +55,9 @@ class CVXPY(ConvexSolverBase):
             self.policies.append(new_policy)
             self.weights = [1.0]
 
-            return self.policies, self.weights, self.densities
+            self.summarize()
+
+            return self.summarized_policy, self.policies, self.weights, self.densities
 
         else:
             raise NotImplementedError("The reward function does not have cvxpy interface implemented. Use different solver.")

@@ -34,10 +34,11 @@ class RewardFunctional(ABC):
 
         for tau in trajectories:
             # add visitations to density
-            for h in range(H):
+            for h in range(len(tau[1])):
                 d[h, tau[0][h], tau[1][h]] += 1
         
         # normalize densities (each has a single action-state pair per time step)
-        d = d / t
+        if d.sum() > 0:
+            d = d / d.sum()
 
         return d

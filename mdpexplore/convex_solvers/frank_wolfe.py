@@ -2,8 +2,9 @@ from typing import Callable, Type, Union, Tuple
 import numpy as np
 from mdpexplore.env.discrete_env import DiscreteEnv
 from mdpexplore.policies.policy_base import Policy
-from mdpexplore.policies.non_stationary_policy import NonStationaryPolicy
-from mdpexplore.policies.stationary_policy import StationaryPolicy
+from mdpexplore.policies.base_policies.non_stationary_policy import NonStationaryPolicy
+from mdpexplore.policies.base_policies.stationary_policy import StationaryPolicy
+from mdpexplore.policies.summary_policies.density_policy import DensityPolicy
 from mdpexplore.solvers.solver_base import DiscreteSolver
 from mdpexplore.solvers.dp import DP
 from mdpexplore.utils.density_estimators import TabularDensity
@@ -17,8 +18,9 @@ import mosek
 from mdpexplore.convex_solvers.convex_solvers_base import ConvexSolverBase
 
 class FrankWolfe(ConvexSolverBase):
-    def __init__(self, env, objective, verbosity : int = 0, accuracy : float = None, num_components : int = 10, initial_policy : bool = False, step: Union[float, str] = None, solver : DiscreteSolver = DP) -> None:
+    def __init__(self, env, objective, verbosity : int = 0, accuracy : float = None, num_components : int = 10, initial_policy : bool = False, step: Union[float, str] = None, solver : DiscreteSolver = DP, SummarizedPolicyType : Policy = DensityPolicy) -> None:
         super().__init__(env, objective, verbosity = verbosity, accuracy = accuracy, initial_policy = initial_policy, solver = solver)
+        self.SummarizedPolicyType = SummarizedPolicyType
         self.num_components = num_components
         self.step = step
         self.type = 'frank-wolfe'
@@ -77,7 +79,7 @@ class FrankWolfe(ConvexSolverBase):
         """
 
         # this is to ensure that the first policy has probability 1
-        if self.initial_policy is not None:
+        if self.initial_policy:
             counter = 1
         else:
             counter = 0
@@ -146,4 +148,6 @@ class FrankWolfe(ConvexSolverBase):
 
             counter += 1
         
-        return self.policies, self.weights, self.densities
+        self.summarize()
+        
+        return self.summarized_policy, self.policies, self.weights, self.densities

@@ -5,13 +5,15 @@ import autograd.numpy as np
 import matplotlib.pyplot as plt
 from mdpexplore.env.discrete_env import DiscreteEnv
 from mdpexplore.policies.policy_base import Policy, SummarizedPolicy
-from mdpexplore.policies.tracking_policy import TrackingPolicy
-from mdpexplore.policies.mixture_policy import MixturePolicy
-from mdpexplore.policies.density_policy import DensityPolicy, MarginalDensityPolicy
+from mdpexplore.policies.summary_policies.tracking_policy import TrackingPolicy
+from mdpexplore.policies.summary_policies.mixture_policy import MixturePolicy
+from mdpexplore.policies.summary_policies.density_policy import DensityPolicy, MarginalDensityPolicy
 from mdpexplore.functionals.reward_functional import RewardFunctional
 from mdpexplore.convex_solvers.convex_solvers_base import ConvexSolverBase
 from mdpexplore.feedback.feedback_base import Feedback, EmptyFeedback
 from mdpexplore.utils.density_estimators import TabularDensity
+from mdpexplore.policies.general_policies.markovian_policy import MarkovianPolicy
+from mdpexplore.policies.general_policies.non_markovian_policy import NonMarkovianPolicy
 
 class MdpExplore():
     def __init__(
@@ -22,6 +24,7 @@ class MdpExplore():
             verbosity: int = 0,
             optimize_repetitions: bool = False,
             feedback: Feedback = EmptyFeedback(),
+            general_policy: str = 'markovian',
     ) -> None:
 
         """Class containing components required to run the maximum entropy exploration algorithm
@@ -41,11 +44,18 @@ class MdpExplore():
         self.convex_solver.verbosity = verbosity
         self.feedback = feedback
 
+        if general_policy == 'markovian':
+            self.general_policy = MarkovianPolicy(self.env, self.convex_solver)
+        elif general_policy == 'non-markovian':
+            self.general_policy = NonMarkovianPolicy(self.env, self.convex_solver)
+        else:
+            raise NotImplementedError(f'General policy {general_policy} not implemented')
+
         # density estimator
         if self.env.type == 'discrete':
             self.density_estimator = TabularDensity(self.env, self.objective)
         else:
-            raise NotImplementedError
+            raise NotImplementedError(f'Density estimator for {self.env.type} environments not implemented')
 
         self.densities = []
         self.objective_values_baseline = []
@@ -67,7 +77,6 @@ class MdpExplore():
         self.state_visitations = []
         self.action_visitations = []
 
-        # self.densities = []
         self.trajectory = []
         if reset_visitations:
             # reset visitations if needed
@@ -110,7 +119,6 @@ class MdpExplore():
 
     def evaluate(
             self,
-            SummarizedPolicyType: Type[SummarizedPolicy] = MixturePolicy,
             episodes: int = 100,
             plot: bool = True
     ) -> None:
@@ -121,38 +129,14 @@ class MdpExplore():
             episodes (int, optional): number of policy rollouts to execute. Defaults to 100.
             plot (bool, optional): if True, plots the heatmap based on the policy rollouts. Defaults to True.
         """
-        empirical = np.zeros(len(self.policies))
-        # if solver is cvxpy, default to MixturePolicy
-        if (self.convex_solver.type == "cvxpy") & (SummarizedPolicyType is not MixturePolicy):
-            print('When using cvxpy solver, summarization method is changed to MixturePolicy')
-            SummarizedPolicyType = MixturePolicy
-
         for _ in range(episodes):
             self.env.reset()
-
-            if SummarizedPolicyType == DensityPolicy:
-                summarized_policy = SummarizedPolicyType(
-                    self.env, self._density_oracle()
-                )
-            elif SummarizedPolicyType == MarginalDensityPolicy:
-                summarized_policy = SummarizedPolicyType(
-                    self.env, self._density_oracle()
-                )
-            elif SummarizedPolicyType == TrackingPolicy:
-                summarized_policy = SummarizedPolicyType(
-                    self.env, self.policies, self.weights, empirical
-                )
-                empirical[summarized_policy.get_picked_policy_id()] += 1
-            else:
-                summarized_policy = SummarizedPolicyType(
-                    self.env, self.policies, self.weights
-                )
 
             self.trajectory.append(self.env.init_state)
             # count episode visitations
             self.state_visitations.append(self.env.init_state)
             for h in range(self.env.max_episode_length):
-                action = summarized_policy.next_action(self.env.state)
+                action = self.general_policy.next_action(self.env.state, self.emissions, self.visitations, self.episodes)
 
                 # feedback the state and action
                 self.feedback.step_single(self.env.state, action)
@@ -171,12 +155,11 @@ class MdpExplore():
     def optimize(self) -> None:
         """Optimizes the objective function using the specified method, returns the optimal policies and weights
         """
-        self.policies, self.weights, self.densities = self.convex_solver.optimize(self.emissions, self.visitations, self.episodes)
+        self.summarized_policy, self.policies, self.weights, self.densities = self.convex_solver.optimize(self.emissions, self.visitations, self.episodes)
 
     def run(
             self,
             episodes: int = 100,
-            SummarizedPolicyType: Type[SummarizedPolicy] = MixturePolicy,
             plot: bool = False,
             save_trajectory: Union[str, None] = None,
             return_visitations: bool = False,
@@ -208,9 +191,9 @@ class MdpExplore():
 
                 self._reset(reset_visitations=False)
 
-                self.optimize()
+                # self.optimize()
 
-                self.evaluate(SummarizedPolicyType, 1)
+                self.evaluate(1)
                 
                 # calculate the aggregate distribution
                 aggregate_distribution = self.objective.build_density_from_trajectories(self.visitations)
@@ -235,7 +218,7 @@ class MdpExplore():
             self.optimize()
 
             self.visitations = []
-            self.evaluate(SummarizedPolicyType, episodes)
+            self.evaluate(episodes)
 
             run_objective_values = []
             aggregate_distribution = 0
