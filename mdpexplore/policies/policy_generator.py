@@ -4,6 +4,7 @@ from mdpexplore.env.discrete_env import DiscreteEnv
 from mdpexplore.env.linear_system import ContinuousEnv
 
 from mdpexplore.policies.base_policies.stationary_policy import StationaryPolicy
+from mdpexplore.policies.base_policies.non_stationary_policy import NonStationaryPolicy
 from mdpexplore.policies.base_policies.linear_policy import LinearPolicy
 
 class PolicyGenerator():
@@ -11,18 +12,33 @@ class PolicyGenerator():
     def __init__(self, env: DiscreteEnv) -> None:
         self.env = env
 
-    def uniform_policy(self):
+    def uniform_policy(self, stationary = False):
         '''
         Returns a uniform policy within the environment
         '''
-        p = np.ones((self.env.states_num, self.env.actions_num))
-        for s in range(self.env.states_num):
-            for a in range(self.env.actions_num):
-                if not self.env.is_valid_action(a, s):
-                    p[s, a] = 0
-        p /= np.sum(p, axis=1, keepdims=True)
+        if stationary:
+            p = np.ones((self.env.states_num, self.env.actions_num))
+            for s in range(self.env.states_num):
+                for a in range(self.env.actions_num):
+                    if not self.env.is_valid_action(a, s):
+                        p_h[s, a] = 0
 
-        return StationaryPolicy(self.env, p)
+            return StationaryPolicy(self.env, p)
+        
+        else:
+            p = np.ones((self.env.max_episode_length, self.env.states_num, self.env.actions_num))
+            for h in range(self.env.max_episode_length):
+
+                p_h = np.ones((self.env.states_num, self.env.actions_num))
+                for s in range(self.env.states_num):
+                    for a in range(self.env.actions_num):
+                        if not self.env.is_valid_action(a, s):
+                            p_h[s, a] = 0
+
+                p_h /= np.sum(p_h, axis=1, keepdims=True)
+                p[h] = p_h
+
+            return NonStationaryPolicy(self.env, p)
 
 class ContinuousPolicyGenerator():
 

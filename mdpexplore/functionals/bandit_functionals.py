@@ -186,10 +186,10 @@ class DesignBestArmLinearBanditNoDenominator(RewardFunctional):
         return None, diff_star, val_star
 
     def eval(self, emissions, distribution, unrolls, episodes):
-
-        alpha = len(unrolls) / episodes
-        #TODO change this to allow for different types of unrolls
-        alpha = len(unrolls[0][1]) / self.env.max_episode_length
+        if len(unrolls) > 0:
+            alpha = (len(unrolls[:-1]) * self.env.max_episode_length + len(unrolls[0][1])) / (episodes * self.env.max_episode_length)
+        else:
+            alpha = 0
 
         # calculate the aggregated action state
         aggregated_unrolls = 0

@@ -1,10 +1,7 @@
 import numpy as np
-from mdpexplore.solvers.dp import DP
 from mdpexplore.env.env_dummy_testing import DummyTestEnv
-from mdpexplore.mdpexplore import MdpExplore
 from mdpexplore.functionals.doe_adaptive_functionals import AdaptiveDesignD
-from mdpexplore.convex_solvers.frank_wolfe import FrankWolfe
-
+from mdpexplore.utils.density_estimators import TabularDensity
 from mdpexplore.policies.base_policies.stationary_policy import StationaryPolicy
 from mdpexplore.policies.base_policies.non_stationary_policy import NonStationaryPolicy
 
@@ -12,8 +9,7 @@ import pytest
 
 env = DummyTestEnv()
 design = AdaptiveDesignD(env)
-
-convex_solver = FrankWolfe(env, design)
+density_estimator = TabularDensity(env, design)
 
 @pytest.mark.parametrize("policy_type", ['StationaryPolicy', 'NonStationaryPolicy'])
 def test_density_oracle_single(policy_type : str):
@@ -27,7 +23,7 @@ def test_density_oracle_single(policy_type : str):
     if policy_type == 'StationaryPolicy':
         # test for stationary policy
         policy = StationaryPolicy(env, p)
-        density = convex_solver._density_oracle_single(policy)
+        density = density_estimator.density_oracle_single(policy)
 
         # make sure the state-action density is valid
         for s in range(env.states_num):
@@ -51,7 +47,7 @@ def test_density_oracle_single(policy_type : str):
         ps = np.expand_dims(p, axis=0).repeat(10, axis=0)
         # test for non-stationary policy
         policy = NonStationaryPolicy(env, ps)
-        density = convex_solver._density_oracle_single(policy)
+        density = density_estimator.density_oracle_single(policy)
 
         # test that the density is valid
         for h in range(10):
