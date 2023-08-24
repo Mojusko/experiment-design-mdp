@@ -2,12 +2,14 @@ from abc import ABC, abstractmethod
 import numpy as np
 
 from mdpexplore.policies.policy_base import Policy
-from mdpexplore.policies.base_policies.non_stationary_policy import NonStationaryPolicy
-from mdpexplore.policies.base_policies.stationary_policy import StationaryPolicy
+from mdpexplore.policies.base_policies.non_stationary_policy import NonStationaryPolicy, NonStationaryPolicyContinuous
+from mdpexplore.policies.base_policies.stationary_policy import StationaryPolicy, StationaryPolicyContinuous
 
 from mdpexplore.env.discrete_env import DiscreteEnv
 from mdpexplore.functionals.reward_functional import RewardFunctional
 from mdpexplore.env.continuous_env import ContinuousEnv
+
+from mdpexplore.densities.continous_densities import SimpleDeltaDensity, NonStationaryDeltaDensity
 
 class DensityEstimator(ABC):
     def __init__(self) -> None:
@@ -103,7 +105,7 @@ class TabularDensity(DensityEstimator):
             total_density += weights[i] * densities[i]
         return total_density
     
-class DeltaDensity(DensityEstimator):
+class DeltaDensityEstimator(DensityEstimator):
     def __init__(self, env:ContinuousEnv, objective:RewardFunctional) -> None:
         super().__init__()
         self.env = env
@@ -111,8 +113,45 @@ class DeltaDensity(DensityEstimator):
     
     def density_oracle_single(self, policy: Policy):
         # run the policy and accumulate the states and actions
-        pass
+        state = self.env.state
+
+        if type(policy) is StationaryPolicyContinuous:
+
+            density = SimpleDeltaDensity(self.env)
+
+            for _ in range(self.env.max_episode_length - self.env.h):
+                action = policy.next_action(state)
+                density = density + SimpleDeltaDensity(self.env, state, action)
+                state = self.env.next(state, action)
+
+        elif type(policy) is NonStationaryPolicyContinuous:
+
+            density = NonStationaryDeltaDensity(self.env)
+            densities = []
+            policy._reset()
+
+            for h in range(self.env.max_episode_length - self.env.h):
+                action = policy.next_action(state)
+                densities.append(SimpleDeltaDensity(self.env, state, action))
+                state = self.env.next(state, action)
+            
+            density = density + NonStationaryDeltaDensity(self.env, densities)
+            
+        else:
+            raise TypeError('invalid policy type')
+        
+        return density
 
     def density_oracle(self, policies, weights, densities, stationary = False):
+        if stationary:
+            total_density = SimpleDeltaDensity(self.env)
+        else:
+            total_density = NonStationaryDeltaDensity(self.env)
+        
         # aggregate the densities depending on the weights
-        pass
+        for i, policy in enumerate(policies):
+            if i >= len(densities):
+                d = self.density_oracle_single(policy)
+                densities.append(d)
+            total_density += weights[i] * densities[i]
+        return total_density
