@@ -28,6 +28,7 @@ class DP(DiscreteSolver):
         else:
             values[self.env.max_episode_length - self.env.h] = self.reward[self.env.max_episode_length - 1 - self.env.h]
 
+        #TODO: remove for-loop to make more efficient
         for i in range(self.env.max_episode_length - 1 - self.env.h, -1, -1):
             for state in range(self.env.states_num):
                 acts = self.env.available_actions(state)

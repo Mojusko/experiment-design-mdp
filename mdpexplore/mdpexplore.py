@@ -11,7 +11,7 @@ from mdpexplore.policies.summary_policies.density_policy import DensityPolicy, M
 from mdpexplore.functionals.reward_functional import RewardFunctional
 from mdpexplore.convex_solvers.convex_solvers_base import ConvexSolverBase
 from mdpexplore.feedback.feedback_base import Feedback, EmptyFeedback
-from mdpexplore.utils.density_estimators import TabularDensity
+from mdpexplore.densities.density_estimators import TabularDensity
 from mdpexplore.policies.general_policies.markovian_policy import MarkovianPolicy
 from mdpexplore.policies.general_policies.non_markovian_policy import NonMarkovianPolicy
 

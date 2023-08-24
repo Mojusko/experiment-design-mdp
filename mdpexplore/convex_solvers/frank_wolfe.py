@@ -7,7 +7,7 @@ from mdpexplore.policies.base_policies.stationary_policy import StationaryPolicy
 from mdpexplore.policies.summary_policies.density_policy import DensityPolicy
 from mdpexplore.solvers.solver_base import DiscreteSolver
 from mdpexplore.solvers.dp import DP
-from mdpexplore.utils.density_estimators import TabularDensity
+from mdpexplore.densities.density_estimators import TabularDensity
 from scipy.optimize import minimize_scalar
 from autograd import grad, hessian
 import numpy.linalg as la

@@ -7,6 +7,7 @@ from mdpexplore.policies.base_policies.stationary_policy import StationaryPolicy
 
 from mdpexplore.env.discrete_env import DiscreteEnv
 from mdpexplore.functionals.reward_functional import RewardFunctional
+from mdpexplore.env.continuous_env import ContinuousEnv
 
 class DensityEstimator(ABC):
     def __init__(self) -> None:
@@ -101,3 +102,17 @@ class TabularDensity(DensityEstimator):
                 densities.append(d)
             total_density += weights[i] * densities[i]
         return total_density
+    
+class DeltaDensity(DensityEstimator):
+    def __init__(self, env:ContinuousEnv, objective:RewardFunctional) -> None:
+        super().__init__()
+        self.env = env
+        self.objective = objective
+    
+    def density_oracle_single(self, policy: Policy):
+        # run the policy and accumulate the states and actions
+        pass
+
+    def density_oracle(self, policies, weights, densities, stationary = False):
+        # aggregate the densities depending on the weights
+        pass
