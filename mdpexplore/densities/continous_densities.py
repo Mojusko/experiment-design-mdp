@@ -41,15 +41,32 @@ class SimpleDeltaDensity(ContinuousDensity):
     def normalization_constant(self):
         return self.weights.sum()
 
+    def average_density(self):
+        normalization_constant = self.normalization_constant()
+
+        if normalization_constant == 0:
+            return self
+        else:
+            return self * (1 / self.normalization_constant())
+    
+    def is_empty(self):
+        if self.average_density().delta_states.shape[0] == 0:
+            return True
+        else:
+            return False
+
 class NonStationaryDeltaDensity(ContinuousDensity):
-    def __init__(self, env, initial_densities = None) -> None:
+    def __init__(self, env, initial_densities = None, initial_states = None, initial_actions = None) -> None:
         super().__init__()
         self.env = env
 
         if initial_densities is None:
             self.densities = [SimpleDeltaDensity(self.env) for _ in range(env.max_episode_length - env.h)]
+            if initial_states is not None:
+                assert initial_actions is not None, "initial_actions must be provided if initial_states is provided"
+                self.densities[0] = SimpleDeltaDensity(self.env, initial_states=initial_states, initial_actions=initial_actions) + self.densities[0]
         else:
-            assert len(initial_densities) == env.max_episode_length, "initial_densities must have length equal to env.max_episode_length"
+            # assert len(initial_densities) == env.max_episode_length - env.h, "initial_densities must have length equal to env.max_episode_length - env.h"
             assert all([type(d) is SimpleDeltaDensity for d in initial_densities]), "initial_densities must be a list of SimpleDeltaDensity"
             self.densities = initial_densities
     
@@ -63,9 +80,19 @@ class NonStationaryDeltaDensity(ContinuousDensity):
         return NonStationaryDeltaDensity(self.env, [self.densities[i] * other for i in range(self.env.max_episode_length - self.env.h)])
     
     def average_density(self):
-
         average_density = SimpleDeltaDensity(self.env)
         for d in self.densities:
             average_density += d
         
-        return average_density / average_density.normalization_constant()
+        normalization_constant = average_density.normalization_constant()
+
+        if normalization_constant == 0:
+            return average_density
+        else:
+            return average_density * (1 / normalization_constant)
+    
+    def is_empty(self):
+        if self.average_density().delta_states.shape[0] == 0:
+            return True
+        else:
+            return False

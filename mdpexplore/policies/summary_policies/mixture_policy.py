@@ -6,7 +6,7 @@ from mdpexplore.env.continuous_env import ContinuousEnv
 
 
 class MixturePolicy(SummarizedPolicy):
-    def __init__(self, env: Union(DiscreteEnv, ContinuousEnv), ps: List[Policy], weights: List[float]) -> None:
+    def __init__(self, env: Union[DiscreteEnv, ContinuousEnv], ps: List[Policy], weights: List[float]) -> None:
         super().__init__(env)
         self.ps = ps
         self.p_weights = weights

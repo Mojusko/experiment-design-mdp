@@ -11,7 +11,7 @@ from mdpexplore.policies.summary_policies.density_policy import DensityPolicy, M
 from mdpexplore.functionals.reward_functional import RewardFunctional
 from mdpexplore.convex_solvers.convex_solvers_base import ConvexSolverBase
 from mdpexplore.feedback.feedback_base import Feedback, EmptyFeedback
-from mdpexplore.densities.density_estimators import TabularDensity
+from mdpexplore.densities.density_estimators import TabularDensity, DeltaDensityEstimator
 from mdpexplore.policies.general_policies.markovian_policy import MarkovianPolicy
 from mdpexplore.policies.general_policies.non_markovian_policy import NonMarkovianPolicy
 
@@ -54,6 +54,8 @@ class MdpExplore():
         # density estimator
         if self.env.type == 'discrete':
             self.density_estimator = TabularDensity(self.env, self.objective)
+        elif self.env.type == 'continuous':
+            self.density_estimator = DeltaDensityEstimator(self.env, self.objective)
         else:
             raise NotImplementedError(f'Density estimator for {self.env.type} environments not implemented')
 
@@ -64,9 +66,13 @@ class MdpExplore():
         # keep track of state and action visitations per episode
         self.state_visitations = []
         self.action_visitations = []
-
+        
         self.optimize_repetitions = optimize_repetitions
-        self._precompute_emissions()
+        # if the environment is discrete, we can precompute the emission matrix
+        if self.env.type == 'discrete':
+            self._precompute_emissions()
+        else:
+            self.emissions = None
 
     def _reset(self, reset_visitations=True) -> None:
         """Resets the max-ent solver to its initial state

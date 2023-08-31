@@ -9,6 +9,8 @@ from mdpexplore.policies.summary_policies.tracking_policy import TrackingPolicy
 from mdpexplore.solvers.solver_base import DiscreteSolver
 from mdpexplore.functionals.reward_functional import RewardFunctional
 from mdpexplore.solvers.dp import DP
+from mdpexplore.solvers.ddpg import DDPG
+from mdpexplore.solvers.additive_gradient import AdditiveGradient
 from mdpexplore.policies.policy_generator import PolicyGenerator
 
 class ConvexSolverBase(ABC):
@@ -20,8 +22,9 @@ class ConvexSolverBase(ABC):
         self.initial_policy = initial_policy
         self.solver = solver
         self.SummarizedPolicyType = None
+        self.initialization_params = None
         #TODO: this needs to be more exhaustive and will result in errors if the solver is not DP
-        if self.solver in [DP]:
+        if self.solver in [DP, DDPG, AdditiveGradient]:
             self.stationary = False
         else:
             self.stationary = True
@@ -56,6 +59,7 @@ class ConvexSolverBase(ABC):
             )
             empirical[self.summarized_policy.get_picked_policy_id()] += 1
         else:
+            self.density_estimator.density_oracle(self.policies, self.weights, self.densities)
             self.summarized_policy = self.SummarizedPolicyType(
                 self.env, self.policies, self.weights
             )

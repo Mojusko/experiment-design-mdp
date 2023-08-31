@@ -40,7 +40,7 @@ class DDPG(ContinuousSolver):
         # we define a Q-function for each time-step
         self.q_functions = ModuleList([])
         self.target_q_functions = ModuleList([])
-        for h in range(self.env.max_episode_length):
+        for h in range(self.env.max_episode_length - self.env.h):
             self.q_functions.append(MLP(self.env.states_dim + self.env.actions_dim, 1, hidden_dim = self.hidden_dim))
             self.target_q_functions.append(MLP(self.env.states_dim + self.env.actions_dim, 1, hidden_dim = self.hidden_dim))
             self.target_q_functions[h].load_state_dict(self.q_functions[h].state_dict())
@@ -130,7 +130,7 @@ class DDPG(ContinuousSolver):
         
         # on the following iterations, initialize the buffer with the initial state to focus on the region of interest
         else:
-            initial_state = self.env.init_state
+            initial_state = self.env.state
             states = initial_state
             # repeat state for buffer size
             states = np.repeat(states, self.buffer_size, axis = 0)
@@ -144,7 +144,7 @@ class DDPG(ContinuousSolver):
             actions += noise
             actions = np.clip(actions, self.env.min_action, self.env.max_action)
 
-            reward = self.reward(h, states, actions)
+            reward = self.reward(h, states, actions).reshape(self.buffer_size, 1)
 
             next_states = self.env.next(states, actions)
 

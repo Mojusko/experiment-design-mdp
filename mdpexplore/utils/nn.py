@@ -18,3 +18,11 @@ class MLP(nn.Module):
         x = self.relu(self.fc1(x))
         x = self.relu(self.fc2(x))
         return self.fc3(x)
+
+class DeterministicModule(nn.Module):
+    def __init__(self, output) -> None:
+        super(DeterministicModule, self).__init__()
+        self.output = output
+    
+    def forward(self, x):
+        return self.output.expand(x.shape[0], -1)

@@ -130,10 +130,14 @@ class DeltaDensityEstimator(DensityEstimator):
             densities = []
             policy._reset()
 
+            # record the current time at the policy
+            policy_time = policy.time
             for h in range(self.env.max_episode_length - self.env.h):
                 action = policy.next_action(state)
                 densities.append(SimpleDeltaDensity(self.env, state, action))
                 state = self.env.next(state, action)
+            # reset the policy to the original time
+            policy.time = policy_time
             
             density = density + NonStationaryDeltaDensity(self.env, densities)
             

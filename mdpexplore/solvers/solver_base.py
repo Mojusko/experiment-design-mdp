@@ -20,6 +20,12 @@ class DiscreteSolver(ABC):
     @abstractmethod
     def solve(self) -> Policy:
         ...
+    
+    def initialize(self, params = None):
+        pass
+
+    def initialization_params(self):
+        pass
 
 
 class ContinuousSolver(ABC):
@@ -35,3 +41,9 @@ class ContinuousSolver(ABC):
     @abstractmethod
     def solve(self) -> Policy:
         ...
+    
+    def initialize(self, params = None):
+        pass
+
+    def initialization_params(self):
+        pass

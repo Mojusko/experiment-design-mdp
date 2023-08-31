@@ -25,7 +25,7 @@ class NonMarkovianPolicy(Policy):
         self.optimize(emissions, visitations_extended, episodes)
 
         action = self.summarized_policy.next_action(state)
-        print('action plan', [np.argmax(self.summarized_policy.policy.ps[i].sum(axis = 0)) for i in range(len(self.summarized_policy.policy.ps))])
+        # print('action plan', [np.argmax(self.summarized_policy.policy.ps[i].sum(axis = 0)) for i in range(len(self.summarized_policy.policy.ps))])
         self.action_trajectory.append(action)
 
         self.time += 1

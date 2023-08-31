@@ -218,3 +218,18 @@ class HermiteEmbedding(QuadratureEmbedding):
         nodes = np.sqrt(2) * nodes / self.gamma
         weights = weights / np.sqrt(np.pi)
         return (nodes, weights)
+
+class EmptyEmbedding(Embedding):
+    """
+    Empty Embedding
+    """
+
+    def __init__(self, **kwargs):
+        Embedding.__init__(self, **kwargs)
+
+    def embed(self, x):
+        """
+        :param x: np array
+        :return: embedding of the x
+        """
+        return x

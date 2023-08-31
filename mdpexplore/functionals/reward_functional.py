@@ -69,6 +69,6 @@ class ContinuousRewardFunctional(ABC):
         for tau in trajectories:
             # add visitations to density
             for h in range(len(tau[1])):
-                densities[h] = densities[h] + SimpleDeltaDensity(self.env, np.expand_dims(tau[0][h], axis=0), np.expand_dims(tau[1][h], axis=0))
+                densities[h] = densities[h] + SimpleDeltaDensity(self.env, tau[0][h], tau[1][h])
         
         return NonStationaryDeltaDensity(self.env, densities)

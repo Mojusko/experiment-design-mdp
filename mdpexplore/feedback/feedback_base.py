@@ -4,6 +4,7 @@ from abc import ABC, abstractmethod
 class Feedback(ABC):
     def __init__(self, env, objective) -> None:
         super().__init__()
+        self.env = env
         self.objective = objective
     
     @abstractmethod
