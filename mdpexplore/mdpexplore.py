@@ -18,6 +18,8 @@ from mdpexplore.policies.density_policy import DensityPolicy
 from mdpexplore.policies.policy_generator import PolicyGenerator
 from mdpexplore.utils.reward_functionals import *
 
+from mdpexplore.solvers.dp import DP
+
 
 class MdpExplore():
     def __init__(
@@ -30,7 +32,7 @@ class MdpExplore():
             verbosity: int = 0,
             optimize_repetitions: bool = False,
             initial_policy: bool = False,
-            callback: Union[Callable, None] = None
+            callback: Union[Callable, None] = None,
     ) -> None:
 
         """Class containing components required to run the maximum entropy exploration algorithm
@@ -102,30 +104,39 @@ class MdpExplore():
         Returns:
             np.ndarray: 1-D array with density for each state
         """
-        d0 = np.zeros(self.env.states_num)
-        d0[self.env.init_state] = 1
-
-        d = np.array(d0)
-        temp = np.array(d0)
 
         if type(policy) is SimplePolicy:
+
+            v0 = np.zeros(self.env.states_num)
+            v0[self.env.init_state] = 1
+
+            v = np.array(v0)
+            temp = np.array(v0)
+
             p_pi = (self.env.get_transition_matrix() *
                     np.expand_dims(policy.p, axis=2)).sum(axis=1)
             assert (np.allclose(p_pi.sum(axis=1), 1, rtol=1e-05, atol=1e-05))
 
             for _ in range(self.env.max_episode_length):
                 temp = p_pi.T @ temp
-                d += temp
+                v += temp
 
         elif type(policy) is NonStationaryPolicy:
-            for i in range(self.env.max_episode_length):
+
+            v0 = np.zeros((self.env.max_episode_length, self.env.states_num))
+            v0[0, self.env.init_state] = 1
+
+            v = np.array(v0)
+            temp = np.array(v0)[0]
+            
+            for i in range(self.env.max_episode_length - 1):
                 p_pi = (self.env.get_transition_matrix() *
                         np.expand_dims(policy.ps[i], axis=2)).sum(axis=1)
                 assert (np.allclose(p_pi.sum(axis=1), 1, rtol=1e-05, atol=1e-05))
-                temp = p_pi.T @ temp
-                d += temp
-
-        return d / d.sum()
+                temp += p_pi.T @ temp
+                v[i + 1] += temp
+        # d = v / v.sum()
+        return v
 
     def _density_oracle(self, actions: bool = False) -> np.ndarray:
         """Computes the combined state (or state-action) distribution induced by the saved policies
@@ -139,21 +150,31 @@ class MdpExplore():
         Raises:
             TypeError: if the saved policies are non-stationary
         """
-        if actions:
-            total_density = np.zeros((self.env.states_num, self.env.actions_num))
+
+        # if the first policy is non-stationary, we define a total density with time index
+        if self.solver is DP:
+            total_density = np.zeros((self.env.max_episode_length, self.env.states_num))
         else:
             total_density = np.zeros(self.env.states_num)
+
+        if actions:
+            # if actions are needed expand dimension
+            total_density = np.repeat(np.expand_dims(total_density, axis = -1), axis = -1, repeats = self.env.actions_num)
 
         for i, policy in enumerate(self.policies):
             if i >= len(self.densities):
                 d = self._density_oracle_single(policy)
                 self.densities.append(d)
             if actions:
-                # TODO: doesn't work with non-stationary
-                try:
+                # TODO: doesn't work with non-stationary, JP: added a fix but have not tested fully 
+                if self.solver is not DP:
                     total_density += self.weights[i] * policy.p * np.expand_dims(self.densities[i], axis=1)
-                except:
-                    raise TypeError('Non-stationary policies are not supported for state-action distribution')
+                else:
+                    total_density += self.weights[i] * policy.ps[i] * np.expand_dims(self.densities[i], axis=1)
+                # try:
+                #     total_density += self.weights[i] * policy.p * np.expand_dims(self.densities[i], axis=1)
+                # except:
+                #     raise TypeError('Non-stationary policies are not supported for state-action distribution')
             else:
                 total_density += self.weights[i] * self.densities[i]
         return total_density
@@ -179,6 +200,10 @@ class MdpExplore():
         Returns:
             np.ndarray: gradient of the functional wrt to the state distribution - i.e. the reward function
         """
+        grad_fn = getattr(self.objective, "gradient", None)
+        if callable(grad_fn):
+            return grad_fn(self.emissions, distribution)
+
         if self.objective.get_type() == "adaptive":
             grad_fn = grad(lambda d: self.objective.eval(self.emissions, d, self.visitations, self.episodes))
         else:
@@ -268,7 +293,6 @@ class MdpExplore():
             reward = self._reward_fn_gradient(density)
             if self.objective.get_type() != "adaptive":
                 self.objective_values_baseline.append(self.objective.eval(self.emissions, density, self.episodes))
-
             new_policy = self._planning_oracle(reward)
             self.policies.append(new_policy)
             #
@@ -315,7 +339,12 @@ class MdpExplore():
                 objective = self.objective.eval(self.emissions, density, self.episodes)
 
 
-            empirical_gap = np.minimum(reward @ (new_density - density), empirical_gap)
+            # if policy is non-stationary, we take the average new density
+            # if type(new_policy) is NonStationaryPolicy:
+            #    new_density = new_density.mean(axis=0)
+
+            # empirical gap is calculated by taking the minimum across time-steps h (not sure this is right)
+            empirical_gap = np.minimum(np.min(reward @ (new_density - density).T), empirical_gap)
 
             if verbose:
                 print(f'component: {counter}, gap: {empirical_gap}, objective: {objective}, stepsize: {step_size}, gradient:{la.norm(reward)}, hess_max:{hess_max}, hess_min:{hess_min}')
@@ -352,7 +381,8 @@ class MdpExplore():
             accuracy: float = None,
             SummarizedPolicyType: Type[SummarizedPolicy] = MixturePolicy,
             plot: bool = False,
-            save_trajectory: Union[str, None] = None
+            save_trajectory: Union[str, None] = None,
+            return_visitations: bool = False,
     ) -> Union[Tuple[np.ndarray, np.ndarray, float], None]:
         """Runs the full max-ent procedure
 
@@ -395,7 +425,7 @@ class MdpExplore():
                     self.emissions, aggregate_distribution, episodes
                 )
 
-                #print (f'episode:{i}, value :{objective}', self.objective.eval(self.emissions, aggregate_distribution,self.visitations, episodes))
+                print (f'episode:{i}, value :{objective}', self.objective.eval(self.emissions, aggregate_distribution,self.visitations, episodes))
                 self.objective_values_baseline.append(objective)
                 run_objective_values.append(objective)
 
@@ -424,5 +454,8 @@ class MdpExplore():
             opt = self.objective.eval_full(self.emissions, self._density_oracle(), self.episodes)
         else:
             opt = None
+
+        if return_visitations:
+            return objective_values, opt, self.visitations
 
         return objective_values, opt
