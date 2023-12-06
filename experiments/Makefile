@@ -1,4 +1,4 @@
-PYTHONPATH=pythonconda
+PYTHONPATH=python
 
 ###########################
 ###########################
@@ -252,7 +252,8 @@ STOCH0: STOCH_ada0 STOCH_opt0 STOCH_static0
 
 STOCH: STOCH1 STOCH2 STOCH3 STOCH0
 
-PLOTS: ${PYTHONPATH} plot_grids.py && ${PYTHONPATH} plot_pharma.py && ${PYTHONPATH} plot.py
+PLOTS: 
+	${PYTHONPATH} plot_grids.py && ${PYTHONPATH} plot_pharma.py && ${PYTHONPATH} plot.py
 
 move:
 	cp figs/*.png ../../pic/.
