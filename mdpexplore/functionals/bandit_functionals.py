@@ -323,6 +323,12 @@ class DesignBestArmLinearBanditNoDenominatorContinuous(ContinuousRewardFunctiona
         # initialize the set of maximizers uniformly
         self.num_of_maximizers = num_of_maximizers
         self.set_of_maximizers = np.random.uniform(low = -0.5, high = 0.5, size = (self.num_of_maximizers, self.env.states_dim))
+        # create set of maximizers using a 101 x 101 grid
+        # self.set_of_maximizers = np.empty((0, self.env.states_dim))
+        # for x in np.linspace(-0.5, 0.5, 21):
+        #    for y in np.linspace(-0.5, 0.5, 21):
+        #        self.set_of_maximizers = np.vstack((self.set_of_maximizers, np.array([x, y])))
+
         # define the embedding
         if embedding is None:
             self.embedding = EmptyEmbedding()
@@ -333,7 +339,6 @@ class DesignBestArmLinearBanditNoDenominatorContinuous(ContinuousRewardFunctiona
 
         set_of_maximizers = self.embedding.embed(torch.tensor(self.set_of_maximizers)).numpy()
         n, m = set_of_maximizers.shape
-
         # Reshape the arrays to have compatible shapes for broadcasting
         # and compute differences between all possible row pairs. Choosing
         # a max over this set upperbounds max_z ||z - z^*||_V_eta_inv
@@ -342,13 +347,34 @@ class DesignBestArmLinearBanditNoDenominatorContinuous(ContinuousRewardFunctiona
         diffs = arr1_reshaped - arr2_reshaped
         diffs = diffs.reshape((-1, diffs.shape[-1]))
 
-        nominators = np.apply_along_axis(lambda x: x @ V_eta_inv @ x.T, 1, diffs)
+        nominators = np.apply_along_axis(lambda x: x @ V_eta_inv @ x.T, 1, diffs)        
         star_id = np.argmax(nominators)
         diff_star = diffs[star_id].reshape(1, -1)
 
         val_star = np.max(nominators)
 
         return diffs, diff_star, val_star
+    
+
+    def _estimate_diff_sum(self):
+
+        set_of_maximizers = self.embedding.embed(torch.tensor(self.set_of_maximizers)).numpy()
+        n, m = set_of_maximizers.shape
+        # Reshape the arrays to have compatible shapes for broadcasting
+
+        arr1_reshaped = set_of_maximizers.reshape(n, 1, m)
+        arr2_reshaped = set_of_maximizers.reshape(1, n, m)
+        diffs = arr1_reshaped - arr2_reshaped
+        diffs = diffs.reshape((-1, diffs.shape[-1]))
+
+        # now compute outer product
+        diffs_outer = np.einsum('ij,ik->ijk', diffs, diffs)
+        diffs_outer = diffs_outer.reshape((-1, diffs_outer.shape[-1]))
+
+        # finally compute the sum
+        diffs_outer_sum = np.mean(diffs_outer, axis = 0).reshape(1, -1)
+
+        return diffs_outer_sum
 
     
     def precompute_z_star_and_V_eta_inv(self, emissions, distribution: NonStationaryDeltaDensity, unrolls, episodes):
@@ -403,8 +429,86 @@ class DesignBestArmLinearBanditNoDenominatorContinuous(ContinuousRewardFunctiona
         self.z_star = diff_star
         self.precomputed_V_eta_inv = V_eta_inv
     
+    def precompute_z_sum_and_V_eta_inv(self, emissions, distribution: NonStationaryDeltaDensity, unrolls, episodes):
+        '''
+        Find the action that maximizes the objective for the current distribution, to avoid having to recompute when calculating
+        the gradient. Given as:
+
+        z_star = argmax_z z^T V_eta_inv z
+        '''
+
+        if len(unrolls) > 0:
+            alpha = (len(unrolls[:-1]) * self.env.max_episode_length + len(unrolls[0][1])) / (episodes * self.env.max_episode_length)
+        else:
+            alpha = 0
+
+        # calculate the aggregated action state
+        if len(unrolls) > 0:
+            aggregated_density = self.build_density_from_trajectories(unrolls)
+            aggregated_density = aggregated_density.average_density()
+            aggregated_emissions = self.embedding.embed(torch.tensor(aggregated_density.delta_states)).numpy()
+            aggregated_weights = aggregated_density.weights
+
+            agg_V_eta = aggregated_emissions.T @ (np.diag(aggregated_weights)/(self.sigma ** 2)) @ aggregated_emissions
+
+        else:
+            aggregated_density = 0
+            aggregated_emissions = 0
+            aggregated_weights = 0
+
+            agg_V_eta = 0
+
+        average_distribution = distribution.average_density()
+        emissions = self.embedding.embed(torch.tensor(average_distribution.delta_states)).numpy()
+        weights = average_distribution.weights
+
+        new_V_eta = emissions.T @ (np.diag(weights)/ (self.sigma ** 2)) @ emissions
+
+        if self.uniform_alpha:
+            V_eta = 1. / episodes * new_V_eta + \
+                alpha * agg_V_eta
+        else:
+            V_eta = (1 - alpha) * new_V_eta + \
+                alpha * agg_V_eta
+        
+        if not self.scale_reg:
+            V_eta_inv = np.linalg.inv(V_eta + (1 - alpha) * self.lambd * np.identity(self.embedding.m))
+        else:
+            V_eta_inv = np.linalg.inv(V_eta + self.lambd * np.identity(self.embedding.m))
+
+        self.z_star = self._estimate_diff_sum()
+        self.precomputed_V_eta_inv = V_eta_inv
+
+    def precompute_agg_V_eta(self, emissions, distribution: NonStationaryDeltaDensity, unrolls, episodes):
+
+        if len(unrolls) > 0:
+            alpha = (len(unrolls[:-1]) * self.env.max_episode_length + len(unrolls[0][1])) / (episodes * self.env.max_episode_length)
+        else:
+            alpha = 0
+
+        # calculate the aggregated action state
+        if (len(unrolls) > 0) & (len(unrolls[0][1]) > 0):
+            aggregated_density = self.build_density_from_trajectories(unrolls)
+            aggregated_density = aggregated_density.average_density()
+            aggregated_emissions = self.embedding.embed(torch.tensor(aggregated_density.delta_states)).numpy()
+            aggregated_weights = aggregated_density.weights
+
+            agg_V_eta = aggregated_emissions.T @ (np.diag(aggregated_weights)/ (self.sigma ** 2)) @ aggregated_emissions
+
+        else:
+            aggregated_density = 0
+            aggregated_emissions = 0
+            aggregated_weights = 0
+
+            agg_V_eta = 0
+        
+        self.precomputed_agg_V_eta = agg_V_eta
+        self.precomputed_alpha = alpha
+
     def pre_compute(self, emissions, distribution, unrolls, episodes):
         self.precompute_z_star_and_V_eta_inv(emissions, distribution, unrolls, episodes)
+        # self.precompute_z_sum_and_V_eta_inv(emissions, distribution, unrolls, episodes)
+        self.precompute_agg_V_eta(emissions, distribution, unrolls, episodes)
 
     def get_gradient_density(self, emissions, distribution, unrolls, episodes, x, a):
         '''
@@ -489,6 +593,70 @@ class DesignBestArmLinearBanditNoDenominatorContinuous(ContinuousRewardFunctiona
 
         _, _, val_star = self._estimate_building_blocks(emissions, V_eta_inv)
 
+        return - val_star
+
+    def eval_quick(self, emission, distribution, unrolls, episodes):
+        '''
+        Quick evaluation of the function for cyipopt optimization.
+
+        distribution - (H, state_dim)
+        '''
+        if isinstance(distribution, torch.Tensor):
+
+            if isinstance(self.precomputed_agg_V_eta, np.ndarray):
+                self.precomputed_agg_V_eta = torch.tensor(self.precomputed_agg_V_eta)
+            
+            emissions = self.embedding.embed(distribution)
+
+            new_V_eta = emissions.T @ (torch.eye(distribution.shape[0])/ (self.sigma ** 2)) @ emissions
+
+            if self.uniform_alpha:
+                V_eta = 1. / episodes * new_V_eta + \
+                    self.precomputed_alpha * self.precomputed_agg_V_eta
+            else:
+                V_eta = (1 - self.precomputed_alpha) * new_V_eta + \
+                    self.precomputed_alpha * self.precomputed_agg_V_eta
+
+            if not self.scale_reg:
+                V_eta_inv = torch.linalg.inv(V_eta + (1 - self.precomputed_alpha) * self.lambd * torch.eye(self.embedding.m))
+            else:
+                V_eta_inv = torch.linalg.inv(V_eta + self.lambd * torch.eye(self.embedding.m))
+            
+            # estimate with building blocks using numpy
+            with torch.no_grad():
+                # create numpy copy of V_eta_inv
+                V_eta_inv_numpy = V_eta_inv.clone().numpy()
+                _, diff_star, val_star = self._estimate_building_blocks(None, V_eta_inv_numpy)
+                diff_star = torch.tensor(diff_star).reshape(-1, 1)
+
+            # now re-calculate val_star using torch to be able to backprop
+            val_star = diff_star.T @ V_eta_inv @ diff_star
+
+            return - val_star
+
+        elif isinstance(distribution, np.ndarray):
+
+            if isinstance(self.precomputed_agg_V_eta, torch.Tensor):
+                self.precomputed_agg_V_eta = np.array(self.precomputed_agg_V_eta)
+            
+            emissions = self.embedding.embed(torch.tensor(distribution)).numpy()
+
+            new_V_eta = emissions.T @ (np.eye(distribution.shape[0])/ (self.sigma ** 2)) @ emissions
+
+            if self.uniform_alpha:
+                V_eta = 1. / episodes * new_V_eta + \
+                    self.precomputed_alpha * self.precomputed_agg_V_eta
+            else:
+                V_eta = (1 - self.precomputed_alpha) * new_V_eta + \
+                    self.precomputed_alpha * self.precomputed_agg_V_eta
+
+            if not self.scale_reg:
+                V_eta_inv = np.linalg.inv(V_eta + (1 - self.precomputed_alpha) * self.lambd * np.identity(self.embedding.m))
+            else:
+                V_eta_inv = np.linalg.inv(V_eta + self.lambd * np.identity(self.embedding.m))
+            
+            _, _, val_star = self._estimate_building_blocks(emissions, V_eta_inv)
+        
         return - val_star
 
     def eval_full(self,

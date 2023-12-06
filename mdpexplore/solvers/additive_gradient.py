@@ -16,8 +16,8 @@ from torchmin import minimize_constr
 class AdditiveGradient(ContinuousSolver):
     def __init__(self, env: ContinuousEnv,
                 reward: Callable, 
-                gradient_steps = 128,
-                num_multistarts = 128,
+                gradient_steps = 256,
+                num_multistarts = 256,
                 verbosity = 0) -> None:
         
         super().__init__(env, reward)

@@ -15,6 +15,8 @@ from mdpexplore.densities.density_estimators import TabularDensity, DeltaDensity
 from mdpexplore.policies.general_policies.markovian_policy import MarkovianPolicy
 from mdpexplore.policies.general_policies.non_markovian_policy import NonMarkovianPolicy
 
+import time
+
 class MdpExplore():
     def __init__(
             self,

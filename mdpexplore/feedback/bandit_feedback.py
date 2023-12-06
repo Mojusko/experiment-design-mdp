@@ -1,4 +1,4 @@
-from typing import Union
+from typing import Union, Callable
 from enum import Enum
 import random
 import numpy as np
@@ -31,14 +31,24 @@ import matplotlib.animation as animation
 from mdpexplore.feedback.feedback_base import SimpleFeedback
 
 class BanditFeedback(SimpleFeedback):
-    def __init__(self, env:MovementConstrainedBayesianOptimization, objective:RewardFunctional, estimator:Union[GaussianProcess, KernelizedFeatures], theta_star:np.array, sigma:float, video:bool = False, markovian:bool = False) -> None:
+    def __init__(self, 
+                env:MovementConstrainedBayesianOptimization, 
+                objective:RewardFunctional, 
+                estimator:Union[GaussianProcess, KernelizedFeatures], 
+                theta_star:Union[np.array, Callable], 
+                sigma:float, video:bool = False, 
+                markovian:bool = False) -> None:
+        
         super().__init__(env, objective)
         self.estimator = estimator
         self.theta_star = theta_star
         self.sigma = sigma
         self.embedded_action_space = env.action_space
+        self.action_space = env.action_space_pre_embedding
         self.video = video
         self.markovian = markovian
+        # keep track of best arm guess
+        self.best_arm = []
     
     def step_update(self):
         if self.markovian:
@@ -46,23 +56,34 @@ class BanditFeedback(SimpleFeedback):
         else:
             action = self.action_trajectory[-1]
             print('actions taken: ', action)
-            
-            z = self.embedded_action_space[action]
+
+            # obtain the value of the action
+            state = self.env.action_space_pre_embedding[action].reshape(1, -1)
+            # obtain the noise
             eps = np.random.normal(0, self.sigma)
-            fun_value = z @ self.theta_star + eps
-            self.estimator.add_data_point(torch.tensor(np.expand_dims(z, 0)),
+
+            if callable(self.theta_star):
+                fun_value = self.theta_star(state) + eps
+            else:
+                z = self.estimator.embed(torch.tensor(state)).numpy()
+                fun_value = z @ self.theta_star + eps
+            
+            self.estimator.add_data_point(torch.tensor(state),
                                         torch.tensor([[fun_value]]))
             self.estimator.fit()
-            self.objective.ucbs = self.estimator.ucb(torch.tensor(self.embedded_action_space)).numpy().squeeze()
-            self.objective.lcbs = self.estimator.lcb(torch.tensor(self.embedded_action_space)).numpy().squeeze()
+            self.objective.ucbs = self.estimator.ucb(torch.tensor(self.action_space)).numpy().squeeze()
+            self.objective.lcbs = self.estimator.lcb(torch.tensor(self.action_space)).numpy().squeeze()
+            # calculate the best arm guess
+            mean_estimates = self.estimator.mean(torch.tensor(self.action_space)).numpy().squeeze()
+            self.best_arm.append(np.argmax(mean_estimates))
 
-            # Compute the differences to get the UCBs and LCBs for the objective denominator
-            n, m = self.embedded_action_space.shape
-            arr1_reshaped = self.embedded_action_space.reshape(n, 1, m)
-            arr2_reshaped = self.embedded_action_space.reshape(1, n, m)
-            diffs = arr1_reshaped - arr2_reshaped
-            self.objective.diff_ucbs = self.estimator.ucb(torch.tensor(diffs.reshape((-1, m)))).numpy().reshape((n, n))
-            self.objective.diff_lcbs = self.estimator.lcb(torch.tensor(diffs.reshape((-1, m)))).numpy().reshape((n, n))
+            # Compute the differences to get the UCBs and LCBs for the objective denominator, no longer used
+            # n, m = self.embedded_action_space.shape
+            # arr1_reshaped = self.embedded_action_space.reshape(n, 1, m)
+            # arr2_reshaped = self.embedded_action_space.reshape(1, n, m)
+            # diffs = arr1_reshaped - arr2_reshaped
+            # self.objective.diff_ucbs = self.estimator.ucb(torch.tensor(diffs.reshape((-1, m)))).numpy().reshape((n, n))
+            # self.objective.diff_lcbs = self.estimator.lcb(torch.tensor(diffs.reshape((-1, m)))).numpy().reshape((n, n))
 
             if self.video:
                 # save the relevant stuff for plotting
@@ -96,23 +117,35 @@ class BanditFeedback(SimpleFeedback):
             print('actions taken: ', action_list)
 
             for action in action_list:
-                z = self.embedded_action_space[action]
+                # obtain the value of the action
+                state = self.env.action_space_pre_embedding[action].reshape(1, -1)
+                # obtain the noise
                 eps = np.random.normal(0, self.sigma)
-                fun_value = z @ self.theta_star + eps
-                self.estimator.add_data_point(torch.tensor(np.expand_dims(z, 0)),
-                                        torch.tensor([[fun_value]]))
+
+                if callable(self.theta_star):
+                    fun_value = self.theta_star(state) + eps
+                else:
+                    z = self.estimator.embed(torch.tensor(state)).numpy()
+                    fun_value = z @ self.theta_star + eps
+                
+                self.estimator.add_data_point(torch.tensor(state),
+                                            torch.tensor([[fun_value]]))
             
             self.estimator.fit()
             self.objective.ucbs = self.estimator.ucb(torch.tensor(self.embedded_action_space)).numpy().squeeze()
             self.objective.lcbs = self.estimator.lcb(torch.tensor(self.embedded_action_space)).numpy().squeeze()
 
-            # Compute the differences to get the UCBs and LCBs for the objective denominator
-            n, m = self.embedded_action_space.shape
-            arr1_reshaped = self.embedded_action_space.reshape(n, 1, m)
-            arr2_reshaped = self.embedded_action_space.reshape(1, n, m)
-            diffs = arr1_reshaped - arr2_reshaped
-            self.objective.diff_ucbs = self.estimator.ucb(torch.tensor(diffs.reshape((-1, m)))).numpy().reshape((n, n))
-            self.objective.diff_lcbs = self.estimator.lcb(torch.tensor(diffs.reshape((-1, m)))).numpy().reshape((n, n))
+            # calculate the best arm guess
+            mean_estimates = self.estimator.mean(torch.tensor(self.action_space)).numpy().squeeze()
+            self.best_arm.append(np.argmax(mean_estimates))
+
+            # Compute the differences to get the UCBs and LCBs for the objective denominator, no longer required
+            # n, m = self.embedded_action_space.shape
+            # arr1_reshaped = self.embedded_action_space.reshape(n, 1, m)
+            # arr2_reshaped = self.embedded_action_space.reshape(1, n, m)
+            # diffs = arr1_reshaped - arr2_reshaped
+            # self.objective.diff_ucbs = self.estimator.ucb(torch.tensor(diffs.reshape((-1, m)))).numpy().reshape((n, n))
+            # self.objective.diff_lcbs = self.estimator.lcb(torch.tensor(diffs.reshape((-1, m)))).numpy().reshape((n, n))
 
             if self.video:
                 # save the relevant stuff for plotting
@@ -142,7 +175,16 @@ class BanditFeedback(SimpleFeedback):
             pass
 
 class ContinuousBanditFeedback(SimpleFeedback):
-    def __init__(self, env:MovementConstrainedBayesianOptimization, objective:RewardFunctional, estimator:Union[GaussianProcess, KernelizedFeatures], theta_star:np.array, sigma:float, video:bool = False, markovian:bool = False) -> None:
+    def __init__(self, 
+                env:MovementConstrainedBayesianOptimization, 
+                objective:RewardFunctional, 
+                estimator:Union[GaussianProcess, KernelizedFeatures], 
+                theta_star:Union[np.array, Callable], 
+                sigma:float, 
+                video:bool = False, 
+                markovian:bool = False,
+                maximization_set_method:str = 'thompson_sampling') -> None:
+        
         super().__init__(env, objective)
         self.estimator = estimator
         self.theta_star = theta_star
@@ -150,20 +192,37 @@ class ContinuousBanditFeedback(SimpleFeedback):
         self.embedding = self.objective.embedding
         self.video = video
         self.markovian = markovian
+        self.maximization_set_method = maximization_set_method
+        if self.maximization_set_method == 'ucb':
+            self.create_maximizers_grid()
     
     def thompson_sample_potential_maximizers(self):
         if type(self.estimator) == KernelizedFeatures:
 
             # sample thetas from the posterior and maximize
-            maximizers = np.zeros((self.objective.num_of_maximizers, self.env.states_dim))
-            for i in range(self.objective.num_of_maximizers):
-                max_x, max_f = self.estimator.sample_and_optimize()
-                maximizers[i] = max_x
+            maximizers, _ = self.estimator.sample_and_optimize(size = self.objective.num_of_maximizers)
             
-            return maximizers
+            return maximizers.numpy()
 
         else:
             raise NotImplementedError('Thompson sampling for GPs not implemented yet')
+    
+    def create_maximizers_grid(self):
+        if self.env.states_dim == 1:
+            self.maximizers_grid = np.linspace(-0.5, 0.5, 101).reshape(-1, 1)
+        elif self.env.states_dim == 2:
+            self.maximizers_grid = np.array(np.meshgrid(np.linspace(-0.5, 0.5, 21), np.linspace(-0.5, 0.5, 21))).T.reshape(-1, 2)
+        else:
+            raise NotImplementedError('Maximizers grid for higher dimensions not implemented yet')
+
+    def ucb_potential_maximizers(self):
+        
+        lcbs = self.estimator.lcb(torch.tensor(self.maximizers_grid)).numpy().squeeze()
+        highest_lcb = np.max(lcbs)
+
+        ucbs = self.estimator.ucb(torch.tensor(self.maximizers_grid)).numpy().squeeze()
+
+        return self.maximizers_grid[ucbs >= highest_lcb]
     
     def step_update(self):
         if self.markovian:
@@ -174,9 +233,14 @@ class ContinuousBanditFeedback(SimpleFeedback):
             next_state = self.env.next(self.env.state, action)
             print('next design: ', next_state)
             # obtain the corresponding observation
-            z = self.embedding.embed(torch.tensor(next_state)).numpy()
             eps = np.random.normal(0, self.sigma)
-            fun_value = z @ self.theta_star + eps
+            if callable(self.theta_star):
+                fun_value = self.theta_star(next_state)
+            else:
+                z = self.embedding.embed(torch.tensor(next_state)).numpy()
+                eps = np.random.normal(0, self.sigma)
+                fun_value = z @ self.theta_star + eps
+
             self.estimator.add_data_point(torch.tensor(next_state),
                                         torch.tensor(fun_value).reshape((-1, 1)))
             self.estimator.fit()
@@ -193,7 +257,13 @@ class ContinuousBanditFeedback(SimpleFeedback):
                 np.save('states.npy', np.vstack((memory_states, np.array(next_state))))
 
                 # need to save the set of maximizers
-                np.save('maximizers.npy', np.vstack((memory_maximizers, self.objective.set_of_maximizers[None, ...])))
+                # create copy of the set of maximizers
+                maximizers = self.objective.set_of_maximizers.copy()
+
+                # extend with empty arrays to match the number of maximizers
+                # maximizers = np.vstack((maximizers, np.zeros((self.objective.num_of_maximizers - maximizers.shape[0], maximizers.shape[1]))))
+
+                np.save('maximizers.npy', np.vstack((memory_maximizers, np.expand_dims(maximizers, 0))))
 
                 if self.env.states_dim == 1:
                     # need to save the state of the GP
@@ -207,7 +277,12 @@ class ContinuousBanditFeedback(SimpleFeedback):
                     np.save('ucb.npy', np.vstack((memory_ucb, ucb)))
                     np.save('lcb.npy', np.vstack((memory_lcb, lcb)))
 
-            self.objective.set_of_maximizers = self.thompson_sample_potential_maximizers()
+            if self.maximization_set_method == 'ucb':
+                self.objective.set_of_maximizers = self.ucb_potential_maximizers()
+            elif self.maximization_set_method == 'thompson_sampling':
+                self.objective.set_of_maximizers = self.thompson_sample_potential_maximizers()
+            else:
+                raise NotImplementedError('Maximization set method not implemented yet')
 
     def episode_update(self):
         if self.markovian:
@@ -216,9 +291,13 @@ class ContinuousBanditFeedback(SimpleFeedback):
             print('actions taken: ', state_list)
 
             for state in state_list:
-                z = self.embedding.embed(torch.tensor(state)).numpy()
                 eps = np.random.normal(0, self.sigma)
-                fun_value = z @ self.theta_star + eps
+                if callable(self.theta_star):
+                    fun_value = self.theta_star(state) + eps
+                else:
+                    z = self.embedding.embed(torch.tensor(state)).numpy()
+                    fun_value = z @ self.theta_star + eps
+                
                 self.estimator.add_data_point(torch.tensor(np.expand_dims(z, 0)),
                                         torch.tensor([[fun_value]]))
             

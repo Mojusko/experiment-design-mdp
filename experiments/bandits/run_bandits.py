@@ -9,7 +9,7 @@ import argparse
 from tqdm.contrib.concurrent import process_map
 import multiprocessing as mp
 
-from mdpexplore.solvers.min import MaxSolver
+from mdpexplore.solvers.max import MaxSolver
 from mdpexplore.mdpexplore import MdpExplore
 from mdpexplore.env.bandits import Bandits
 from mdpexplore.functionals.reward_functional import DesignRewardBandit, DesignBestArmLinearBandit, DesignBestArmLinearBanditNoDenominator

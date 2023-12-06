@@ -61,10 +61,13 @@ class NonStationaryDeltaDensity(ContinuousDensity):
         self.env = env
 
         if initial_densities is None:
-            self.densities = [SimpleDeltaDensity(self.env) for _ in range(env.max_episode_length - env.h)]
             if initial_states is not None:
                 assert initial_actions is not None, "initial_actions must be provided if initial_states is provided"
-                self.densities[0] = SimpleDeltaDensity(self.env, initial_states=initial_states, initial_actions=initial_actions) + self.densities[0]
+                assert len(initial_states) == env.max_episode_length - env.h, "initial_states must have length equal to env.max_episode_length - env.h"
+                self.densities = [SimpleDeltaDensity(self.env, initial_states = initial_states[i].reshape(1, -1), initial_actions = initial_actions[i].reshape(1, -1)) for i in range(env.max_episode_length - env.h)]
+            else:
+                self.densities = [SimpleDeltaDensity(self.env) for _ in range(env.max_episode_length - env.h)]
+
         else:
             # assert len(initial_densities) == env.max_episode_length - env.h, "initial_densities must have length equal to env.max_episode_length - env.h"
             assert all([type(d) is SimpleDeltaDensity for d in initial_densities]), "initial_densities must be a list of SimpleDeltaDensity"
