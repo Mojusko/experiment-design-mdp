@@ -1,12 +1,20 @@
 from setuptools import setup
 
-packages = ['numpy']
+packages = ['numpy',
+            'torch',
+            'matplotlib',
+            'scipy',
+            'sklearn'
+            'cyipopt'
+            'pandas',
+            'cvxpy'
+            ]
 
 setup(name='mdpexplore',
-      version='0.0.1',
+      version='0.0.2',
       description='',
       url='',
-      author='Mojmir Mutny, Tadeusz Janik',
+      author='Mojmir Mutny, Tadeusz Janik, Jose Pablo Folch',
       author_email='mojmir.mutny@inf.ethz.ch',
       license='MIT Licence',
       packages=['mdpexplore'],

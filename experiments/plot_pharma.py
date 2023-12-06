@@ -5,8 +5,8 @@ import matplotlib.pyplot as plt
 methods = ["adaptive-un-1","adaptive-un", 'tracking-un', "density-un", "random-un"]
 color = ["tab:blue", "tab:orange","tab:red", "tab:green", "tab:purple"]
 labels = ["adaptive-1","adaptive","tracking", "non-adaptive", "random"]
-NAMES = ["ONE-STEP","EXACT","TRACKING","NON-ADAPTIVE","RANDOM"]
-
+#NAMES = ["ONE-STEP","EXACT","TRACKING","NON-ADAPTIVE","RANDOM"]
+NAMES = ["LINEAR","EXACT","TRACKING","RESAMPLING","RANDOM"]
 name = "pharmacokinetics/results/opt.txt"
 opt = np.loadtxt(name)
 

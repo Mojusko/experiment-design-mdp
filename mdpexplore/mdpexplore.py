@@ -39,6 +39,7 @@ class MdpExplore():
             method (str, optional): optimization method. Defaults to 'frank-wolfe'.
             verbosity (int, optional): level of information logging. Defaults to 0.
         """
+        
         self.env = env
         self.objective = objective
         self.convex_solver = convex_solver

@@ -74,9 +74,9 @@ class AdaptiveDesignD(RewardFunctional):
         z = self.eval_basic(emissions, distribution, unrolls, episodes)
 
         if not self.scale_reg:
-            return np.linalg.slogdet(z + (1 - alpha) * self.lambd)[1]
+            return la.slogdet(z + (1 - alpha) * self.lambd)[1]
         else:
-            return np.linalg.slogdet(z + self.lambd / episodes)[1]
+            return la.slogdet(z + self.lambd / episodes)[1]
 
     def eval_basic_cvxpy(self,
                    emissions: np.ndarray,
@@ -137,9 +137,9 @@ class AdaptiveDesignD(RewardFunctional):
         z = emissions.T @ np.diag(distribution / (self.Sigma_true ** 2)) @ emissions
 
         if not self.scale_reg:
-            return np.linalg.slogdet(z + self.lambd)[1]
+            return la.slogdet(z + self.lambd)[1]
         else:
-            return np.linalg.slogdet(z + self.lambd / episodes)[1]
+            return la.slogdet(z + self.lambd / episodes)[1]
 
 
 class AdaptiveDesignC(AdaptiveDesignD):

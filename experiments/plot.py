@@ -5,11 +5,11 @@ methods = ["adaptive-1","adaptive","tracking", "density", "random"]
 colors = ["tab:blue", "tab:orange", "tab:red", "tab:green", "tab:purple"]
 
 labels = ["adaptive-1","adaptive","tracking", "non-adaptive", "random"]
-NAMES = ["ONE-STEP","EXACT","TRACKING","NON-ADAPTIVE","RANDOM"]
+NAMES = ["LINEAR","EXACT","TRACKING","RESAMPLING","RANDOM"]
 
 name = "beilschmiedia/results/opt.txt"
 opt = np.loadtxt(name)
-
+y_lim = [1,2**9]
 ax = plt.axes()
 for index, method in enumerate(methods):
     vals = []
@@ -27,6 +27,8 @@ for index, method in enumerate(methods):
 plt.xlim([2**0, 2**7])
 plt.plot(xaxis, 2 ** 9 / np.sqrt(xaxis), 'k', label='1/\u221At')
 plt.plot(xaxis, 2 ** 9 / xaxis, 'k:', label='1/t')
+plt.plot(xaxis, 2 ** 9  / xaxis**2, 'k-.', label='$1/t^2$', linewidth = 2)
+
 plt.grid("--", color = 'gray', alpha=0.5)
 plt.xlabel("Episodes [t]", fontsize="xx-large")
 plt.ylabel("$F(p_t) - F(p^*)$", fontsize="xx-large")
@@ -37,6 +39,7 @@ plt.xticks(fontsize="x-large")
 plt.legend(fontsize="x-large", borderpad=0.1, labelspacing=0.1)
 ax.patch.set_facecolor('grey')
 ax.patch.set_alpha(0.2)
+plt.ylim(y_lim)
 plt.savefig("figs/bels-known.png",dpi = 100, bbox_inches = 'tight',pad_inches = 0)
 plt.show()
 
@@ -62,6 +65,8 @@ for index, method in enumerate(methods):
 plt.xlim([2**0, 2**7])
 plt.plot(xaxis, 2 ** 9 / np.sqrt(xaxis), 'k', label='1/\u221At')
 plt.plot(xaxis, 2 ** 9 / xaxis, 'k:', label='1/t')
+plt.plot(xaxis, 2 ** 9  / xaxis**2, 'k-.', label='$1/t^2$', linewidth = 2)
+
 plt.grid("--", color = 'gray', alpha=0.5)
 plt.xlabel("Episodes [t]", fontsize="xx-large")
 plt.ylabel("$F(p_t) - F(p^*)$", fontsize="xx-large")

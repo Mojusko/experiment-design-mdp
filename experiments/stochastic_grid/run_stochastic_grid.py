@@ -3,22 +3,39 @@ import numpy as np
 import pandas as pd
 import matplotlib.pyplot as plt
 import torch
+
+# solvers
 from mdpexplore.solvers.lp import LP
 from mdpexplore.solvers.dp import DP
-from sklearn.cluster import KMeans
-from scipy.linalg import null_space, orth
-from mdpexplore.env.time_chain import TimeChain
+
+# policy summarizations
 from mdpexplore.policies.summary_policies.density_policy import DensityPolicy
 from mdpexplore.policies.summary_policies.mixture_policy import MixturePolicy
 from mdpexplore.policies.summary_policies.average_policy import AveragePolicy
 from mdpexplore.policies.summary_policies.tracking_policy import TrackingPolicy
-from mdpexplore.functionals.reward_functional import DesignBayesD, DesignBayesC, DesignC, DesignD
-from mdpexplore.policies.summary_policies.density_policy import DensityPolicy
+
+# convex solvers 
+from mdpexplore.convex_solvers.frank_wolfe import FrankWolfe
+#from mdpexplore.convex_solvers.cyipopt import InteriorPoint
+
+# functionals
+from mdpexplore.functionals.doe_adaptive_functionals import AdaptiveDesignD
+from mdpexplore.functionals.doe_static_functionals import DesignD
+
+# environments
 from mdpexplore.env.grid_worlds import DummyGridWorld
 from mdpexplore.env.stochastic_grid_world import StochasticGridWorld, StochasticDummyGridWorld
+
+# feedbacks
+from mdpexplore.feedback.feedback_base import EmptyFeedback, SimpleFeedback
+
+# general algorithm
 from mdpexplore.mdpexplore import MdpExplore
 from scipy.integrate import odeint
 import argparse
+
+
+
 
 if __name__ == "__main__":
 
@@ -56,12 +73,25 @@ if __name__ == "__main__":
         raise ValueError('Invalid policy type')
 
     env = StochasticDummyGridWorld(prob = args.probability)
-    #env = DummyGridWorld(prob = args.probability, max_episode_length=20)
 
     if args.adaptive == "Bayes":
-        design = DesignBayesD(env, lambd=1e-3)
+        design = AdaptiveDesignD(env, lambd=1e-3)
     else:
         design = DesignD(env, lambd=1e-3)
+
+
+    # define the convex solver
+    convex_solver = FrankWolfe(env, objective=design,
+                            num_components = args.num_components,
+                            solver = DP,
+                            SummarizedPolicyType = DensityPolicy,
+                            accuracy = args.accuracy)
+    
+    # define the feedback class
+    feedback = EmptyFeedback(env, design)
+
+
+
 
     initial_policy = False
 
@@ -70,23 +100,20 @@ if __name__ == "__main__":
         args.num_components = 1
 
     me = MdpExplore(
-        env,
+        env=env,
         objective=design,
-        solver=DP,
-        step=args.linesearch,
-        method='frank-wolfe',
+        convex_solver=convex_solver,
         verbosity=args.verbosity,
-        initial_policy=initial_policy
-
+        feedback=feedback,
+        general_policy = 'markovian'
     )
 
     val, opt_val = me.run(
-        num_components=args.num_components,
         episodes=args.episodes,
-        SummarizedPolicyType=args.policy,
-        accuracy=args.accuracy,
-        save_trajectory=args.savetrajectory
+        save_trajectory=args.savetrajectory,
+        #return_visitations=True
     )
+
     vals = np.array(val)
     np.savetxt(args.save, vals)
     if args.opt == "true":

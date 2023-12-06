@@ -10,7 +10,8 @@ fig = plt.figure(figsize=size, constrained_layout=False)
 gs = gridspec.GridSpec(2, 3, figure=fig, wspace=0.1)
 COLORS = ["tab:blue", "tab:orange", "tab:red", "tab:green", "tab:purple"]
 METHODS = ["adaptive-1","adaptive", "tracking", "non-adaptive", "random"]
-NAMES = ["ONE-STEP","EXACT","TRACKING","NON-ADAPTIVE","RANDOM"]
+#NAMES = ["ONE-STEP","EXACT","TRACKING","NON-ADAPTIVE","RANDOM"]
+NAMES = ["LINEAR","EXACT","TRACKING","RESAMPLING","RANDOM"]
 NUM_RUNS = 20
 LINEWIDTH = [4,4,2,2,2]
 def plot(ax, methods, colors, opt_file, base_path, y_lim, label, title):
