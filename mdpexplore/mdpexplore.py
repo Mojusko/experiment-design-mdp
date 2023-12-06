@@ -2,37 +2,31 @@ from typing import Callable, Type, Union, Tuple
 from datetime import datetime
 import os
 import autograd.numpy as np
-from autograd import grad, hessian
 import matplotlib.pyplot as plt
-from scipy.optimize import minimize_scalar
-import wandb
-
-from mdpexplore.solvers.solver_base import DiscreteSolver
 from mdpexplore.env.discrete_env import DiscreteEnv
 from mdpexplore.policies.policy_base import Policy, SummarizedPolicy
-from mdpexplore.policies.tracking_policy import TrackingPolicy
-from mdpexplore.policies.simple_policy import SimplePolicy
-from mdpexplore.policies.non_stationary_policy import NonStationaryPolicy
-from mdpexplore.policies.mixture_policy import MixturePolicy
-from mdpexplore.policies.density_policy import DensityPolicy
-from mdpexplore.policies.policy_generator import PolicyGenerator
-from mdpexplore.utils.reward_functionals import *
+from mdpexplore.policies.summary_policies.tracking_policy import TrackingPolicy
+from mdpexplore.policies.summary_policies.mixture_policy import MixturePolicy
+from mdpexplore.policies.summary_policies.density_policy import DensityPolicy, MarginalDensityPolicy
+from mdpexplore.functionals.reward_functional import RewardFunctional
+from mdpexplore.convex_solvers.convex_solvers_base import ConvexSolverBase
+from mdpexplore.feedback.feedback_base import Feedback, EmptyFeedback
+from mdpexplore.densities.density_estimators import TabularDensity, DeltaDensityEstimator
+from mdpexplore.policies.general_policies.markovian_policy import MarkovianPolicy
+from mdpexplore.policies.general_policies.non_markovian_policy import NonMarkovianPolicy
 
-from mdpexplore.solvers.dp import DP
-
+import time
 
 class MdpExplore():
     def __init__(
             self,
             env: DiscreteEnv,
             objective: RewardFunctional,
-            solver: Type[DiscreteSolver],
-            step: Union[float, str] = None,
-            method: str = 'frank-wolfe',
+            convex_solver: Type[ConvexSolverBase],
             verbosity: int = 0,
             optimize_repetitions: bool = False,
-            initial_policy: bool = False,
-            callback: Union[Callable, None] = None,
+            feedback: Feedback = EmptyFeedback(),
+            general_policy: str = 'markovian',
     ) -> None:
 
         """Class containing components required to run the maximum entropy exploration algorithm
@@ -47,42 +41,53 @@ class MdpExplore():
         """
         self.env = env
         self.objective = objective
-        self.solver = solver
-        self.step = step
-        self.method = method
+        self.convex_solver = convex_solver
         self.verbosity = verbosity
-        self.callback = callback
+        self.convex_solver.verbosity = verbosity
+        self.feedback = feedback
 
-        self.policy_generator = PolicyGenerator(self.env)
-        self.initial_policy = initial_policy
-
-        if self.initial_policy:
-            self.policies = [self.policy_generator.uniform_policy()]
-            self.weights = [1]
+        if general_policy == 'markovian':
+            self.general_policy = MarkovianPolicy(self.env, self.convex_solver)
+        elif general_policy == 'non-markovian':
+            self.general_policy = NonMarkovianPolicy(self.env, self.convex_solver)
         else:
-            self.policies = []
-            self.weights = []
+            raise NotImplementedError(f'General policy {general_policy} not implemented')
+
+        # density estimator
+        if self.env.type == 'discrete':
+            self.density_estimator = TabularDensity(self.env, self.objective)
+        elif self.env.type == 'continuous':
+            self.density_estimator = DeltaDensityEstimator(self.env, self.objective)
+        else:
+            raise NotImplementedError(f'Density estimator for {self.env.type} environments not implemented')
 
         self.densities = []
         self.objective_values_baseline = []
+        # we keep track of state and action visitations
         self.visitations = []
+        # keep track of state and action visitations per episode
+        self.state_visitations = []
+        self.action_visitations = []
+        
         self.optimize_repetitions = optimize_repetitions
-        self._precompute_emissions()
+        # if the environment is discrete, we can precompute the emission matrix
+        if self.env.type == 'discrete':
+            self._precompute_emissions()
+        else:
+            self.emissions = None
 
     def _reset(self, reset_visitations=True) -> None:
         """Resets the max-ent solver to its initial state
         """
         self.env.reset()
-        if self.initial_policy:
-            self.policies = [self.policy_generator.uniform_policy()]
-            self.weights = [1]
-        else:
-            self.policies = []
-            self.weights = []
+        self.convex_solver.reset()
+        # reset the episode visitations
+        self.state_visitations = []
+        self.action_visitations = []
 
-        self.densities = []
         self.trajectory = []
         if reset_visitations:
+            # reset visitations if needed
             self.visitations = []
             self.objective_values_baseline = []
 
@@ -102,43 +107,11 @@ class MdpExplore():
             policy (Policy): inducing policy
 
         Returns:
-            np.ndarray: 1-D array with density for each state
+            np.ndarray: S x A (stationary) or H x S x A (non-stationary) array with density for each state
         """
-
-        if type(policy) is SimplePolicy:
-
-            v0 = np.zeros(self.env.states_num)
-            v0[self.env.init_state] = 1
-
-            v = np.array(v0)
-            temp = np.array(v0)
-
-            p_pi = (self.env.get_transition_matrix() *
-                    np.expand_dims(policy.p, axis=2)).sum(axis=1)
-            assert (np.allclose(p_pi.sum(axis=1), 1, rtol=1e-05, atol=1e-05))
-
-            for _ in range(self.env.max_episode_length):
-                temp = p_pi.T @ temp
-                v += temp
-
-        elif type(policy) is NonStationaryPolicy:
-
-            v0 = np.zeros((self.env.max_episode_length, self.env.states_num))
-            v0[0, self.env.init_state] = 1
-
-            v = np.array(v0)
-            temp = np.array(v0)[0]
-            
-            for i in range(self.env.max_episode_length - 1):
-                p_pi = (self.env.get_transition_matrix() *
-                        np.expand_dims(policy.ps[i], axis=2)).sum(axis=1)
-                assert (np.allclose(p_pi.sum(axis=1), 1, rtol=1e-05, atol=1e-05))
-                temp += p_pi.T @ temp
-                v[i + 1] += temp
-        # d = v / v.sum()
-        return v
-
-    def _density_oracle(self, actions: bool = False) -> np.ndarray:
+        return self.density_estimator.density_oracle_single(policy)
+    
+    def _density_oracle(self) -> np.ndarray:
         """Computes the combined state (or state-action) distribution induced by the saved policies
 
         Args:
@@ -150,80 +123,10 @@ class MdpExplore():
         Raises:
             TypeError: if the saved policies are non-stationary
         """
-
-        # if the first policy is non-stationary, we define a total density with time index
-        if self.solver is DP:
-            total_density = np.zeros((self.env.max_episode_length, self.env.states_num))
-        else:
-            total_density = np.zeros(self.env.states_num)
-
-        if actions:
-            # if actions are needed expand dimension
-            total_density = np.repeat(np.expand_dims(total_density, axis = -1), axis = -1, repeats = self.env.actions_num)
-
-        for i, policy in enumerate(self.policies):
-            if i >= len(self.densities):
-                d = self._density_oracle_single(policy)
-                self.densities.append(d)
-            if actions:
-                # TODO: doesn't work with non-stationary, JP: added a fix but have not tested fully 
-                if self.solver is not DP:
-                    total_density += self.weights[i] * policy.p * np.expand_dims(self.densities[i], axis=1)
-                else:
-                    total_density += self.weights[i] * policy.ps[i] * np.expand_dims(self.densities[i], axis=1)
-                # try:
-                #     total_density += self.weights[i] * policy.p * np.expand_dims(self.densities[i], axis=1)
-                # except:
-                #     raise TypeError('Non-stationary policies are not supported for state-action distribution')
-            else:
-                total_density += self.weights[i] * self.densities[i]
-        return total_density
-
-    def _planning_oracle(self, reward: np.ndarray) -> Policy:
-        """Computes the optimal policy given a reward function and internal environment
-
-        Args:
-            reward (np.ndarray): reward function for each state
-
-        Returns:
-            Policy: policy solving the saved environment with the given reward function
-        """
-        solver = self.solver(self.env, reward)
-        return solver.solve()
-
-    def _reward_fn_gradient(self, distribution: np.ndarray) -> np.ndarray:
-        """Computes the reward functional differentiated wrt to the state distribution
-
-        Args:
-            distribution (np.ndarray): state distribution to compute the reward function
-
-        Returns:
-            np.ndarray: gradient of the functional wrt to the state distribution - i.e. the reward function
-        """
-        grad_fn = getattr(self.objective, "gradient", None)
-        if callable(grad_fn):
-            return grad_fn(self.emissions, distribution)
-
-        if self.objective.get_type() == "adaptive":
-            grad_fn = grad(lambda d: self.objective.eval(self.emissions, d, self.visitations, self.episodes))
-        else:
-            grad_fn = grad(lambda d: self.objective.eval(self.emissions, d, self.episodes))
-        return grad_fn(distribution)
-
-    def _reward_fn_hessian(self, distribution: np.array)->np.array:
-        if self.objective.get_type() == "adaptive":
-            hes_fn = hessian(lambda d: self.objective.eval(self.emissions, d, self.visitations, self.episodes))
-        else:
-            hes_fn = hessian(lambda d: self.objective.eval(self.emissions, d, self.episodes))
-        return hes_fn(distribution)
-
-    def _update_data(self):
-        if self.callback is not None:
-            self.callback(self.trajectory, self.objective)
+        return self.density_estimator.density_oracle(self.policies, self.weights, self.densities, self.convex_solver.stationary)
 
     def evaluate(
             self,
-            SummarizedPolicyType: Type[SummarizedPolicy] = MixturePolicy,
             episodes: int = 100,
             plot: bool = True
     ) -> None:
@@ -234,152 +137,37 @@ class MdpExplore():
             episodes (int, optional): number of policy rollouts to execute. Defaults to 100.
             plot (bool, optional): if True, plots the heatmap based on the policy rollouts. Defaults to True.
         """
-        empirical = np.zeros(len(self.policies))
         for _ in range(episodes):
             self.env.reset()
 
-            if SummarizedPolicyType == DensityPolicy:
-                summarized_policy = SummarizedPolicyType(
-                    self.env, self._density_oracle(), self._density_oracle(actions=True)
-                )
-            elif SummarizedPolicyType == TrackingPolicy:
-                summarized_policy = SummarizedPolicyType(
-                    self.env, self.policies, self.weights, empirical
-                )
-                empirical[summarized_policy.get_picked_policy_id()] += 1
-            else:
-                summarized_policy = SummarizedPolicyType(
-                    self.env, self.policies, self.weights
-                )
-
             self.trajectory.append(self.env.init_state)
-            for _ in range(self.env.max_episode_length):
-                action = summarized_policy.next_action(self.env.state)
+            # count episode visitations
+            self.state_visitations.append(self.env.init_state)
+            for h in range(self.env.max_episode_length):
+                action = self.general_policy.next_action(self.env.state, self.emissions, self.visitations, self.episodes)
+
+                # feedback the state and action
+                self.feedback.step_single(self.env.state, action)
+
                 next_state = self.env.step(action)
                 self.trajectory.append(next_state)
+                # count episode visitations
+                self.state_visitations.append(next_state)
+                self.action_visitations.append(action)
+            
+            self.feedback.step_episode()
+            # update the visitations
+            self.visitations.append((self.state_visitations, self.action_visitations))
+        
 
-            self._update_data()
-            self.visitations.append(self.env.visitations / self.env.visitations.sum())
-
-    def _optimize_frank_wolfe(
-            self,
-            num_components: int,
-            gap=None,
-            verbose=False,
-    ) -> None:
-        """Performs Frank-Wolfe algorithm to maximize the objective function
-
-        Args:
-            num_components (int): limit on number of components to be obtained by the algorithm
-            gap ([type], optional): upper bound on the optimality gap. Defaults to None.
-            verbose (bool, optional): if True, logs optimization progress to terminal. Defaults to True.
+    def optimize(self) -> None:
+        """Optimizes the objective function using the specified method, returns the optimal policies and weights
         """
-
-        # this is to ensure that the first policy has probability 1
-        if self.initial_policy:
-            counter = 1
-        else:
-            counter = 0
-
-        gap = -10e10 if gap is None else gap
-        empirical_gap = 1e10
-
-        while counter < num_components and empirical_gap > gap:
-
-            # calculate the current density
-            density = self._density_oracle()
-
-            # gradient of the reward
-            reward = self._reward_fn_gradient(density)
-            if self.objective.get_type() != "adaptive":
-                self.objective_values_baseline.append(self.objective.eval(self.emissions, density, self.episodes))
-            new_policy = self._planning_oracle(reward)
-            self.policies.append(new_policy)
-            #
-            # hess_min = np.min(np.linalg.eigh(self._reward_fn_hessian(density))[0])
-            # hess_max = np.max(np.linalg.eigh(self._reward_fn_hessian(density))[0])
-            hess_min = 0
-            hess_max = 0
-            # new base density to be added
-            new_density = self._density_oracle_single(new_policy)
-
-            if self.step == "line-search" and num_components > 1:
-                # line search to determine optimal step-size
-
-                def fn(h):
-                    if self.objective.get_type() == "adaptive":
-                        return -self.objective.eval(
-                            self.emissions,
-                            density * (1 - h) + h * new_density,
-                            self.visitations,
-                            self.episodes
-                        )
-                    return -self.objective.eval(
-                        self.emissions,
-                        density * (1 - h) + h * new_density,
-                        self.episodes
-                    )
-
-                res = minimize_scalar(
-                    fn,
-                    bounds=(1e-5, 1. - 1e-5),
-                    method='bounded')
-                step_size = res.x
-
-            elif self.step is not None and isinstance(self.step, float):
-                # fixed step size
-                step_size = self.step
-            else:
-                # greedy simulation
-                step_size = 1.0 / (1 + counter)
-
-            if self.objective.get_type() == "adaptive":
-                objective = self.objective.eval(self.emissions, density, self.visitations, self.episodes)
-            else:
-                objective = self.objective.eval(self.emissions, density, self.episodes)
-
-
-            # if policy is non-stationary, we take the average new density
-            # if type(new_policy) is NonStationaryPolicy:
-            #    new_density = new_density.mean(axis=0)
-
-            # empirical gap is calculated by taking the minimum across time-steps h (not sure this is right)
-            empirical_gap = np.minimum(np.min(reward @ (new_density - density).T), empirical_gap)
-
-            if verbose:
-                print(f'component: {counter}, gap: {empirical_gap}, objective: {objective}, stepsize: {step_size}, gradient:{la.norm(reward)}, hess_max:{hess_max}, hess_min:{hess_min}')
-            self.weights = [(1 - step_size) * weight for weight in self.weights] + [step_size]
-
-            counter += 1
-
-    def optimize(
-            self,
-            num_components: int,
-            method: str,
-            accuracy: float = None,
-    ) -> None:
-        """Optimizes the objective function using the specified method
-
-        Args:
-            num_components (int): limit on number of components to be obtained by the algorithm
-            method (str): method to be used for optimization (only frank-wolfe available)
-            accuracy (float, optional): optimality gap to be reached. Defaults to None.
-        """
-        if method == 'frank-wolfe':
-            self._optimize_frank_wolfe(
-                num_components=num_components,
-                gap=accuracy,
-                verbose=self.verbosity > 2,
-            )
-        else:
-            pass  # can't happen, handled by argparser
+        self.summarized_policy, self.policies, self.weights, self.densities = self.convex_solver.optimize(self.emissions, self.visitations, self.episodes)
 
     def run(
             self,
-            num_components: int,
             episodes: int = 100,
-            accuracy: float = None,
-            SummarizedPolicyType: Type[SummarizedPolicy] = MixturePolicy,
             plot: bool = False,
             save_trajectory: Union[str, None] = None,
             return_visitations: bool = False,
@@ -404,7 +192,6 @@ class MdpExplore():
 
             self._reset()
             run_objective_values = []
-            aggregate_distribution = 0
 
             for i in range(episodes):
                 if self.verbosity > 2:
@@ -412,10 +199,12 @@ class MdpExplore():
 
                 self._reset(reset_visitations=False)
 
-                self.optimize(num_components, self.method, accuracy)
+                # self.optimize()
 
-                self.evaluate(SummarizedPolicyType, 1)
-                aggregate_distribution = (i * aggregate_distribution + self.visitations[i]) / (i + 1)
+                self.evaluate(1)
+                
+                # calculate the aggregate distribution
+                aggregate_distribution = self.objective.build_density_from_trajectories(self.visitations)
 
                 if save_trajectory is not None:
                     np.savetxt(f"{save_trajectory}{i}.txt",
@@ -425,7 +214,7 @@ class MdpExplore():
                     self.emissions, aggregate_distribution, episodes
                 )
 
-                print (f'episode:{i}, value :{objective}', self.objective.eval(self.emissions, aggregate_distribution,self.visitations, episodes))
+                print (f'episode:{i}, value :{objective}', self.objective.eval(self.emissions, aggregate_distribution, self.visitations, episodes))
                 self.objective_values_baseline.append(objective)
                 run_objective_values.append(objective)
 
@@ -434,16 +223,16 @@ class MdpExplore():
         else:
             self._reset()
             self.episodes = episodes
-            self.optimize(num_components, self.method, accuracy)
+            self.optimize()
 
             self.visitations = []
-            self.evaluate(SummarizedPolicyType, episodes)
+            self.evaluate(episodes)
 
             run_objective_values = []
             aggregate_distribution = 0
 
             for i, d in enumerate(self.visitations):
-                aggregate_distribution = (i * aggregate_distribution + d) / (i + 1)
+                aggregate_distribution = (i * aggregate_distribution + self.objective.build_density_from_trajectories(d)) / (i+1)
                 run_objective_values.append(
                     self.objective.eval_full(self.emissions, aggregate_distribution, self.episodes))
 

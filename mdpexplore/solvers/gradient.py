@@ -2,7 +2,7 @@ import numpy as np
 from mdpexplore.solvers.solver_base import DiscreteSolver
 from mdpexplore.solvers.solver_base import ContinuousSolver
 from mdpexplore.policies.policy_base import Policy
-from mdpexplore.policies.linear_policy import LinearPolicy
+from mdpexplore.policies.base_policies.linear_policy import LinearPolicy
 from mdpexplore.env.linear_system import ContinuousEnv
 from typing import Callable
 from autograd import grad

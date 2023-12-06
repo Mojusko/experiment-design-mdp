@@ -1,0 +1,401 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<project version="4">
+  <component name="AutoImportSettings">
+    <option name="autoReloadType" value="SELECTIVE" />
+  </component>
+  <component name="ChangeListManager">
+    <list default="true" id="7baeaed4-21fe-4fb1-9570-9305f25d0d58" name="Default Changelist" comment="">
+      <change afterPath="$PROJECT_DIR$/.idea/ChatGPTCopilotChannelManager.xml" afterDir="false" />
+      <change afterPath="$PROJECT_DIR$/.idea/jupyter-settings.xml" afterDir="false" />
+      <change afterPath="$PROJECT_DIR$/.idea/sshConfigs.xml" afterDir="false" />
+      <change beforePath="$PROJECT_DIR$/.idea/webServers.xml" beforeDir="false" afterPath="$PROJECT_DIR$/.idea/webServers.xml" afterDir="false" />
+      <change beforePath="$PROJECT_DIR$/experiments/Makefile" beforeDir="false" afterPath="$PROJECT_DIR$/experiments/Makefile" afterDir="false" />
+      <change beforePath="$PROJECT_DIR$/experiments/classical_grid/results/adaptive-1-1.txt" beforeDir="false" afterPath="$PROJECT_DIR$/experiments/classical_grid/results/adaptive-1-1.txt" afterDir="false" />
+      <change beforePath="$PROJECT_DIR$/experiments/classical_grid/results/adaptive-1-10.txt" beforeDir="false" afterPath="$PROJECT_DIR$/experiments/classical_grid/results/adaptive-1-10.txt" afterDir="false" />
+      <change beforePath="$PROJECT_DIR$/experiments/classical_grid/results/adaptive-1-11.txt" beforeDir="false" afterPath="$PROJECT_DIR$/experiments/classical_grid/results/adaptive-1-11.txt" afterDir="false" />
+      <change beforePath="$PROJECT_DIR$/experiments/classical_grid/results/adaptive-1-12.txt" beforeDir="false" afterPath="$PROJECT_DIR$/experiments/classical_grid/results/adaptive-1-12.txt" afterDir="false" />
+      <change beforePath="$PROJECT_DIR$/experiments/classical_grid/results/adaptive-1-13.txt" beforeDir="false" afterPath="$PROJECT_DIR$/experiments/classical_grid/results/adaptive-1-13.txt" afterDir="false" />
+      <change beforePath="$PROJECT_DIR$/experiments/classical_grid/results/adaptive-1-14.txt" beforeDir="false" afterPath="$PROJECT_DIR$/experiments/classical_grid/results/adaptive-1-14.txt" afterDir="false" />
+      <change beforePath="$PROJECT_DIR$/experiments/classical_grid/results/adaptive-1-15.txt" beforeDir="false" afterPath="$PROJECT_DIR$/experiments/classical_grid/results/adaptive-1-15.txt" afterDir="false" />
+      <change beforePath="$PROJECT_DIR$/experiments/classical_grid/results/adaptive-1-16.txt" beforeDir="false" afterPath="$PROJECT_DIR$/experiments/classical_grid/results/adaptive-1-16.txt" afterDir="false" />
+      <change beforePath="$PROJECT_DIR$/experiments/classical_grid/results/adaptive-1-17.txt" beforeDir="false" afterPath="$PROJECT_DIR$/experiments/classical_grid/results/adaptive-1-17.txt" afterDir="false" />
+      <change beforePath="$PROJECT_DIR$/experiments/classical_grid/results/adaptive-1-18.txt" beforeDir="false" afterPath="$PROJECT_DIR$/experiments/classical_grid/results/adaptive-1-18.txt" afterDir="false" />
+      <change beforePath="$PROJECT_DIR$/experiments/classical_grid/results/adaptive-1-19.txt" beforeDir="false" afterPath="$PROJECT_DIR$/experiments/classical_grid/results/adaptive-1-19.txt" afterDir="false" />
+      <change beforePath="$PROJECT_DIR$/experiments/classical_grid/results/adaptive-1-2.txt" beforeDir="false" afterPath="$PROJECT_DIR$/experiments/classical_grid/results/adaptive-1-2.txt" afterDir="false" />
+      <change beforePath="$PROJECT_DIR$/experiments/classical_grid/results/adaptive-1-20.txt" beforeDir="false" afterPath="$PROJECT_DIR$/experiments/classical_grid/results/adaptive-1-20.txt" afterDir="false" />
+      <change beforePath="$PROJECT_DIR$/experiments/classical_grid/results/adaptive-1-21.txt" beforeDir="false" afterPath="$PROJECT_DIR$/experiments/classical_grid/results/adaptive-1-21.txt" afterDir="false" />
+      <change beforePath="$PROJECT_DIR$/experiments/classical_grid/results/adaptive-1-22.txt" beforeDir="false" afterPath="$PROJECT_DIR$/experiments/classical_grid/results/adaptive-1-22.txt" afterDir="false" />
+      <change beforePath="$PROJECT_DIR$/experiments/classical_grid/results/adaptive-1-23.txt" beforeDir="false" afterPath="$PROJECT_DIR$/experiments/classical_grid/results/adaptive-1-23.txt" afterDir="false" />
+      <change beforePath="$PROJECT_DIR$/experiments/classical_grid/results/adaptive-1-24.txt" beforeDir="false" afterPath="$PROJECT_DIR$/experiments/classical_grid/results/adaptive-1-24.txt" afterDir="false" />
+      <change beforePath="$PROJECT_DIR$/experiments/classical_grid/results/adaptive-1-25.txt" beforeDir="false" afterPath="$PROJECT_DIR$/experiments/classical_grid/results/adaptive-1-25.txt" afterDir="false" />
+      <change beforePath="$PROJECT_DIR$/experiments/classical_grid/results/adaptive-1-3.txt" beforeDir="false" afterPath="$PROJECT_DIR$/experiments/classical_grid/results/adaptive-1-3.txt" afterDir="false" />
+      <change beforePath="$PROJECT_DIR$/experiments/classical_grid/results/adaptive-1-4.txt" beforeDir="false" afterPath="$PROJECT_DIR$/experiments/classical_grid/results/adaptive-1-4.txt" afterDir="false" />
+      <change beforePath="$PROJECT_DIR$/experiments/classical_grid/results/adaptive-1-5.txt" beforeDir="false" afterPath="$PROJECT_DIR$/experiments/classical_grid/results/adaptive-1-5.txt" afterDir="false" />
+      <change beforePath="$PROJECT_DIR$/experiments/classical_grid/results/adaptive-1-6.txt" beforeDir="false" afterPath="$PROJECT_DIR$/experiments/classical_grid/results/adaptive-1-6.txt" afterDir="false" />
+      <change beforePath="$PROJECT_DIR$/experiments/classical_grid/results/adaptive-1-7.txt" beforeDir="false" afterPath="$PROJECT_DIR$/experiments/classical_grid/results/adaptive-1-7.txt" afterDir="false" />
+      <change beforePath="$PROJECT_DIR$/experiments/classical_grid/results/adaptive-1-8.txt" beforeDir="false" afterPath="$PROJECT_DIR$/experiments/classical_grid/results/adaptive-1-8.txt" afterDir="false" />
+      <change beforePath="$PROJECT_DIR$/experiments/classical_grid/results/adaptive-1-9.txt" beforeDir="false" afterPath="$PROJECT_DIR$/experiments/classical_grid/results/adaptive-1-9.txt" afterDir="false" />
+      <change beforePath="$PROJECT_DIR$/experiments/classical_grid/results/adaptive-1.txt" beforeDir="false" afterPath="$PROJECT_DIR$/experiments/classical_grid/results/adaptive-1.txt" afterDir="false" />
+      <change beforePath="$PROJECT_DIR$/experiments/classical_grid/results/adaptive-10.txt" beforeDir="false" afterPath="$PROJECT_DIR$/experiments/classical_grid/results/adaptive-10.txt" afterDir="false" />
+      <change beforePath="$PROJECT_DIR$/experiments/classical_grid/results/adaptive-11.txt" beforeDir="false" afterPath="$PROJECT_DIR$/experiments/classical_grid/results/adaptive-11.txt" afterDir="false" />
+      <change beforePath="$PROJECT_DIR$/experiments/classical_grid/results/adaptive-12.txt" beforeDir="false" afterPath="$PROJECT_DIR$/experiments/classical_grid/results/adaptive-12.txt" afterDir="false" />
+      <change beforePath="$PROJECT_DIR$/experiments/classical_grid/results/adaptive-13.txt" beforeDir="false" afterPath="$PROJECT_DIR$/experiments/classical_grid/results/adaptive-13.txt" afterDir="false" />
+      <change beforePath="$PROJECT_DIR$/experiments/classical_grid/results/adaptive-14.txt" beforeDir="false" afterPath="$PROJECT_DIR$/experiments/classical_grid/results/adaptive-14.txt" afterDir="false" />
+      <change beforePath="$PROJECT_DIR$/experiments/classical_grid/results/adaptive-15.txt" beforeDir="false" afterPath="$PROJECT_DIR$/experiments/classical_grid/results/adaptive-15.txt" afterDir="false" />
+      <change beforePath="$PROJECT_DIR$/experiments/classical_grid/results/adaptive-16.txt" beforeDir="false" afterPath="$PROJECT_DIR$/experiments/classical_grid/results/adaptive-16.txt" afterDir="false" />
+      <change beforePath="$PROJECT_DIR$/experiments/classical_grid/results/adaptive-17.txt" beforeDir="false" afterPath="$PROJECT_DIR$/experiments/classical_grid/results/adaptive-17.txt" afterDir="false" />
+      <change beforePath="$PROJECT_DIR$/experiments/classical_grid/results/adaptive-18.txt" beforeDir="false" afterPath="$PROJECT_DIR$/experiments/classical_grid/results/adaptive-18.txt" afterDir="false" />
+      <change beforePath="$PROJECT_DIR$/experiments/classical_grid/results/adaptive-19.txt" beforeDir="false" afterPath="$PROJECT_DIR$/experiments/classical_grid/results/adaptive-19.txt" afterDir="false" />
+      <change beforePath="$PROJECT_DIR$/experiments/classical_grid/results/adaptive-2.txt" beforeDir="false" afterPath="$PROJECT_DIR$/experiments/classical_grid/results/adaptive-2.txt" afterDir="false" />
+      <change beforePath="$PROJECT_DIR$/experiments/classical_grid/results/adaptive-20.txt" beforeDir="false" afterPath="$PROJECT_DIR$/experiments/classical_grid/results/adaptive-20.txt" afterDir="false" />
+      <change beforePath="$PROJECT_DIR$/experiments/classical_grid/results/adaptive-21.txt" beforeDir="false" afterPath="$PROJECT_DIR$/experiments/classical_grid/results/adaptive-21.txt" afterDir="false" />
+      <change beforePath="$PROJECT_DIR$/experiments/classical_grid/results/adaptive-22.txt" beforeDir="false" afterPath="$PROJECT_DIR$/experiments/classical_grid/results/adaptive-22.txt" afterDir="false" />
+      <change beforePath="$PROJECT_DIR$/experiments/classical_grid/results/adaptive-23.txt" beforeDir="false" afterPath="$PROJECT_DIR$/experiments/classical_grid/results/adaptive-23.txt" afterDir="false" />
+      <change beforePath="$PROJECT_DIR$/experiments/classical_grid/results/adaptive-24.txt" beforeDir="false" afterPath="$PROJECT_DIR$/experiments/classical_grid/results/adaptive-24.txt" afterDir="false" />
+      <change beforePath="$PROJECT_DIR$/experiments/classical_grid/results/adaptive-25.txt" beforeDir="false" afterPath="$PROJECT_DIR$/experiments/classical_grid/results/adaptive-25.txt" afterDir="false" />
+      <change beforePath="$PROJECT_DIR$/experiments/classical_grid/results/adaptive-3.txt" beforeDir="false" afterPath="$PROJECT_DIR$/experiments/classical_grid/results/adaptive-3.txt" afterDir="false" />
+      <change beforePath="$PROJECT_DIR$/experiments/classical_grid/results/adaptive-4.txt" beforeDir="false" afterPath="$PROJECT_DIR$/experiments/classical_grid/results/adaptive-4.txt" afterDir="false" />
+      <change beforePath="$PROJECT_DIR$/experiments/classical_grid/results/adaptive-5.txt" beforeDir="false" afterPath="$PROJECT_DIR$/experiments/classical_grid/results/adaptive-5.txt" afterDir="false" />
+      <change beforePath="$PROJECT_DIR$/experiments/classical_grid/results/adaptive-6.txt" beforeDir="false" afterPath="$PROJECT_DIR$/experiments/classical_grid/results/adaptive-6.txt" afterDir="false" />
+      <change beforePath="$PROJECT_DIR$/experiments/classical_grid/results/adaptive-7.txt" beforeDir="false" afterPath="$PROJECT_DIR$/experiments/classical_grid/results/adaptive-7.txt" afterDir="false" />
+      <change beforePath="$PROJECT_DIR$/experiments/classical_grid/results/adaptive-8.txt" beforeDir="false" afterPath="$PROJECT_DIR$/experiments/classical_grid/results/adaptive-8.txt" afterDir="false" />
+      <change beforePath="$PROJECT_DIR$/experiments/classical_grid/results/adaptive-9.txt" beforeDir="false" afterPath="$PROJECT_DIR$/experiments/classical_grid/results/adaptive-9.txt" afterDir="false" />
+      <change beforePath="$PROJECT_DIR$/experiments/classical_grid/results/density-1.txt" beforeDir="false" afterPath="$PROJECT_DIR$/experiments/classical_grid/results/density-1.txt" afterDir="false" />
+      <change beforePath="$PROJECT_DIR$/experiments/classical_grid/results/density-10.txt" beforeDir="false" afterPath="$PROJECT_DIR$/experiments/classical_grid/results/density-10.txt" afterDir="false" />
+      <change beforePath="$PROJECT_DIR$/experiments/classical_grid/results/density-11.txt" beforeDir="false" afterPath="$PROJECT_DIR$/experiments/classical_grid/results/density-11.txt" afterDir="false" />
+      <change beforePath="$PROJECT_DIR$/experiments/classical_grid/results/density-12.txt" beforeDir="false" afterPath="$PROJECT_DIR$/experiments/classical_grid/results/density-12.txt" afterDir="false" />
+      <change beforePath="$PROJECT_DIR$/experiments/classical_grid/results/density-13.txt" beforeDir="false" afterPath="$PROJECT_DIR$/experiments/classical_grid/results/density-13.txt" afterDir="false" />
+      <change beforePath="$PROJECT_DIR$/experiments/classical_grid/results/density-14.txt" beforeDir="false" afterPath="$PROJECT_DIR$/experiments/classical_grid/results/density-14.txt" afterDir="false" />
+      <change beforePath="$PROJECT_DIR$/experiments/classical_grid/results/density-15.txt" beforeDir="false" afterPath="$PROJECT_DIR$/experiments/classical_grid/results/density-15.txt" afterDir="false" />
+      <change beforePath="$PROJECT_DIR$/experiments/classical_grid/results/density-16.txt" beforeDir="false" afterPath="$PROJECT_DIR$/experiments/classical_grid/results/density-16.txt" afterDir="false" />
+      <change beforePath="$PROJECT_DIR$/experiments/classical_grid/results/density-17.txt" beforeDir="false" afterPath="$PROJECT_DIR$/experiments/classical_grid/results/density-17.txt" afterDir="false" />
+      <change beforePath="$PROJECT_DIR$/experiments/classical_grid/results/density-18.txt" beforeDir="false" afterPath="$PROJECT_DIR$/experiments/classical_grid/results/density-18.txt" afterDir="false" />
+      <change beforePath="$PROJECT_DIR$/experiments/classical_grid/results/density-19.txt" beforeDir="false" afterPath="$PROJECT_DIR$/experiments/classical_grid/results/density-19.txt" afterDir="false" />
+      <change beforePath="$PROJECT_DIR$/experiments/classical_grid/results/density-2.txt" beforeDir="false" afterPath="$PROJECT_DIR$/experiments/classical_grid/results/density-2.txt" afterDir="false" />
+      <change beforePath="$PROJECT_DIR$/experiments/classical_grid/results/density-20.txt" beforeDir="false" afterPath="$PROJECT_DIR$/experiments/classical_grid/results/density-20.txt" afterDir="false" />
+      <change beforePath="$PROJECT_DIR$/experiments/classical_grid/results/density-21.txt" beforeDir="false" afterPath="$PROJECT_DIR$/experiments/classical_grid/results/density-21.txt" afterDir="false" />
+      <change beforePath="$PROJECT_DIR$/experiments/classical_grid/results/density-22.txt" beforeDir="false" afterPath="$PROJECT_DIR$/experiments/classical_grid/results/density-22.txt" afterDir="false" />
+      <change beforePath="$PROJECT_DIR$/experiments/classical_grid/results/density-23.txt" beforeDir="false" afterPath="$PROJECT_DIR$/experiments/classical_grid/results/density-23.txt" afterDir="false" />
+      <change beforePath="$PROJECT_DIR$/experiments/classical_grid/results/density-24.txt" beforeDir="false" afterPath="$PROJECT_DIR$/experiments/classical_grid/results/density-24.txt" afterDir="false" />
+      <change beforePath="$PROJECT_DIR$/experiments/classical_grid/results/density-25.txt" beforeDir="false" afterPath="$PROJECT_DIR$/experiments/classical_grid/results/density-25.txt" afterDir="false" />
+      <change beforePath="$PROJECT_DIR$/experiments/classical_grid/results/density-3.txt" beforeDir="false" afterPath="$PROJECT_DIR$/experiments/classical_grid/results/density-3.txt" afterDir="false" />
+      <change beforePath="$PROJECT_DIR$/experiments/classical_grid/results/density-4.txt" beforeDir="false" afterPath="$PROJECT_DIR$/experiments/classical_grid/results/density-4.txt" afterDir="false" />
+      <change beforePath="$PROJECT_DIR$/experiments/classical_grid/results/density-5.txt" beforeDir="false" afterPath="$PROJECT_DIR$/experiments/classical_grid/results/density-5.txt" afterDir="false" />
+      <change beforePath="$PROJECT_DIR$/experiments/classical_grid/results/density-6.txt" beforeDir="false" afterPath="$PROJECT_DIR$/experiments/classical_grid/results/density-6.txt" afterDir="false" />
+      <change beforePath="$PROJECT_DIR$/experiments/classical_grid/results/density-7.txt" beforeDir="false" afterPath="$PROJECT_DIR$/experiments/classical_grid/results/density-7.txt" afterDir="false" />
+      <change beforePath="$PROJECT_DIR$/experiments/classical_grid/results/density-8.txt" beforeDir="false" afterPath="$PROJECT_DIR$/experiments/classical_grid/results/density-8.txt" afterDir="false" />
+      <change beforePath="$PROJECT_DIR$/experiments/classical_grid/results/density-9.txt" beforeDir="false" afterPath="$PROJECT_DIR$/experiments/classical_grid/results/density-9.txt" afterDir="false" />
+      <change beforePath="$PROJECT_DIR$/experiments/classical_grid/results/none-.txt" beforeDir="false" afterPath="$PROJECT_DIR$/experiments/classical_grid/results/none-.txt" afterDir="false" />
+      <change beforePath="$PROJECT_DIR$/experiments/classical_grid/results/opt.txt" beforeDir="false" afterPath="$PROJECT_DIR$/experiments/classical_grid/results/opt.txt" afterDir="false" />
+      <change beforePath="$PROJECT_DIR$/experiments/figs/grids-subplots.png" beforeDir="false" afterPath="$PROJECT_DIR$/experiments/figs/grids-subplots.png" afterDir="false" />
+      <change beforePath="$PROJECT_DIR$/experiments/figs/grids-subplots2.png" beforeDir="false" afterPath="$PROJECT_DIR$/experiments/figs/grids-subplots2.png" afterDir="false" />
+      <change beforePath="$PROJECT_DIR$/experiments/plot_bels_pharma.py" beforeDir="false" afterPath="$PROJECT_DIR$/experiments/plot_bels_pharma.py" afterDir="false" />
+      <change beforePath="$PROJECT_DIR$/experiments/plot_grids.py" beforeDir="false" afterPath="$PROJECT_DIR$/experiments/plot_grids.py" afterDir="false" />
+      <change beforePath="$PROJECT_DIR$/experiments/stochastic_grid/experiment.csv" beforeDir="false" afterPath="$PROJECT_DIR$/experiments/stochastic_grid/experiment.csv" afterDir="false" />
+      <change beforePath="$PROJECT_DIR$/experiments/stochastic_grid/results/adaptive-1-prob-0.1-1.txt" beforeDir="false" afterPath="$PROJECT_DIR$/experiments/stochastic_grid/results/adaptive-1-prob-0.1-1.txt" afterDir="false" />
+      <change beforePath="$PROJECT_DIR$/experiments/stochastic_grid/results/adaptive-1-prob-0.1-10.txt" beforeDir="false" afterPath="$PROJECT_DIR$/experiments/stochastic_grid/results/adaptive-1-prob-0.1-10.txt" afterDir="false" />
+      <change beforePath="$PROJECT_DIR$/experiments/stochastic_grid/results/adaptive-1-prob-0.1-11.txt" beforeDir="false" afterPath="$PROJECT_DIR$/experiments/stochastic_grid/results/adaptive-1-prob-0.1-11.txt" afterDir="false" />
+      <change beforePath="$PROJECT_DIR$/experiments/stochastic_grid/results/adaptive-1-prob-0.1-12.txt" beforeDir="false" afterPath="$PROJECT_DIR$/experiments/stochastic_grid/results/adaptive-1-prob-0.1-12.txt" afterDir="false" />
+      <change beforePath="$PROJECT_DIR$/experiments/stochastic_grid/results/adaptive-1-prob-0.1-13.txt" beforeDir="false" afterPath="$PROJECT_DIR$/experiments/stochastic_grid/results/adaptive-1-prob-0.1-13.txt" afterDir="false" />
+      <change beforePath="$PROJECT_DIR$/experiments/stochastic_grid/results/adaptive-1-prob-0.1-14.txt" beforeDir="false" afterPath="$PROJECT_DIR$/experiments/stochastic_grid/results/adaptive-1-prob-0.1-14.txt" afterDir="false" />
+      <change beforePath="$PROJECT_DIR$/experiments/stochastic_grid/results/adaptive-1-prob-0.1-15.txt" beforeDir="false" afterPath="$PROJECT_DIR$/experiments/stochastic_grid/results/adaptive-1-prob-0.1-15.txt" afterDir="false" />
+      <change beforePath="$PROJECT_DIR$/experiments/stochastic_grid/results/adaptive-1-prob-0.1-16.txt" beforeDir="false" afterPath="$PROJECT_DIR$/experiments/stochastic_grid/results/adaptive-1-prob-0.1-16.txt" afterDir="false" />
+      <change beforePath="$PROJECT_DIR$/experiments/stochastic_grid/results/adaptive-1-prob-0.1-2.txt" beforeDir="false" afterPath="$PROJECT_DIR$/experiments/stochastic_grid/results/adaptive-1-prob-0.1-2.txt" afterDir="false" />
+      <change beforePath="$PROJECT_DIR$/experiments/stochastic_grid/results/adaptive-1-prob-0.1-3.txt" beforeDir="false" afterPath="$PROJECT_DIR$/experiments/stochastic_grid/results/adaptive-1-prob-0.1-3.txt" afterDir="false" />
+      <change beforePath="$PROJECT_DIR$/experiments/stochastic_grid/results/adaptive-1-prob-0.1-4.txt" beforeDir="false" afterPath="$PROJECT_DIR$/experiments/stochastic_grid/results/adaptive-1-prob-0.1-4.txt" afterDir="false" />
+      <change beforePath="$PROJECT_DIR$/experiments/stochastic_grid/results/adaptive-1-prob-0.1-5.txt" beforeDir="false" afterPath="$PROJECT_DIR$/experiments/stochastic_grid/results/adaptive-1-prob-0.1-5.txt" afterDir="false" />
+      <change beforePath="$PROJECT_DIR$/experiments/stochastic_grid/results/adaptive-1-prob-0.1-6.txt" beforeDir="false" afterPath="$PROJECT_DIR$/experiments/stochastic_grid/results/adaptive-1-prob-0.1-6.txt" afterDir="false" />
+      <change beforePath="$PROJECT_DIR$/experiments/stochastic_grid/results/adaptive-1-prob-0.1-7.txt" beforeDir="false" afterPath="$PROJECT_DIR$/experiments/stochastic_grid/results/adaptive-1-prob-0.1-7.txt" afterDir="false" />
+      <change beforePath="$PROJECT_DIR$/experiments/stochastic_grid/results/adaptive-1-prob-0.1-8.txt" beforeDir="false" afterPath="$PROJECT_DIR$/experiments/stochastic_grid/results/adaptive-1-prob-0.1-8.txt" afterDir="false" />
+      <change beforePath="$PROJECT_DIR$/experiments/stochastic_grid/results/adaptive-1-prob-0.1-9.txt" beforeDir="false" afterPath="$PROJECT_DIR$/experiments/stochastic_grid/results/adaptive-1-prob-0.1-9.txt" afterDir="false" />
+      <change beforePath="$PROJECT_DIR$/experiments/stochastic_grid/run_stochastic_grid.py" beforeDir="false" afterPath="$PROJECT_DIR$/experiments/stochastic_grid/run_stochastic_grid.py" afterDir="false" />
+      <change beforePath="$PROJECT_DIR$/mdpexplore.egg-info/PKG-INFO" beforeDir="false" afterPath="$PROJECT_DIR$/mdpexplore.egg-info/PKG-INFO" afterDir="false" />
+      <change beforePath="$PROJECT_DIR$/mdpexplore.egg-info/SOURCES.txt" beforeDir="false" afterPath="$PROJECT_DIR$/mdpexplore.egg-info/SOURCES.txt" afterDir="false" />
+      <change beforePath="$PROJECT_DIR$/mdpexplore/solvers/dp.py" beforeDir="false" afterPath="$PROJECT_DIR$/mdpexplore/solvers/dp.py" afterDir="false" />
+      <change beforePath="$PROJECT_DIR$/mdpexplore/solvers/lp.py" beforeDir="false" afterPath="$PROJECT_DIR$/mdpexplore/solvers/lp.py" afterDir="false" />
+    </list>
+    <option name="SHOW_DIALOG" value="false" />
+    <option name="HIGHLIGHT_CONFLICTS" value="true" />
+    <option name="HIGHLIGHT_NON_ACTIVE_CHANGELIST" value="false" />
+    <option name="LAST_RESOLUTION" value="IGNORE" />
+  </component>
+  <component name="DatabaseView">
+    <option name="SHOW_INTERMEDIATE" value="true" />
+    <option name="GROUP_DATA_SOURCES" value="true" />
+    <option name="GROUP_SCHEMA" value="true" />
+    <option name="GROUP_CONTENTS" value="false" />
+    <option name="SORT_POSITIONED" value="false" />
+    <option name="SHOW_EMPTY_GROUPS" value="false" />
+    <option name="AUTO_SCROLL_FROM_SOURCE" value="false" />
+    <option name="HIDDEN_KINDS">
+      <set />
+    </option>
+    <expand />
+    <select />
+  </component>
+  <component name="FileTemplateManagerImpl">
+    <option name="RECENT_TEMPLATES">
+      <list>
+        <option value="Jupyter Notebook" />
+        <option value="Python Script" />
+      </list>
+    </option>
+  </component>
+  <component name="Git.Settings">
+    <option name="RECENT_GIT_ROOT_PATH" value="$PROJECT_DIR$" />
+  </component>
+  <component name="IgnoredFileRootStore">
+    <option name="generatedRoots">
+      <set>
+        <option value="$PROJECT_DIR$/.idea" />
+      </set>
+    </option>
+  </component>
+  <component name="MarkdownSettingsMigration">
+    <option name="stateVersion" value="1" />
+  </component>
+  <component name="ProjectId" id="28WBxF8Q4omPKwex2YJ4UCKbEtR" />
+  <component name="ProjectLevelVcsManager" settingsEditedManually="true" />
+  <component name="ProjectViewState">
+    <option name="hideEmptyMiddlePackages" value="true" />
+    <option name="showLibraryContents" value="true" />
+  </component>
+  <component name="PropertiesComponent"><![CDATA[{
+  "keyToString": {
+    "SHARE_PROJECT_CONFIGURATION_FILES": "true",
+    "WebServerToolWindowFactoryState": "true",
+    "last_opened_file_path": "/home/mojko/Documents/PhD_Projects/mdp-exploration/mdp-experiment-design",
+    "node.js.detected.package.eslint": "true",
+    "node.js.detected.package.tslint": "true",
+    "node.js.selected.package.eslint": "(autodetect)",
+    "node.js.selected.package.tslint": "(autodetect)",
+    "vue.rearranger.settings.migration": "true"
+  }
+}]]></component>
+  <component name="PyCoverageOptionsProvider">
+    <option name="myUseBundledCoveragePy" value="true" />
+  </component>
+  <component name="RecentsManager">
+    <key name="CopyFile.RECENT_KEYS">
+      <recent name="$PROJECT_DIR$/experiments/beilschmiedia/results" />
+      <recent name="$PROJECT_DIR$/experiments/figs" />
+      <recent name="$PROJECT_DIR$/experiments" />
+      <recent name="$PROJECT_DIR$/experiments/pharmacokinetics" />
+      <recent name="$PROJECT_DIR$/experiments/beilschmiedia" />
+    </key>
+    <key name="MoveFile.RECENT_KEYS">
+      <recent name="$PROJECT_DIR$/experiments/legacy" />
+      <recent name="$PROJECT_DIR$/experiments/pharmacokinetics/data" />
+      <recent name="$PROJECT_DIR$/experiments/beilschmiedia/results" />
+    </key>
+  </component>
+  <component name="RunManager" selected="Python.plot_grids">
+    <configuration name="fit_beilschmiedia" type="PythonConfigurationType" factoryName="Python" temporary="true">
+      <module name="mdp-experiment-design" />
+      <option name="INTERPRETER_OPTIONS" value="" />
+      <option name="PARENT_ENVS" value="true" />
+      <envs>
+        <env name="PYTHONUNBUFFERED" value="1" />
+      </envs>
+      <option name="SDK_HOME" value="" />
+      <option name="WORKING_DIRECTORY" value="$PROJECT_DIR$/experiments/beilschmiedia" />
+      <option name="IS_MODULE_SDK" value="true" />
+      <option name="ADD_CONTENT_ROOTS" value="true" />
+      <option name="ADD_SOURCE_ROOTS" value="true" />
+      <EXTENSION ID="PythonCoverageRunConfigurationExtension" runner="coverage.py" />
+      <option name="SCRIPT_NAME" value="$PROJECT_DIR$/experiments/beilschmiedia/fit_beilschmiedia.py" />
+      <option name="PARAMETERS" value="" />
+      <option name="SHOW_COMMAND_LINE" value="false" />
+      <option name="EMULATE_TERMINAL" value="false" />
+      <option name="MODULE_MODE" value="false" />
+      <option name="REDIRECT_INPUT" value="false" />
+      <option name="INPUT_FILE" value="" />
+      <method v="2" />
+    </configuration>
+    <configuration name="plot_bels_pharma" type="PythonConfigurationType" factoryName="Python" temporary="true">
+      <module name="mdp-experiment-design" />
+      <option name="INTERPRETER_OPTIONS" value="" />
+      <option name="PARENT_ENVS" value="true" />
+      <envs>
+        <env name="PYTHONUNBUFFERED" value="1" />
+      </envs>
+      <option name="SDK_HOME" value="" />
+      <option name="WORKING_DIRECTORY" value="$PROJECT_DIR$/experiments" />
+      <option name="IS_MODULE_SDK" value="true" />
+      <option name="ADD_CONTENT_ROOTS" value="true" />
+      <option name="ADD_SOURCE_ROOTS" value="true" />
+      <EXTENSION ID="PythonCoverageRunConfigurationExtension" runner="coverage.py" />
+      <option name="SCRIPT_NAME" value="$PROJECT_DIR$/experiments/plot_bels_pharma.py" />
+      <option name="PARAMETERS" value="" />
+      <option name="SHOW_COMMAND_LINE" value="false" />
+      <option name="EMULATE_TERMINAL" value="false" />
+      <option name="MODULE_MODE" value="false" />
+      <option name="REDIRECT_INPUT" value="false" />
+      <option name="INPUT_FILE" value="" />
+      <method v="2" />
+    </configuration>
+    <configuration name="plot_grids" type="PythonConfigurationType" factoryName="Python" temporary="true">
+      <module name="mdp-experiment-design" />
+      <option name="INTERPRETER_OPTIONS" value="" />
+      <option name="PARENT_ENVS" value="true" />
+      <envs>
+        <env name="PYTHONUNBUFFERED" value="1" />
+      </envs>
+      <option name="SDK_HOME" value="" />
+      <option name="WORKING_DIRECTORY" value="$PROJECT_DIR$/experiments" />
+      <option name="IS_MODULE_SDK" value="true" />
+      <option name="ADD_CONTENT_ROOTS" value="true" />
+      <option name="ADD_SOURCE_ROOTS" value="true" />
+      <EXTENSION ID="PythonCoverageRunConfigurationExtension" runner="coverage.py" />
+      <option name="SCRIPT_NAME" value="$PROJECT_DIR$/experiments/plot_grids.py" />
+      <option name="PARAMETERS" value="" />
+      <option name="SHOW_COMMAND_LINE" value="false" />
+      <option name="EMULATE_TERMINAL" value="false" />
+      <option name="MODULE_MODE" value="false" />
+      <option name="REDIRECT_INPUT" value="false" />
+      <option name="INPUT_FILE" value="" />
+      <method v="2" />
+    </configuration>
+    <configuration name="run_stochastic_grid" type="PythonConfigurationType" factoryName="Python" temporary="true">
+      <module name="mdp-experiment-design" />
+      <option name="INTERPRETER_OPTIONS" value="" />
+      <option name="PARENT_ENVS" value="true" />
+      <envs>
+        <env name="PYTHONUNBUFFERED" value="1" />
+      </envs>
+      <option name="SDK_HOME" value="" />
+      <option name="WORKING_DIRECTORY" value="$PROJECT_DIR$/experiments/stochastic_grid" />
+      <option name="IS_MODULE_SDK" value="true" />
+      <option name="ADD_CONTENT_ROOTS" value="true" />
+      <option name="ADD_SOURCE_ROOTS" value="true" />
+      <EXTENSION ID="PythonCoverageRunConfigurationExtension" runner="coverage.py" />
+      <option name="SCRIPT_NAME" value="$PROJECT_DIR$/experiments/stochastic_grid/run_stochastic_grid.py" />
+      <option name="PARAMETERS" value="" />
+      <option name="SHOW_COMMAND_LINE" value="false" />
+      <option name="EMULATE_TERMINAL" value="false" />
+      <option name="MODULE_MODE" value="false" />
+      <option name="REDIRECT_INPUT" value="false" />
+      <option name="INPUT_FILE" value="" />
+      <method v="2" />
+    </configuration>
+    <configuration name="test_pharmaco" type="PythonConfigurationType" factoryName="Python" temporary="true">
+      <module name="mdp-experiment-design" />
+      <option name="INTERPRETER_OPTIONS" value="" />
+      <option name="PARENT_ENVS" value="true" />
+      <envs>
+        <env name="PYTHONUNBUFFERED" value="1" />
+      </envs>
+      <option name="SDK_HOME" value="" />
+      <option name="WORKING_DIRECTORY" value="$PROJECT_DIR$/experiments/pharmacokinetics" />
+      <option name="IS_MODULE_SDK" value="true" />
+      <option name="ADD_CONTENT_ROOTS" value="true" />
+      <option name="ADD_SOURCE_ROOTS" value="true" />
+      <EXTENSION ID="PythonCoverageRunConfigurationExtension" runner="coverage.py" />
+      <option name="SCRIPT_NAME" value="$PROJECT_DIR$/experiments/pharmacokinetics/test_pharmaco.py" />
+      <option name="PARAMETERS" value="" />
+      <option name="SHOW_COMMAND_LINE" value="false" />
+      <option name="EMULATE_TERMINAL" value="false" />
+      <option name="MODULE_MODE" value="false" />
+      <option name="REDIRECT_INPUT" value="false" />
+      <option name="INPUT_FILE" value="" />
+      <method v="2" />
+    </configuration>
+    <list>
+      <item itemvalue="Python.test_pharmaco" />
+      <item itemvalue="Python.plot_bels_pharma" />
+      <item itemvalue="Python.fit_beilschmiedia" />
+      <item itemvalue="Python.plot_grids" />
+      <item itemvalue="Python.run_stochastic_grid" />
+    </list>
+    <recent_temporary>
+      <list>
+        <item itemvalue="Python.plot_grids" />
+        <item itemvalue="Python.run_stochastic_grid" />
+        <item itemvalue="Python.plot_bels_pharma" />
+        <item itemvalue="Python.test_pharmaco" />
+        <item itemvalue="Python.fit_beilschmiedia" />
+      </list>
+    </recent_temporary>
+  </component>
+  <component name="SpellCheckerSettings" RuntimeDictionaries="0" Folders="0" CustomDictionaries="0" DefaultDictionary="application-level" UseSingleDictionary="true" transferred="true" />
+  <component name="SvnConfiguration">
+    <configuration />
+  </component>
+  <component name="TaskManager">
+    <task active="true" id="Default" summary="Default task">
+      <changelist id="7baeaed4-21fe-4fb1-9570-9305f25d0d58" name="Default Changelist" comment="" />
+      <created>1651322705991</created>
+      <option name="number" value="Default" />
+      <option name="presentableId" value="Default" />
+      <updated>1651322705991</updated>
+      <workItem from="1651322712289" duration="992000" />
+      <workItem from="1651324662834" duration="2130000" />
+      <workItem from="1651328949998" duration="2087000" />
+      <workItem from="1651335333059" duration="174000" />
+      <workItem from="1651336292505" duration="2042000" />
+      <workItem from="1651481018365" duration="616000" />
+      <workItem from="1651521662843" duration="134000" />
+      <workItem from="1651521994435" duration="3613000" />
+      <workItem from="1651583979087" duration="1032000" />
+      <workItem from="1651585112599" duration="191000" />
+      <workItem from="1651585338587" duration="2735000" />
+      <workItem from="1651672241241" duration="3273000" />
+      <workItem from="1651758036362" duration="837000" />
+      <workItem from="1651758896507" duration="15615000" />
+      <workItem from="1651823976636" duration="13000" />
+      <workItem from="1651824005678" duration="16000" />
+      <workItem from="1651824032406" duration="29337000" />
+      <workItem from="1651909625729" duration="69207000" />
+      <workItem from="1652128702720" duration="1753000" />
+      <workItem from="1652132930924" duration="5280000" />
+      <workItem from="1652180842706" duration="5916000" />
+      <workItem from="1652192103906" duration="3802000" />
+      <workItem from="1652253490721" duration="37801000" />
+      <workItem from="1652683139154" duration="3946000" />
+      <workItem from="1652727922879" duration="3446000" />
+      <workItem from="1652734386357" duration="29692000" />
+      <workItem from="1652959981764" duration="8174000" />
+      <workItem from="1653294340664" duration="86000" />
+      <workItem from="1653296112972" duration="103000" />
+      <workItem from="1653564739746" duration="3873000" />
+      <workItem from="1654671758974" duration="28000" />
+      <workItem from="1677145110014" duration="3582000" />
+      <workItem from="1677489827081" duration="70000" />
+      <workItem from="1680612900247" duration="621000" />
+      <workItem from="1686121830061" duration="2655000" />
+    </task>
+    <servers />
+  </component>
+  <component name="TypeScriptGeneratedFilesManager">
+    <option name="version" value="3" />
+  </component>
+  <component name="Vcs.Log.Tabs.Properties">
+    <option name="TAB_STATES">
+      <map>
+        <entry key="MAIN">
+          <value>
+            <State />
+          </value>
+        </entry>
+      </map>
+    </option>
+  </component>
+  <component name="com.intellij.coverage.CoverageDataManagerImpl">
+    <SUITE FILE_PATH="coverage/mdp_experiment_design$linear_system.coverage" NAME="linear_system Coverage Results" MODIFIED="1652305461360" SOURCE_PROVIDER="com.intellij.coverage.DefaultCoverageFileProvider" RUNNER="coverage.py" COVERAGE_BY_TEST_ENABLED="true" COVERAGE_TRACING_ENABLED="false" WORKING_DIRECTORY="$PROJECT_DIR$/mdpexplore/env" />
+    <SUITE FILE_PATH="coverage/mdp_experiment_design$plot_grids.coverage" NAME="plot_grids Coverage Results" MODIFIED="1686122851851" SOURCE_PROVIDER="com.intellij.coverage.DefaultCoverageFileProvider" RUNNER="coverage.py" COVERAGE_BY_TEST_ENABLED="true" COVERAGE_TRACING_ENABLED="false" WORKING_DIRECTORY="$PROJECT_DIR$/experiments" />
+    <SUITE FILE_PATH="coverage/mdp_experiment_design$show_grid.coverage" NAME="show_grid Coverage Results" MODIFIED="1652182554776" SOURCE_PROVIDER="com.intellij.coverage.DefaultCoverageFileProvider" RUNNER="coverage.py" COVERAGE_BY_TEST_ENABLED="true" COVERAGE_TRACING_ENABLED="false" WORKING_DIRECTORY="$PROJECT_DIR$/experiments" />
+    <SUITE FILE_PATH="coverage/mdp_experiment_design$run_beilschmiedia.coverage" NAME="run_beilschmiedia Coverage Results" MODIFIED="1652000246173" SOURCE_PROVIDER="com.intellij.coverage.DefaultCoverageFileProvider" RUNNER="coverage.py" COVERAGE_BY_TEST_ENABLED="true" COVERAGE_TRACING_ENABLED="false" WORKING_DIRECTORY="$PROJECT_DIR$/experiments/beilschmiedia" />
+    <SUITE FILE_PATH="coverage/mdp_experiment_design$plot_grid.coverage" NAME="plot_grid Coverage Results" MODIFIED="1652734457457" SOURCE_PROVIDER="com.intellij.coverage.DefaultCoverageFileProvider" RUNNER="coverage.py" COVERAGE_BY_TEST_ENABLED="true" COVERAGE_TRACING_ENABLED="false" WORKING_DIRECTORY="$PROJECT_DIR$/experiments" />
+    <SUITE FILE_PATH="coverage/mdp_experiment_design$plot.coverage" NAME="plot Coverage Results" MODIFIED="1652305603485" SOURCE_PROVIDER="com.intellij.coverage.DefaultCoverageFileProvider" RUNNER="coverage.py" COVERAGE_BY_TEST_ENABLED="true" COVERAGE_TRACING_ENABLED="false" WORKING_DIRECTORY="$PROJECT_DIR$/experiments" />
+    <SUITE FILE_PATH="coverage/mdp_experiment_design$test_1_component.coverage" NAME="test_1_component Coverage Results" MODIFIED="1652784220735" SOURCE_PROVIDER="com.intellij.coverage.DefaultCoverageFileProvider" RUNNER="coverage.py" COVERAGE_BY_TEST_ENABLED="true" COVERAGE_TRACING_ENABLED="false" WORKING_DIRECTORY="$PROJECT_DIR$/experiments/test" />
+    <SUITE FILE_PATH="coverage/mdp_experiment_design$run_stochastic_grid.coverage" NAME="run_stochastic_grid Coverage Results" MODIFIED="1677145976398" SOURCE_PROVIDER="com.intellij.coverage.DefaultCoverageFileProvider" RUNNER="coverage.py" COVERAGE_BY_TEST_ENABLED="true" COVERAGE_TRACING_ENABLED="false" WORKING_DIRECTORY="$PROJECT_DIR$/experiments/stochastic_grid" />
+    <SUITE FILE_PATH="coverage/mdp_experiment_design$run_pharmaco.coverage" NAME="test_pharmaco Coverage Results" MODIFIED="1652107634857" SOURCE_PROVIDER="com.intellij.coverage.DefaultCoverageFileProvider" RUNNER="coverage.py" COVERAGE_BY_TEST_ENABLED="true" COVERAGE_TRACING_ENABLED="false" WORKING_DIRECTORY="$PROJECT_DIR$/experiments/pharmacokinetics" />
+    <SUITE FILE_PATH="coverage/mdp_experiment_design$test_linear_system.coverage" NAME="test_linear_system Coverage Results" MODIFIED="1652305508095" SOURCE_PROVIDER="com.intellij.coverage.DefaultCoverageFileProvider" RUNNER="coverage.py" COVERAGE_BY_TEST_ENABLED="true" COVERAGE_TRACING_ENABLED="false" WORKING_DIRECTORY="$PROJECT_DIR$/experiments/linear_system_exp" />
+    <SUITE FILE_PATH="coverage/mdp_experiment_design$plot_stoch.coverage" NAME="plot_stoch Coverage Results" MODIFIED="1652734468888" SOURCE_PROVIDER="com.intellij.coverage.DefaultCoverageFileProvider" RUNNER="coverage.py" COVERAGE_BY_TEST_ENABLED="true" COVERAGE_TRACING_ENABLED="false" WORKING_DIRECTORY="$PROJECT_DIR$/experiments" />
+    <SUITE FILE_PATH="coverage/mdp_experiment_design$test_pharmaco.coverage" NAME="test_pharmaco Coverage Results" MODIFIED="1652878314713" SOURCE_PROVIDER="com.intellij.coverage.DefaultCoverageFileProvider" RUNNER="coverage.py" COVERAGE_BY_TEST_ENABLED="true" COVERAGE_TRACING_ENABLED="false" WORKING_DIRECTORY="$PROJECT_DIR$/experiments/pharmacokinetics" />
+    <SUITE FILE_PATH="coverage/mdp_experiment_design$run.coverage" NAME="run Coverage Results" MODIFIED="1652300917116" SOURCE_PROVIDER="com.intellij.coverage.DefaultCoverageFileProvider" RUNNER="coverage.py" COVERAGE_BY_TEST_ENABLED="true" COVERAGE_TRACING_ENABLED="false" WORKING_DIRECTORY="$PROJECT_DIR$/experiments/covergence_experiment" />
+    <SUITE FILE_PATH="coverage/mdp_experiment_design$plot_bels_pharma.coverage" NAME="plot_bels_pharma Coverage Results" MODIFIED="1652988208862" SOURCE_PROVIDER="com.intellij.coverage.DefaultCoverageFileProvider" RUNNER="coverage.py" COVERAGE_BY_TEST_ENABLED="true" COVERAGE_TRACING_ENABLED="false" WORKING_DIRECTORY="$PROJECT_DIR$/experiments" />
+    <SUITE FILE_PATH="coverage/mdp_experiment_design$plot_pharma.coverage" NAME="plot_pharma Coverage Results" MODIFIED="1652279012583" SOURCE_PROVIDER="com.intellij.coverage.DefaultCoverageFileProvider" RUNNER="coverage.py" COVERAGE_BY_TEST_ENABLED="true" COVERAGE_TRACING_ENABLED="false" WORKING_DIRECTORY="$PROJECT_DIR$/experiments" />
+    <SUITE FILE_PATH="coverage/mdp_experiment_design$fit_beilschmiedia.coverage" NAME="fit_beilschmiedia Coverage Results" MODIFIED="1652876707157" SOURCE_PROVIDER="com.intellij.coverage.DefaultCoverageFileProvider" RUNNER="coverage.py" COVERAGE_BY_TEST_ENABLED="true" COVERAGE_TRACING_ENABLED="false" WORKING_DIRECTORY="$PROJECT_DIR$/experiments/beilschmiedia" />
+  </component>
+</project>

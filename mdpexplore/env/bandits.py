@@ -43,21 +43,18 @@ class Bandits(DiscreteEnv, ABC):
     def reset(self) -> None:
         self.state = self.init_state
 
-class Bandits_Left_Right(DiscreteEnv, ABC):
-
-    def __init__(self, action_space: np.array, action_space_pre_embedding: np.array, theta_star: np.array, sigma: float, discount_factor: float = 0.99) -> None:
+class MovementConstrainedBayesianOptimization(DiscreteEnv, ABC):
+    def __init__(self, action_space: np.array, action_space_pre_embedding: np.array, theta_star: np.array, sigma: float, discount_factor: float = 0.99, max_episode_length:int = 10) -> None:
         super().__init__(init_state=0)
         self.action_space = action_space
         self.action_space_pre_embedding = action_space_pre_embedding
         self.theta_star = theta_star
         self.sigma = sigma
-        # TODO: For backward compatibility we treat actions as states for now,
-        #       it would be better to make the code support space actions everywhere
         self.states_num = action_space.shape[0]
         self.actions_num = action_space.shape[0]
         # Emissions are features
         self.emissions = self.action_space
-        self.max_episode_length = 5
+        self.max_episode_length = max_episode_length
         self.terminal_state = None
         self.visitations = np.zeros(self.states_num)
         # initialize the transition matrix
@@ -77,6 +74,7 @@ class Bandits_Left_Right(DiscreteEnv, ABC):
     def step(self, action: int):
         self.state = self.next(self.state, action)
         self.visitations[action] += 1
+        self.h += 1
         return action
 
     def convert(self, state):
@@ -109,3 +107,34 @@ class Bandits_Left_Right(DiscreteEnv, ABC):
 
     def reset(self) -> None:
         self.state = self.init_state
+        self.h = 0
+    
+    def get_dim(self):
+        return self.action_space.shape[1]
+    
+class Bandits_Left_Right(MovementConstrainedBayesianOptimization, ABC):
+    def __init__(self, action_space: np.array, action_space_pre_embedding: np.array, theta_star: np.array, sigma: float, discount_factor: float = 0.99) -> None:
+        super().__init__(action_space, action_space_pre_embedding, theta_star, sigma, discount_factor)
+    
+    def is_valid_action(self, action, state) -> bool:
+        current_x = self.action_space_pre_embedding[state]
+        action_x = self.action_space_pre_embedding[action]
+        # we alternate between sampling in <= 0 and >= 0
+        if current_x <= 0:
+            return action_x > 0
+        else:
+            return action_x <= 0
+
+class ConstrainedMaxMovement(MovementConstrainedBayesianOptimization, ABC):
+    def __init__(self, action_space: np.array, action_space_pre_embedding: np.array, theta_star: np.array, sigma: float, discount_factor: float = 0.99, max_episode_length:int = 10, delta: float = 0.1) -> None:
+        super().__init__(action_space, action_space_pre_embedding, theta_star, sigma, discount_factor, max_episode_length)
+        self.delta = delta
+        # self.constrained = True
+        # self.terminal_state = self.states_num - 1
+
+    def is_valid_action(self, action, state) -> bool:
+        current_x = self.action_space_pre_embedding[state]
+        action_x = self.action_space_pre_embedding[action]
+        # calculate the distance between the current state and the action
+        distance = np.linalg.norm(current_x - action_x)
+        return distance <= self.delta

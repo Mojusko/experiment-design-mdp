@@ -9,11 +9,14 @@ class Environment(ABC):
 class DiscreteEnv(Environment):
     def __init__(self, init_state) -> None:
         super().__init__()
+        self.type = 'discrete'
         self.init_state = init_state
         self.state = init_state
         self.states_num = None
         self.actions_num = None
         self.visitations = None
+        self.max_episode_length = None
+        self.h = 0
     
     @abstractmethod
     def available_actions(self, state):
@@ -58,3 +61,4 @@ class DiscreteEnv(Environment):
     @abstractmethod
     def reset(self) -> None:
         self.state = self.init_state
+        self.h = 0

@@ -1,5 +1,5 @@
 from mdpexplore.env.discrete_env import Environment
-from mdpexplore.policies.linear_policy import LinearPolicy
+from mdpexplore.policies.base_policies.linear_policy import LinearPolicy
 import autograd.numpy as np
 import autograd.numpy.linalg as la
 import torch
