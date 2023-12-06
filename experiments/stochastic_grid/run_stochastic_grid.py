@@ -4,6 +4,7 @@ import pandas as pd
 import matplotlib.pyplot as plt
 import torch
 from mdpexplore.solvers.lp import LP
+from mdpexplore.solvers.dp import DP
 from sklearn.cluster import KMeans
 from scipy.linalg import null_space, orth
 from mdpexplore.env.time_chain import TimeChain
@@ -71,7 +72,7 @@ if __name__ == "__main__":
     me = MdpExplore(
         env,
         objective=design,
-        solver=LP,
+        solver=DP,
         step=args.linesearch,
         method='frank-wolfe',
         verbosity=args.verbosity,
