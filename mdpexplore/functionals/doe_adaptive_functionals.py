@@ -153,6 +153,7 @@ class AdaptiveDesignC(AdaptiveDesignD):
              unrolls: List[np.ndarray],
              episodes: int,
              ) -> float:
+        distribution = np.sum(np.sum(distribution, axis = 2), axis = 0)
         z = self.eval_basic(emissions, distribution, unrolls, episodes)
         if isinstance(self.C, list):
             return np.max([np.trace(la.inv(C @ la.inv(z + (1. / episodes) * self.lambd) @ C.T)) for C in self.C])
@@ -164,6 +165,7 @@ class AdaptiveDesignC(AdaptiveDesignD):
                   distribution: np.ndarray,
                   episodes: int,
                   ) -> float:
+        distribution = np.sum(np.sum(distribution, axis = 2), axis = 0)
         z = np.multiply(emissions.T, distribution / (self.Sigma_true ** 2)) @ emissions
         if isinstance(self.C, list):
             return np.max([np.trace(la.inv(C @ la.inv(z + (1. / episodes) * self.lambd) @ C.T)) for C in self.C])
@@ -179,6 +181,7 @@ class AdaptiveDesignA(RewardFunctional):
              episodes: int,
              ) -> float:
         alpha = len(unrolls) / episodes
+        distribution = np.sum(np.sum(distribution, axis = 2), axis = 0)
         z = self.eval_basic(emissions, distribution, unrolls, episodes)
         if not self.scale_reg:
             return -np.trace(la.inv(z + (1 - alpha) * self.lambd))

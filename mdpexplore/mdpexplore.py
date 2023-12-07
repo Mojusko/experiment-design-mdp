@@ -71,6 +71,7 @@ class MdpExplore():
         self.action_visitations = []
         
         self.optimize_repetitions = optimize_repetitions
+
         # if the environment is discrete, we can precompute the emission matrix
         if self.env.type == 'discrete':
             self._precompute_emissions()
@@ -78,7 +79,8 @@ class MdpExplore():
             self.emissions = None
 
     def _reset(self, reset_visitations=True) -> None:
-        """Resets the max-ent solver to its initial state
+        """Resets  the trajectory, state_visitations, action_visitations
+
         """
         self.env.reset()
         self.convex_solver.reset()
@@ -100,6 +102,9 @@ class MdpExplore():
             emissions.append(self.env.emissions[i])
         emissions = np.array(emissions)
         self.emissions = emissions
+
+
+
 
     def _density_oracle_single(self, policy: Policy) -> np.ndarray:
         """Computes state distribution induced by the given policy over a specified horizon
@@ -126,50 +131,60 @@ class MdpExplore():
         """
         return self.density_estimator.density_oracle(self.policies, self.weights, self.densities, self.convex_solver.stationary)
 
+
+
     def evaluate(
             self,
             episodes: int = 100,
-            plot: bool = True
+            keep = False, 
     ) -> None:
         """Evaluates the saved policies using chosen summarization method
 
         Args:
             SummarizedPolicyType (Type[SummarizedPolicy], optional): method of policy summarization (Mixture, Density or Average). Defaults to MixturePolicy.
             episodes (int, optional): number of policy rollouts to execute. Defaults to 100.
-            plot (bool, optional): if True, plots the heatmap based on the policy rollouts. Defaults to True.
         """
+        
         for _ in range(episodes):
+
+            self._reset(reset_visitations=False)
+   
             self.env.reset()
 
             self.trajectory.append(self.env.init_state)
+            
             # count episode visitations
             self.state_visitations.append(self.env.init_state)
+
             for h in range(self.env.max_episode_length):
-                action = self.general_policy.next_action(self.env.state, self.emissions, self.visitations, self.episodes)
+                action = self.general_policy.next_action(self.env.state, self.emissions, self.visitations, self.episodes, keep = keep)
 
                 # feedback the state and action
                 self.feedback.step_single(self.env.state, action)
 
                 next_state = self.env.step(action)
                 self.trajectory.append(next_state)
+                
                 # count episode visitations
                 self.state_visitations.append(next_state)
                 self.action_visitations.append(action)
             
+            # per episode feedback 
             self.feedback.step_episode()
+            
             # update the visitations
             self.visitations.append((self.state_visitations, self.action_visitations))
         
 
-    def optimize(self) -> None:
+    def optimize_general_policy(self) -> None:
         """Optimizes the objective function using the specified method, returns the optimal policies and weights
         """
-        self.summarized_policy, self.policies, self.weights, self.densities = self.convex_solver.optimize(self.emissions, self.visitations, self.episodes)
+        self.general_policy.optimize(self.emissions, self.visitations, self.episodes)
+
 
     def run(
             self,
             episodes: int = 100,
-            plot: bool = False,
             save_trajectory: Union[str, None] = None,
             return_visitations: bool = False,
     ) -> Union[Tuple[np.ndarray, np.ndarray, float], None]:
@@ -181,7 +196,6 @@ class MdpExplore():
             num_runs (int, optional): number of max-ent runs. Defaults to 1.
             accuracy (float, optional): optimality gap for the optimization procedure. Defaults to None.
             SummarizedPolicyType (Type[SummarizedPolicy], optional): policy summarization mode to be used. Defaults to MixturePolicy.
-            plot (bool, optional): if True, plots the resulting heatmaps. Defaults to True.
 
         Returns:
             np.ndarray: means of the objective values after each rollout
@@ -198,10 +212,7 @@ class MdpExplore():
                 if self.verbosity > 2:
                     print("Episode:", i)
 
-                self._reset(reset_visitations=False)
-
-                # self.optimize()
-
+                # evaluates one episode of the policy
                 self.evaluate(1)
                 
                 # calculate the aggregate distribution
@@ -224,16 +235,18 @@ class MdpExplore():
         else:
             self._reset()
             self.episodes = episodes
-            self.optimize()
-
+            self.optimize_general_policy()
             self.visitations = []
-            self.evaluate(episodes)
+
+            # keep represent that the optimization is premade, and one does not need to reoptimize at deployment
+            self.evaluate(episodes, keep=True)
 
             run_objective_values = []
             aggregate_distribution = 0
 
             for i, d in enumerate(self.visitations):
-                aggregate_distribution = (i * aggregate_distribution + self.objective.build_density_from_trajectories(d)) / (i+1)
+                aggregate_distribution = (i * aggregate_distribution + self.objective.build_density_from_trajectories([d])) / (i+1)
+                
                 run_objective_values.append(
                     self.objective.eval_full(self.emissions, aggregate_distribution, self.episodes))
 
@@ -241,7 +254,8 @@ class MdpExplore():
             objective_values = np.array(objective_values)
 
         if self.objective.get_type() != "adaptive":
-            opt = self.objective.eval_full(self.emissions, self._density_oracle(), self.episodes)
+            # here I want to evaluate on theoretical visitations, i.e., optimal 
+            opt = self.objective.eval_full(self.emissions, self.general_policy.return_density(), self.episodes)
         else:
             opt = None
 

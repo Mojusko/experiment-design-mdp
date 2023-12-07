@@ -21,6 +21,7 @@ class DesignA(RewardFunctional):
              distribution: np.ndarray,
              episodes: int = 0
              ) -> float:
+        distribution = np.sum(np.sum(distribution, axis = 2), axis = 0)
         z = emissions.T @ np.diag(distribution) @ emissions
         return -np.trace(la.inv(z + self.lambd * np.eye(z.shape[0])))
 
@@ -51,6 +52,7 @@ class DesignD(RewardFunctional):
              distribution: np.ndarray,
              episodes: int
              ) -> float:
+        distribution = np.sum(np.sum(distribution, axis = 2), axis = 0)
         z = emissions.T @ np.diag(distribution / (self.Sigma ** 2)) @ emissions
         return np.linalg.slogdet(z + self.lambd / episodes)[1]
 
@@ -59,6 +61,7 @@ class DesignD(RewardFunctional):
                   distribution: np.ndarray,
                   episodes: int,
                   ) -> float:
+        distribution = np.sum(np.sum(distribution, axis = 2), axis = 0)
         z = emissions.T @ np.diag(distribution / (self.Sigma_true ** 2)) @ emissions
         return np.linalg.slogdet(z + self.lambd / episodes)[1]
 
@@ -84,7 +87,7 @@ class DesignC(RewardFunctional):
              emissions: np.ndarray,
              distribution: np.ndarray,
              episodes: int = 0) -> float:
-
+        distribution = np.sum(np.sum(distribution, axis = 2), axis = 0)
         z = np.multiply(emissions.T, distribution / (self.sigma ** 2)) @ emissions
         if isinstance(self.C, list):
             return np.max([np.trace(la.inv(C @ la.inv(z + self.lambd / episodes) @ C.T)) for C in self.C])

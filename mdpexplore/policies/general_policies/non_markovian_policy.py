@@ -16,7 +16,7 @@ class NonMarkovianPolicy(Policy):
     def optimize(self, emissions, visitations, episodes):
         self.summarized_policy, self.policies, self.weights, self.densities = self.convex_solver.optimize(emissions, visitations, episodes)
 
-    def next_action(self, state: int, emissions, visitations, episodes):
+    def next_action(self, state: int, emissions, visitations, episodes, keep = False):
 
         self.state_trajectory.append(state)
 

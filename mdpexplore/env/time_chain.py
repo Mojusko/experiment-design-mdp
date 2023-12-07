@@ -32,7 +32,7 @@ class TimeChain(DiscreteEnv, ABC):
             seed (int, optional): random seed. Defaults to None.
             sigma (float, optional): standard deviation of noise oracle.
         """
-
+        super().__init__(0)
 
         self.rng = default_rng(seed)
         self.sigma = sigma
@@ -62,7 +62,8 @@ class TimeChain(DiscreteEnv, ABC):
 
         # to be initialized when get_transition_matrix is first called
         self.transition_matrix = None
-
+        self.constrained = False
+        
     def get_dim(self):
         return self.dim
 
