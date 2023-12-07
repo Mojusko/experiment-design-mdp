@@ -255,7 +255,8 @@ class MdpExplore():
             opt = self.objective.eval_full(self.emissions, self.general_policy.return_density(), self.episodes)
         else:
             opt = None
-
+            print ("optimal value:", opt)
+            
         if return_visitations:
             return objective_values, opt, self.visitations
 
