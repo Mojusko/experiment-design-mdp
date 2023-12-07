@@ -10,19 +10,39 @@ from stpy.continuous_processes.kernelized_features import KernelizedFeatures
 from mdpexplore.solvers.lp import LP
 from sklearn.cluster import KMeans
 from scipy.linalg import null_space, orth
+
 from mdpexplore.env.time_chain import TimeChain
+
+# solvers
+from mdpexplore.solvers.lp import LP
+from mdpexplore.solvers.dp import DP
+
+# policy summarizations
 from mdpexplore.policies.summary_policies.density_policy import DensityPolicy
 from mdpexplore.policies.summary_policies.mixture_policy import MixturePolicy
+from mdpexplore.policies.summary_policies.average_policy import AveragePolicy
 from mdpexplore.policies.summary_policies.tracking_policy import TrackingPolicy
 
-from mdpexplore.policies.summary_policies.average_policy import AveragePolicy
-from mdpexplore.functionals.reward_functional import DesignBayesD, DesignBayesC, DesignC
-from mdpexplore.policies.summary_policies.density_policy import DensityPolicy
+# convex solvers 
+from mdpexplore.convex_solvers.frank_wolfe import FrankWolfe
+#from mdpexplore.convex_solvers.cyipopt import InteriorPoint
+
+# functionals
+from mdpexplore.functionals.doe_adaptive_functionals import AdaptiveDesignC
+from mdpexplore.functionals.doe_static_functionals import DesignC
+
+# environments
+from mdpexplore.env.grid_worlds import DummyGridWorld
+from mdpexplore.env.stochastic_grid_world import StochasticGridWorld, StochasticDummyGridWorld
+
+# feedbacks
+from mdpexplore.feedback.feedback_base import EmptyFeedback, SimpleFeedback
+
+# general algorithm
 from mdpexplore.mdpexplore import MdpExplore
 from scipy.integrate import odeint
 from stpy.helpers.helper import cartesian
 import argparse
-
 from fit_pharmaco import *
 
 a = 5.
@@ -136,7 +156,7 @@ if __name__ == "__main__":
     C = sum(Cs) / len(Cs)
 
     if args.adaptive == "Bayes":
-        design = DesignBayesC(env, lambd=1.0, scale_reg=False, sigma=sigma, C = Cs)
+        design = AdaptiveDesignC(env, lambd=1.0, scale_reg=False, sigma=sigma, C = Cs)
     else:
         design = DesignC(env, lambd=1.0, C=Cs, sigma = sigma)
 
@@ -146,23 +166,31 @@ if __name__ == "__main__":
         initial_policy = True
         args.num_components = 1
 
-    me = MdpExplore(
-        env,
-        objective=design,
-        solver=LP,
-        step=args.linesearch,
-        method='frank-wolfe',
-        verbosity=args.verbosity,
-        initial_policy=initial_policy
 
+    # define the convex solver
+    convex_solver = FrankWolfe(env, objective=design,
+                            num_components = args.num_components,
+                            solver = DP,
+                            SummarizedPolicyType = DensityPolicy,
+                            accuracy = args.accuracy)
+    
+    # define the feedback class
+    feedback = EmptyFeedback(env, design)
+
+
+    me = MdpExplore(
+        env=env,
+        objective=design,
+        convex_solver=convex_solver,
+        verbosity=args.verbosity,
+        feedback=feedback,
+        general_policy = 'markovian'
     )
 
     val, opt_val = me.run(
-        num_components=args.num_components,
         episodes=args.episodes,
-        SummarizedPolicyType=args.policy,
-        accuracy=args.accuracy,
-        save_trajectory=args.savetrajectory
+        save_trajectory=args.savetrajectory,
+        #return_visitations=True
     )
 
     vals = np.array(val)

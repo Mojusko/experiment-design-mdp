@@ -103,33 +103,30 @@ class MdpExplore():
         emissions = np.array(emissions)
         self.emissions = emissions
 
+    # def _density_oracle_single(self, policy: Policy) -> np.ndarray:
+    #     """Computes state distribution induced by the given policy over a specified horizon
 
+    #     Args:
+    #         policy (Policy): inducing policy
 
-
-    def _density_oracle_single(self, policy: Policy) -> np.ndarray:
-        """Computes state distribution induced by the given policy over a specified horizon
-
-        Args:
-            policy (Policy): inducing policy
-
-        Returns:
-            np.ndarray: S x A (stationary) or H x S x A (non-stationary) array with density for each state
-        """
-        return self.density_estimator.density_oracle_single(policy)
+    #     Returns:
+    #         np.ndarray: S x A (stationary) or H x S x A (non-stationary) array with density for each state
+    #     """
+    #     return self.density_estimator.density_oracle_single(policy)
     
-    def _density_oracle(self) -> np.ndarray:
-        """Computes the combined state (or state-action) distribution induced by the saved policies
+    # def _density_oracle(self) -> np.ndarray:
+    #     """Computes the combined state (or state-action) distribution induced by the saved policies
 
-        Args:
-            actions (bool, optional): if True, computes state-action distribution instead of state distribution. Defaults to False.
+    #     Args:
+    #         actions (bool, optional): if True, computes state-action distribution instead of state distribution. Defaults to False.
 
-        Returns:
-            np.ndarray: 1-D array with density for each state
+    #     Returns:
+    #         np.ndarray: 1-D array with density for each state
 
-        Raises:
-            TypeError: if the saved policies are non-stationary
-        """
-        return self.density_estimator.density_oracle(self.policies, self.weights, self.densities, self.convex_solver.stationary)
+    #     Raises:
+    #         TypeError: if the saved policies are non-stationary
+    #     """
+    #     return self.density_estimator.density_oracle(self.policies, self.weights, self.densities, self.convex_solver.stationary)
 
 
 
