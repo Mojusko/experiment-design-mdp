@@ -30,6 +30,7 @@ def plot(ax, methods, colors, opt_file, base_path, y_lim, label, title):
         xaxis = np.arange(1, median.shape[0] + 1, 1)
         ax.plot(xaxis, median, color=colors[index], label=NAMES[index], linewidth = LINEWIDTH[index])
         ax.fill_between(xaxis, q10, q90, alpha=0.3, color=colors[index])
+
     plt.grid(linestyle = "--", color = 'gray', alpha = 0.5)
     plt.xlabel("Episodes [t]", fontsize=fontsize)
     plt.xscale('log', base=2)

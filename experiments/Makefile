@@ -266,6 +266,8 @@ STOCH: STOCH1 STOCH2 STOCH3 STOCH0
 
 PLOTS: 
 	${PYTHONPATH} plot_grids.py && ${PYTHONPATH} plot_pharma.py && ${PYTHONPATH} plot.py
+PLOTS_STOCH: 
+	${PYTHONPATH} plot_grids.py
 
 move:
 	cp figs/*.png ../../pic/.

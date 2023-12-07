@@ -15,19 +15,41 @@ from stpy.borel_set import HierarchicalBorelSets, BorelSet
 from stpy.point_processes.poisson_rate_estimator import PoissonRateEstimator
 from stpy.kernels import KernelFunction
 from sensepy.benchmarks.spatial_problem import SpatialProblem
+from sensepy.benchmarks.bels.bels_problem import BeilschmiediaProblem
 from stpy.continuous_processes.gauss_procc import GaussianProcess
+
+from mdpexplore.solvers.lp import LP
+from mdpexplore.solvers.dp import DP
+# solvers
 from mdpexplore.solvers.lp import LP
 from mdpexplore.solvers.dp import DP
 
-from sensepy.benchmarks.bels.bels_problem import BeilschmiediaProblem
-from mdpexplore.env.quad_tree_env import QuadTreeGrid
-from mdpexplore.functionals.reward_functional import DesignBayesD, DesignD
+# policy summarizations
 from mdpexplore.policies.summary_policies.density_policy import DensityPolicy
 from mdpexplore.policies.summary_policies.mixture_policy import MixturePolicy
+from mdpexplore.policies.summary_policies.average_policy import AveragePolicy
 from mdpexplore.policies.summary_policies.tracking_policy import TrackingPolicy
 
-from mdpexplore.policies.summary_policies.average_policy import AveragePolicy
+# convex solvers 
+from mdpexplore.convex_solvers.frank_wolfe import FrankWolfe
+#from mdpexplore.convex_solvers.cyipopt import InteriorPoint
+
+# functionals
+from mdpexplore.functionals.doe_adaptive_functionals import AdaptiveDesignD
+from mdpexplore.functionals.doe_static_functionals import DesignD
+
+# environments
+from mdpexplore.env.grid_worlds import DummyGridWorld
+from mdpexplore.env.stochastic_grid_world import StochasticGridWorld, StochasticDummyGridWorld
+from mdpexplore.env.quad_tree_env import QuadTreeGrid
+
+# feedbacks
+from mdpexplore.feedback.feedback_base import EmptyFeedback, SimpleFeedback
+from mdpexplore.feedback.poisson_feedback import PoissonFeedback
+
+# general algorithm
 from mdpexplore.mdpexplore import MdpExplore
+
 import argparse
 from tqdm.contrib.concurrent import process_map
 import multiprocessing as mp
@@ -72,16 +94,19 @@ if __name__ == "__main__":
 	np.random.seed(24)
 	random.seed(24)
 
-	Problem = BeilschmiediaProblem(m = 20, basis = "triangle",levels=5, gamma = 0.1, b = 0.5)
-	Problem.load_data(clusters = 100, prefix = "data/")
-	Problem.fit_model()
+	# Problem = BeilschmiediaProblem(m = 20, basis = "triangle",levels=5, gamma = 0.1, b = 0.5)
+	# Problem.load_data(clusters = 100, prefix = "data/")
+	# Problem.fit_model()
 
 	if ~os.path.isfile("model.pt"):
+		Problem = BeilschmiediaProblem(m = 20, basis = "triangle",levels=5, gamma = 0.1, b = 0.5)
+		Problem.load_data(clusters = 100, prefix = "data/")
+		Problem.fit_model()
 		Problem.save_model("model.pt")
 
 	Problem.load_saved_model("model.pt")
 	p = Problem.return_process(n=20)
-	Problem.plot()
+	# Problem.plot()
 
 	torch.manual_seed(args.seed)
 	torch.use_deterministic_algorithms(True)
@@ -94,8 +119,8 @@ if __name__ == "__main__":
 	integral = lambda S: Problem.estimator.packing.integral(S)*dt
 	env = QuadTreeGrid(integral,Problem.hs2d,depth=5, max_episode_length = 64)
 
-
 	basic_sets = [env.sets[i] for i in np.arange(0,env.states_num,1)]
+
 	estimator = PoissonRateEstimator(None, Problem.hs2d, d=2, basis=Problem.basis,
 									 feedback = 'histogram', kernel_object=Problem.kernel,
 									 B=p.B, b=p.b, m=Problem.m, jitter=1e-5, opt='cvxpy', dual = False,
@@ -103,7 +128,7 @@ if __name__ == "__main__":
 
 
 	if args.adaptive == "Bayes":
-		design = DesignBayesD(env, lambd=1.0, sigma = 1.)
+		design = AdaptiveDesignD(env, lambd=1.0, sigma = 1.)
 	else:
 		design = DesignD(env, lambd=1.0, sigma = 1.)
 
@@ -112,31 +137,15 @@ if __name__ == "__main__":
 	print (design.Sigma)
 
 	if args.uncertain == "true":
-		def callback(state_history, objective):
-			if args.adaptive == "Bayes":
-				state = state_history[-1]
-				S = env.sets[state]
-				y = p.sample(S)
-				n = torch.randn(size=(y.size()[0], Problem.estimator.get_m())).double() if y is not None else None
-				datapoint = (S, n, dt)
-
-				estimator.add_data_point(datapoint)
-				estimator.fit_gp()
-
-				if args.opt != "true":
-					objective.Sigma = np.sqrt(np.array([float(estimator.ucb(s, dt = dt)) for s in basic_sets]).reshape(-1))
-				else:
-					objective.Sigma = np.sqrt(np.array([float(Problem.estimator.mean_set(s, dt = dt)) for s in basic_sets]).reshape(-1))
-
-				print (objective.Sigma)
-				print ("-------------")
-			else:
-				pass
+		if args.opt != "true":
+			feedback = PoissonFeedback(env, design, p, estimator = estimator, problem = Problem, opt = True)
+		else:
+			feedback = PoissonFeedback(env, design, p, estimator = estimator, problem = Problem, opt = False)
 		design.Sigma_true = np.sqrt(np.array([float(Problem.estimator.mean_set(s, dt = dt)) for s in basic_sets]).reshape(-1))
 	else:
 		design.Sigma_true = design.Sigma
-		def callback(state_history, objective):
-			pass
+		feedback = EmptyFeedback(env, design)
+
 
 	print ("True Sigma:")
 	print (design.Sigma_true)
@@ -150,23 +159,26 @@ if __name__ == "__main__":
 
 
 	def run_single(_):
+		convex_solver = FrankWolfe(env, objective=design,
+			num_components = args.num_components,
+			solver = DP,
+			SummarizedPolicyType = DensityPolicy,
+			accuracy = args.accuracy)
+
+
 		me = MdpExplore(
-		env,
-		objective=design,
-		solver=LP,
-		step=args.linesearch,
-		method='frank-wolfe',
-		verbosity=args.verbosity,
-		callback = callback,
-		initial_policy = initial_policy
+			env=env,
+			objective=design,
+			convex_solver=convex_solver,
+			verbosity=args.verbosity,
+			feedback=feedback,
+			general_policy = 'markovian'
 		)
 
 		val, opt_val = me.run(
-			num_components=args.num_components,
 			episodes=args.episodes,
-			SummarizedPolicyType=args.policy,
-			accuracy=args.accuracy,
-			plot=False,
+			#save_trajectory=args.savetrajectory,
+			#return_visitations=True
 		)
 		return val, opt_val
 
