@@ -53,10 +53,12 @@ class FrankWolfe(ConvexSolverBase):
             np.ndarray: gradient of the functional wrt to the state distribution - i.e. the reward function
         """
         grad_fn = getattr(self.objective, "gradient", None)
-        if callable(grad_fn):
+        if callable(grad_fn) and (self.objective.get_type() != "adaptive"):
             return grad_fn(emissions, distribution)
         
         if self.env.type == 'discrete':
+            if callable(grad_fn):
+                return grad_fn(emissions, distribution, visitations, episodes)
 
             if self.objective.get_type() == "adaptive":
                 grad_fn = grad(lambda d: self.objective.eval(emissions, d, visitations, episodes))
