@@ -37,7 +37,8 @@ class BanditFeedback(SimpleFeedback):
                 estimator:Union[GaussianProcess, KernelizedFeatures], 
                 theta_star:Union[np.array, Callable], 
                 sigma:float, video:bool = False, 
-                markovian:bool = False) -> None:
+                markovian:bool = False,
+                update_mean: bool = False) -> None:
         
         super().__init__(env, objective)
         self.estimator = estimator
@@ -47,12 +48,43 @@ class BanditFeedback(SimpleFeedback):
         self.action_space = env.action_space_pre_embedding
         self.video = video
         self.markovian = markovian
+        self.update_mean = update_mean
         # keep track of best arm guess
         self.best_arm = []
     
     def step_update(self):
         if self.markovian:
-            pass
+            action = self.action_trajectory[-1]
+            print('actions taken: ', action)
+
+            if self.video:
+                # save the relevant stuff for plotting
+                if self.estimator.fitted:
+                    lcb = self.estimator.lcb(torch.tensor(self.action_space)).numpy().squeeze()
+                    ucb = self.estimator.ucb(torch.tensor(self.action_space)).numpy().squeeze()
+                    mean = self.estimator.mean(torch.tensor(self.action_space)).numpy().squeeze()
+                else:
+                    lcb = self.objective.lcbs
+                    ucb = self.objective.ucbs
+                    mean = np.zeros_like(lcb)
+
+                # load the arrays from memory
+                actions = np.load('actions.npy')
+                lcbs = np.load('lcb.npy')
+                means = np.load('mean.npy')
+                ucbs = np.load('ucb.npy')
+
+                # append the new values
+                actions = np.vstack((actions, np.array(action)))
+                lcbs = np.vstack((lcbs, lcb))
+                means = np.vstack((means, mean))
+                ucbs = np.vstack((ucbs, ucb))
+
+                # save them in memory
+                np.save('actions.npy', actions)
+                np.save('lcb.npy', lcbs)
+                np.save('mean.npy', means)
+                np.save('ucb.npy', ucbs)
         else:
             action = self.action_trajectory[-1]
             print('actions taken: ', action)
@@ -73,23 +105,22 @@ class BanditFeedback(SimpleFeedback):
             self.estimator.fit()
             self.objective.ucbs = self.estimator.ucb(torch.tensor(self.action_space)).numpy().squeeze()
             self.objective.lcbs = self.estimator.lcb(torch.tensor(self.action_space)).numpy().squeeze()
+            # update the mean if required
+            if self.update_mean:
+                means, stds = self.estimator.mean_std(torch.tensor(self.action_space))
+                self.objective.means = means.numpy().squeeze()
+                self.objective.stds = stds.numpy().squeeze()
+                self.objective.best_obs = np.maximum(self.objective.best_obs, fun_value)
+
             # calculate the best arm guess
             mean_estimates = self.estimator.mean(torch.tensor(self.action_space)).numpy().squeeze()
             self.best_arm.append(np.argmax(mean_estimates))
 
-            # Compute the differences to get the UCBs and LCBs for the objective denominator, no longer used
-            # n, m = self.embedded_action_space.shape
-            # arr1_reshaped = self.embedded_action_space.reshape(n, 1, m)
-            # arr2_reshaped = self.embedded_action_space.reshape(1, n, m)
-            # diffs = arr1_reshaped - arr2_reshaped
-            # self.objective.diff_ucbs = self.estimator.ucb(torch.tensor(diffs.reshape((-1, m)))).numpy().reshape((n, n))
-            # self.objective.diff_lcbs = self.estimator.lcb(torch.tensor(diffs.reshape((-1, m)))).numpy().reshape((n, n))
-
             if self.video:
                 # save the relevant stuff for plotting
-                lcb = self.estimator.lcb(torch.tensor(self.embedded_action_space)).numpy().squeeze()
-                ucb = self.estimator.ucb(torch.tensor(self.embedded_action_space)).numpy().squeeze()
-                mean = self.estimator.mean(torch.tensor(self.embedded_action_space)).numpy().squeeze()
+                lcb = self.estimator.lcb(torch.tensor(self.action_space)).numpy().squeeze()
+                ucb = self.estimator.ucb(torch.tensor(self.action_space)).numpy().squeeze()
+                mean = self.estimator.mean(torch.tensor(self.action_space)).numpy().squeeze()
 
                 # load the arrays from memory
                 actions = np.load('actions.npy')
@@ -130,46 +161,46 @@ class BanditFeedback(SimpleFeedback):
                 
                 self.estimator.add_data_point(torch.tensor(state),
                                             torch.tensor([[fun_value]]))
+                
+                if self.update_mean:
+                    self.objective.best_obs = np.maximum(self.objective.best_obs, fun_value)
             
             self.estimator.fit()
             self.objective.ucbs = self.estimator.ucb(torch.tensor(self.embedded_action_space)).numpy().squeeze()
             self.objective.lcbs = self.estimator.lcb(torch.tensor(self.embedded_action_space)).numpy().squeeze()
+            # update the mean if required
+            if self.update_mean:
+                means, stds = self.estimator.mean_std(torch.tensor(self.action_space))
+                self.objective.means = means.numpy().squeeze()
+                self.objective.stds = stds.numpy().squeeze()
 
             # calculate the best arm guess
             mean_estimates = self.estimator.mean(torch.tensor(self.action_space)).numpy().squeeze()
             self.best_arm.append(np.argmax(mean_estimates))
 
-            # Compute the differences to get the UCBs and LCBs for the objective denominator, no longer required
-            # n, m = self.embedded_action_space.shape
-            # arr1_reshaped = self.embedded_action_space.reshape(n, 1, m)
-            # arr2_reshaped = self.embedded_action_space.reshape(1, n, m)
-            # diffs = arr1_reshaped - arr2_reshaped
-            # self.objective.diff_ucbs = self.estimator.ucb(torch.tensor(diffs.reshape((-1, m)))).numpy().reshape((n, n))
-            # self.objective.diff_lcbs = self.estimator.lcb(torch.tensor(diffs.reshape((-1, m)))).numpy().reshape((n, n))
+            # if self.video:
+            #     # save the relevant stuff for plotting
+            #     lcb = self.estimator.lcb(torch.tensor(self.embedded_action_space)).numpy().squeeze()
+            #     ucb = self.estimator.ucb(torch.tensor(self.embedded_action_space)).numpy().squeeze()
+            #     mean = self.estimator.mean(torch.tensor(self.embedded_action_space)).numpy().squeeze()
 
-            if self.video:
-                # save the relevant stuff for plotting
-                lcb = self.estimator.lcb(torch.tensor(self.embedded_action_space)).numpy().squeeze()
-                ucb = self.estimator.ucb(torch.tensor(self.embedded_action_space)).numpy().squeeze()
-                mean = self.estimator.mean(torch.tensor(self.embedded_action_space)).numpy().squeeze()
+            #     # load the arrays from memory
+            #     actions = np.load('actions.npy')
+            #     lcbs = np.load('lcb.npy')
+            #     means = np.load('mean.npy')
+            #     ucbs = np.load('ucb.npy')
 
-                # load the arrays from memory
-                actions = np.load('actions.npy')
-                lcbs = np.load('lcb.npy')
-                means = np.load('mean.npy')
-                ucbs = np.load('ucb.npy')
+            #     # append the new values
+            #     actions = np.vstack((actions, np.array(action_list)))
+            #     lcbs = np.vstack((lcbs, lcb))
+            #     means = np.vstack((means, mean))
+            #     ucbs = np.vstack((ucbs, ucb))
 
-                # append the new values
-                actions = np.vstack((actions, np.array(action_list)))
-                lcbs = np.vstack((lcbs, lcb))
-                means = np.vstack((means, mean))
-                ucbs = np.vstack((ucbs, ucb))
-
-                # save them in memory
-                np.save('actions.npy', actions)
-                np.save('lcb.npy', lcbs)
-                np.save('mean.npy', means)
-                np.save('ucb.npy', ucbs)
+            #     # save them in memory
+            #     np.save('actions.npy', actions)
+            #     np.save('lcb.npy', lcbs)
+            #     np.save('mean.npy', means)
+            #     np.save('ucb.npy', ucbs)
         
         else:
             pass
@@ -233,7 +264,7 @@ class ContinuousBanditFeedback(SimpleFeedback):
             next_state = self.env.next(self.env.state, action)
             print('next design: ', next_state)
             # obtain the corresponding observation
-            eps = np.random.normal(0, self.sigma)
+            eps = np.random.normal(0, self.sigma**2)
             if callable(self.theta_star):
                 fun_value = self.theta_star(next_state)
             else:
@@ -291,7 +322,7 @@ class ContinuousBanditFeedback(SimpleFeedback):
             print('actions taken: ', state_list)
 
             for state in state_list:
-                eps = np.random.normal(0, self.sigma)
+                eps = np.random.normal(0, self.sigma**2)
                 if callable(self.theta_star):
                     fun_value = self.theta_star(state) + eps
                 else:
