@@ -10,7 +10,8 @@ from mdpexplore.densities.continous_densities import SimpleDeltaDensity, NonStat
 from mdpexplore.utils.embedding import EmptyEmbedding
 import cvxpy as cp
 
-
+# for dummy EI we need the cdf and pdf of the normal distribution
+from scipy.stats import norm
 
 class DesignRewardBandit(RewardFunctional):
 
@@ -134,7 +135,7 @@ class DesignBestArmLinearBandit(RewardFunctional):
 
 class DesignBestArmLinearBanditNoDenominator(RewardFunctional):
 
-    def __init__(self, env, lambd, variant: int = 0, eps=0.01, sigma=0.01, scale_reg=True, mix_objectives=(False, 0), init_ucb = np.inf):
+    def __init__(self, env, lambd, variant: int = 0, eps=0.01, sigma=0.01, scale_reg=True, init_ucb = np.inf):
 
         super().__init__()
 
@@ -152,8 +153,6 @@ class DesignBestArmLinearBanditNoDenominator(RewardFunctional):
         self.sigma = sigma
         self.uniform_alpha = False
         self.scale_reg = scale_reg
-        # objectives trade-off
-        self.mix_objectives, self.mix_ratio = mix_objectives
 
     def _restrict_best_action_space(self, emissions):
 
@@ -224,10 +223,7 @@ class DesignBestArmLinearBanditNoDenominator(RewardFunctional):
 
         _, _, val_star = self._estimate_building_blocks(emissions, V_eta_inv)
 
-        if self.mix_objectives:
-            return - (1 - self.mix_ratio) * val_star + self.mix_ratio * self.ucbs @ distribution
-        else:
-            return - val_star
+        return - val_star
 
     def get_eval_cvxpy(self, emissions, distribution, unrolls, episodes):
         alpha = len(unrolls) / episodes
@@ -284,10 +280,7 @@ class DesignBestArmLinearBanditNoDenominator(RewardFunctional):
 
         # _, _, val_star = self._estimate_building_blocks(emissions, V_eta_inv)
 
-        if self.mix_objectives:
-            return - (1 - self.mix_ratio) * val_star + self.mix_ratio * self.ucbs @ distribution
-        else:
-            return - val_star
+        return - val_star
 
     def eval_full(self,
                   emissions: np.ndarray,
@@ -301,10 +294,121 @@ class DesignBestArmLinearBanditNoDenominator(RewardFunctional):
 
         _, _, val_star = self._estimate_building_blocks(emissions, V_eta_inv)
 
-        if self.mix_objectives:
-            return - (1 - self.mix_ratio) * val_star + self.mix_ratio * self.ucbs @ distribution
+        return - val_star
+
+    def gradient(self, emissions: np.ndarray, distribution: np.array, unrolls, episodes):
+        """Implements a custom gradient.
+
+        Gradient is custom implemented and uses Danskin's theorem due to the "non-smoothness" of the objective.
+        """
+
+        if len(unrolls) > 0:
+            alpha = (len(unrolls[:-1]) * self.env.max_episode_length + len(unrolls[0][1])) / (episodes * self.env.max_episode_length)
         else:
-            return - val_star
+            alpha = 0
+
+        # calculate the aggregated action state
+        aggregated_unrolls = 0
+        if len(unrolls) > 0:
+            # for t in range(len(unrolls)):
+            #     aggregated_unrolls += unrolls[t]
+            # aggregated_unrolls = aggregated_unrolls / len(unrolls)
+            aggregated_unrolls = self.build_density_from_trajectories(unrolls)
+        else:
+            aggregated_unrolls = np.zeros((self.env.max_episode_length, self.env.states_num, self.env.actions_num))
+        
+        # obtain the distribution shape before summing
+        H, S, A = distribution.shape
+        
+        distribution = np.sum(np.sum(distribution, axis = 2), axis = 0)
+        aggregated_unrolls = np.sum(np.sum(aggregated_unrolls, axis = 2), axis = 0)
+
+        new_V_eta = np.multiply(emissions.T, distribution / (self.sigma ** 2)) @ emissions
+        agg_V_eta = np.multiply(emissions.T, aggregated_unrolls / (self.sigma ** 2)) @ emissions
+
+        if self.uniform_alpha:
+            V_eta = 1. / episodes * new_V_eta + \
+                alpha * agg_V_eta
+        else:
+            V_eta = (1 - alpha) * new_V_eta + \
+                alpha * agg_V_eta
+
+        if not self.scale_reg:
+            V_eta_inv = np.linalg.inv(V_eta + (1 - alpha) * self.lambd * np.identity(V_eta.shape[0]))
+        else:
+            V_eta_inv = np.linalg.inv(V_eta + self.lambd * np.identity(V_eta.shape[0]))
+
+        d, diff_star, _ = self._estimate_building_blocks(emissions, V_eta_inv)
+        diff_star = diff_star.reshape(1, -1)
+
+
+        # compute the first part of the matrix multiplication
+        mat_1 = V_eta_inv @ diff_star.T @ diff_star @ V_eta_inv
+        # calculated batched outer product of the emissions
+        mat_2 = np.einsum('ij,ik->ijk', emissions, emissions)
+        # mat_2 = torch.bmm(phi_x.unsqueeze(2), phi_x.unsqueeze(1))
+        # multiply together
+        mat = np.matmul(mat_1, mat_2)
+        # mat = torch.matmul(mat_1.unsqueeze(0), mat_2)
+        # take the trace of each matrix to obtain the gradient
+        gradient = np.diagonal(mat, axis1=1, axis2=2).sum(axis=1, keepdims = True)
+        # gradient = torch.diagonal(mat, dim1=1, dim2=2).sum(dim=1, keepdim = True)
+
+        # repeat the gradient to be of shape (H, S, A)
+        gradient = gradient.reshape(1, -1, 1)
+
+        gradient = np.repeat(gradient, H, axis = 0)
+        gradient = np.repeat(gradient, A, axis = 2)
+
+        return gradient
+
+class DesignBestArmLinearBanditEIDummy(RewardFunctional):
+
+    def __init__(self, env, init_ucb = np.inf):
+
+        super().__init__()
+
+        self.env = env
+        action_space_size = env.actions_num
+
+        self.ucbs = np.ones(action_space_size) * init_ucb
+        self.lcbs = -1 * np.ones(action_space_size) * init_ucb
+        self.means = np.zeros(action_space_size)
+        self.stds = np.ones(action_space_size)
+        self.best_obs = -1 * init_ucb
+
+        self.type = "adaptive"
+
+    def eval(self, emissions, distribution, unrolls, episodes):
+        return 0
+
+    def eval_full(self,
+                  emissions: np.ndarray,
+                  distribution: np.ndarray,
+                  episodes: int = 0) -> float:
+        
+        return 0
+
+    def gradient(self, emissions: np.ndarray, distribution: np.array, unrolls, episodes):
+        """
+        Calculate the Expected Improvement at each emission point.
+
+        The formula is given by:
+
+        EI(x) = (mu(x) - f(x)) * Phi(mu(x) - f(x)) + sigma(x) * phi(mu(x) - f(x))
+
+        """
+        # obtain the distribution shape before summing
+        H, S, A = distribution.shape
+        
+        EI = (self.means - self.best_obs) * norm.cdf(self.means - self.best_obs) + self.stds * norm.pdf(self.means - self.best_obs)
+
+        EI = EI.reshape(1, S, 1)
+
+        EI = np.repeat(EI, H, axis = 0)
+        EI = np.repeat(EI, A, axis = 2)
+
+        return EI
 
 class DesignBestArmLinearBanditNoDenominatorContinuous(ContinuousRewardFunctional):
 
@@ -323,11 +427,6 @@ class DesignBestArmLinearBanditNoDenominatorContinuous(ContinuousRewardFunctiona
         # initialize the set of maximizers uniformly
         self.num_of_maximizers = num_of_maximizers
         self.set_of_maximizers = np.random.uniform(low = -0.5, high = 0.5, size = (self.num_of_maximizers, self.env.states_dim))
-        # create set of maximizers using a 101 x 101 grid
-        # self.set_of_maximizers = np.empty((0, self.env.states_dim))
-        # for x in np.linspace(-0.5, 0.5, 21):
-        #    for y in np.linspace(-0.5, 0.5, 21):
-        #        self.set_of_maximizers = np.vstack((self.set_of_maximizers, np.array([x, y])))
 
         # define the embedding
         if embedding is None:
