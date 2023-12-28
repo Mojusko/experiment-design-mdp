@@ -44,8 +44,8 @@ class Bandits(DiscreteEnv, ABC):
         self.state = self.init_state
 
 class MovementConstrainedBayesianOptimization(DiscreteEnv, ABC):
-    def __init__(self, action_space: np.array, action_space_pre_embedding: np.array, theta_star: np.array, sigma: float, discount_factor: float = 0.99, max_episode_length:int = 10) -> None:
-        super().__init__(init_state=0)
+    def __init__(self, action_space: np.array, action_space_pre_embedding: np.array, theta_star: np.array, sigma: float, discount_factor: float = 0.99, max_episode_length:int = 10, init_state:int = 0) -> None:
+        super().__init__(init_state=init_state)
         self.action_space = action_space
         self.action_space_pre_embedding = action_space_pre_embedding
         self.theta_star = theta_star
@@ -126,8 +126,8 @@ class Bandits_Left_Right(MovementConstrainedBayesianOptimization, ABC):
             return action_x <= 0
 
 class ConstrainedMaxMovement(MovementConstrainedBayesianOptimization, ABC):
-    def __init__(self, action_space: np.array, action_space_pre_embedding: np.array, theta_star: np.array, sigma: float, discount_factor: float = 0.99, max_episode_length:int = 10, delta: float = 0.1) -> None:
-        super().__init__(action_space, action_space_pre_embedding, theta_star, sigma, discount_factor, max_episode_length)
+    def __init__(self, action_space: np.array, action_space_pre_embedding: np.array, theta_star: np.array, sigma: float, discount_factor: float = 0.99, max_episode_length:int = 10, delta: float = 0.1, init_state: int = 0) -> None:
+        super().__init__(action_space, action_space_pre_embedding, theta_star, sigma, discount_factor, max_episode_length, init_state)
         self.delta = delta
         # self.constrained = True
         # self.terminal_state = self.states_num - 1
