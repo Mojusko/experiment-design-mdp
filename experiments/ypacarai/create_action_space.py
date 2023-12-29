@@ -100,16 +100,22 @@ ax.scatter(lake_scatter[:, 0], lake_scatter[:, 1], s=0.1)
 ax.scatter(ypacarai_action_space[:, 0], ypacarai_action_space[:, 1], s=30, c='darkorange')
 
 # plot the index of the centroids to see which one transitions to manually remove
-# for i in range(ypacarai_action_space.shape[0]):
+# for i in range(ypacarai_action_space.shape[0]):
 #    ax.text(ypacarai_action_space[i, 0], ypacarai_action_space[i, 1], str(i), fontsize=10, color='white')
 
 # define the initial state
 init_state = 59
 # define the terminal state
 terminal_state = 43
+optimal_state = 95
 # plot a diamond near the initial state and a square near the terminal state
-plt.scatter(ypacarai_action_space[init_state, 0], ypacarai_action_space[init_state, 1], marker='d', s=100, c='k', label='initial state')
-plt.scatter(ypacarai_action_space[terminal_state, 0], ypacarai_action_space[terminal_state, 1], marker='s', s=100, c='k', label='terminal state')
+plt.scatter(ypacarai_action_space[init_state, 0], ypacarai_action_space[init_state, 1], marker='s', s=150, c='k', label='initial state')
+# plt.scatter(ypacarai_action_space[terminal_state, 0], ypacarai_action_space[terminal_state, 1], marker='s', s=100, c='k', label='terminal state')
+plt.scatter(ypacarai_action_space[95, 0], ypacarai_action_space[95, 1], marker='*', s=150, c='darkorange', label='initial state', zorder = 10)
+plt.scatter(ypacarai_action_space[95, 0], ypacarai_action_space[95, 1], marker='*', s=500, c='k', label='initial state', zorder = 9)
+
+plt.scatter(ypacarai_action_space[53, 0], ypacarai_action_space[53, 1], marker='s', s=100, c='darkorange', label='initial state', zorder = 10)
+plt.scatter(ypacarai_action_space[53, 0], ypacarai_action_space[53, 1], marker='s', s=200, c='k', label='initial state', zorder = 9)
 
 # create a line between the centroids if they are connected
 for i in range(ypacarai_action_space.shape[0]):
@@ -118,6 +124,6 @@ for i in range(ypacarai_action_space.shape[0]):
             ax.plot([ypacarai_action_space[i, 0], ypacarai_action_space[j, 0]], [ypacarai_action_space[i, 1], ypacarai_action_space[j, 1]], c = 'black')
 
 # save the figure as a png
-# plt.savefig('ypacarai_constrained.png', dpi=300)
+plt.savefig('ypacarai_constrained.png', dpi=300)
 
 plt.show()

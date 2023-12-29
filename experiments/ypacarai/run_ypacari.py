@@ -3,28 +3,17 @@ import random
 
 import numpy as np
 import torch
-from stpy.continuous_processes.gauss_procc import GaussianProcess
 from stpy.kernels import KernelFunction
-from stpy.embeddings.embedding import HermiteEmbedding
 from stpy.continuous_processes.nystrom_fea import NystromFeatures
 from stpy.continuous_processes.kernelized_features import KernelizedFeatures
 import argparse
-from tqdm.contrib.concurrent import process_map
-import multiprocessing as mp
 
-from mdpexplore.solvers.ddpg import DDPG
-from mdpexplore.solvers.additive_gradient import AdditiveGradient
 from mdpexplore.solvers.dp import DP
 from mdpexplore.convex_solvers.frank_wolfe import FrankWolfe
-from mdpexplore.convex_solvers.cyipopt import InteriorPoint
 from mdpexplore.mdpexplore import MdpExplore
-from mdpexplore.env.bandits import Bandits, Bandits_Left_Right, ConstrainedMaxMovement
-from mdpexplore.env.continuous_bandits import ContinuousMovementConstrainedBayesianOptimization
 from mdpexplore.functionals.bandit_functionals import DesignBestArmLinearBanditNoDenominator, DesignBestArmLinearBanditEIDummy
-from mdpexplore.functionals.doe_adaptive_functionals import AdaptiveDesignD
 from mdpexplore.policies.summary_policies.density_policy import DensityPolicy, MarginalDensityPolicy
-from mdpexplore.policies.summary_policies.mixture_policy import MixturePolicy
-from mdpexplore.feedback.bandit_feedback import BanditFeedback, ContinuousBanditFeedback
+from mdpexplore.feedback.bandit_feedback import BanditFeedback
 
 from experiments.ypacarai.fit_ypacarai import Schekel2D, YpacaraiEnv
 import os
@@ -35,7 +24,7 @@ if __name__ == "__main__":
     # arguments I know I will need
     parser.add_argument('--seed', default=121, type=int, help='Use this to set the seed for the random number generator')
     parser.add_argument('--verbosity', default=3, type=int, help='Use this to increase debug ouput')
-    parser.add_argument('--episodic_feedback', default=True, type=bool, help='Wether we use episodic feedback or not')
+    parser.add_argument('--episodic_feedback', default=False, type=bool, help='Wether we use episodic feedback or not')
     parser.add_argument('--episode_length', default=50, type=int, help='Length of the episode')
     parser.add_argument('--noise', default=0.001, type=float, help='Noise variance')
     parser.add_argument('--num_features', default=100, type=int, help='Number of features')
@@ -44,9 +33,9 @@ if __name__ == "__main__":
     parser.add_argument('--episodes', default=3, type=int, help='Number of episodes')
     parser.add_argument('--EI', default=False, type=bool, help='Wether we use EI or not')
     parser.add_argument('--video', default=False, type=bool, help='Wether we want to save a video')
+    parser.add_argument('--policy', default='density', type=str, help='Summarized policy type (mixed/average/density)')
     # extra arguments
     parser.add_argument('--accuracy', default=None, type=float, help='Termination criterion for optimality gap')
-    parser.add_argument('--policy', default='density', type=str, help='Summarized policy type (mixed/average/density)')
     parser.add_argument('--repeats', default=1, type=int, help='Number of repeats')
     parser.add_argument('--uncertain', default="false", type = str, help = "type")
     parser.add_argument('--random', default="false", type=str, help="type")
@@ -120,7 +109,7 @@ if __name__ == "__main__":
             env = env,
             lambd=lambd,
             sigma=sigma,
-            init_ucb = 0.6
+            init_ucb = 1.0
         )
     elif args.EI:
         design = DesignBestArmLinearBanditEIDummy(
@@ -128,8 +117,14 @@ if __name__ == "__main__":
             init_ucb = 0.0
         )
 
+    # choose the policy
+    if args.policy == 'density':
+        SummarizedPolicyType = DensityPolicy
+    elif args.policy == 'marginal':
+        SummarizedPolicyType = MarginalDensityPolicy
+
     # define the convex solver
-    convex_solver = FrankWolfe(env, objective=design, num_components = 1, solver = DP, SummarizedPolicyType = DensityPolicy)
+    convex_solver = FrankWolfe(env, objective=design, num_components = args.num_components, solver = DP, SummarizedPolicyType = SummarizedPolicyType)
     # define the feedback class
     feedback = BanditFeedback(env, design, estimator, theta_star = theta_star, sigma = sigma, video = args.video, markovian = args.episodic_feedback, update_mean = args.EI)
 
@@ -159,12 +154,12 @@ if __name__ == "__main__":
     if args.episodic_feedback:
         file_name = f'experiments/ypacarai/results/episodic_feedback/noise_var_{args.noise}/num_features_{args.num_features}/num_episodes_{args.episodes}/episode_length_{args.episode_length}/'
     else:
-        file_name = f'experiments/ypacarai/results/immediate_feedback/noise_var_{args.noise}/num_features_{args.num_features}/episode_length_{args.episode_length}/'
+        file_name = f'experiments/ypacarai/results/immediate_feedback/noise_var_{args.noise}/num_features_{args.num_features}/num_episodes_{args.episodes}/episode_length_{args.episode_length}/'
     
     if args.EI:
         algo_name = '/EI'
     else:
-        algo_name = f'/MDPExplore/num_components_{args.num_components}'
+        algo_name = f'/MDPExplore/policy_type_{args.policy}/num_components_{args.num_components}'
 
     file_name = file_name + algo_name + f'/seed_{args.seed}/'
 
