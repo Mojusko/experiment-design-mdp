@@ -401,7 +401,7 @@ class DesignBestArmLinearBanditEIDummy(RewardFunctional):
         # obtain the distribution shape before summing
         H, S, A = distribution.shape
         
-        EI = (self.means - self.best_obs) * norm.cdf(self.means - self.best_obs) + self.stds * norm.pdf(self.means - self.best_obs)
+        EI = (self.means - self.best_obs) * norm.cdf((self.means - self.best_obs) / self.stds) + self.stds * norm.pdf((self.means - self.best_obs) / self.stds)
 
         EI = EI.reshape(1, S, 1)
 
