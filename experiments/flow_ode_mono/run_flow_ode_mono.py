@@ -22,7 +22,7 @@ if __name__ == "__main__":
 	
     parser = argparse.ArgumentParser(description='Schrecker Monotonic ODE Problem.')
     # arguments I know I will need
-    parser.add_argument('--seed', default=123, type=int, help='Use this to set the seed for the random number generator')
+    parser.add_argument('--seed', default=1, type=int, help='Use this to set the seed for the random number generator')
     parser.add_argument('--save', default="experiment.csv", type=str, help='name of the file')
     parser.add_argument('--verbosity', default=3, type=int, help='Use this to increase debug ouput')
     parser.add_argument('--episodic_feedback', default=True, type=bool, help='Wether we use episodic feedback or not')
@@ -30,7 +30,7 @@ if __name__ == "__main__":
     parser.add_argument('--noise', default=0.0001, type=float, help='Noise variance')
     parser.add_argument('--delta_mov', default=0.15, type=float, help='Maximum movement constraint')
     parser.add_argument('--num_features', default=121, type=int, help='Number of features')
-    parser.add_argument('--EI', default=True, type=bool, help='Wether we use EI or not')
+    parser.add_argument('--EI', default=False, type=bool, help='Wether we use EI or not')
     parser.add_argument('--num_components', default=1, type=int, help='Number of MaxEnt components (basic policies)')
     parser.add_argument('--episodes', default=10, type=int, help='Number of episodes')
     parser.add_argument('--plot', default=False, type = bool, help = "Wether we should save the paths and the potential maximizers for plotting")
