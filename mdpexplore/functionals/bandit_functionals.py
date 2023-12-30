@@ -364,7 +364,7 @@ class DesignBestArmLinearBanditNoDenominator(RewardFunctional):
 
 class DesignBestArmLinearBanditEIDummy(RewardFunctional):
 
-    def __init__(self, env, init_ucb = np.inf):
+    def __init__(self, env, init_ucb = np.inf, prior_mean = None):
 
         super().__init__()
 
@@ -373,9 +373,13 @@ class DesignBestArmLinearBanditEIDummy(RewardFunctional):
 
         self.ucbs = np.ones(action_space_size) * init_ucb
         self.lcbs = -1 * np.ones(action_space_size) * init_ucb
-        self.means = np.zeros(action_space_size)
         self.stds = np.ones(action_space_size)
         self.best_obs = -1 * init_ucb
+
+        if prior_mean is None:
+            self.means = np.zeros(action_space_size)
+        else:
+            self.means = prior_mean
 
         self.type = "adaptive"
 

@@ -22,15 +22,15 @@ if __name__ == "__main__":
 	
     parser = argparse.ArgumentParser(description='Schrecker Monotonic ODE Problem.')
     # arguments I know I will need
-    parser.add_argument('--seed', default=121, type=int, help='Use this to set the seed for the random number generator')
+    parser.add_argument('--seed', default=123, type=int, help='Use this to set the seed for the random number generator')
     parser.add_argument('--save', default="experiment.csv", type=str, help='name of the file')
     parser.add_argument('--verbosity', default=3, type=int, help='Use this to increase debug ouput')
     parser.add_argument('--episodic_feedback', default=True, type=bool, help='Wether we use episodic feedback or not')
     parser.add_argument('--episode_length', default=10, type=int, help='Length of the episode')
     parser.add_argument('--noise', default=0.0001, type=float, help='Noise variance')
     parser.add_argument('--delta_mov', default=0.15, type=float, help='Maximum movement constraint')
-    parser.add_argument('--num_features', default=2048, type=int, help='Number of features')
-    parser.add_argument('--EI', default=False, type=bool, help='Wether we use EI or not')
+    parser.add_argument('--num_features', default=121, type=int, help='Number of features')
+    parser.add_argument('--EI', default=True, type=bool, help='Wether we use EI or not')
     parser.add_argument('--num_components', default=1, type=int, help='Number of MaxEnt components (basic policies)')
     parser.add_argument('--episodes', default=10, type=int, help='Number of episodes')
     parser.add_argument('--plot', default=False, type = bool, help = "Wether we should save the paths and the potential maximizers for plotting")
@@ -68,13 +68,19 @@ if __name__ == "__main__":
     action_space = grid
 
     # create a finer grid for the nyström embedding
-    grid_1d = np.linspace(-0.5, 0.5, 201)
+    grid_1d = np.linspace(-0.5, 0.5, 11)
     grid = np.array(np.meshgrid(grid_1d, grid_1d)).T.reshape(-1, 2)
     nystrom_space = grid
 
+    prior_var = 0.0225
     embedding = ode_embedding(num_features = args.num_features, action_space = nystrom_space, alpha_ode = 1.0, alpha_rbf = 0.001, ard = False)
     # define the embedded action space for the discrete case
     embedded_action_space = embedding.embed(torch.tensor(action_space)).detach().numpy()
+    # define the prior mean and variance of the ode model
+    prior_mean = (embedded_action_space[:, 0] * 0.6)
+    prior_var = 0.0225
+    # redefine the embedding
+    embedding = ode_embedding(num_features = args.num_features, action_space = nystrom_space, alpha_ode = prior_var, alpha_rbf = 0.001, ard = False)
 
     # finally define the estimator
     estimator = KernelizedFeatures(embedding, m = args.num_features, s = sigma, lam = lambd, d = 2, diameter = 0.5)
@@ -92,7 +98,8 @@ if __name__ == "__main__":
     if args.EI:
         design = DesignBestArmLinearBanditEIDummy(
             env = env,
-            init_ucb = 0.0
+            init_ucb = 0.0,
+            prior_mean = prior_mean
         )
     else:
         design = DesignBestArmLinearBanditNoDenominator(
@@ -111,7 +118,7 @@ if __name__ == "__main__":
     # define the convex solver
     convex_solver = FrankWolfe(env, objective=design, num_components = args.num_components, solver = DP, SummarizedPolicyType = policy_type)
     # define the feedback class
-    feedback = BanditFeedback(env, design, estimator, theta_star = theta_star, sigma = sigma, video = False, markovian = args.episodic_feedback, update_mean = args.EI)
+    feedback = BanditFeedback(env, design, estimator, theta_star = theta_star, sigma = sigma, video = False, markovian = args.episodic_feedback, update_mean = args.EI, prior_mean = prior_mean)
     
     # define the MDP explore algorithm
     me = MdpExplore(
@@ -140,7 +147,12 @@ if __name__ == "__main__":
         np.save('flow_mono_lcbs.npy', design.lcbs)
 
     # save the results
-    x_evaluations = action_space[visitations[0][0]]
+    x_evaluations = np.zeros((args.episodes, args.episode_length, 2))
+    for ep in range(args.episodes):
+        x_evaluations[ep, :] = action_space[visitations[ep][1:]]
+    
+    x_evaluations = x_evaluations.reshape(args.episodes * args.episode_length, 2)
+
     f_evaluations = []
     for x in x_evaluations:
         f_evaluations.append(theta_star(x.reshape(1, -1)))

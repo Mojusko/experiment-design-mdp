@@ -38,7 +38,8 @@ class BanditFeedback(SimpleFeedback):
                 theta_star:Union[np.array, Callable], 
                 sigma:float, video:bool = False, 
                 markovian:bool = False,
-                update_mean: bool = False) -> None:
+                update_mean: bool = False,
+                prior_mean: np.array = None) -> None:
         
         super().__init__(env, objective)
         self.estimator = estimator
@@ -51,6 +52,11 @@ class BanditFeedback(SimpleFeedback):
         self.update_mean = update_mean
         # keep track of best arm guess
         self.best_arm = []
+        # define the prior mean
+        if prior_mean is None:
+            self.prior_mean = np.zeros((self.action_space.shape[0], 1))
+        else:
+            self.prior_mean = prior_mean
     
     def step_update(self):
         if self.markovian:
@@ -95,25 +101,25 @@ class BanditFeedback(SimpleFeedback):
             eps = np.random.normal(0, self.sigma)
 
             if callable(self.theta_star):
-                fun_value = self.theta_star(state) + eps
+                fun_value = self.theta_star(state) + eps - self.prior_mean[action]
             else:
                 z = self.estimator.embed(torch.tensor(state)).numpy()
-                fun_value = z @ self.theta_star + eps
+                fun_value = z @ self.theta_star + eps - self.prior_mean[action]
             
             self.estimator.add_data_point(torch.tensor(state),
                                         torch.tensor([[fun_value]]))
             self.estimator.fit()
-            self.objective.ucbs = self.estimator.ucb(torch.tensor(self.action_space)).numpy().squeeze()
-            self.objective.lcbs = self.estimator.lcb(torch.tensor(self.action_space)).numpy().squeeze()
+            self.objective.ucbs = self.estimator.ucb(torch.tensor(self.action_space)).numpy().squeeze() + self.prior_mean
+            self.objective.lcbs = self.estimator.lcb(torch.tensor(self.action_space)).numpy().squeeze() + self.prior_mean
             # update the mean if required
             if self.update_mean:
                 means, stds = self.estimator.mean_std(torch.tensor(self.action_space))
-                self.objective.means = means.numpy().squeeze()
+                self.objective.means = means.numpy().squeeze() + self.prior_mean
                 self.objective.stds = stds.numpy().squeeze()
-                self.objective.best_obs = np.maximum(self.objective.best_obs, fun_value)
+                self.objective.best_obs = np.maximum(self.objective.best_obs, fun_value + self.prior_mean[action])
 
             # calculate the best arm guess
-            mean_estimates = self.estimator.mean(torch.tensor(self.action_space)).numpy().squeeze()
+            mean_estimates = self.estimator.mean(torch.tensor(self.action_space)).numpy().squeeze() + self.prior_mean
             self.best_arm.append(np.argmax(mean_estimates))
 
             if self.video:
@@ -154,28 +160,28 @@ class BanditFeedback(SimpleFeedback):
                 eps = np.random.normal(0, self.sigma)
 
                 if callable(self.theta_star):
-                    fun_value = self.theta_star(state) + eps
+                    fun_value = self.theta_star(state) + eps - self.prior_mean[action]
                 else:
                     z = self.estimator.embed(torch.tensor(state)).numpy()
-                    fun_value = z @ self.theta_star + eps
+                    fun_value = z @ self.theta_star + eps - self.prior_mean[action]
                 
                 self.estimator.add_data_point(torch.tensor(state),
                                             torch.tensor([[fun_value]]))
                 
                 if self.update_mean:
-                    self.objective.best_obs = np.maximum(self.objective.best_obs, fun_value)
+                    self.objective.best_obs = np.maximum(self.objective.best_obs, fun_value + self.prior_mean[action])
             
             self.estimator.fit()
-            self.objective.ucbs = self.estimator.ucb(torch.tensor(self.embedded_action_space)).numpy().squeeze()
-            self.objective.lcbs = self.estimator.lcb(torch.tensor(self.embedded_action_space)).numpy().squeeze()
+            self.objective.ucbs = self.estimator.ucb(torch.tensor(self.embedded_action_space)).numpy().squeeze() + self.prior_mean
+            self.objective.lcbs = self.estimator.lcb(torch.tensor(self.embedded_action_space)).numpy().squeeze() + self.prior_mean
             # update the mean if required
             if self.update_mean:
                 means, stds = self.estimator.mean_std(torch.tensor(self.action_space))
-                self.objective.means = means.numpy().squeeze()
+                self.objective.means = means.numpy().squeeze() + self.prior_mean
                 self.objective.stds = stds.numpy().squeeze()
 
             # calculate the best arm guess
-            mean_estimates = self.estimator.mean(torch.tensor(self.action_space)).numpy().squeeze()
+            mean_estimates = self.estimator.mean(torch.tensor(self.action_space)).numpy().squeeze() + self.prior_mean
             self.best_arm.append(np.argmax(mean_estimates))
 
             # if self.video:

@@ -163,7 +163,7 @@ class ode_embedding():
         if ard:
             self.kernel_rbf = KernelFunction(kernel_name='ard', gamma = [0.15, 0.05], d = 2, kappa = self.alpha_rbf)
         else:
-            self.kernel_rbf = KernelFunction(kernel_name='squared_exponential', gamma = 0.05, d = 2, kappa = self.alpha_rbf)
+            self.kernel_rbf = KernelFunction(kernel_name='squared_exponential', gamma = 0.1, d = 2, kappa = self.alpha_rbf)
         # now define the nystrom embedding
         self.nystrom_embedding = NystromFeatures(m = torch.tensor(num_features - 1), kernel_object = self.kernel_rbf)
         self.nystrom_embedding.fit_gp(torch.tensor(action_space), None)
