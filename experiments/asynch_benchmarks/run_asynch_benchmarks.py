@@ -29,15 +29,15 @@ if __name__ == "__main__":
     parser.add_argument('--seed', default=121, type=int, help='Use this to set the seed for the random number generator')
     parser.add_argument('--save', default="experiment.csv", type=str, help='name of the file')
     parser.add_argument('--verbosity', default=3, type=int, help='Use this to increase debug ouput')
-    parser.add_argument('--episode_length', default=20, type=int, help='Length of the episode')
+    parser.add_argument('--episode_length', default=100, type=int, help='Length of the episode')
     parser.add_argument('--noise', default=0.0001, type=float, help='Noise variance')
-    parser.add_argument('--number_of_maximizers', default=25, type=int, help='Number of Thompson Samples')
-    parser.add_argument('--delta_mov', default=0.11, type=float, help='Maximum movement constraint')
-    parser.add_argument('--num_features', default=128, type=int, help='Number of features')
+    parser.add_argument('--number_of_maximizers', default=100, type=int, help='Number of Thompson Samples')
+    parser.add_argument('--delta_mov', default=-1, type=float, help='Maximum movement constraint')
+    parser.add_argument('--num_features', default=-1, type=int, help='Number of features')
     parser.add_argument('--num_components', default=1, type=int, help='Number of MaxEnt components (basic policies)')
     parser.add_argument('--episodes', default=1, type=int, help='Number of episodes')
     parser.add_argument('--policy', default='density', type=str, help='Summarized policy type (mixed/average/density)')
-    parser.add_argument('--delay', default=10, type=int, help='Delay in the feedback')
+    parser.add_argument('--delay', default=25, type=int, help='Delay in the feedback')
     parser.add_argument('--snake', default=False, type=bool, help='Wether to use the snake algorithm or not')
     parser.add_argument('--func_num', default=1, type=int, help='Function to optimize: 1. Branin2D, 2. Michalewicz2D, 3. Hartmann3D, 4. Hartmann6D')
     # extra arguments
@@ -66,7 +66,23 @@ if __name__ == "__main__":
         func = Hartmann6D()
     else:
         raise ValueError('Function not implemented')
+
+    # number of features
+    if args.num_features == -1:
+        args.num_features = int(2 ** (func.dim + 6))
+    else:
+        args.num_features = args.num_features
     
+    if args.delta_mov < 0:
+        if args.func_num == 1:
+            args.delta_mov = 0.05
+        elif args.func_num == 2:
+            args.delta_mov = 0.05
+        elif args.func_num == 3:
+            args.delta_mov = 0.1
+        elif args.func_num == 4:
+            args.delta_mov = 0.2
+
     theta_star = lambda x: func.query_function(x.reshape(-1, func.dim)).reshape(-1).item()
     # set noise level
     sigma = np.sqrt(args.noise)

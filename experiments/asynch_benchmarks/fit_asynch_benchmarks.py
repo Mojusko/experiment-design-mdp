@@ -57,7 +57,7 @@ class Hartmann3D():
         self.dim = 3
 
         self.kappa = 2.0
-        self.gamma = 0.2
+        self.gamma = 0.13849
 
         self.name = 'Hartmann3D'
 
@@ -92,7 +92,7 @@ class Hartmann6D():
         self.dim = 6
 
         self.kappa = 1.7
-        self.gamma = 0.2
+        self.gamma = 0.22
 
         self.name = 'Hartmann6D'
 
@@ -127,7 +127,7 @@ class Michalewicz2D():
         self.dim = 2
 
         self.kappa = 0.35
-        self.gamma = 0.15
+        self.gamma = 0.179485
 
         self.name = 'Michaelwicz2D'
 
