@@ -49,7 +49,7 @@ class ContinuousGreedyApproximation(ConvexSolverBase):
         self.objective.pre_compute(self.emissions, density, self.visitations, self.episodes)
 
         # to initialize the optimization problem, solve the greedy problem
-        greedy_state, greedy_action = self.calculate_optimal_greedy_state_action(density, emissions, visitations, episodes)
+        greedy_state, greedy_action = self.calculate_optimal_greedy_state_action(density, emissions, visitations, episodes, H_plan)
 
         # create a path from the current state to the greedy state
         path_state = np.array(self.env.state)
@@ -116,7 +116,7 @@ class ContinuousGreedyApproximation(ConvexSolverBase):
         
         return grad_fn
     
-    def calculate_optimal_greedy_state_action(self, distribution, emissions, visitations, episodes):
+    def calculate_optimal_greedy_state_action(self, distribution, emissions, visitations, episodes, H_plan):
         grad_reward_fn = self._reward_fn_gradient(distribution, emissions, visitations, episodes)
 
         def greedy_objective(x):
@@ -156,13 +156,52 @@ class ContinuousGreedyApproximation(ConvexSolverBase):
 
             return state, action
 
-        # remove from best objective if best is not < 90% of the best objective
-        [optimal_state_actions, optimal_objs] = zip(*[(x, y) for x, y in zip(optimal_state_actions, optimal_objs) if y < 0.9 * best_obj])
+        # check each of the optimal state-actions paths
+        best_rewards = 1e10
+        best_idx = 0
+        for curr_idx, op_state_action in enumerate(optimal_state_actions):
+
+            states = np.zeros((H_plan, self.dim))
+            actions = np.zeros((H_plan, self.dim))
+            sum_rewards = 0.0
+
+            path_state = np.array(self.env.state)
+            greedy_state = op_state_action[:self.env.states_dim]
+            greedy_action = op_state_action[self.env.states_dim:]
+
+            init_h = 0
+            while init_h < H_plan - 1:
+                states[init_h, :] = path_state
+
+                # take a greedy action
+                direction = greedy_state - path_state
+
+                # check if step is achievable in a single step
+                if np.all(direction <= self.env.max_action) and np.all(direction >= self.env.min_action):
+                    actions[init_h, :] = direction
+                    # set all remaining states to the greedy state
+                    states[init_h + 1:, :] = greedy_state
+                    init_h += 1
+                    break
+
+                else:
+                    # clip wrt to min and max action
+                    direction = np.clip(direction, self.env.min_action, self.env.max_action)
+                    actions[init_h, :] = direction
+                    init_h += 1
+                    path_state = path_state + direction
+            
+            # now calculate the reward
+            for h in range(H_plan):
+                state_action = np.concatenate((states[h, :], actions[h, :]))
+                sum_rewards += greedy_objective(state_action)
+            
+            if sum_rewards < best_rewards:
+                best_rewards = sum_rewards
+                best_idx = curr_idx
 
         # extract the optimal state-action
-        dist_to_current_state = [np.linalg.norm(x[:self.env.states_dim] - self.env.state) for x in optimal_state_actions]
-        idx = np.argmin(dist_to_current_state)
-        optimal_state_action = optimal_state_actions[idx]
+        optimal_state_action = optimal_state_actions[best_idx]
 
         state = optimal_state_action[:self.env.states_dim]
         action = optimal_state_action[self.env.states_dim:]

@@ -110,15 +110,15 @@ if __name__ == "__main__":
     embedding.fit_gp(torch.tensor(action_space), None)
 
     # finally define the estimator
-    estimator = KernelizedFeatures(embedding, m = args.num_features, s = sigma, lam = lambd, d = 2, diameter = 0.5)
+    estimator = KernelizedFeatures(embedding, m = args.num_features, s = sigma, lam = lambd, d = func.dim, diameter = 0.5)
 
     env = ContinuousMovementConstrainedBayesianOptimization(
-        states_dim = 2,
-        actions_dim = 2,
+        states_dim = func.dim,
+        actions_dim = func.dim,
         theta_star=theta_star,
         sigma=sigma,
-        min_action = -delta_mov,
-        max_action = delta_mov,
+        min_action = -args.delta_mov,
+        max_action = args.delta_mov,
         max_episode_length = args.episode_length)
     
     design = DesignBestArmLinearBanditNoDenominatorContinuous(
