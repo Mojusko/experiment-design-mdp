@@ -25,7 +25,7 @@ if __name__ == "__main__":
     parser.add_argument('--seed', default=1, type=int, help='Use this to set the seed for the random number generator')
     parser.add_argument('--save', default="experiment.csv", type=str, help='name of the file')
     parser.add_argument('--verbosity', default=3, type=int, help='Use this to increase debug ouput')
-    parser.add_argument('--episodic_feedback', default=True, type=bool, help='Wether we use episodic feedback or not')
+    parser.add_argument('--episodic_feedback', default=False, type=bool, help='Wether we use episodic feedback or not')
     parser.add_argument('--episode_length', default=10, type=int, help='Length of the episode')
     parser.add_argument('--noise', default=0.0001, type=float, help='Noise variance')
     parser.add_argument('--delta_mov', default=0.15, type=float, help='Maximum movement constraint')

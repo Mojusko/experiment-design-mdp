@@ -45,18 +45,19 @@ if __name__ == "__main__":
     parser.add_argument('--seed', default=121, type=int, help='Use this to set the seed for the random number generator')
     parser.add_argument('--save', default="experiment.csv", type=str, help='name of the file')
     parser.add_argument('--verbosity', default=3, type=int, help='Use this to increase debug ouput')
+    parser.add_argument('--episodic_feedback', default=False, type=bool, help='Wether we use episodic feedback or not')
     parser.add_argument('--episode_length', default=50, type=int, help='Length of the episode')
     parser.add_argument('--env_type', default='discrete', type=str, help='Environment type (discrete/continuous)')
     parser.add_argument('--noise', default=0.0001, type=float, help='Noise variance')
     parser.add_argument('--number_of_maximizers', default=25, type=int, help='Number of Thompson Samples')
     parser.add_argument('--delta_mov', default=0.11, type=float, help='Maximum movement constraint')
-    parser.add_argument('--num_features', default=2048, type=int, help='Number of features')
+    parser.add_argument('--num_features', default=121, type=int, help='Number of features')
     parser.add_argument('--mix_objective', default=False, type=bool, help='Wether we mix our DoE design with UCB')
     parser.add_argument('--num_components', default=1, type=int, help='Number of MaxEnt components (basic policies)')
     parser.add_argument('--episodes', default=1, type=int, help='Number of episodes')
+    parser.add_argument('--policy', default='density', type=str, help='Summarized policy type (mixed/average/density)')
     # extra arguments
     parser.add_argument('--accuracy', default=None, type=float, help='Termination criterion for optimality gap')
-    parser.add_argument('--policy', default='density', type=str, help='Summarized policy type (mixed/average/density)')
     parser.add_argument('--repeats', default=1, type=int, help='Number of repeats')
     parser.add_argument('--uncertain', default="false", type = str, help = "type")
     parser.add_argument('--random', default="false", type=str, help="type")
@@ -91,23 +92,12 @@ if __name__ == "__main__":
     action_space = grid
 
     # define a nystrom grid which has a lot of points
-    grid_1d = np.linspace(-0.5, 0.5, 201)
-    grid = np.array(np.meshgrid(grid_1d, grid_1d)).T.reshape(-1, 2)
-    nystrom_grid = grid
-
-    # kernel_rbf = KernelFunction(kernel_name='squared_exponential', gamma = 0.05, d = 2, kappa = 0.002)
-    # kernel_rbf = KernelFunction(kernel_name='ard', gamma = [0.15, 0.05], d = 2, kappa = 0.002)
-    # kernel_ode_inner = ode_kernel()
-    # kernel_ode = KernelFunction(kernel_function=kernel_ode_inner, kappa = 1.0, d = 2)
-
-    # kernel = kernel_ode + kernel_rbf
-
-    # # now define the nystrom embedding
-    # embedding = NystromFeatures(m = torch.tensor(args.num_features), kernel_object=kernel)
-    # embedding.fit_gp(torch.tensor(action_space), None)
+    # grid_1d = np.linspace(-0.5, 0.5, 201)
+    # grid = np.array(np.meshgrid(grid_1d, grid_1d)).T.reshape(-1, 2)
+    # nystrom_grid = grid
 
     # define the ode embedding
-    embedding = ode_embedding(num_features = args.num_features, action_space = nystrom_grid, alpha_ode = 1.0, alpha_rbf = 0.001)
+    embedding = ode_embedding(num_features = args.num_features, action_space = action_space, alpha_ode = 1.0, alpha_rbf = 0.001)
 
     # define the embedded action space for the discrete case
     embedded_action_space = embedding.embed(torch.tensor(action_space)).detach().numpy()
@@ -137,7 +127,7 @@ if __name__ == "__main__":
         # convex_solver = FrankWolfe(env, objective=design, num_components = 1, solver = AdditiveGradient, SummarizedPolicyType = MixturePolicy, verbosity = 4)
         convex_solver = InteriorPoint(env, objective=design)
         # define the feedback class
-        feedback = ContinuousBanditFeedback(env, design, estimator, theta_star = theta_star, sigma = sigma, video = False, markovian = False, maximization_set_method = 'thompson_sampling')
+        feedback = ContinuousBanditFeedback(env, design, estimator, theta_star = theta_star, sigma = sigma, video = False, markovian = args.episodic_feedback, maximization_set_method = 'thompson_sampling')
         
     
     elif args.env_type == 'discrete':
@@ -153,14 +143,18 @@ if __name__ == "__main__":
             env = env,
             lambd=lambd,
             sigma=sigma,
-            mix_objectives=(args.mix_objective, 0.5),
             init_ucb = 0.6
         )
 
+        if args.policy == 'density':
+            SummarizedPolicyType = DensityPolicy
+        elif args.policy == 'marginal':
+            SummarizedPolicyType = MarginalDensityPolicy
+
         # define the convex solver
-        convex_solver = FrankWolfe(env, objective=design, num_components = 1, solver = DP, SummarizedPolicyType = DensityPolicy)
+        convex_solver = FrankWolfe(env, objective=design, num_components = args.num_components, solver = DP, SummarizedPolicyType = SummarizedPolicyType)
         # define the feedback class
-        feedback = BanditFeedback(env, design, estimator, theta_star = theta_star, sigma = sigma, video = False, markovian = False)
+        feedback = BanditFeedback(env, design, estimator, theta_star = theta_star, sigma = sigma, video = False, markovian = args.episodic_feedback)
 
 
     else:
@@ -196,7 +190,5 @@ if __name__ == "__main__":
         best_guesses = action_space[feedback.best_arm]
 
         file_name = 'experiments/flow_ode/results/' + args.env_type  + f'/delta_mov_{args.delta_mov}/noise_{args.noise}/num_features_{args.num_features}/'
-
-
 
     print('done')

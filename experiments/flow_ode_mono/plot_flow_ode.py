@@ -36,21 +36,25 @@ contour_plot = ax.contourf(X, Y, Z, 20, cmap='Blues')
 
 # plot the paths
 for path in reversed(paths):
-    ax.plot(path[:, 0], path[:, 1], alpha = 0.75, linewidth = 10)
+    ax.plot(path[:, 0], path[:, 1], alpha = 0.75, linewidth = 5)
 
 max_point = action_space[np.argmax([theta_star(act.reshape(-1, 2)) for act in action_space])].reshape(1, -1)
 # plot the true maximizer
-ax.scatter(max_point[:, 0], max_point[:, 1], marker='*', color='yellow', label='True maximizer', zorder = 11, s = 250)
+ax.scatter(max_point[:, 0], max_point[:, 1], marker='*', color='darkorange', label='True maximizer', zorder = 11, s = 150)
+ax.scatter(max_point[:, 0], max_point[:, 1], marker='*', color='k', zorder = 10, s = 500)
 
 # find the set of potential maximizers
 mask = ucbs > np.max(lcbs)
+mask[114] = False
 potential_maximizers = action_space[mask]
-ax.scatter(potential_maximizers[:, 0], potential_maximizers[:, 1], marker='o', color='yellow', label='Potential maximizers', zorder = 10)
+ax.scatter(potential_maximizers[:, 0], potential_maximizers[:, 1], marker='o', color='darkorange', label='Potential maximizers', zorder = 10, s = 50)
+ax.scatter(potential_maximizers[:, 0], potential_maximizers[:, 1], marker='o', color='k', zorder = 9, s = 125)
 
 # now plot the discarded points
 mask = np.logical_not(mask)
+mask[114] = False
 discarded_maximizers = action_space[mask]
-ax.scatter(discarded_maximizers[:, 0], discarded_maximizers[:, 1], marker='o', color='red', label='Discarded states', zorder = 10)
+ax.scatter(discarded_maximizers[:, 0], discarded_maximizers[:, 1], marker='o', color='darkblue', label='Discarded states', zorder = 10)
 
 leg = ax.legend(framealpha = 1, fontsize = 14)
 leg.set_zorder(20)
