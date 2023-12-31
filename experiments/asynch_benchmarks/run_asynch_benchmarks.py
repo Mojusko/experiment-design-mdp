@@ -101,7 +101,7 @@ if __name__ == "__main__":
     # generate a finite grid of points
     grid_points = 2 ** (func.dim + 6)
 
-    sobol_generator = Sobol(d=args.dim, scramble=True, seed=args.seed)
+    sobol_generator = Sobol(d=func.dim, scramble=True, seed=args.seed)
     action_space = sobol_generator.random(grid_points) - 0.5
 
     # define the embedding
