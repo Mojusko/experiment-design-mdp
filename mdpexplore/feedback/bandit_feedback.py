@@ -23,10 +23,7 @@ from mdpexplore.functionals.reward_functional import RewardFunctional
 from mdpexplore.policies.summary_policies.density_policy import DensityPolicy, MarginalDensityPolicy
 from mdpexplore.policies.summary_policies.mixture_policy import MixturePolicy
 
-import matplotlib
-import matplotlib.pyplot as plt
-from matplotlib.animation import FuncAnimation
-import matplotlib.animation as animation
+from scipy.optimize import minimize
 
 from mdpexplore.feedback.feedback_base import SimpleFeedback
 
@@ -355,3 +352,206 @@ class ContinuousBanditFeedback(SimpleFeedback):
         
         else:
             pass
+
+class ContinuousBanditFeedbackAsynchronous(SimpleFeedback):
+    def __init__(self, 
+                env:MovementConstrainedBayesianOptimization, 
+                objective:RewardFunctional, 
+                estimator:Union[GaussianProcess, KernelizedFeatures], 
+                theta_star:Union[np.array, Callable], 
+                sigma:float, 
+                video:bool = False, 
+                markovian:bool = False,
+                maximization_set_method:str = 'thompson_sampling',
+                asynchronous_delay:int = 1,
+                initial_point: np.array = None,
+                keep_track_best_guess: bool = False) -> None:
+        
+        super().__init__(env, objective)
+        self.estimator = estimator
+        self.theta_star = theta_star
+        self.sigma = sigma
+        self.embedding = self.objective.embedding
+        self.video = video
+        self.markovian = markovian
+        self.maximization_set_method = maximization_set_method
+        if self.maximization_set_method == 'ucb':
+            self.create_maximizers_grid()
+        self.asynchronous_delay = asynchronous_delay
+        # start a queue for the delay in the feedback
+        self.queue = []
+        # define the initial point
+        if initial_point is None:
+            self.initial_point = np.ones((1, self.env.states_dim)) * -0.5
+        else:
+            self.initial_point = initial_point
+        self.initialize(initial_point)
+        # keep track of best guess
+        self.keep_track_best_guess = keep_track_best_guess
+        self.best_arm = []
+    
+    def initialize(self, initial_point):
+        eps = np.random.normal(0, self.sigma**2)
+        if callable(self.theta_star):
+            fun_value = self.theta_star(initial_point)
+        else:
+            z = self.embedding.embed(torch.tensor(initial_point)).numpy()
+            eps = np.random.normal(0, self.sigma)
+            fun_value = z @ self.theta_star + eps
+        
+        # add the data point to the queue
+        self.queue.append((initial_point, fun_value))
+
+        if len(self.queue) == self.asynchronous_delay:
+            # add the data point to the estimator
+            data_point = self.queue[0]
+            self.estimator.add_data_point(torch.tensor(data_point[0]),
+                                            torch.tensor([[data_point[1]]]))
+            # fit the estimator
+            self.estimator.fit()
+            # update the maximizers
+            if self.maximization_set_method == 'ucb':
+                self.objective.set_of_maximizers = self.ucb_potential_maximizers()
+            elif self.maximization_set_method == 'thompson_sampling':
+                self.objective.set_of_maximizers = self.thompson_sample_potential_maximizers()
+            else:
+                raise NotImplementedError('Maximization set method not implemented yet')
+            # shorten the queue
+            self.queue = self.queue[1:]
+
+    def thompson_sample_potential_maximizers(self):
+        if type(self.estimator) == KernelizedFeatures:
+
+            # sample thetas from the posterior and maximize
+            maximizers, _ = self.estimator.sample_and_optimize(size = self.objective.num_of_maximizers)
+            
+            return maximizers.numpy()
+
+        else:
+            raise NotImplementedError('Thompson sampling for GPs not implemented yet')
+    
+    def create_maximizers_grid(self):
+        if self.env.states_dim == 1:
+            self.maximizers_grid = np.linspace(-0.5, 0.5, 101).reshape(-1, 1)
+        elif self.env.states_dim == 2:
+            self.maximizers_grid = np.array(np.meshgrid(np.linspace(-0.5, 0.5, 21), np.linspace(-0.5, 0.5, 21))).T.reshape(-1, 2)
+        else:
+            raise NotImplementedError('Maximizers grid for higher dimensions not implemented yet')
+
+    def ucb_potential_maximizers(self):
+        
+        lcbs = self.estimator.lcb(torch.tensor(self.maximizers_grid)).numpy().squeeze()
+        highest_lcb = np.max(lcbs)
+
+        ucbs = self.estimator.ucb(torch.tensor(self.maximizers_grid)).numpy().squeeze()
+
+        return self.maximizers_grid[ucbs >= highest_lcb]
+    
+    def step_update(self):
+        if self.markovian:
+            pass
+        else:
+            action = self.action_trajectory[-1]
+            # see the next state
+            next_state = self.env.next(self.env.state, action)
+            print('next design: ', next_state)
+            # obtain the corresponding observation
+            eps = np.random.normal(0, self.sigma**2)
+            if callable(self.theta_star):
+                fun_value = self.theta_star(next_state)
+            else:
+                z = self.embedding.embed(torch.tensor(next_state)).numpy()
+                eps = np.random.normal(0, self.sigma)
+                fun_value = z @ self.theta_star + eps
+            
+            # add the data point to the queue
+            self.queue.append((next_state, fun_value))
+
+            if len(self.queue) == self.asynchronous_delay:
+                # add the data point to the estimator
+                data_point = self.queue[0]
+                self.estimator.add_data_point(torch.tensor(data_point[0]),
+                                                torch.tensor([[data_point[1]]]))
+                # fit the estimator
+                self.estimator.fit()
+                # update the maximizers
+                if self.maximization_set_method == 'ucb':
+                    self.objective.set_of_maximizers = self.ucb_potential_maximizers()
+                elif self.maximization_set_method == 'thompson_sampling':
+                    self.objective.set_of_maximizers = self.thompson_sample_potential_maximizers()
+                else:
+                    raise NotImplementedError('Maximization set method not implemented yet')
+                # shorten the queue
+                self.queue = self.queue[1:]
+            
+            # keep track of best guess
+            if self.keep_track_best_guess:
+                best_guess = self.optimum_location_guess()
+                self.best_arm.append(best_guess)
+
+
+    def episode_update(self):
+        if self.markovian:
+            final_state = self.env.next(self.env.state, self.action_trajectory[-1])
+            state_list = self.state_trajectory[1:] + [final_state]
+            print('actions taken: ', state_list)
+
+            for state in state_list:
+                eps = np.random.normal(0, self.sigma**2)
+                if callable(self.theta_star):
+                    fun_value = self.theta_star(state) + eps
+                else:
+                    z = self.embedding.embed(torch.tensor(state)).numpy()
+                    fun_value = z @ self.theta_star + eps
+                
+                self.estimator.add_data_point(torch.tensor(np.expand_dims(z, 0)),
+                                        torch.tensor([[fun_value]]))
+            
+            self.estimator.fit()
+            self.objective.set_of_maximizers = self.thompson_sample_potential_maximizers()
+
+            if self.keep_track_best_guess:
+                best_guess = self.optimum_location_guess()
+                self.best_arm.append(best_guess)
+
+
+            if self.video:
+                # save the relevant stuff for plotting
+
+                # need to save the state
+
+                # need to save the set of maximizers
+
+                # need to save the state of the GP
+
+                pass
+        
+        else:
+            pass
+    
+    def optimum_location_guess(self):
+        '''
+        Estimate the location of the optimum by maximizing the posterior mean
+        '''
+        # if the estimator is not fitted, return the initial point
+        if not self.estimator.fitted:
+            return self.initial_point
+
+
+        # define the function to optimize
+        def f(x):
+            self.estimator.mean(torch.tensor(x.reshape(1, -1)))
+            return -self.estimator.mean(torch.tensor(x.reshape(1, -1))).numpy().squeeze()
+        
+        # define the bounds
+        bounds = [(-0.5, 0.5) for _ in range(self.env.states_dim)]
+
+        # initialize the optimizer at the best observed point so far
+        x0_idx = np.argmax(self.estimator.y)
+        x0 = self.estimator.x[x0_idx, :].numpy()
+
+        # run the optimization
+        res = minimize(f, x0 = x0, bounds = bounds, method = 'L-BFGS-B', options = {'maxiter': 1000})
+
+        return res.x.reshape(1, -1)
+        
