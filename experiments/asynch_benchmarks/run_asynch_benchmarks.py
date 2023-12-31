@@ -10,7 +10,7 @@ import argparse
 
 from mdpexplore.solvers.additive_gradient import AdditiveGradient
 from mdpexplore.convex_solvers.frank_wolfe import FrankWolfe
-from mdpexplore.convex_solvers.cyipopt import InteriorPoint
+# from mdpexplore.convex_solvers.cyipopt import InteriorPoint
 from mdpexplore.convex_solvers.greedy_approximation import ContinuousGreedyApproximation
 from mdpexplore.mdpexplore import MdpExplore
 from mdpexplore.env.continuous_bandits import ContinuousMovementConstrainedBayesianOptimization
