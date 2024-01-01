@@ -29,15 +29,15 @@ if __name__ == "__main__":
     parser.add_argument('--seed', default=121, type=int, help='Use this to set the seed for the random number generator')
     parser.add_argument('--save', default="experiment.csv", type=str, help='name of the file')
     parser.add_argument('--verbosity', default=3, type=int, help='Use this to increase debug ouput')
-    parser.add_argument('--episode_length', default=100, type=int, help='Length of the episode')
+    parser.add_argument('--episode_length', default=10, type=int, help='Length of the episode')
     parser.add_argument('--noise', default=0.0001, type=float, help='Noise variance')
-    parser.add_argument('--number_of_maximizers', default=100, type=int, help='Number of Thompson Samples')
+    parser.add_argument('--number_of_maximizers', default=10, type=int, help='Number of Thompson Samples')
     parser.add_argument('--delta_mov', default=-1, type=float, help='Maximum movement constraint')
     parser.add_argument('--num_features', default=-1, type=int, help='Number of features')
     parser.add_argument('--num_components', default=1, type=int, help='Number of MaxEnt components (basic policies)')
     parser.add_argument('--episodes', default=1, type=int, help='Number of episodes')
     parser.add_argument('--policy', default='density', type=str, help='Summarized policy type (mixed/average/density)')
-    parser.add_argument('--delay', default=25, type=int, help='Delay in the feedback')
+    parser.add_argument('--delay', default=2, type=int, help='Delay in the feedback')
     parser.add_argument('--snake', default=False, type=bool, help='Wether to use the snake algorithm or not')
     parser.add_argument('--func_num', default=1, type=int, help='Function to optimize: 1. Branin2D, 2. Michalewicz2D, 3. Hartmann3D, 4. Hartmann6D')
     # extra arguments
@@ -169,15 +169,17 @@ if __name__ == "__main__":
     )
 
     # save the results
-    x_evaluations = np.zeros((args.episodes, args.episode_length, 2))
+    x_evaluations = np.zeros((args.episodes, args.episode_length + 1, 2))
     for ep in range(args.episodes):
-        x_evaluations[ep, :] = action_space[visitations[ep][1:]]
+        x_evaluations[ep, :] = np.array(visitations[ep][0]).reshape(args.episode_length + 1, -1)
     
-    x_evaluations = x_evaluations.reshape(args.episodes * args.episode_length, 2)
+    x_evaluations = x_evaluations.reshape(args.episodes * (args.episode_length + 1), 2)
 
     f_evaluations = []
     for x in x_evaluations:
         f_evaluations.append(theta_star(x.reshape(1, -1)))
+    
+    f_evaluations = np.array(f_evaluations).reshape(-1, 1)
     
     best_guesses = np.array(feedback.best_arm)
 
