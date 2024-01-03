@@ -22,12 +22,13 @@ class ContinuousGreedyApproximation(ConvexSolverBase):
     Greedy approximation algorithm for continuous environments. We find the maximum of $\nalba$ U and find the
     shortest path to it. This means using a single component of the Frank-Wolfe algorithm.
     '''
-    def __init__(self, env : ContinuousEnv, objective, verbosity = 0, accuracy = 1e-4) -> None:
+    def __init__(self, env : ContinuousEnv, objective, verbosity = 0, accuracy = 1e-4, tol = 1e-3) -> None:
         super().__init__(env, objective, verbosity = verbosity, accuracy = accuracy)
         self.type = 'greedy_approximation'
         self.stationary = False
         self.SummarizedPolicyType = MixturePolicy
         self.density_estimator = DeltaDensityEstimator(self.env, self.objective)
+        self.tol = tol
 
     
     def optimize(self, emissions, visitations, episodes) -> None:
@@ -132,33 +133,45 @@ class ContinuousGreedyApproximation(ConvexSolverBase):
         optimal_state_actions = []
         optimal_objs = []
 
-        for _ in range(100):
-            x_init = np.random.uniform(-0.5, 0.5, size = (self.env.states_dim))
+        best_maximizer_idx = [0, 0, 0, 0, 0]
+        best_maximizer_val = [1e10, 1e10, 1e10, 1e10, 1e10]
+
+        # check the value of the objective function at each of the potential maximizers
+        for maximizer_idx, potential_maximizer in enumerate(self.objective.set_of_maximizers):
+            x_init = np.concatenate((potential_maximizer, np.zeros((self.env.actions_dim))))
+            maximizer_val = greedy_objective(x_init)
+
+            # check if it is better than the worst best maximizer
+            if maximizer_val < best_maximizer_val[-1]:
+                # replace the worst maximizer
+                best_maximizer_val[-1] = maximizer_val
+                best_maximizer_idx[-1] = maximizer_idx
+            
+            # sort the maximizers
+            best_maximizer_val, best_maximizer_idx = zip(*sorted(zip(best_maximizer_val, best_maximizer_idx)))
+            best_maximizer_val = list(best_maximizer_val)
+            best_maximizer_idx = list(best_maximizer_idx)
+
+
+        for maximizer_idx in best_maximizer_idx:
+            x_init = self.objective.set_of_maximizers[maximizer_idx]
             a_init = np.zeros((self.env.actions_dim))
 
             x_init = np.concatenate((x_init, a_init))
 
-            res = minimize(greedy_objective, x_init, bounds = bounds_states + bounds_actions, options = {'disp' : False}, tol = 1e-20)
+            res = minimize(greedy_objective, x_init, bounds = bounds_states + bounds_actions, options = {'disp' : False}, tol = self.tol)
 
             if res.fun < best_obj:
                 best_obj = res.fun
                 best_state_action = res.x
             
-            if res.success:
-                optimal_state_actions.append(res.x)
-                optimal_objs.append(res.fun)
-        
-        # if there were no successful runs, just return the best one and print a warning
-        if len(optimal_state_actions) == 0:
-            print('WARNING: No successful runs for greedy optimization')
-            state = best_state_action[:self.env.states_dim]
-            action = best_state_action[self.env.states_dim:]
-
-            return state, action
+            optimal_state_actions.append(res.x)
+            optimal_objs.append(res.fun)
 
         # check each of the optimal state-actions paths
         best_rewards = 1e10
         best_idx = 0
+
         for curr_idx, op_state_action in enumerate(optimal_state_actions):
 
             states = np.zeros((H_plan, self.dim))
