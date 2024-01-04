@@ -12,6 +12,7 @@ from mdpexplore.solvers.additive_gradient import AdditiveGradient
 from mdpexplore.convex_solvers.frank_wolfe import FrankWolfe
 # from mdpexplore.convex_solvers.cyipopt import InteriorPoint
 from mdpexplore.convex_solvers.greedy_approximation import ContinuousGreedyApproximation
+from mdpexplore.convex_solvers.first_action_random_path import RandomPaths
 from mdpexplore.mdpexplore import MdpExplore
 from mdpexplore.env.continuous_bandits import ContinuousMovementConstrainedBayesianOptimization
 from mdpexplore.functionals.bandit_functionals import DesignBestArmLinearBanditNoDenominatorContinuous
@@ -39,6 +40,8 @@ if __name__ == "__main__":
     parser.add_argument('--policy', default='density', type=str, help='Summarized policy type (mixed/average/density)')
     parser.add_argument('--delay', default=25, type=int, help='Delay in the feedback')
     parser.add_argument('--snake', default=False, type=bool, help='Wether to use the snake algorithm or not')
+    parser.add_argument('--random_paths', default=False, type=bool, help='Random paths or not')
+    parser.add_argument('--num_random_paths', default=100, type=int, help='Number of random paths')
     parser.add_argument('--func_num', default=1, type=int, help='Function to optimize: 1. Branin2D, 2. Michalewicz2D, 3. Hartmann3D, 4. Hartmann6D')
     # extra arguments
     parser.add_argument('--accuracy', default=None, type=float, help='Termination criterion for optimality gap')
@@ -132,6 +135,9 @@ if __name__ == "__main__":
     if args.snake:
         # define the convex solver
         convex_solver = TruncatedSnAKeSolver(env, objective=design, epsilon = func.gamma)
+    elif args.random_paths:
+        # define the convex solver
+        convex_solver = RandomPaths(env, objective=design, num_paths = args.num_random_paths)
     else:
         # convex_solver = FrankWolfe(env, objective=design, num_components = 1, solver = AdditiveGradient, SummarizedPolicyType = MixturePolicy, verbosity = 4)
         convex_solver = ContinuousGreedyApproximation(env, objective=design)
@@ -169,7 +175,7 @@ if __name__ == "__main__":
     )
 
     # save the results
-    x_evaluations = np.zeros((args.episodes, args.episode_length + 1, 2))
+    x_evaluations = np.zeros((args.episodes, args.episode_length + 1, func.dim))
     for ep in range(args.episodes):
         x_evaluations[ep, :] = np.array(visitations[ep][0]).reshape(args.episode_length + 1, -1)
     
@@ -187,6 +193,8 @@ if __name__ == "__main__":
     
     if args.snake:
         algo_name = '/TruncatedSnAKe'
+    elif args.random_paths:
+        algo_name = f'/MDPExploreRandomPaths/num_paths_{args.num_random_paths}'
     else:
         algo_name = f'/MDPExplore/num_maximizers_{num_maximizers}'
 
