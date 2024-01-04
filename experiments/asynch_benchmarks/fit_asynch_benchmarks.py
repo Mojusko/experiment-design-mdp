@@ -228,24 +228,24 @@ class TruncatedSnAKeSolver(ConvexSolverBase):
         # now calculate the actions with a truncated policy
         while h_idx < H_plan:
             # loop until current state is approximately equal to next state
-            while (norm(current_state - next_state) > 1e-6) and (h_idx < H_plan):
-                # check direction of movement
-                direction = next_state - current_state
-                # check if direction is valid
-                if np.all(direction <= self.env.max_action) and np.all(direction >= self.env.min_action):
-                    # if it is valid, move in that direction
-                    actions[h_idx, :] = direction
-                    current_state = next_state
-                    next_state = new_path[path_idx + 1, :]
-                    path_idx += 1
-                else:
-                    # clip the direction
-                    direction = np.clip(direction, self.env.min_action, self.env.max_action)
-                    actions[h_idx, :] = direction
-                    current_state = current_state + direction
+            # while (norm(current_state - next_state) > 1e-6) and (h_idx < H_plan):
+            # check direction of movement
+            direction = next_state - current_state
+            # check if direction is valid
+            if np.all(direction <= self.env.max_action) and np.all(direction >= self.env.min_action):
+                # if it is valid, move in that direction
+                actions[h_idx, :] = direction
+                current_state = next_state
+                next_state = new_path[path_idx + 1, :]
+                path_idx += 1
+            else:
+                # clip the direction
+                direction = np.clip(direction, self.env.min_action, self.env.max_action)
+                actions[h_idx, :] = direction
+                current_state = current_state + direction
 
-                # update the idx
-                h_idx += 1
+            # update the idx
+            h_idx += 1
             
 
         # now create the policy
