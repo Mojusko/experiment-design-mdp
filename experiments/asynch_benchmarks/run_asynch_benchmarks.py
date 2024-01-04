@@ -18,7 +18,7 @@ from mdpexplore.env.continuous_bandits import ContinuousMovementConstrainedBayes
 from mdpexplore.functionals.bandit_functionals import DesignBestArmLinearBanditNoDenominatorContinuous
 from mdpexplore.feedback.bandit_feedback import ContinuousBanditFeedbackAsynchronous
 
-from  experiments.asynch_benchmarks.fit_asynch_benchmarks import Branin2D, Michalewicz2D, Hartmann3D, Hartmann6D
+from  experiments.asynch_benchmarks.fit_asynch_benchmarks import Branin2D, Michalewicz2D, Hartmann3D, Hartmann6D, ModifiedBranin2D
 from  experiments.asynch_benchmarks.fit_asynch_benchmarks import TruncatedSnAKeSolver
 
 from scipy.stats.qmc import Sobol
@@ -67,6 +67,8 @@ if __name__ == "__main__":
         func = Hartmann3D()
     elif args.func_num == 4:
         func = Hartmann6D()
+    elif args.func_num == 5:
+        func = ModifiedBranin2D()
     else:
         raise ValueError('Function not implemented')
 
@@ -85,6 +87,8 @@ if __name__ == "__main__":
             args.delta_mov = 0.1
         elif args.func_num == 4:
             args.delta_mov = 0.2
+        elif args.func_num == 5:
+            args.delta_mov = 0.025
 
     theta_star = lambda x: func.query_function(x.reshape(-1, func.dim)).reshape(-1).item()
     # set noise level
@@ -206,6 +210,3 @@ if __name__ == "__main__":
     np.save(file_name + 'x_evaluations.npy', x_evaluations)
     np.save(file_name + 'f_evaluations.npy', f_evaluations)
     np.save(file_name + 'best_guesses.npy', best_guesses)
-
-    # TODO: Make more efficient by initializing the greedy optimization at the potential maximizers and running less multi-starts
-    # TODO: Check why SnAKe is so slow
