@@ -48,7 +48,7 @@ class RandomPaths(ConvexSolverBase):
         plot = False
 
         # first look at the planning horizon
-        H_plan = self.env.max_episode_length - self.env.h
+        H_plan = np.maximum(self.env.max_episode_length - self.env.h, 2)
 
         # calculate the current density function
         density = self.density_estimator.density_oracle(self.policies, self.weights, self.densities, self.stationary)
@@ -82,23 +82,37 @@ class RandomPaths(ConvexSolverBase):
             actions = path[H_plan * self.dim:].reshape((H_plan, self.dim))
 
             x0 = states[0]
-            x2 = states[2]
+            if H_plan > 2:
+                x2 = states[2]
 
-            x_min = np.maximum(-0.5, x0 + self.env.min_action, x2 - self.env.max_action)
-            x_max = np.minimum(0.5, x0 + self.env.max_action, x2 - self.env.min_action)
+            if H_plan > 2:
+                x_min = np.maximum(-0.5, x0 + self.env.min_action, x2 - self.env.max_action)
+                x_max = np.minimum(0.5, x0 + self.env.max_action, x2 - self.env.min_action)
+            else:
+                x_min = np.maximum(-0.5, x0 + self.env.min_action)
+                x_max = np.minimum(0.5, x0 + self.env.max_action)
 
             for d in range(self.env.states_dim):
                 bounds.append((x_min[d], x_max[d]))
             
             # now optimize
-            def objective_first_action(x):
-                states_obj = np.concatenate((states[0, :].reshape(1, -1), x.reshape(1, -1), states[2:, :]), axis = 0)
-                act0 = states_obj[1, :] - states_obj[0, :]
-                act1 = states_obj[2, :] - states_obj[1, :]
-                actions_obj = np.concatenate((act0.reshape(1, -1), act1.reshape(1, -1), actions[2:, :]), axis = 0)
-                # now evaluate the objective
-                obj = objective(np.concatenate((states_obj.reshape(1, -1), actions_obj.reshape(1, -1)), axis = 1).reshape(-1))
-                return obj
+            if H_plan > 2:
+                def objective_first_action(x):
+                    states_obj = np.concatenate((states[0, :].reshape(1, -1), x.reshape(1, -1), states[2:, :]), axis = 0)
+                    act0 = states_obj[1, :] - states_obj[0, :]
+                    act1 = states_obj[2, :] - states_obj[1, :]
+                    actions_obj = np.concatenate((act0.reshape(1, -1), act1.reshape(1, -1), actions[2:, :]), axis = 0)
+                    # now evaluate the objective
+                    obj = objective(np.concatenate((states_obj.reshape(1, -1), actions_obj.reshape(1, -1)), axis = 1).reshape(-1))
+                    return obj
+            else:
+                def objective_first_action(x):
+                    states_obj = np.concatenate((states[0, :].reshape(1, -1), x.reshape(1, -1)), axis = 0)
+                    act0 = states_obj[1, :] - states_obj[0, :]
+                    actions_obj = np.concatenate((act0.reshape(1, -1), np.zeros(self.dim).reshape(1, -1)), axis = 0)
+                    # now evaluate the objective
+                    obj = objective(np.concatenate((states_obj.reshape(1, -1), actions_obj.reshape(1, -1)), axis = 1).reshape(-1))
+                    return obj
 
             # get the gradient of the objective
             def gradient(X):
@@ -122,18 +136,31 @@ class RandomPaths(ConvexSolverBase):
 
                 return - state1_grad
 
-            x1_init = states[1, :]
+            if H_plan > 2:
+                x1_init = states[1, :]
+            else:
+                x1_init = np.random.uniform(x_min, x_max, size = (1, self.dim)).reshape(-1)
+            
             res = minimize(objective_first_action, x1_init, bounds = bounds, tol = 1e-4, jac = gradient)
 
             # get the best objective
-            if res.fun < best_obj:
-                best_obj = res.fun
-                # build the best path
-                best_states = np.concatenate((states[0, :].reshape(1, -1), res.x.reshape(1, -1), states[2:, :]), axis = 0)
-                a0 = best_states[1, :] - best_states[0, :]
-                a1 = best_states[2, :] - best_states[1, :]
-                best_actions = np.concatenate((a0.reshape(1, -1), a1.reshape(1, -1), actions[2:, :]), axis = 0)
-                best_path = np.concatenate((best_states.reshape(1, -1), best_actions.reshape(1, -1)), axis = 1).reshape(-1)
+            if H_plan > 2:
+                if res.fun < best_obj:
+                    best_obj = res.fun
+                    # build the best path
+                    best_states = np.concatenate((states[0, :].reshape(1, -1), res.x.reshape(1, -1), states[2:, :]), axis = 0)
+                    a0 = best_states[1, :] - best_states[0, :]
+                    a1 = best_states[2, :] - best_states[1, :]
+                    best_actions = np.concatenate((a0.reshape(1, -1), a1.reshape(1, -1), actions[2:, :]), axis = 0)
+                    best_path = np.concatenate((best_states.reshape(1, -1), best_actions.reshape(1, -1)), axis = 1).reshape(-1)
+            else:
+                if res.fun < best_obj:
+                    best_obj = res.fun
+                    # build the best path
+                    best_states = np.concatenate((states[0, :].reshape(1, -1), res.x.reshape(1, -1)), axis = 0)
+                    a0 = best_states[1, :] - best_states[0, :]
+                    best_actions = np.concatenate((a0.reshape(1, -1), np.zeros(self.dim).reshape(1, -1)), axis = 0)
+                    best_path = np.concatenate((best_states.reshape(1, -1), best_actions.reshape(1, -1)), axis = 1).reshape(-1)
                 
         # extract the best path
         states = best_states
