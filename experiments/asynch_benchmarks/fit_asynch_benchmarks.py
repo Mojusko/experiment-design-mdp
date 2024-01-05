@@ -295,7 +295,7 @@ class TruncatedSnAKeSolver(ConvexSolverBase):
                 # if it is valid, move in that direction
                 actions[h_idx, :] = direction
                 current_state = next_state
-                next_state = new_path[path_idx + 1, :]
+                next_state = new_path[np.minimum(path_idx + 1, H_plan), :]
                 path_idx += 1
             else:
                 # clip the direction
