@@ -18,7 +18,7 @@ from mdpexplore.env.continuous_bandits import ContinuousMovementConstrainedBayes
 from mdpexplore.functionals.bandit_functionals import DesignBestArmLinearBanditNoDenominatorContinuous
 from mdpexplore.feedback.bandit_feedback import ContinuousBanditFeedbackAsynchronous
 
-from  experiments.asynch_benchmarks.fit_asynch_benchmarks import Branin2D, Michalewicz2D, Hartmann3D, Hartmann6D, ModifiedBranin2D
+from  experiments.asynch_benchmarks.fit_asynch_benchmarks import Branin2D, Michalewicz2D, Hartmann3D, Hartmann6D, ModifiedBranin2D, Levy4D
 from  experiments.asynch_benchmarks.fit_asynch_benchmarks import TruncatedSnAKeSolver
 
 from scipy.stats.qmc import Sobol
@@ -58,6 +58,9 @@ if __name__ == "__main__":
     random.seed(args.seed)
     torch.manual_seed(args.seed)
 
+    # set regularization parameter
+    lambd = 1.0
+
     # define the function to optimize
     if args.func_num == 1:
         func = Branin2D()
@@ -69,6 +72,9 @@ if __name__ == "__main__":
         func = Hartmann6D()
     elif args.func_num == 5:
         func = ModifiedBranin2D()
+    elif args.func_num == 6:
+        func = Levy4D()
+        lambd = 10.0
     else:
         raise ValueError('Function not implemented')
 
@@ -89,13 +95,13 @@ if __name__ == "__main__":
             args.delta_mov = 0.2
         elif args.func_num == 5:
             args.delta_mov = 0.025
+        elif args.func_num == 6:
+            args.delta_mov = 0.1
 
     theta_star = lambda x: func.query_function(x.reshape(-1, func.dim)).reshape(-1).item()
     # set noise level
     sigma = np.sqrt(args.noise)
 
-    # set regularization parameter
-    lambd = 1.0
     # maximum movement parameter
     delta_mov = args.delta_mov
     # number of maximizers

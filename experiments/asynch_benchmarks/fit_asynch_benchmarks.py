@@ -21,7 +21,7 @@ Here we include the functions that we will use to benchmark the algorithms.
 
 class Branin2D():
     def __init__(self):
-        # taken from website: https://www.sfu.ca/~ssurjano/shekel.html
+        # taken from website: https://www.sfu.ca/~ssurjano/branin.html
 
         self.optimum = 1.0473939180374147
         self.dim = 2
@@ -52,7 +52,7 @@ class Branin2D():
 
 class ModifiedBranin2D():
     def __init__(self):
-        # taken from website: https://www.sfu.ca/~ssurjano/shekel.html, slightly modified to have a unique optimum
+        # taken from website: https://www.sfu.ca/~ssurjano/branin.html, slightly modified to have a unique optimum
 
         self.optimum = 1.2943814926103765
         self.dim = 2
@@ -174,7 +174,31 @@ class Michalewicz2D():
         S1 = np.sin(x[:, 0]) * (np.sin(x[:, 0] / np.pi))**(2*self.m)
         S2 = np.sin(x[:, 1]) * (np.sin(2 * x[:, 1] / np.pi))**(2*self.m)
         return S1 + S2
+
+class Levy4D():
+    def __init__(self):
+        # taken from website: https://www.sfu.ca/~ssurjano/levy.html
+        self.optimum = 1.0
+        self.dim = 4
+
+        self.kappa = 0.6
+        self.gamma = 0.14174832
+
+        self.name = 'Levy4D'
     
+    def query_function(self, x):
+        x = x * 16
+        
+        w = 1 + (x[:, 0] - 1) / 4
+        S = np.sin(np.pi * w)**2
+        for d in range(3):
+            w = 1 + (x[:, d] - 1) / 4
+            S += (w - 1)**2 * (1 + 10 * np.sin(np.pi * w + 1)**2)
+        
+        w = 1 + (x[:, 3] - 1) / 4
+        S += (w - 1)**2 * (1 + np.sin(2 * np.pi * w)**2)
+
+        return -S / 400 + 1
 
 '''
 Here we implement a dummy convex solver that will be used to implement the SnAKe algorithm.
@@ -300,14 +324,14 @@ class TruncatedSnAKeSolver(ConvexSolverBase):
 
 
 if __name__ == '__main__':
-    func = ModifiedBranin2D()
+    func = Levy4D()
     theta_star = lambda x: - func.query_function(x.reshape(1, -1))
 
-    bounds = [(-0.5, 0.5), (-0.5, 0.5)]
+    bounds = [(-0.5, 0.5), (-0.5, 0.5), (-0.5, 0.5), (-0.5, 5)]
     best_func_val = np.inf
 
     for i in range(1000):
-        x0 = np.random.uniform(-0.5, 0.5, (1, 2)).reshape(-1)
+        x0 = np.random.uniform(-0.5, 0.5, (1, 4)).reshape(-1)
         res = minimize(theta_star, x0, method = 'L-BFGS-B', bounds = bounds, tol = 1e-20, options = {'maxiter': 10000})
         print(res.x)
         print(res.fun)
