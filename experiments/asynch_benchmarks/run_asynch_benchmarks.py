@@ -80,7 +80,7 @@ if __name__ == "__main__":
 
     # number of features
     if args.num_features == -1:
-        args.num_features = int(2 ** (func.dim + 5))
+        args.num_features = np.minimum(2 ** (func.dim + 5), 512)
     else:
         args.num_features = args.num_features
     

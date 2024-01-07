@@ -18,14 +18,15 @@ from mdpexplore.env.continuous_bandits import ContinuousMovementConstrainedBayes
 from mdpexplore.functionals.bandit_functionals import DesignBestArmLinearBanditNoDenominatorContinuous
 from mdpexplore.feedback.bandit_feedback import ContinuousBanditFeedback
 
-from  experiments.snar.fit_snar import SnAr, LSR
+from experiments.snar.fit_snar import SnAr, LSR
+from experiments.asynch_benchmarks.fit_asynch_benchmarks import Branin2D, Michalewicz2D, Hartmann3D, Hartmann6D, ModifiedBranin2D, Levy4D
 from experiments.asynch_benchmarks.fit_asynch_benchmarks import TruncatedSnAKeSolver
 
 from scipy.stats.qmc import Sobol
 
 if __name__ == "__main__":
 	
-    parser = argparse.ArgumentParser(description='SnAr Benchmark.')
+    parser = argparse.ArgumentParser(description='Synchronous Benchmark.')
     # arguments I know I will need
     parser.add_argument('--seed', default=121, type=int, help='Use this to set the seed for the random number generator')
     parser.add_argument('--save', default="experiment.csv", type=str, help='name of the file')
@@ -33,9 +34,9 @@ if __name__ == "__main__":
     parser.add_argument('--episode_length', default=100, type=int, help='Length of the episode')
     parser.add_argument('--noise', default=0.001, type=float, help='Noise variance')
     parser.add_argument('--number_of_maximizers', default=100, type=int, help='Number of Thompson Samples, UCB samples, etc...')
-    parser.add_argument('--maximizer_type', default='af_mix', type=str, help='Type of maximizer (thompson_sampling / ucb / af_mix)')
-    parser.add_argument('--delta_mov', default= 0.1, type=float, help='Maximum movement constraint')
-    parser.add_argument('--num_features', default=512, type=int, help='Number of features')
+    parser.add_argument('--maximizer_type', default='thompson_sampling', type=str, help='Type of maximizer (thompson_sampling / ucb / af_mix)')
+    parser.add_argument('--delta_mov', default= -1, type=float, help='Maximum movement constraint')
+    parser.add_argument('--num_features', default=-1, type=int, help='Number of features')
     parser.add_argument('--num_components', default=1, type=int, help='Number of MaxEnt components (basic policies)')
     parser.add_argument('--episodes', default=1, type=int, help='Number of episodes')
     parser.add_argument('--policy', default='density', type=str, help='Summarized policy type (mixed/average/density)')
@@ -59,15 +60,43 @@ if __name__ == "__main__":
     random.seed(args.seed)
     torch.manual_seed(args.seed)
 
+    # set regularization parameter
+    lambd = 1.0
     # define the function to optimize
-    func = SnAr()
+    if args.func_num == 1:
+        func = Branin2D()
+    elif args.func_num == 2:
+        func = Michalewicz2D()
+    elif args.func_num == 3:
+        func = Hartmann3D()
+    elif args.func_num == 4:
+        func = Hartmann6D()
+    elif args.func_num == 5:
+        func = ModifiedBranin2D()
+    elif args.func_num == 6:
+        func = Levy4D()
+        lambd = 10.0
+    else:
+        raise ValueError('Function not implemented')
+
+    if args.delta_mov < 0:
+        if args.func_num == 1:
+            args.delta_mov = 0.05
+        elif args.func_num == 2:
+            args.delta_mov = 0.05
+        elif args.func_num == 3:
+            args.delta_mov = 0.1
+        elif args.func_num == 4:
+            args.delta_mov = 0.2
+        elif args.func_num == 5:
+            args.delta_mov = 0.025
+        elif args.func_num == 6:
+            args.delta_mov = 0.1
 
     theta_star = lambda x: func.query_function(x.reshape(-1, func.dim))
     # set noise level
     sigma = np.sqrt(args.noise)
 
-    # set regularization parameter
-    lambd = 1.0
     # maximum movement parameter
     delta_mov = args.delta_mov
     # number of maximizers
@@ -75,6 +104,12 @@ if __name__ == "__main__":
         num_maximizers = args.number_of_maximizers
     else:
         num_maximizers = args.episode_length + 1
+    
+    # number of features
+    if args.num_features == -1:
+        args.num_features = np.minimum(2 ** (func.dim + 5), 512)
+    else:
+        args.num_features = args.num_features
 
     # define the kernel
     # generate a finite grid of points
@@ -131,6 +166,7 @@ if __name__ == "__main__":
         maximization_set_method = 'af_mix'
     else:
         maximization_set_method = 'thompson_sampling'
+    
     feedback = ContinuousBanditFeedback(env, 
                                         design, 
                                         estimator, 
@@ -173,7 +209,7 @@ if __name__ == "__main__":
 
     best_guesses = np.array(feedback.best_arm)
 
-    file_name = f'experiments/snar/results/' + func.name + f'/delta_mov_{args.delta_mov}/noise_var_{args.noise}/num_features_{args.num_features}/episode_length_{args.episode_length}/'
+    file_name = f'experiments/synch_benchmarks/results/' + func.name + f'/delta_mov_{args.delta_mov}/noise_var_{args.noise}/num_features_{args.num_features}/episode_length_{args.episode_length}/'
     
     if args.snake:
         algo_name = '/TruncatedSnAKe'

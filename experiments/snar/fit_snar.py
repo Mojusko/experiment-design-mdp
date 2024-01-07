@@ -26,6 +26,8 @@ class SnAr():
         self.gamma = 0.2
         self.kappa = 0.8
 
+        self.optimum = 1.42998
+
         self.name = 'SnarBenchmark'
 
         self.snar_bench = SnarBenchmark()

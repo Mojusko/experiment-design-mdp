@@ -24,6 +24,7 @@ from mdpexplore.policies.summary_policies.density_policy import DensityPolicy, M
 from mdpexplore.policies.summary_policies.mixture_policy import MixturePolicy
 
 from scipy.optimize import minimize
+from scipy.stats import norm
 
 from mdpexplore.feedback.feedback_base import SimpleFeedback
 
@@ -229,7 +230,7 @@ class ContinuousBanditFeedback(SimpleFeedback):
         self.video = video
         self.markovian = markovian
         self.maximization_set_method = maximization_set_method
-        if self.maximization_set_method == 'ucb':
+        if self.maximization_set_method == 'ucb_grid':
             self.create_maximizers_grid()
         elif self.maximization_set_method == 'none':
             pass
@@ -261,16 +262,119 @@ class ContinuousBanditFeedback(SimpleFeedback):
         # fit the estimator
         self.estimator.fit()
 
-    def thompson_sample_potential_maximizers(self):
+    def thompson_sample_potential_maximizers(self, num_maximizers = None):
         if type(self.estimator) == KernelizedFeatures:
+            if num_maximizers is None:
+                num_maximizers = self.objective.num_of_maximizers
 
             # sample thetas from the posterior and maximize
-            maximizers, _ = self.estimator.sample_and_optimize(size = self.objective.num_of_maximizers)
+            maximizers, _ = self.estimator.sample_and_optimize(size = num_maximizers)
             
             return maximizers.numpy()
 
         else:
             raise NotImplementedError('Thompson sampling for GPs not implemented yet')
+    
+    def ucb_potential_maximizers(self, num_maximizers = None, betas = None):
+        if num_maximizers is None:
+            num_maximizers = self.objective.num_of_maximizers
+        
+        potential_maximizers = np.zeros((num_maximizers, self.env.states_dim))
+
+        if betas is None:
+            betas = np.linspace(0, 2.5, num_maximizers)
+
+        for max_idx in range(num_maximizers):
+            # optimize the UCB acquisition function for each beta
+            beta = betas[max_idx]
+
+            def f(x):
+                return -self.UCB(x, beta = beta)
+
+            x0_idx = np.argmax(self.estimator.y)
+            x0 = self.estimator.x[x0_idx, :].numpy().reshape(-1)
+
+            # run the optimization with a few random restarts
+            best_f = 1e10
+            for _ in range(5):
+                res = minimize(f, x0 = x0, bounds = [(-0.5, 0.5) for _ in range(self.env.states_dim)], method = 'L-BFGS-B', options = {'maxiter': 1000})
+                if res.fun < best_f:
+                    best_f = res.fun
+                    best_x = res.x
+                # set x0 after so that first iteration is not random
+                x0 = np.random.uniform(-0.5, 0.5, self.env.states_dim)
+
+            potential_maximizers[max_idx, :] = best_x
+        
+        return potential_maximizers
+    
+    def ei_potential_maximizers(self, num_maximizers = 1):
+        if num_maximizers is None:
+            num_maximizers = self.objective.num_of_maximizers
+        
+        potential_maximizers = np.zeros((num_maximizers, self.env.states_dim))
+
+        for max_idx in range(num_maximizers):
+            # optimize the EI acquisition function for each beta
+
+            def f(x):
+                return -self.EI(x)
+
+            x0_idx = np.argmax(self.estimator.y)
+            x0 = self.estimator.x[x0_idx, :].numpy().reshape(-1)
+
+            # run the optimization with a few random restarts
+            best_f = 1e10
+            for _ in range(5):
+                res = minimize(f, x0 = x0, bounds = [(-0.5, 0.5) for _ in range(self.env.states_dim)], method = 'L-BFGS-B', options = {'maxiter': 1000})
+                if res.fun < best_f:
+                    best_f = res.fun
+                    best_x = res.x
+                # set x0 after so that first iteration is not random
+                x0 = np.random.uniform(-0.5, 0.5, self.env.states_dim)
+
+            potential_maximizers[max_idx, :] = best_x
+        
+        return potential_maximizers
+
+    def pi_potential_maximizers(self, num_maximizers = 1):
+        if num_maximizers is None:
+            num_maximizers = self.objective.num_of_maximizers
+        
+        potential_maximizers = np.zeros((num_maximizers, self.env.states_dim))
+
+        for max_idx in range(num_maximizers):
+            # optimize the PI acquisition function for each beta
+            def f(x):
+                return -self.PI(x)
+
+            x0_idx = np.argmax(self.estimator.y)
+            x0 = self.estimator.x[x0_idx, :].numpy().reshape(-1)
+
+            # run the optimization with a few random restarts
+            best_f = 1e10
+            for _ in range(5):
+                res = minimize(f, x0 = x0, bounds = [(-0.5, 0.5) for _ in range(self.env.states_dim)], method = 'L-BFGS-B', options = {'maxiter': 1000})
+                if res.fun < best_f:
+                    best_f = res.fun
+                    best_x = res.x
+                # set x0 after so that first iteration is not random
+                x0 = np.random.uniform(-0.5, 0.5, self.env.states_dim)
+
+            potential_maximizers[max_idx, :] = best_x
+        
+        return potential_maximizers
+    
+    def af_mix_potential_maximizers(self, num_maximizers = 6):
+        # obtain the maximizers from the different acquisition functions
+        ucb_maximizers = self.ucb_potential_maximizers(num_maximizers = 3, betas = [0, 1, 2])
+        ei_maximizers = self.ei_potential_maximizers(num_maximizers = 1)
+        pi_maximizers = self.pi_potential_maximizers(num_maximizers = 1)
+        ts_maximizers = self.thompson_sample_potential_maximizers(num_maximizers = num_maximizers - 5)
+        # concatenate them
+        potential_maximizers = np.vstack((ucb_maximizers, ei_maximizers, pi_maximizers, ts_maximizers))
+        
+        return potential_maximizers
     
     def create_maximizers_grid(self):
         if self.env.states_dim == 1:
@@ -280,7 +384,7 @@ class ContinuousBanditFeedback(SimpleFeedback):
         else:
             raise NotImplementedError('Maximizers grid for higher dimensions not implemented yet')
 
-    def ucb_potential_maximizers(self):
+    def ucb_grid_potential_maximizers(self):
         
         lcbs = self.estimator.lcb(torch.tensor(self.maximizers_grid)).numpy().squeeze()
         highest_lcb = np.max(lcbs)
@@ -347,10 +451,14 @@ class ContinuousBanditFeedback(SimpleFeedback):
                     np.save('ucb.npy', np.vstack((memory_ucb, ucb)))
                     np.save('lcb.npy', np.vstack((memory_lcb, lcb)))
 
-            if self.maximization_set_method == 'ucb':
+            if self.maximization_set_method == 'ucb_grid':
+                self.objective.set_of_maximizers = self.ucb_grid_potential_maximizers()
+            elif self.maximization_set_method == 'ucb':
                 self.objective.set_of_maximizers = self.ucb_potential_maximizers()
             elif self.maximization_set_method == 'thompson_sampling':
                 self.objective.set_of_maximizers = self.thompson_sample_potential_maximizers()
+            elif self.maximization_set_method == 'af_mix':
+                self.objective.set_of_maximizers = self.af_mix_potential_maximizers()
             elif self.maximization_set_method == 'none':
                 pass
             else:
@@ -376,8 +484,12 @@ class ContinuousBanditFeedback(SimpleFeedback):
             self.estimator.fit()
             if self.maximization_set_method == 'ucb':
                 self.objective.set_of_maximizers = self.ucb_potential_maximizers()
+            elif self.maximization_set_method == 'ucb_grid':
+                self.objective.set_of_maximizers = self.ucb_grid_potential_maximizers()    
             elif self.maximization_set_method == 'thompson_sampling':
                 self.objective.set_of_maximizers = self.thompson_sample_potential_maximizers()
+            elif self.maximization_set_method == 'af_mix':
+                self.objective.set_of_maximizers = self.af_mix_potential_maximizers()
             elif self.maximization_set_method == 'none':
                 pass
 
@@ -425,6 +537,49 @@ class ContinuousBanditFeedback(SimpleFeedback):
         res = minimize(f, x0 = x0, bounds = bounds, method = 'L-BFGS-B', options = {'maxiter': 1000})
 
         return res.x.reshape(1, -1)
+    
+    def EI(self, x):
+        '''
+        Expected improvement acquisition function
+        '''
+        # obtain the mean and std of the GP
+        mean, std = self.estimator.mean_std(torch.tensor(x.reshape(1, -1)))
+        # obtain the best observed value
+        best_obs = np.max(self.estimator.y.numpy())
+        # calculate the improvement
+        improvement = mean.numpy().squeeze() - best_obs
+        # calculate the expected improvement
+        expected_improvement = improvement * norm.cdf(improvement / std.numpy().squeeze()) + std.numpy().squeeze() * norm.pdf(improvement / std.numpy().squeeze())
+        # return the negative expected improvement
+        return expected_improvement
+
+    def PI(self, x):
+        '''
+        Probability of improvement acquisition function
+        '''
+        # obtain the mean and std of the GP
+        mean, std = self.estimator.mean_std(torch.tensor(x.reshape(1, -1)))
+        # obtain the best observed value
+        best_obs = np.max(self.estimator.y.numpy())
+        # calculate the improvement
+        improvement = mean.numpy().squeeze() - best_obs
+        # calculate the probability of improvement
+        probability_improvement = norm.cdf(improvement / std.numpy().squeeze())
+        # return the negative probability of improvement
+        return probability_improvement
+    
+
+    
+    def UCB(self, x, beta = 2):
+        '''
+        Upper confidence bound acquisition function
+        '''
+        # obtain the mean and std of the GP
+        mean, std = self.estimator.mean_std(torch.tensor(x.reshape(1, -1)))
+        # calculate the upper confidence bound
+        ucb = mean.numpy().squeeze() + beta * std.numpy().squeeze()
+        # return the negative upper confidence bound
+        return ucb
         
 
 class ContinuousBanditFeedbackAsynchronous(SimpleFeedback):
@@ -449,7 +604,7 @@ class ContinuousBanditFeedbackAsynchronous(SimpleFeedback):
         self.video = video
         self.markovian = markovian
         self.maximization_set_method = maximization_set_method
-        if self.maximization_set_method == 'ucb':
+        if self.maximization_set_method == 'ucb_grid':
             self.create_maximizers_grid()
         self.asynchronous_delay = asynchronous_delay
         # start a queue for the delay in the feedback
@@ -503,7 +658,7 @@ class ContinuousBanditFeedbackAsynchronous(SimpleFeedback):
 
         else:
             raise NotImplementedError('Thompson sampling for GPs not implemented yet')
-    
+        
     def create_maximizers_grid(self):
         if self.env.states_dim == 1:
             self.maximizers_grid = np.linspace(-0.5, 0.5, 101).reshape(-1, 1)
@@ -512,7 +667,7 @@ class ContinuousBanditFeedbackAsynchronous(SimpleFeedback):
         else:
             raise NotImplementedError('Maximizers grid for higher dimensions not implemented yet')
 
-    def ucb_potential_maximizers(self):
+    def ucb_grid_potential_maximizers(self):
         
         lcbs = self.estimator.lcb(torch.tensor(self.maximizers_grid)).numpy().squeeze()
         highest_lcb = np.max(lcbs)
@@ -628,4 +783,46 @@ class ContinuousBanditFeedbackAsynchronous(SimpleFeedback):
         res = minimize(f, x0 = x0, bounds = bounds, method = 'L-BFGS-B', options = {'maxiter': 1000})
 
         return res.x.reshape(1, -1)
-        
+
+    def EI(self, x):
+        '''
+        Expected improvement acquisition function
+        '''
+        # obtain the mean and std of the GP
+        mean, std = self.estimator.mean_std(torch.tensor(x.reshape(1, -1)))
+        # obtain the best observed value
+        best_obs = np.max(self.estimator.y)
+        # calculate the improvement
+        improvement = mean.numpy().squeeze() - best_obs
+        # calculate the expected improvement
+        expected_improvement = improvement * norm.cdf(improvement / std.numpy().squeeze()) + std.numpy().squeeze() * norm.pdf(improvement / std.numpy().squeeze())
+        # return the negative expected improvement
+        return -expected_improvement
+
+    def PI(self, x):
+        '''
+        Probability of improvement acquisition function
+        '''
+        # obtain the mean and std of the GP
+        mean, std = self.estimator.mean_std(torch.tensor(x.reshape(1, -1)))
+        # obtain the best observed value
+        best_obs = np.max(self.estimator.y)
+        # calculate the improvement
+        improvement = mean.numpy().squeeze() - best_obs
+        # calculate the probability of improvement
+        probability_improvement = norm.cdf(improvement / std.numpy().squeeze())
+        # return the negative probability of improvement
+        return -probability_improvement
+    
+
+    
+    def UCB(self, x, beta = 2):
+        '''
+        Upper confidence bound acquisition function
+        '''
+        # obtain the mean and std of the GP
+        mean, std = self.estimator.mean_std(torch.tensor(x.reshape(1, -1)))
+        # calculate the upper confidence bound
+        ucb = mean.numpy().squeeze() + beta * std.numpy().squeeze()
+        # return the negative upper confidence bound
+        return -ucb
