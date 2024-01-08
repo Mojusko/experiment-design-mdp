@@ -658,6 +658,107 @@ class ContinuousBanditFeedbackAsynchronous(SimpleFeedback):
 
         else:
             raise NotImplementedError('Thompson sampling for GPs not implemented yet')
+    
+    def ucb_potential_maximizers(self, num_maximizers = None, betas = None):
+        if num_maximizers is None:
+            num_maximizers = self.objective.num_of_maximizers
+        
+        potential_maximizers = np.zeros((num_maximizers, self.env.states_dim))
+
+        if betas is None:
+            betas = np.linspace(0, 2.5, num_maximizers)
+
+        for max_idx in range(num_maximizers):
+            # optimize the UCB acquisition function for each beta
+            beta = betas[max_idx]
+
+            def f(x):
+                return -self.UCB(x, beta = beta)
+
+            x0_idx = np.argmax(self.estimator.y)
+            x0 = self.estimator.x[x0_idx, :].numpy().reshape(-1)
+
+            # run the optimization with a few random restarts
+            best_f = 1e10
+            for _ in range(5):
+                res = minimize(f, x0 = x0, bounds = [(-0.5, 0.5) for _ in range(self.env.states_dim)], method = 'L-BFGS-B', options = {'maxiter': 1000})
+                if res.fun < best_f:
+                    best_f = res.fun
+                    best_x = res.x
+                # set x0 after so that first iteration is not random
+                x0 = np.random.uniform(-0.5, 0.5, self.env.states_dim)
+
+            potential_maximizers[max_idx, :] = best_x
+        
+        return potential_maximizers
+    
+    def ei_potential_maximizers(self, num_maximizers = 1):
+        if num_maximizers is None:
+            num_maximizers = self.objective.num_of_maximizers
+        
+        potential_maximizers = np.zeros((num_maximizers, self.env.states_dim))
+
+        for max_idx in range(num_maximizers):
+            # optimize the EI acquisition function for each beta
+
+            def f(x):
+                return -self.EI(x)
+
+            x0_idx = np.argmax(self.estimator.y)
+            x0 = self.estimator.x[x0_idx, :].numpy().reshape(-1)
+
+            # run the optimization with a few random restarts
+            best_f = 1e10
+            for _ in range(5):
+                res = minimize(f, x0 = x0, bounds = [(-0.5, 0.5) for _ in range(self.env.states_dim)], method = 'L-BFGS-B', options = {'maxiter': 1000})
+                if res.fun < best_f:
+                    best_f = res.fun
+                    best_x = res.x
+                # set x0 after so that first iteration is not random
+                x0 = np.random.uniform(-0.5, 0.5, self.env.states_dim)
+
+            potential_maximizers[max_idx, :] = best_x
+        
+        return potential_maximizers
+
+    def pi_potential_maximizers(self, num_maximizers = 1):
+        if num_maximizers is None:
+            num_maximizers = self.objective.num_of_maximizers
+        
+        potential_maximizers = np.zeros((num_maximizers, self.env.states_dim))
+
+        for max_idx in range(num_maximizers):
+            # optimize the PI acquisition function for each beta
+            def f(x):
+                return -self.PI(x)
+
+            x0_idx = np.argmax(self.estimator.y)
+            x0 = self.estimator.x[x0_idx, :].numpy().reshape(-1)
+
+            # run the optimization with a few random restarts
+            best_f = 1e10
+            for _ in range(5):
+                res = minimize(f, x0 = x0, bounds = [(-0.5, 0.5) for _ in range(self.env.states_dim)], method = 'L-BFGS-B', options = {'maxiter': 1000})
+                if res.fun < best_f:
+                    best_f = res.fun
+                    best_x = res.x
+                # set x0 after so that first iteration is not random
+                x0 = np.random.uniform(-0.5, 0.5, self.env.states_dim)
+
+            potential_maximizers[max_idx, :] = best_x
+        
+        return potential_maximizers
+    
+    def af_mix_potential_maximizers(self, num_maximizers = 6):
+        # obtain the maximizers from the different acquisition functions
+        ucb_maximizers = self.ucb_potential_maximizers(num_maximizers = 3, betas = [0, 1, 2])
+        ei_maximizers = self.ei_potential_maximizers(num_maximizers = 1)
+        pi_maximizers = self.pi_potential_maximizers(num_maximizers = 1)
+        ts_maximizers = self.thompson_sample_potential_maximizers(num_maximizers = num_maximizers - 5)
+        # concatenate them
+        potential_maximizers = np.vstack((ucb_maximizers, ei_maximizers, pi_maximizers, ts_maximizers))
+        
+        return potential_maximizers
         
     def create_maximizers_grid(self):
         if self.env.states_dim == 1:
@@ -706,10 +807,14 @@ class ContinuousBanditFeedbackAsynchronous(SimpleFeedback):
                 # update the maximizers
                 if self.maximization_set_method == 'ucb':
                     self.objective.set_of_maximizers = self.ucb_potential_maximizers()
+                elif self.maximization_set_method == 'ucb_grid':
+                    self.objective.set_of_maximizers = self.ucb_grid_potential_maximizers()    
                 elif self.maximization_set_method == 'thompson_sampling':
                     self.objective.set_of_maximizers = self.thompson_sample_potential_maximizers()
-                else:
-                    raise NotImplementedError('Maximization set method not implemented yet')
+                elif self.maximization_set_method == 'af_mix':
+                    self.objective.set_of_maximizers = self.af_mix_potential_maximizers()
+                elif self.maximization_set_method == 'none':
+                    pass
                 # shorten the queue
                 self.queue = self.queue[1:]
             
@@ -737,7 +842,16 @@ class ContinuousBanditFeedbackAsynchronous(SimpleFeedback):
                                         torch.tensor([[fun_value]]))
             
             self.estimator.fit()
-            self.objective.set_of_maximizers = self.thompson_sample_potential_maximizers()
+            if self.maximization_set_method == 'ucb':
+                self.objective.set_of_maximizers = self.ucb_potential_maximizers()
+            elif self.maximization_set_method == 'ucb_grid':
+                self.objective.set_of_maximizers = self.ucb_grid_potential_maximizers()    
+            elif self.maximization_set_method == 'thompson_sampling':
+                self.objective.set_of_maximizers = self.thompson_sample_potential_maximizers()
+            elif self.maximization_set_method == 'af_mix':
+                self.objective.set_of_maximizers = self.af_mix_potential_maximizers()
+            elif self.maximization_set_method == 'none':
+                pass
 
             if self.keep_track_best_guess:
                 best_guess = self.optimum_location_guess()
