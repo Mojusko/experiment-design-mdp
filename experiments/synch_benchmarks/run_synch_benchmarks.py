@@ -95,6 +95,8 @@ if __name__ == "__main__":
             args.delta_mov = 0.025
         elif args.func_num == 6:
             args.delta_mov = 0.1
+        elif args.func_num == 7:
+            args.delta_mov = 0.1
 
     theta_star = lambda x: func.query_function(x.reshape(-1, func.dim)).reshape(-1).item()
     # set noise level
