@@ -33,7 +33,7 @@ if __name__ == "__main__":
     parser.add_argument('--episode_length', default=100, type=int, help='Length of the episode')
     parser.add_argument('--noise', default=0.001, type=float, help='Noise variance')
     parser.add_argument('--number_of_maximizers', default=100, type=int, help='Number of Thompson Samples, UCB samples, etc...')
-    parser.add_argument('--maximizer_type', default='af_mix', type=str, help='Type of maximizer (thompson_sampling / ucb / af_mix)')
+    parser.add_argument('--maximizer_type', default='thompson_sampling', type=str, help='Type of maximizer (thompson_sampling / ucb / af_mix)')
     parser.add_argument('--delta_mov', default= 0.1, type=float, help='Maximum movement constraint')
     parser.add_argument('--num_features', default=512, type=int, help='Number of features')
     parser.add_argument('--num_components', default=1, type=int, help='Number of MaxEnt components (basic policies)')
@@ -42,6 +42,7 @@ if __name__ == "__main__":
     parser.add_argument('--snake', default=False, type=bool, help='Wether to use the snake algorithm or not')
     parser.add_argument('--random_paths', default=False, type=bool, help='Wether to use the random paths algorithm or not')
     parser.add_argument('--num_random_paths', default=100, type=int, help='Number of random paths')
+    parser.add_argument('--delay', default=25, type=int, help='Delay in the feedback')
     # extra arguments
     parser.add_argument('--accuracy', default=None, type=float, help='Termination criterion for optimality gap')
     parser.add_argument('--repeats', default=1, type=int, help='Number of repeats')
@@ -168,7 +169,7 @@ if __name__ == "__main__":
 
     best_guesses = np.array(feedback.best_arm)
 
-    file_name = f'experiments/snar/results/asynch' + func.name + f'/delta_mov_{args.delta_mov}/noise_var_{args.noise}/num_features_{args.num_features}/episode_length_{args.episode_length}/'
+    file_name = f'experiments/snar/results/asynch' + func.name + f'/delay_{args.delay}/delta_mov_{args.delta_mov}/noise_var_{args.noise}/num_features_{args.num_features}/episode_length_{args.episode_length}/'
     
     if args.snake:
         algo_name = '/TruncatedSnAKe'

@@ -19,7 +19,7 @@ from mdpexplore.functionals.bandit_functionals import DesignBestArmLinearBanditN
 from mdpexplore.feedback.bandit_feedback import ContinuousBanditFeedback
 
 from experiments.snar.fit_snar import SnAr, LSR
-from experiments.asynch_benchmarks.fit_asynch_benchmarks import Branin2D, Michalewicz2D, Hartmann3D, Hartmann6D, ModifiedBranin2D, Levy4D
+from experiments.asynch_benchmarks.fit_asynch_benchmarks import Branin2D, Michalewicz2D, Hartmann3D, Hartmann6D, ModifiedBranin2D, Levy4D, Michalewicz3D
 from experiments.asynch_benchmarks.fit_asynch_benchmarks import TruncatedSnAKeSolver
 
 from scipy.stats.qmc import Sobol
@@ -77,6 +77,8 @@ if __name__ == "__main__":
     elif args.func_num == 6:
         func = Levy4D()
         lambd = 10.0
+    elif args.func_num == 7:
+        func = Michalewicz3D()
     else:
         raise ValueError('Function not implemented')
 

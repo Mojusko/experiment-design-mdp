@@ -18,7 +18,7 @@ from mdpexplore.env.continuous_bandits import ContinuousMovementConstrainedBayes
 from mdpexplore.functionals.bandit_functionals import DesignBestArmLinearBanditNoDenominatorContinuous
 from mdpexplore.feedback.bandit_feedback import ContinuousBanditFeedbackAsynchronous
 
-from  experiments.asynch_benchmarks.fit_asynch_benchmarks import Branin2D, Michalewicz2D, Hartmann3D, Hartmann6D, ModifiedBranin2D, Levy4D
+from  experiments.asynch_benchmarks.fit_asynch_benchmarks import Branin2D, Michalewicz2D, Hartmann3D, Hartmann6D, ModifiedBranin2D, Levy4D, Michalewicz3D
 from  experiments.asynch_benchmarks.fit_asynch_benchmarks import TruncatedSnAKeSolver
 
 from scipy.stats.qmc import Sobol
@@ -33,6 +33,7 @@ if __name__ == "__main__":
     parser.add_argument('--episode_length', default=100, type=int, help='Length of the episode')
     parser.add_argument('--noise', default=0.0001, type=float, help='Noise variance')
     parser.add_argument('--number_of_maximizers', default=100, type=int, help='Number of Thompson Samples')
+    parser.add_argument('--maximizer_type', default='thompson_sampling', type=str, help='Type of maximizer (thompson_sampling / ucb / af_mix)')
     parser.add_argument('--delta_mov', default=-1, type=float, help='Maximum movement constraint')
     parser.add_argument('--num_features', default=-1, type=int, help='Number of features')
     parser.add_argument('--num_components', default=1, type=int, help='Number of MaxEnt components (basic policies)')
@@ -75,6 +76,8 @@ if __name__ == "__main__":
     elif args.func_num == 6:
         func = Levy4D()
         lambd = 10.0
+    elif args.func_num == 7:
+        func = Michalewicz3D()
     else:
         raise ValueError('Function not implemented')
 
@@ -156,6 +159,12 @@ if __name__ == "__main__":
     init_point = np.ones((1, func.dim)) * -0.5
 
     # define the feedback class
+    if args.maximizer_type == 'ucb':
+        maximization_set_method = 'ucb'
+    else:
+        maximization_set_method = 'thompson_sampling'
+
+    # define the feedback class
     feedback = ContinuousBanditFeedbackAsynchronous(env, 
                                                     design, 
                                                     estimator, 
@@ -163,7 +172,7 @@ if __name__ == "__main__":
                                                     sigma = sigma, 
                                                     video = False, 
                                                     markovian = False, 
-                                                    maximization_set_method = 'thompson_sampling',
+                                                    maximization_set_method = maximization_set_method,
                                                     asynchronous_delay = args.delay,
                                                     initial_point = init_point,
                                                     keep_track_best_guess = True)
@@ -206,7 +215,7 @@ if __name__ == "__main__":
     elif args.random_paths:
         algo_name = f'/MDPExploreRandomPaths/num_paths_{args.num_random_paths}'
     else:
-        algo_name = f'/MDPExplore/num_maximizers_{num_maximizers}'
+        algo_name = f'/MDPExplore/' + maximization_set_method + f'/num_maximizers_{num_maximizers}'
 
     file_name = file_name + algo_name + f'/seed_{args.seed}/'
 

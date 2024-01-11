@@ -175,6 +175,28 @@ class Michalewicz2D():
         S2 = np.sin(x[:, 1]) * (np.sin(2 * x[:, 1] / np.pi))**(2*self.m)
         return S1 + S2
 
+class Michalewicz3D():
+    def __init__(self):
+        # taken from website: https://www.sfu.ca/~ssurjano/michal.html
+        self.optimum = 1.6728426380418773
+        self.dim = 3
+
+        self.kappa = 0.85
+        self.gamma = 0.179485
+
+        self.name = 'Michaelwicz2D'
+
+        self.m = 10
+    
+    def query_function(self, x):
+        x = x + 0.5
+        x = x * np.pi
+        S1 = np.sin(x[:, 0]) * (np.sin(x[:, 0] / np.pi))**(2*self.m)
+        S2 = np.sin(x[:, 1]) * (np.sin(2 * x[:, 1] / np.pi))**(2*self.m)
+        S3 = np.sin(x[:, 2]) * (np.sin(3 * x[:, 2] / np.pi))**(2*self.m)
+
+        return S1 + S2 + S3
+
 class Levy4D():
     def __init__(self):
         # taken from website: https://www.sfu.ca/~ssurjano/levy.html
@@ -324,14 +346,14 @@ class TruncatedSnAKeSolver(ConvexSolverBase):
 
 
 if __name__ == '__main__':
-    func = Levy4D()
+    func = Michalewicz2D()
     theta_star = lambda x: - func.query_function(x.reshape(1, -1))
 
-    bounds = [(-0.5, 0.5), (-0.5, 0.5), (-0.5, 0.5), (-0.5, 5)]
+    bounds = [(-0.5, 0.5), (-0.5, 0.5)]
     best_func_val = np.inf
 
     for i in range(1000):
-        x0 = np.random.uniform(-0.5, 0.5, (1, 4)).reshape(-1)
+        x0 = np.random.uniform(-0.5, 0.5, (1, 2)).reshape(-1)
         res = minimize(theta_star, x0, method = 'L-BFGS-B', bounds = bounds, tol = 1e-20, options = {'maxiter': 10000})
         print(res.x)
         print(res.fun)
