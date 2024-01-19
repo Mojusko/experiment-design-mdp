@@ -184,7 +184,7 @@ class Michalewicz3D():
         self.kappa = 0.85
         self.gamma = 0.179485
 
-        self.name = 'Michaelwicz2D'
+        self.name = 'Michaelwicz3D'
 
         self.m = 10
     
