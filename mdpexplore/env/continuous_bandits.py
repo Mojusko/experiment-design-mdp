@@ -47,10 +47,10 @@ class ContinuousMovementConstrainedBayesianOptimization(ContinuousEnv, ABC):
         
         return next_state
 
-    def step(self, action: int):
+    def step(self, action):
         self.state = self.next(self.state, action)
         self.h += 1
-        return action
+        return self.state
 
     def convert(self, state):
         pass

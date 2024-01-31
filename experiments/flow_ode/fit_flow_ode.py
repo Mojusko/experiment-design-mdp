@@ -1,6 +1,8 @@
 import numpy as np
 from scipy.integrate import odeint
 import torch
+from stpy.kernels import KernelFunction
+from stpy.continuous_processes.nystrom_fea import NystromFeatures
 
 # define the ODE class
 class ODE():
@@ -89,7 +91,7 @@ class SchreckerODE(ODE):
 
 # define the kernel specified by the ODE
 class ode_kernel():
-    def __init__(self, k1 : float = 1, k2 : float = 10, k3 : float = 50, alpha : float = 10, beta : float = 0.5, alpha_ode : float = 0.5, **kwargs):
+    def __init__(self, k1 : float = 10, k2 : float = 874, k3 : float = 19200, alpha : float = 5, beta : float = 0.5, alpha_ode : float = 0.35, **kwargs):
         self.k1 = torch.tensor(k1).double()
         self.k2 = torch.tensor(k2).double()
         self.k3 = torch.tensor(k3).double()
@@ -106,8 +108,8 @@ class ode_kernel():
 
     def __call__(self, x1, x2, **kwargs):
         # define the different parts of the inputs
-        _t1 = (x1[:, 0] + 0.5) * 30
-        _t2 = (x2[:, 0] + 0.5) * 30
+        _t1 = (x1[:, 0] + 0.5) * 40
+        _t2 = (x2[:, 0] + 0.5) * 40
         _B1 = x1[:, 1] + 0.5
         _B2 = x2[:, 1] + 0.5
 
@@ -144,3 +146,72 @@ class ode_kernel():
         covar_matrix = torch.matmul(vec1, vec2)
 
         return covar_matrix.T * self.alpha_ode
+
+# define the custom embedding class
+class ode_embedding():
+    def __init__(self, num_features, action_space, k1 : float = 10, k2 : float = 874, k3 : float = 19200, alpha : float = 5, beta : float = 0.5, alpha_ode : float = 0.35, alpha_rbf : float = 0.01, ard = False) -> None:
+        # define the parameters for the ode kernel
+        self.k1 = torch.tensor(k1).double()
+        self.k2 = torch.tensor(k2).double()
+        self.k3 = torch.tensor(k3).double()
+        self.alpha = torch.tensor(alpha).double()
+        self.beta = torch.tensor(beta).double()
+        self.alpha_ode = torch.tensor(alpha_ode).double()
+
+        # define the rbf kernel
+        self.alpha_rbf = torch.tensor(alpha_rbf).double()
+        if ard:
+            self.kernel_rbf = KernelFunction(kernel_name='ard', gamma = [0.15, 0.05], d = 2, kappa = self.alpha_rbf)
+        else:
+            self.kernel_rbf = KernelFunction(kernel_name='squared_exponential', gamma = 0.1, d = 2, kappa = self.alpha_rbf)
+        # now define the nystrom embedding
+        self.nystrom_embedding = NystromFeatures(m = torch.tensor(num_features - 1), kernel_object = self.kernel_rbf)
+        self.nystrom_embedding.fit_gp(torch.tensor(action_space), None)
+
+        # known parameters
+        self.b = 0.1
+        self.c = 0.0
+
+    def embed(self, x):
+        # input is a tensor of size (batch_size, 2)
+        # output is a tensor of size (batch_size, num_features)
+
+        # first calculate the nystrom rbf embedding, size (batch_size, num_features - 1)
+        rbf_embedding = self.nystrom_embedding.embed(x)
+
+        # now calculate the ode embedding, size (batch_size, 1)
+        ode_embedding = self.ode_embed(x)
+
+        # concatenate the two embeddings, size (batch_size, num_features) and return
+        return torch.cat((ode_embedding, rbf_embedding), dim = 1)
+    
+    def sigmoid(self, x):
+        return 1 / (1 + torch.exp(-self.alpha * (x - self.beta)))
+
+    def ode_embed(self, x):
+        # return  the ode feature
+        # define the different parts of the inputs
+        _t1 = (x[:, 0] + 0.5) * 40
+        _B1 = x[:, 1] + 0.5
+
+        # calculate the eigenvalues
+        part1 = self.k1 * self.b + self.k2 * self.c + self.k3
+        part2 = self.b**2 * self.k1**2 + self.c**2 * self.k2**2 + self.k3**2 + \
+                2 * self.b * self.c * self.k1 * self.k2 - 2 * self.b * self.k1 * self.k3 + \
+                2 * self.c * self.k2 * self.k3
+        
+        # define the eigenvalues
+        lambda_1 = -0.5 * (part1 + torch.sqrt(part2))
+        lambda_2 = -0.5 * (part1 - torch.sqrt(part2))
+        
+        # efficient implementation using broadcasting and outer products
+        # calculate the first exponential
+        y1 = lambda_2 / (lambda_1 - lambda_2) * torch.exp(lambda_1 * _t1.unsqueeze(1))
+        y1 = y1 - lambda_1 / (lambda_1 - lambda_2) * torch.exp(lambda_2 * _t1.unsqueeze(1)) + 1
+        # calculate the second exponential
+        y2 = lambda_2 / (lambda_1 - lambda_2) * torch.exp(lambda_1 * _t1.unsqueeze(1))
+        y2 = y2 - lambda_1 / (lambda_1 - lambda_2) * torch.exp(lambda_2 * _t1.unsqueeze(1)) + 1
+        # calculate the first vector
+        vec1 = (_B1 * (1 - self.sigmoid(_B1))).unsqueeze(1) * y1 + ((1 - _B1) * self.sigmoid(_B1)).unsqueeze(1) * y2
+
+        return vec1 * self.alpha_ode
