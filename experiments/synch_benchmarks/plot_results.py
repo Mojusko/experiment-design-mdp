@@ -1,8 +1,8 @@
 import numpy as np
 import matplotlib.pyplot as plt
-from  experiments.asynch_benchmarks.fit_asynch_benchmarks import Branin2D, Michalewicz2D, Hartmann3D, Hartmann6D, ModifiedBranin2D, Levy4D
+from  experiments.asynch_benchmarks.fit_asynch_benchmarks import Branin2D, Michalewicz2D, Hartmann3D, Hartmann6D, ModifiedBranin2D, Levy4D, Michalewicz3D
 
-func_num = 6
+func_num = 7
 noise = 0.001
 episode_length = 100
 
@@ -20,7 +20,8 @@ elif func_num == 3:
     delta_mov = 0.1
 elif func_num == 4:
     func = Hartmann6D()
-    func_idx = [1, 3, 4, 5, 6, 7, 8, 10, 11, 12, 13, 14, 15, 16, 17, 18, 19, 20, 21, 22, 23, 24, 25]
+    func_idx = list(range(1, 26))
+    # func_idx = [1, 3, 4, 5, 6, 7, 8, 10, 11, 12, 13, 14, 15, 16, 17, 18, 19, 20, 21, 22, 23, 24, 25]
     delta_mov = 0.2
 elif func_num == 5:
     func = ModifiedBranin2D()
@@ -30,16 +31,27 @@ elif func_num == 6:
     func = Levy4D()
     func_idx = list(range(1, 26))
     delta_mov = 0.1
+elif func_num == 7:
+    func = Michalewicz3D()
+    func_idx = list(range(1, 26))
+    delta_mov = 0.1
 
 num_features = np.minimum(int(2 ** (func.dim + 5)), 512)
 
 # file paths
 file_name_outer = f'experiments/synch_benchmarks/results/' + func.name + f'/delta_mov_{delta_mov}/noise_var_{noise}/num_features_{num_features}/episode_length_{episode_length}/'
     
-methods = ['MDPExplore/thompson_sampling/num_maximizers_100', 'TruncatedSnAKe', 'MDPExplore/ucb/num_maximizers_25', 'LSR/gamma_0.01']
-# methods = ['/MDPExplore/num_maximizers_100', '/TruncatedSnAKe']
-method_cols = ['orange' ,'purple','green', 'blue']
-algo_label = ['MDP-BO-TS (100)', 'TrSnAKe' ,'MDP-BO-UCB (25)', 'LSR']
+methods = ['MDPExplore/thompson_sampling/num_maximizers_100', 'MDPExplore/ucb/num_maximizers_25', 'TruncatedSnAKe', 'LSR/gamma_0.01']
+method_cols = ['orange','green', 'purple', 'blue']
+algo_label = ['MDP-BO-TS (100)', 'MDP-BO-UCB (25)', 'TrSnAKe', 'LSR']
+
+# methods = ['MDPExplore/thompson_sampling/num_maximizers_100', 'MDPExploreGDesign/thompson_sampling/num_maximizers_100']
+# method_cols = ['orange', 'red']
+# algo_label = ['XY-allocation', 'G-allocation']
+
+# methods = ['MDPExplore/ucb/num_maximizers_25', 'MDPExploreGDesign/ucb/num_maximizers_25']
+# method_cols = ['green', 'brown']
+# algo_label = ['MDP-XY-BO-UCB (25)', 'MDP-G-BO-UCB (25)']
 
 for algo_idx, algo_name in enumerate(methods):
     regret = np.zeros((len(func_idx), 100))
@@ -61,8 +73,7 @@ for algo_idx, algo_name in enumerate(methods):
     plt.fill_between(np.arange(100), np.quantile(regret, 0.1, axis = 0), np.quantile(regret, 0.9, axis = 0), alpha = 0.2, color = method_cols[algo_idx])
 
 # set x limits
-# plt.xlim([20, 100])
-plt.legend(fontsize = 14)
+# plt.xlim([20, 100]
 # set y limits depending on the function
 if func_num == 1:
     plt.ylim([-0.05, 0.5])
@@ -84,8 +95,16 @@ plt.ylabel('Median Regret', fontsize = 14)
 plt.xticks(fontsize = 14)
 plt.yticks(fontsize = 14)
 
+# set figure size
+fig = plt.gcf()
+fig.set_size_inches(6, 2.5)
+# plot legend
+plt.legend(fontsize = 14)
+
 # save the figure
-title = f'{func.name}_synch_experiment.png'
+title = f'{func.name}_synch_experiment_main.png'
+# title = f'{func.name}_synch_XYvsG_experiment.png'
+# title = f'{func.name}_ucb_ablation_synch_experiment.png'
 plt.savefig(title, bbox_inches='tight', dpi = 300)
 
-print('stop')
+plt.show()
