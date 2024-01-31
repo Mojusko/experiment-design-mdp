@@ -1,14 +1,6 @@
 from setuptools import setup
 
-packages = ['numpy',
-            'torch',
-            'matplotlib',
-            'scipy',
-            'sklearn'
-            'cyipopt'
-            'pandas',
-            'cvxpy'
-            ]
+packages=['numpy']
 
 setup(name='mdpexplore',
       version='0.0.2',

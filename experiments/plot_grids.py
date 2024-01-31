@@ -71,7 +71,7 @@ ax = plt.subplot(gs[0,2])
 p = 0.3
 methods = ["adaptive-1-prob-"+str(p),"adaptive-prob-"+str(p),"tracking-prob-"+str(p), "density-prob-"+str(p), "random-prob-"+str(p)]
 name = "stochastic_grid/results/opt+"+str(np.round(float(p),2))+".txt"
-plot(ax, methods, COLORS, name, "stochastic_grid/results/",(2**(-13),2**4), 'c)', 'stochastic (p=0.3)')
+plot(ax, methods, COLORS, name, "stochastic_grid/results/",(2**(-13),2**6), 'c)', 'stochastic (p=0.3)')
 
 ####################################################################################
 ax = plt.subplot(gs[0,1])

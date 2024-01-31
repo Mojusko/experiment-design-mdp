@@ -36,9 +36,10 @@ class DP(DiscreteSolver):
                     [self.reward[i, state, a] + transition_matrix[state, a] @ values[i+1].max(axis = -1) for a in acts]
                 )
                 optimal_actions = np.argwhere(new_values == np.max(new_values))
-                idx = np.random.choice( 
+                idx = np.random.choice(
                     optimal_actions.flatten()
                 )
+
                 best_act = acts[idx]
                 actions[i, state] = best_act
                 values[i, state, acts] = new_values

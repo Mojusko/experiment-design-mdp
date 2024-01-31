@@ -122,6 +122,26 @@ pharma_concentration: ${JOBS_PHARMA_CONC}
 #	cd pharmacokinetics && OMP_NUM_THREADS=1 MKL_NUM_THREADS=1 ${PYTHONPATH} run_pharmaco.py --repeats=1 --save="results/plot-1-6.txt" --num_components=1 --episodes=32 --adaptive="No" --policy="density" --cores=1 --seed=1 --accuracy=1e-7 --measurements=10 --savetrajectory="data/plot_N_10.txt" &
 
 
+###########################
+###########################
+##  SWISSFEL
+###########################
+###########################
+
+REPEATS_SWISSFEL=20
+NUMBERS_SWISSFEL := $(shell seq 1 ${REPEATS_SWISSFEL})
+
+JOBS_SWISSFEL_CON := $(addprefix job-swissfel-con,${NUMBERS_SWISSFEL})
+JOBS_SWISSFEL_WORST := $(addprefix job-swissfel-worst,${NUMBERS_SWISSFEL})
+
+${JOBS_SWISSFEL_CON}: job-swissfel-con%: ; cd swissfel && OMP_NUM_THREADS=1 MKL_NUM_THREADS=1 ${PYTHONPATH} swissfel.py --repeats=1 --save="results/con-$*.txt" --worst="No" --cores=1 --seed=$* --accuracy=1e-7
+${JOBS_SWISSFEL_WORST}: job-swissfel-worst%: ; cd swissfel && OMP_NUM_THREADS=1 MKL_NUM_THREADS=1 ${PYTHONPATH} swissfel.py --repeats=1 --save="results/worst-$*.txt" --worst="Yes" --cores=1 --seed=$* --accuracy=1e-7
+
+swissfel_worst: ${JOBS_SWISSFEL_WORST}
+swissfel_con: ${JOBS_SWISSFEL_CON}
+
+swissfel: swissfel_worst swissfel_con
+
 
 ###########################
 ###########################
@@ -266,11 +286,17 @@ STOCH: STOCH1 STOCH2 STOCH3 STOCH0
 
 PLOTS: 
 	${PYTHONPATH} plot_grids.py && ${PYTHONPATH} plot_pharma.py && ${PYTHONPATH} plot.py
+
 PLOTS_STOCH: 
 	${PYTHONPATH} plot_grids.py
+
+PLOTS_BELS:
+	${PYTHONPATH} plot_bels.py
 
 move:
 	cp figs/*.png ../../pic/.
 
 grids: STOCH GRID
+
 all: STOCH GRID bels pharma
+

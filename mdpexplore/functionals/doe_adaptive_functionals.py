@@ -2,7 +2,7 @@ import autograd.numpy as np
 import autograd.numpy.linalg as la
 import torch
 import cvxpy as cp 
-from typing import List, Union
+from typing import List, Union, Callable
 from abc import ABC, abstractmethod
 from mdpexplore.env.discrete_env import Environment
 from mdpexplore.functionals.reward_functional import RewardFunctional
@@ -172,6 +172,49 @@ class AdaptiveDesignC(AdaptiveDesignD):
         else:
             return np.trace(la.inv(self.C @ la.inv(z + (1. / episodes) * self.lambd) @ self.C.T))
 
+class AdaptiveDesignHeteroD(AdaptiveDesignD):
+    def __init__(self,
+                 env: Environment,
+                 lambd: float = 1e-3,
+                 scale_reg: bool = True,
+                 uniform_alpha: bool = False,
+                 sigma: float = 1.0,
+                 sigma_fun: Callable = lambda x: 1.0):
+        super().__init__(env, lambd=lambd, scale_reg=scale_reg, sigma=sigma)
+        self.sigma_fun = sigma_fun
+    def eval_basic(self,
+                   emissions: np.ndarray,
+                   distribution: np.ndarray,
+                   unrolls: List[np.ndarray],
+                   episodes: int,
+                   ) -> float:
+        """
+
+        """
+
+        if len(unrolls) > 0:
+            aggregated_density = self.build_density_from_trajectories(unrolls)
+        else:
+            aggregated_density = np.zeros((self.env.max_episode_length, self.env.states_num, self.env.actions_num))
+
+        alpha = len(unrolls) / episodes
+
+        distribution = np.sum(distribution, axis = 0)
+        distribution = np.sum(self.sigma_fun(distribution), axis = 1)
+
+        aggregated_density = np.sum(aggregated_density, axis = 0)
+        aggregated_density = np.sum(self.sigma_fun(aggregated_density), axis = 1)
+
+        new_z = np.multiply(emissions.T, distribution) @ emissions
+        agg_z = np.multiply(emissions.T, aggregated_density) @ emissions
+
+        if self.uniform_alpha:
+            z = 1. / episodes * new_z + \
+                alpha * agg_z
+        else:
+            z = (1 - alpha) * new_z + \
+                alpha * agg_z
+        return z
 
 class AdaptiveDesignA(RewardFunctional):
     def eval(self,

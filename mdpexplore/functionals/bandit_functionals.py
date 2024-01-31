@@ -134,7 +134,16 @@ class DesignBestArmLinearBandit(RewardFunctional):
 
 class DesignBestArmLinearBanditNoDenominator(RewardFunctional):
 
-    def __init__(self, env, lambd, variant: int = 0, eps=0.01, sigma=0.01, scale_reg=True, mix_objectives=(False, 0), init_ucb = np.inf):
+    def __init__(self,
+                 env,
+                 lambd,
+                 variant: int = 0,
+                 eps=0.01,
+                 sigma=0.01,
+                 scale_reg=True,
+                 mix_objectives=(False, 0),
+                 init_ucb = np.inf,
+                 sigma_fun = None):
 
         super().__init__()
 
@@ -149,6 +158,7 @@ class DesignBestArmLinearBanditNoDenominator(RewardFunctional):
         self.lambd = lambd
         self.variant = variant
         self.eps = eps
+        self.sigma_fun = sigma_fun
         self.sigma = sigma
         self.uniform_alpha = False
         self.scale_reg = scale_reg
@@ -203,12 +213,24 @@ class DesignBestArmLinearBanditNoDenominator(RewardFunctional):
             aggregated_unrolls = self.build_density_from_trajectories(unrolls)
         else:
             aggregated_unrolls = np.zeros((self.env.max_episode_length, self.env.states_num, self.env.actions_num))
-        
-        distribution = np.sum(np.sum(distribution, axis = 2), axis = 0)
-        aggregated_unrolls = np.sum(np.sum(aggregated_unrolls, axis = 2), axis = 0)
 
-        new_V_eta = np.multiply(emissions.T, distribution / (self.sigma ** 2)) @ emissions
-        agg_V_eta = np.multiply(emissions.T, aggregated_unrolls / (self.sigma ** 2)) @ emissions
+
+        if self.sigma_fun is not None:
+            distribution = np.sum(distribution, axis = 0)
+            distribution = np.sum(self.sigma_fun(distribution), axis = 1)
+
+            aggregated_density = np.sum(aggregated_unrolls, axis = 0)
+            aggregated_density = np.sum(self.sigma_fun(aggregated_density), axis = 1)
+
+            new_V_eta = np.multiply(emissions.T, distribution) @ emissions
+            agg_V_eta = np.multiply(emissions.T, aggregated_density) @ emissions
+        else:
+            distribution = np.sum(np.sum(distribution, axis = 2), axis = 0)
+            aggregated_unrolls = np.sum(np.sum(aggregated_unrolls, axis = 2), axis = 0)
+
+            new_V_eta = np.multiply(emissions.T, distribution / (self.sigma ** 2)) @ emissions
+            agg_V_eta = np.multiply(emissions.T, aggregated_unrolls / (self.sigma ** 2)) @ emissions
+
 
         if self.uniform_alpha:
             V_eta = 1. / episodes * new_V_eta + \
@@ -305,6 +327,11 @@ class DesignBestArmLinearBanditNoDenominator(RewardFunctional):
             return - (1 - self.mix_ratio) * val_star + self.mix_ratio * self.ucbs @ distribution
         else:
             return - val_star
+
+
+
+
+
 
 class DesignBestArmLinearBanditNoDenominatorContinuous(ContinuousRewardFunctional):
 

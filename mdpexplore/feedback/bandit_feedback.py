@@ -34,18 +34,23 @@ class BanditFeedback(SimpleFeedback):
     def __init__(self, 
                 env:MovementConstrainedBayesianOptimization, 
                 objective:RewardFunctional, 
-                estimator:Union[GaussianProcess, KernelizedFeatures], 
+                estimator:Union[GaussianProcess, KernelizedFeatures],
                 theta_star:Union[np.array, Callable], 
-                sigma:float, video:bool = False, 
+                sigma:float,
+                sigma_fn: Union[Callable,Callable] = None,
+                video:bool = False,
+                wort_case:bool = True,
                 markovian:bool = False) -> None:
         
         super().__init__(env, objective)
         self.estimator = estimator
         self.theta_star = theta_star
         self.sigma = sigma
+        self.sigma_fn = sigma_fn
         self.embedded_action_space = env.action_space
         self.action_space = env.action_space_pre_embedding
         self.video = video
+        self.worst_case = wort_case
         self.markovian = markovian
         # keep track of best arm guess
         self.best_arm = []
@@ -55,27 +60,53 @@ class BanditFeedback(SimpleFeedback):
             pass
         else:
             action = self.action_trajectory[-1]
-            print('actions taken: ', action)
+            state = self.state_trajectory[-1]
+            print('actions taken: ', action, 'in state:', state)
+
+            state_coord = self.env.convert_to_grid(state)
+            action_coord = self.env.convert_to_grid(action)
 
             # obtain the value of the action
-            state = self.env.action_space_pre_embedding[action].reshape(1, -1)
+            state_x = self.env.action_space_pre_embedding[action].reshape(1, -1)
+            print ('corresponding x:', state_x)
             # obtain the noise
-            eps = np.random.normal(0, self.sigma)
+            if self.sigma_fn is None:
+                eps = np.random.normal(0, self.sigma)
+                Sigma = self.sigma
+            else:
+                Sigma = self.sigma_fn(state_coord,action_coord)
+                eps = np.random.normal(0, Sigma)
+
+
 
             if callable(self.theta_star):
-                fun_value = self.theta_star(state) + eps
+                fun_value = self.theta_star(state_x) + eps
             else:
-                z = self.estimator.embed(torch.tensor(state)).numpy()
+                z = self.estimator.embed(torch.tensor(state_x)).numpy()
                 fun_value = z @ self.theta_star + eps
-            
-            self.estimator.add_data_point(torch.tensor(state),
-                                        torch.tensor([[fun_value]]))
+
+            print ('y:', fun_value)
+            if not self.worst_case:
+                print ("constrained sigma:", Sigma)
+                self.estimator.add_data_point(torch.tensor(state_x),
+                                            torch.tensor([[fun_value]]),Sigma = torch.from_numpy(np.array([Sigma])).view(1,1))
+            else:
+                print ("worst-case:", self.sigma)
+                self.estimator.add_data_point(torch.tensor(state_x),
+                                              torch.tensor([[fun_value]]),
+                                              Sigma=torch.from_numpy(np.array([self.sigma])).view(1, 1))
             self.estimator.fit()
             self.objective.ucbs = self.estimator.ucb(torch.tensor(self.action_space)).numpy().squeeze()
             self.objective.lcbs = self.estimator.lcb(torch.tensor(self.action_space)).numpy().squeeze()
             # calculate the best arm guess
             mean_estimates = self.estimator.mean(torch.tensor(self.action_space)).numpy().squeeze()
             self.best_arm.append(np.argmax(mean_estimates))
+
+            # plt.plot(self.objective.ucbs.reshape(-1))
+            # plt.plot(mean_estimates.reshape(-1))
+            # plt.plot(self.objective.lcbs.reshape(-1))
+            # plt.plot(self.theta_star(self.action_space).reshape(-1),'k--')
+            # plt.show()
 
             # Compute the differences to get the UCBs and LCBs for the objective denominator, no longer used
             # n, m = self.embedded_action_space.shape

@@ -1,6 +1,7 @@
 from typing import Callable, Type, Union, Tuple
 from datetime import datetime
 import os
+import copy
 import autograd.numpy as np
 import matplotlib.pyplot as plt
 from mdpexplore.env.discrete_env import DiscreteEnv
@@ -155,11 +156,16 @@ class MdpExplore():
 
             for h in range(self.env.max_episode_length):
                 action = self.general_policy.next_action(self.env.state, self.emissions, self.visitations, self.episodes, keep = keep)
+                state = copy.copy(self.env.state)
 
                 # feedback the state and action
                 self.feedback.step_single(self.env.state, action)
 
                 next_state = self.env.step(action)
+
+                if self.verbosity > 3:
+                    print (h,state,action,next_state)
+
                 self.trajectory.append(next_state)
                 
                 # count episode visitations
@@ -255,7 +261,6 @@ class MdpExplore():
             opt = self.objective.eval_full(self.emissions, self.general_policy.return_density(), self.episodes)
         else:
             opt = None
-            print ("optimal value:", opt)
             
         if return_visitations:
             return objective_values, opt, self.visitations
