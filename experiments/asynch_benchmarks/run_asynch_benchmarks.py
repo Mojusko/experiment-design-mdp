@@ -15,7 +15,7 @@ from mdpexplore.convex_solvers.greedy_approximation import ContinuousGreedyAppro
 from mdpexplore.convex_solvers.first_action_random_path import RandomPaths
 from mdpexplore.mdpexplore import MdpExplore
 from mdpexplore.env.continuous_bandits import ContinuousMovementConstrainedBayesianOptimization
-from mdpexplore.functionals.bandit_functionals import DesignBestArmLinearBanditNoDenominatorContinuous
+from mdpexplore.functionals.bandit_functionals import DesignBestArmLinearBanditNoDenominatorContinuous, G_DesignBestArmLinearBanditNoDenominatorContinuous
 from mdpexplore.feedback.bandit_feedback import ContinuousBanditFeedbackAsynchronous
 
 from  experiments.asynch_benchmarks.fit_asynch_benchmarks import Branin2D, Michalewicz2D, Hartmann3D, Hartmann6D, ModifiedBranin2D, Levy4D, Michalewicz3D
@@ -44,6 +44,7 @@ if __name__ == "__main__":
     parser.add_argument('--random_paths', default=False, type=bool, help='Random paths or not')
     parser.add_argument('--num_random_paths', default=100, type=int, help='Number of random paths')
     parser.add_argument('--func_num', default=1, type=int, help='Function to optimize: 1. Branin2D, 2. Michalewicz2D, 3. Hartmann3D, 4. Hartmann6D')
+    parser.add_argument('--g_design', default=False, type=bool, help='Wether to use the g-design objective or not')
     # extra arguments
     parser.add_argument('--accuracy', default=None, type=float, help='Termination criterion for optimality gap')
     parser.add_argument('--repeats', default=1, type=int, help='Number of repeats')
@@ -139,13 +140,22 @@ if __name__ == "__main__":
         max_action = args.delta_mov,
         max_episode_length = args.episode_length)
     
-    design = DesignBestArmLinearBanditNoDenominatorContinuous(
-        env = env,
-        lambd = lambd,
-        sigma = sigma,
-        embedding = embedding,
-        num_of_maximizers = num_maximizers,
-    )
+    if args.g_design:
+        design = G_DesignBestArmLinearBanditNoDenominatorContinuous(
+            env = env,
+            lambd = lambd,
+            sigma = sigma,
+            embedding = embedding,
+            num_of_maximizers = num_maximizers,
+        )
+    else:
+        design = DesignBestArmLinearBanditNoDenominatorContinuous(
+            env = env,
+            lambd = lambd,
+            sigma = sigma,
+            embedding = embedding,
+            num_of_maximizers = num_maximizers,
+        )
 
     if args.snake:
         # define the convex solver
@@ -216,6 +226,8 @@ if __name__ == "__main__":
         algo_name = '/TruncatedSnAKe'
     elif args.random_paths:
         algo_name = f'/MDPExploreRandomPaths/num_paths_{args.num_random_paths}'
+    elif args.g_design:
+        algo_name = f'/MDPExploreGDesign/' +  maximization_set_method + f'/num_maximizers_{num_maximizers}'
     else:
         algo_name = f'/MDPExplore/' + maximization_set_method + f'/num_maximizers_{num_maximizers}'
 

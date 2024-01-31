@@ -89,15 +89,15 @@ We create a plot to see the action space and the adjacency matrix are correct. P
 '''
 
 # initialize a plot
-fig, ax = plt.subplots(1, 1, figsize=(6, 8))
+fig, ax = plt.subplots(1, 1, figsize=(9, 6))
 # make the background green
 ax.set_facecolor('darkseagreen')
 
 # plot the lake first as a scatter plot
-ax.scatter(lake_scatter[:, 0], lake_scatter[:, 1], s=0.1)
+ax.scatter(lake_scatter[:, 1], lake_scatter[:, 0], s=0.1)
 
 # plot the centroids dark orange
-ax.scatter(ypacarai_action_space[:, 0], ypacarai_action_space[:, 1], s=30, c='darkorange')
+ax.scatter(ypacarai_action_space[:, 1], ypacarai_action_space[:, 0], s=30, c='darkorange')
 
 # plot the index of the centroids to see which one transitions to manually remove
 # for i in range(ypacarai_action_space.shape[0]):
@@ -109,21 +109,40 @@ init_state = 59
 terminal_state = 43
 optimal_state = 95
 # plot a diamond near the initial state and a square near the terminal state
-plt.scatter(ypacarai_action_space[init_state, 0], ypacarai_action_space[init_state, 1], marker='s', s=150, c='k', label='initial state')
+plt.scatter(ypacarai_action_space[init_state, 1], ypacarai_action_space[init_state, 0], marker='s', s=150, c='k', label='initial state')
 # plt.scatter(ypacarai_action_space[terminal_state, 0], ypacarai_action_space[terminal_state, 1], marker='s', s=100, c='k', label='terminal state')
-plt.scatter(ypacarai_action_space[95, 0], ypacarai_action_space[95, 1], marker='*', s=150, c='darkorange', label='initial state', zorder = 10)
-plt.scatter(ypacarai_action_space[95, 0], ypacarai_action_space[95, 1], marker='*', s=500, c='k', label='initial state', zorder = 9)
+plt.scatter(ypacarai_action_space[95, 1], ypacarai_action_space[95, 0], marker='*', s=150, c='darkorange', label='global optima', zorder = 10)
+plt.scatter(ypacarai_action_space[95, 1], ypacarai_action_space[95, 0], marker='*', s=500, c='k', zorder = 9)
 
-plt.scatter(ypacarai_action_space[53, 0], ypacarai_action_space[53, 1], marker='s', s=100, c='darkorange', label='initial state', zorder = 10)
-plt.scatter(ypacarai_action_space[53, 0], ypacarai_action_space[53, 1], marker='s', s=200, c='k', label='initial state', zorder = 9)
+plt.scatter(ypacarai_action_space[53, 1], ypacarai_action_space[53, 0], marker='s', s=100, c='darkorange', label='local optima', zorder = 10)
+plt.scatter(ypacarai_action_space[53, 1], ypacarai_action_space[53, 0], marker='s', s=200, c='k', zorder = 9)
 
 # create a line between the centroids if they are connected
 for i in range(ypacarai_action_space.shape[0]):
     for j in range(ypacarai_action_space.shape[0]):
         if ypacarai_adjacency_matrix[i, j] == 1:
-            ax.plot([ypacarai_action_space[i, 0], ypacarai_action_space[j, 0]], [ypacarai_action_space[i, 1], ypacarai_action_space[j, 1]], c = 'black')
+            ax.plot([ypacarai_action_space[i, 1], ypacarai_action_space[j, 1]], [ypacarai_action_space[i, 0], ypacarai_action_space[j, 0]], c = 'black')
+
+# now load a trajectory chosen by the algorithm
+file_name = 'experiments/ypacarai/results/episodic_feedback/noise_var_0.001/num_features_100/num_episodes_5/episode_length_50/MDPExplore/policy_type_density/num_components_1/seed_3'
+
+x_evals = np.load(file_name + '/x_evaluations.npy')
+
+# plot the x_eval trajectory in red
+plt.plot(x_evals[:50, 1], x_evals[:50, 0], c='red', linewidth=2, label='chosen trajectory')
+
+# remove xticks and yticks
+plt.xticks([])
+plt.yticks([])
+
+# rotate the whole plot 90 degrees
+# plt.gca().invert_yaxis()
+# plt.gca().invert_xaxis()
+
+# plot legend in top right
+plt.legend(loc='upper right', fontsize=14)
 
 # save the figure as a png
-plt.savefig('ypacarai_constrained.png', dpi=300)
+plt.savefig('ypacarai_constrained.png', dpi=300, bbox_inches='tight')
 
 plt.show()

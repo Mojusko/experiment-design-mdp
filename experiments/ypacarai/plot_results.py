@@ -31,7 +31,7 @@ optimal_action = action_space[np.argmax(theta_star(action_space))]
 optimal_observation = theta_star(optimal_action.reshape(1, -1))
 
 # initialize the figure
-fig, ax = plt.subplots(figsize=(8, 6))
+fig, ax = plt.subplots(figsize=(8, 5))
 
 # initial regret
 # init_regret = np.log(optimal_observation - theta_star(action_space[59].reshape(1, -1)) + 1e-8)

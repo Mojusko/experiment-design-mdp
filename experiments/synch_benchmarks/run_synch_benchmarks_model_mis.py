@@ -67,19 +67,26 @@ if __name__ == "__main__":
     # define the function to optimize
     if args.func_num == 1:
         func = Branin2D()
+        func.kappa = 0.4
     elif args.func_num == 2:
         func = Michalewicz2D()
+        func.kappa = 0.25
     elif args.func_num == 3:
         func = Hartmann3D()
+        func.kappa = 1.6
     elif args.func_num == 4:
         func = Hartmann6D()
+        func.kappa = 1.4
     elif args.func_num == 5:
         func = ModifiedBranin2D()
+        func.kappa = 0.5
     elif args.func_num == 6:
         func = Levy4D()
         lambd = 10.0
+        func.kappa = 0.4
     elif args.func_num == 7:
         func = Michalewicz3D()
+        func.kappa = 0.7
     else:
         raise ValueError('Function not implemented')
 
@@ -224,7 +231,7 @@ if __name__ == "__main__":
 
     best_guesses = np.array(feedback.best_arm)
 
-    file_name = f'experiments/synch_benchmarks/results/' + func.name + f'/delta_mov_{args.delta_mov}/noise_var_{args.noise}/num_features_{args.num_features}/episode_length_{args.episode_length}/'
+    file_name = f'experiments/synch_benchmarks_model_mis/results/' + func.name + f'/delta_mov_{args.delta_mov}/noise_var_{args.noise}/num_features_{args.num_features}/episode_length_{args.episode_length}/'
     
     if args.snake:
         algo_name = '/TruncatedSnAKe'

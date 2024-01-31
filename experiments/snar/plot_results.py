@@ -10,14 +10,14 @@ noise = 0.001
 num_features = 512
 episode_length = 100
 
-algo_names = ['LSR/gamma_0.01', 'MDPExplore/num_maximizers_100', 'MDPExploreRandomPaths/num_paths_100', 'TruncatedSnAKe', 'MDPExplore/ucb/num_maximizers_10', 'MDPExplore/af_mix/num_maximizers_10']
-algo_labels = ['LSR', 'MDP-BO', 'MDP-BO-RP', 'TrSnAKe', 'MDP-BO-UCB', 'MDP-BO-AFmix']
-cols = ['blue', 'orange', 'green', 'purple', 'red', 'brown']
+algo_names = ['MDPExplore/num_maximizers_100', 'MDPExplore/ucb/num_maximizers_25', 'TruncatedSnAKe', 'LSR/gamma_0.01']
+algo_labels = ['MDP-BO-TS (100)','MDP-BO-UCB (25)', 'TrSnAKe', 'LSR']
+cols = ['orange', 'green', 'purple', 'blue']
 
 file_name_outer = f'experiments/snar/results/SnarBenchmark/delta_mov_{delta_mov}/noise_var_{noise}/num_features_{num_features}/episode_length_{episode_length}/'
 
 # plot the results
-fig, ax = plt.subplots(figsize=(8, 6))
+# fig, ax = plt.subplots(figsize=(8, 6))
 
 pre_load_regret = False
 
@@ -47,5 +47,20 @@ for algo_idx, algo_name in enumerate(algo_names):
     # plot quantiles
     plt.fill_between(np.arange(100), np.quantile(regret, 0.1, axis = 0), np.quantile(regret, 0.9, axis = 0), alpha = 0.2, color = cols[algo_idx])
 
-plt.legend()
+# set x and y labels
+plt.xlabel('Iteration', fontsize = 14)
+plt.ylabel('Median Regret', fontsize = 14)
+# increase tick font size
+plt.xticks(fontsize = 14)
+plt.yticks(fontsize = 14)
+
+plt.legend(fontsize = 14)
+
+# set figure size
+fig = plt.gcf()
+fig.set_size_inches(6, 3)
+
+# save the figure
+plt.savefig('snar_synch_experiment.png', bbox_inches='tight', dpi = 300)
+
 plt.show()
