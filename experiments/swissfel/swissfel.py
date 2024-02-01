@@ -150,10 +150,14 @@ if __name__ == "__main__":
 
     sigma_fn_states = lambda s_coord,a_coord: (base_sigma+switch_weight*np.sqrt((s_coord[0]-a_coord[0])**2 +  (s_coord[1]-a_coord[1])**2))*sigma
 
+    # define the embedded space
+    env.action_space = embedding.embed(torch.tensor(action_space)).detach().numpy()
+    env.emissions = embedding.embed(torch.tensor(action_space)).detach().numpy()
+
     if args.worst == "No":
-        feedback = BanditFeedback(env, design, estimator, F, sigma = sigma * (base_sigma + switch_weight*np.sqrt((size ** 2 + size ** 2))), sigma_fn=sigma_fn_states, wort_case=False)
+        feedback = BanditFeedback(env, design, estimator, F, sigma = sigma * (base_sigma + switch_weight*np.sqrt((size ** 2 + size ** 2))), sigma_fn=sigma_fn_states, wort_case=False, prior_mean = 0)
     else:
-        feedback = BanditFeedback(env, design, estimator, F, sigma = sigma * (base_sigma + switch_weight*np.sqrt((size ** 2 + size ** 2))), sigma_fn=sigma_fn_states, wort_case=True)
+        feedback = BanditFeedback(env, design, estimator, F, sigma = sigma * (base_sigma + switch_weight*np.sqrt((size ** 2 + size ** 2))), sigma_fn=sigma_fn_states, wort_case=True, prior_mean = 0)
 
     initial_policy = False
 

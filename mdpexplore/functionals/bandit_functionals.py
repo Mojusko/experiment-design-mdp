@@ -342,11 +342,21 @@ class DesignBestArmLinearBanditNoDenominator(RewardFunctional):
         # obtain the distribution shape before summing
         H, S, A = distribution.shape
         
-        distribution = np.sum(np.sum(distribution, axis = 2), axis = 0)
-        aggregated_unrolls = np.sum(np.sum(aggregated_unrolls, axis = 2), axis = 0)
+        if self.sigma_fun is not None:
+            distribution = np.sum(distribution, axis = 0)
+            distribution = np.sum(self.sigma_fun(distribution), axis = 1)
 
-        new_V_eta = np.multiply(emissions.T, distribution / (self.sigma ** 2)) @ emissions
-        agg_V_eta = np.multiply(emissions.T, aggregated_unrolls / (self.sigma ** 2)) @ emissions
+            aggregated_density = np.sum(aggregated_unrolls, axis = 0)
+            aggregated_density = np.sum(self.sigma_fun(aggregated_density), axis = 1)
+
+            new_V_eta = np.multiply(emissions.T, distribution) @ emissions
+            agg_V_eta = np.multiply(emissions.T, aggregated_density) @ emissions
+        else:
+            distribution = np.sum(np.sum(distribution, axis = 2), axis = 0)
+            aggregated_unrolls = np.sum(np.sum(aggregated_unrolls, axis = 2), axis = 0)
+
+            new_V_eta = np.multiply(emissions.T, distribution / (self.sigma ** 2)) @ emissions
+            agg_V_eta = np.multiply(emissions.T, aggregated_unrolls / (self.sigma ** 2)) @ emissions
 
         if self.uniform_alpha:
             V_eta = 1. / episodes * new_V_eta + \
@@ -375,14 +385,29 @@ class DesignBestArmLinearBanditNoDenominator(RewardFunctional):
         # take the trace of each matrix to obtain the gradient
         gradient = np.diagonal(mat, axis1=1, axis2=2).sum(axis=1, keepdims = True)
         # gradient = torch.diagonal(mat, dim1=1, dim2=2).sum(dim=1, keepdim = True)
+    
+        if self.sigma_fun is not None:
+            # first repeat the gradient to be of shape (S, A)
+            gradient = gradient.reshape(-1, 1)
+            gradient = np.repeat(gradient, A, axis = 1)
+            # now scale by the noise
+            gradient = self.sigma_fun(gradient)
+            # now repeat the gradient to be of shape (H, S, A)
+            gradient = gradient.reshape(1, S, A)
 
-        # repeat the gradient to be of shape (H, S, A)
-        gradient = gradient.reshape(1, -1, 1)
+            # repeat the gradient to be of shape (H, S, A)
+            gradient = np.repeat(gradient, H, axis = 0)
 
-        gradient = np.repeat(gradient, H, axis = 0)
-        gradient = np.repeat(gradient, A, axis = 2)
+            return gradient
+        
+        else:
+            # repeat the gradient to be of shape (H, S, A)
+            gradient = gradient.reshape(1, -1, 1)
 
-        return gradient
+            gradient = np.repeat(gradient, H, axis = 0)
+            gradient = np.repeat(gradient, A, axis = 2)
+
+            return gradient
 
 class DesignBestArmLinearBanditEIDummy(RewardFunctional):
 
