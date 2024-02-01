@@ -43,7 +43,7 @@ if __name__ == "__main__":
     parser.add_argument('--snake', default=False, type=bool, help='Wether to use the snake algorithm or not')
     parser.add_argument('--random_paths', default=False, type=bool, help='Random paths or not')
     parser.add_argument('--num_random_paths', default=100, type=int, help='Number of random paths')
-    parser.add_argument('--func_num', default=1, type=int, help='Function to optimize: 1. Branin2D, 2. Michalewicz2D, 3. Hartmann3D, 4. Hartmann6D')
+    parser.add_argument('--func_num', default=1, type=int, help='Function to optimize: 1. Branin2D, 2. Michalewicz2D, 3. Hartmann3D, 4. Hartmann6D, 5. Levy 4D, 6. Michalewicz3D')
     parser.add_argument('--g_design', default=False, type=bool, help='Wether to use the g-design objective or not')
     # extra arguments
     parser.add_argument('--accuracy', default=None, type=float, help='Termination criterion for optimality gap')
@@ -73,11 +73,9 @@ if __name__ == "__main__":
     elif args.func_num == 4:
         func = Hartmann6D()
     elif args.func_num == 5:
-        func = ModifiedBranin2D()
-    elif args.func_num == 6:
         func = Levy4D()
         lambd = 10.0
-    elif args.func_num == 7:
+    elif args.func_num == 6:
         func = Michalewicz3D()
     else:
         raise ValueError('Function not implemented')
@@ -98,10 +96,8 @@ if __name__ == "__main__":
         elif args.func_num == 4:
             args.delta_mov = 0.2
         elif args.func_num == 5:
-            args.delta_mov = 0.025
-        elif args.func_num == 6:
             args.delta_mov = 0.1
-        elif args.func_num == 7:
+        elif args.func_num == 6:
             args.delta_mov = 0.1
 
     theta_star = lambda x: func.query_function(x.reshape(-1, func.dim)).reshape(-1).item()

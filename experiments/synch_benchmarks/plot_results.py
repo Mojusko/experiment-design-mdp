@@ -1,6 +1,6 @@
 import numpy as np
 import matplotlib.pyplot as plt
-from  experiments.asynch_benchmarks.fit_asynch_benchmarks import Branin2D, Michalewicz2D, Hartmann3D, Hartmann6D, ModifiedBranin2D, Levy4D, Michalewicz3D
+from  experiments.asynch_benchmarks.fit_asynch_benchmarks import Branin2D, Michalewicz2D, Hartmann3D, Hartmann6D, Levy4D, Michalewicz3D
 
 func_num = 7
 noise = 0.001
@@ -21,17 +21,12 @@ elif func_num == 3:
 elif func_num == 4:
     func = Hartmann6D()
     func_idx = list(range(1, 26))
-    # func_idx = [1, 3, 4, 5, 6, 7, 8, 10, 11, 12, 13, 14, 15, 16, 17, 18, 19, 20, 21, 22, 23, 24, 25]
     delta_mov = 0.2
 elif func_num == 5:
-    func = ModifiedBranin2D()
-    func_idx = list(range(1, 26))
-    delta_mov = 0.025
-elif func_num == 6:
     func = Levy4D()
     func_idx = list(range(1, 26))
     delta_mov = 0.1
-elif func_num == 7:
+elif func_num == 6:
     func = Michalewicz3D()
     func_idx = list(range(1, 26))
     delta_mov = 0.1
@@ -84,8 +79,6 @@ elif func_num == 3:
 elif func_num == 4:
     plt.ylim([-0.05, 3.05])
 elif func_num == 5:
-    plt.ylim([-0.05, 1.0])
-elif func_num == 6:
     plt.ylim([-0.005, 0.1])
 
 # set labels

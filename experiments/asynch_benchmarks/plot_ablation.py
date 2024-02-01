@@ -1,6 +1,6 @@
 import numpy as np
 import matplotlib.pyplot as plt
-from  experiments.asynch_benchmarks.fit_asynch_benchmarks import Branin2D, Michalewicz2D, Hartmann3D, Hartmann6D, ModifiedBranin2D
+from  experiments.asynch_benchmarks.fit_asynch_benchmarks import Branin2D, Michalewicz2D, Hartmann3D, Hartmann6D
 
 func_num = 3
 delay = 25
@@ -23,10 +23,6 @@ elif func_num == 4:
     func = Hartmann6D()
     func_idx = []
     delta_mov = 0.2
-elif func_num == 5:
-    func = ModifiedBranin2D()
-    func_idx = list(range(1, 26))
-    delta_mov = 0.025
 
 num_features = int(2 ** (func.dim + 5))
 

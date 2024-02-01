@@ -74,11 +74,9 @@ if __name__ == "__main__":
     elif args.func_num == 4:
         func = Hartmann6D()
     elif args.func_num == 5:
-        func = ModifiedBranin2D()
-    elif args.func_num == 6:
         func = Levy4D()
         lambd = 10.0
-    elif args.func_num == 7:
+    elif args.func_num == 6:
         func = Michalewicz3D()
     else:
         raise ValueError('Function not implemented')
@@ -93,10 +91,8 @@ if __name__ == "__main__":
         elif args.func_num == 4:
             args.delta_mov = 0.2
         elif args.func_num == 5:
-            args.delta_mov = 0.025
-        elif args.func_num == 6:
             args.delta_mov = 0.1
-        elif args.func_num == 7:
+        elif args.func_num == 6:
             args.delta_mov = 0.1
 
     theta_star = lambda x: func.query_function(x.reshape(-1, func.dim)).reshape(-1).item()
