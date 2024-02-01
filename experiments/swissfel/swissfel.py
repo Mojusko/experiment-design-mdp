@@ -43,19 +43,18 @@ from stpy.continuous_processes.nystrom_fea import NystromFeatures
 from stpy.continuous_processes.kernelized_features import KernelizedFeatures
 from stpy.continuous_processes.gauss_procc import GaussianProcess
 
+import os
+
 if __name__ == "__main__":
 
     parser = argparse.ArgumentParser(description='Gridworlds Problem.')
-    parser.add_argument('--seed', default=12, type=int,
-                        help='Use this to set the seed for the random number generator')
+    parser.add_argument('--seed', default=12, type=int, help='Use this to set the seed for the random number generator')
     parser.add_argument('--save', default="experiment.csv", type=str, help='name of the file')
     parser.add_argument('--cores', default=None, type=int, help='number of cores')
     parser.add_argument('--verbosity', default=4, type=int, help='Use this to increase debug ouput')
     parser.add_argument('--accuracy', default=None, type=float, help='Termination criterion for optimality gap')
-    parser.add_argument('--policy', default='density', type=str,
-                        help='Summarized policy type (mixed/average/density)')
-    parser.add_argument('--num_components', default=1, type=int,
-                        help='Number of MaxEnt components (basic policies)')
+    parser.add_argument('--policy', default='density', type=str, help='Summarized policy type (mixed/average/density)')
+    parser.add_argument('--num_components', default=1, type=int, help='Number of MaxEnt components (basic policies)')
 
     parser.add_argument('--horizon', default=100, type=int, help='Number of evaluation policy unrolls')
     parser.add_argument('--episodes', default=1, type=int, help='Number of evaluation policy unrolls')
@@ -70,6 +69,11 @@ if __name__ == "__main__":
     parser.add_argument('--random', default="false", type=str, help="type")
 
     args = parser.parse_args()
+    
+    # set the seed
+    np.random.seed(args.seed)
+    random.seed(args.seed)
+    torch.manual_seed(args.seed)
 
     if args.policy == 'mixed':
         args.policy = MixturePolicy
@@ -188,4 +192,16 @@ if __name__ == "__main__":
     print (regrets)
 
     vals = np.array(val)
-    np.savetxt(args.save, np.array(regrets))
+
+    # save the results
+    if args.worst == "No":
+        file_name = f'experiments/swissfel/results/mdp/seed_{args.seed}/horizon_{args.horizon}/'
+    elif args.worst == "Yes":
+        file_name = f'experiments/swissfel/results/worst/seed_{args.seed}/horizon_{args.horizon}/'
+    else:
+        raise ValueError('Invalid worst case type')
+    # create the directory if it does not exist
+    os.makedirs(os.path.dirname(file_name), exist_ok=True)
+
+    # save the results
+    np.save(file_name + 'regrets.npy', np.array(regrets))
