@@ -129,7 +129,8 @@ file_name = 'experiments/ypacarai/results/episodic_feedback/noise_var_0.001/num_
 x_evals = np.load(file_name + '/x_evaluations.npy')
 
 # plot the x_eval trajectory in red
-plt.plot(x_evals[:50, 1], x_evals[:50, 0], c='red', linewidth=2, label='chosen trajectory')
+plt.plot(x_evals[:50, 1], x_evals[:50, 0], c='k', linewidth=6)
+plt.plot(x_evals[:50, 1], x_evals[:50, 0], c='red', linewidth=3, label='chosen trajectory')
 
 # remove xticks and yticks
 plt.xticks([])

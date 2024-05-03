@@ -159,9 +159,9 @@ if __name__ == "__main__":
     env.emissions = embedding.embed(torch.tensor(action_space)).detach().numpy()
 
     if args.worst == "No":
-        feedback = BanditFeedback(env, design, estimator, F, sigma = sigma * (base_sigma + switch_weight*np.sqrt((size ** 2 + size ** 2))), sigma_fn=sigma_fn_states, wort_case=False, prior_mean = 0)
+        feedback = BanditFeedback(env, design, estimator, F, sigma = sigma * (base_sigma + switch_weight*np.sqrt((size ** 2 + size ** 2))), sigma_fn=sigma_fn_states, wort_case=False)
     else:
-        feedback = BanditFeedback(env, design, estimator, F, sigma = sigma * (base_sigma + switch_weight*np.sqrt((size ** 2 + size ** 2))), sigma_fn=sigma_fn_states, wort_case=True, prior_mean = 0)
+        feedback = BanditFeedback(env, design, estimator, F, sigma = sigma * (base_sigma + switch_weight*np.sqrt((size ** 2 + size ** 2))), sigma_fn=sigma_fn_states, wort_case=True)
 
     initial_policy = False
 
