@@ -122,6 +122,8 @@ class BanditFeedback(SimpleFeedback):
                 z = self.estimator.embed(torch.tensor(state_x)).numpy()
                 fun_value = z @ self.theta_star + eps - self.prior_mean[action]
 
+            fun_value = fun_value.item()
+
             print ('y:', fun_value)
             if not self.worst_case:
                 if self.sigma_fn is not None:
