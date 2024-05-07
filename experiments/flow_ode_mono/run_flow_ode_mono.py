@@ -9,7 +9,7 @@ import argparse
 from mdpexplore.solvers.dp import DP
 from mdpexplore.convex_solvers.frank_wolfe import FrankWolfe
 from mdpexplore.mdpexplore import MdpExplore
-from mdpexplore.functionals.bandit_functionals import DesignBestArmLinearBanditEIDummy, DesignBestArmLinearBanditNoDenominator
+from mdpexplore.functionals.bandit_functionals import DesignBestArmLinearBanditEIDummy, DesignBestArmLinearBanditNoDenominator, GreedyEIDummy
 from mdpexplore.policies.summary_policies.density_policy import DensityPolicy, MarginalDensityPolicy
 from mdpexplore.feedback.bandit_feedback import BanditFeedback
 
@@ -31,6 +31,7 @@ if __name__ == "__main__":
     parser.add_argument('--delta_mov', default=0.15, type=float, help='Maximum movement constraint')
     parser.add_argument('--num_features', default=121, type=int, help='Number of features')
     parser.add_argument('--EI', default=False, type=bool, help='Wether we use EI or not')
+    parser.add_argument('--greedyEI', default=False, type=bool, help='Wether we use greedy EI or not')
     parser.add_argument('--num_components', default=1, type=int, help='Number of MaxEnt components (basic policies)')
     parser.add_argument('--episodes', default=10, type=int, help='Number of episodes')
     parser.add_argument('--plot', default=False, type = bool, help = "Wether we should save the paths and the potential maximizers for plotting")
@@ -97,6 +98,12 @@ if __name__ == "__main__":
     
     if args.EI:
         design = DesignBestArmLinearBanditEIDummy(
+            env = env,
+            init_ucb = 0.0,
+            prior_mean = prior_mean
+        )
+    elif args.greedyEI:
+        design = GreedyEIDummy(
             env = env,
             init_ucb = 0.0,
             prior_mean = prior_mean
@@ -168,6 +175,8 @@ if __name__ == "__main__":
     
     if args.EI:
         algo_name = '/EI'
+    elif args.greedyEI:
+        algo_name = '/greedyEI'
     else:
         algo_name = f'/MDPExplore/policy_type_{args.policy}/num_components_{args.num_components}'
 

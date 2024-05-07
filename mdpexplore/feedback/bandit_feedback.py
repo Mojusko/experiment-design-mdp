@@ -117,17 +117,17 @@ class BanditFeedback(SimpleFeedback):
 
 
             if callable(self.theta_star):
-                fun_value = self.theta_star(state_x) + eps
+                fun_value = self.theta_star(state_x) + eps - self.prior_mean[action]
             else:
                 z = self.estimator.embed(torch.tensor(state_x)).numpy()
-                fun_value = z @ self.theta_star + eps
+                fun_value = z @ self.theta_star + eps - self.prior_mean[action]
 
             print ('y:', fun_value)
             if not self.worst_case:
                 if self.sigma_fn is not None:
                     print ("constrained sigma:", Sigma)
                     self.estimator.add_data_point(torch.tensor(state_x),
-                                            torch.tensor([[fun_value]]),Sigma = torch.from_numpy(np.array([Sigma])).view(1,1))
+                                            torch.tensor([[fun_value]]), Sigma = torch.from_numpy(np.array([Sigma])).view(1,1))
                 else:
                     self.estimator.add_data_point(torch.tensor(state_x),
                                             torch.tensor([[fun_value]]))
@@ -198,6 +198,8 @@ class BanditFeedback(SimpleFeedback):
                     z = self.estimator.embed(torch.tensor(state)).numpy()
                     fun_value = z @ self.theta_star + eps - self.prior_mean[action]
                 
+                fun_value = fun_value.item()
+
                 self.estimator.add_data_point(torch.tensor(state),
                                             torch.tensor([[fun_value]]))
                 
@@ -205,8 +207,8 @@ class BanditFeedback(SimpleFeedback):
                     self.objective.best_obs = np.maximum(self.objective.best_obs, fun_value + self.prior_mean[action])
             
             self.estimator.fit()
-            self.objective.ucbs = self.estimator.ucb(torch.tensor(self.embedded_action_space)).numpy().squeeze() + self.prior_mean.squeeze()
-            self.objective.lcbs = self.estimator.lcb(torch.tensor(self.embedded_action_space)).numpy().squeeze() + self.prior_mean.squeeze()
+            self.objective.ucbs = self.estimator.ucb(torch.tensor(self.action_space)).numpy().squeeze() + self.prior_mean.squeeze()
+            self.objective.lcbs = self.estimator.lcb(torch.tensor(self.action_space)).numpy().squeeze() + self.prior_mean.squeeze()
             # update the mean if required
             if self.update_mean:
                 means, stds = self.estimator.mean_std(torch.tensor(self.action_space))
