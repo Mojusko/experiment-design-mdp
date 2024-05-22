@@ -2,7 +2,7 @@ import numpy as np
 import matplotlib.pyplot as plt
 from  experiments.asynch_benchmarks.fit_asynch_benchmarks import Branin2D, Michalewicz2D, Hartmann3D, Hartmann6D, Levy4D, Michalewicz3D
 
-func_num = 3
+func_num = 6
 delay = 25
 noise = 0.0001
 episode_length = 100
@@ -40,7 +40,7 @@ file_name_outer = f'experiments/asynch_benchmarks/results/' + func.name + f'/del
     
 methods = ['MDPExplore/thompson_sampling/num_maximizers_100', 'MDPExplore/ucb/num_maximizers_25', 'TruncatedSnAKe']
 method_cols = ['orange', 'green', 'purple']
-algo_label = ['MDP-BO-TS (100)', 'MDP-BO-UCB (25)', 'TrSnAKe']
+algo_label = ['MDP-BO-TS', 'MDP-BO-UCB', 'TrSnAKe']
 
 # methods = ['MDPExplore/thompson_sampling/num_maximizers_100', 'MDPExploreGDesign/thompson_sampling/num_maximizers_100']
 # method_cols = ['orange', 'red']
@@ -67,7 +67,7 @@ for algo_idx, algo_name in enumerate(methods):
 
 # set x limits
 plt.xlim([20, 100])
-# plt.legend(fontsize = 14)
+plt.legend(fontsize = 14)
 # set y limits depending on the function
 if func_num == 1:
     plt.ylim([-0.05, 3.05])
@@ -89,7 +89,8 @@ fig = plt.gcf()
 fig.set_size_inches(6, 2.5)
 
 # save the figure
-title = f'{func.name}_asynch_experiment_main.png'
+title = f'{func.name}_asynch_experiment.png'
+# title = f'{func.name}_asynch_experiment_main.png'
 # title = f'{func.name}_ucb_ablation_asynch_experiment.png'
 plt.savefig(title, bbox_inches='tight', dpi = 300)
 

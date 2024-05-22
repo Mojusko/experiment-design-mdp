@@ -93,11 +93,11 @@ if episodic:
 else:
     file_name = f'experiments/ypacarai/results/immediate_feedback/noise_var_{noise}/num_features_{num_features}/num_episodes_{episodes}/episode_length_{episode_length}/'
 
-algo_names = ['EI', 'MDPExplore/policy_type_density/num_components_1', 'MDPExplore/policy_type_density/num_components_10', 'MDPExplore/policy_type_density/num_components_25']
-algo_labels = ['MDP-EI', 'MDP-BO (1)', 'MDP-BO (10)', 'MDP-BO (25)']
-# algo_names = ['EI', 'MDPExplore/policy_type_density/num_components_1', 'MDPExplore/policy_type_density/num_components_10']
-# algo_labels = ['MDP-EI', 'MDP-B0 (1)', 'MDP-BO (10)']
-cols = ['blue', 'orange', 'green', 'red']
+# algo_names = ['EI', 'MDPExplore/policy_type_density/num_components_1', 'MDPExplore/policy_type_density/num_components_10', 'MDPExplore/policy_type_density/num_components_25']
+# algo_labels = ['MDP-EI', 'MDP-BO (1)', 'MDP-BO (10)', 'MDP-BO (25)']
+algo_names = ['greedyEI', 'EI', 'MDPExplore/policy_type_density/num_components_1']
+algo_labels = ['Greedy-UCB', 'MDP-EI', 'MDP-B0']
+cols = ['green', 'blue', 'orange']
 
 # get the real function
 from experiments.ypacarai.fit_ypacarai import Schekel2D
@@ -188,10 +188,10 @@ if episodic:
     # plot the group bar chart
     width = 0.2
     x = np.arange(1, episodes + 1)
-    ax2.bar(x - 1.5 * width, zero_regret[0, :], width, label = algo_labels[0], color = cols[0])
-    ax2.bar(x - 0.5 * width, zero_regret[1, :], width, label = algo_labels[1], color = cols[1])
-    ax2.bar(x + 0.5 * width, zero_regret[2, :], width, label = algo_labels[2], color = cols[2])
-    ax2.bar(x + 1.5 * width, zero_regret[3, :], width, label = algo_labels[3], color = cols[3])
+    ax2.bar(x - 1 * width, zero_regret[0, :], width, label = algo_labels[0], color = cols[0])
+    ax2.bar(x - 0 * width, zero_regret[1, :], width, label = algo_labels[1], color = cols[1])
+    ax2.bar(x + 1 * width, zero_regret[2, :], width, label = algo_labels[2], color = cols[2])
+    # ax2.bar(x + 1.5 * width, zero_regret[3, :], width, label = algo_labels[3], color = cols[3])
 
     ax[1].set_xlabel('Episode', fontsize=20)
     ax[1].set_ylabel('Average Regret', fontsize=20)
@@ -239,10 +239,10 @@ else:
     episode_break_points = np.arange(episode_length - 1, episodes * episode_length, episode_length)
     width = 10
 
-    ax2.bar(episode_break_points + 1 - 1.5 * width, zero_regret[0, episode_break_points], width, label = algo_labels[0], color = cols[0])
-    ax2.bar(episode_break_points + 1 - 0.5 * width, zero_regret[1, episode_break_points], width, label = algo_labels[1], color = cols[1])
-    ax2.bar(episode_break_points + 1 + 0.5 * width, zero_regret[2, episode_break_points], width, label = algo_labels[2], color = cols[2])
-    ax2.bar(episode_break_points + 1 + 1.5 * width, zero_regret[3, episode_break_points], width, label = algo_labels[3], color = cols[3])
+    ax2.bar(episode_break_points + 1 - 1 * width, zero_regret[0, episode_break_points], width, label = algo_labels[0], color = cols[0])
+    ax2.bar(episode_break_points + 1 - 0 * width, zero_regret[1, episode_break_points], width, label = algo_labels[1], color = cols[1])
+    ax2.bar(episode_break_points + 1 + 1 * width, zero_regret[2, episode_break_points], width, label = algo_labels[2], color = cols[2])
+    # ax2.bar(episode_break_points + 1 + 1.5 * width, zero_regret[3, episode_break_points], width, label = algo_labels[3], color = cols[3])
 
 plt.subplots_adjust(wspace=0.4)
 

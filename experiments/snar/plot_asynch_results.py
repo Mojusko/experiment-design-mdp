@@ -12,7 +12,7 @@ episode_length = 100
 delay = 25
 
 algo_names = ['MDPExplore/thompson_sampling/num_maximizers_100', 'MDPExplore/ucb/num_maximizers_25', 'TruncatedSnAKe']
-algo_labels = ['MDP-BO-TS (100)', 'MDP-BO-UCB (25)', 'TrSnAKe']
+algo_labels = ['MDP-BO-TS', 'MDP-BO-UCB', 'TrSnAKe']
 cols = ['orange', 'green', 'purple']
 
 file_name_outer = f'experiments/snar/results/asynchSnarBenchmark/delay_{delay}/delta_mov_{delta_mov}/noise_var_{noise}/num_features_{num_features}/episode_length_{episode_length}/'

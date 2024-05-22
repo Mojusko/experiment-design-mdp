@@ -2,10 +2,11 @@ import numpy as np
 import matplotlib.pyplot as plt
 from  experiments.asynch_benchmarks.fit_asynch_benchmarks import Branin2D, Michalewicz2D, Hartmann3D, Hartmann6D, Levy4D, Michalewicz3D
 
-func_num = 7
+func_num = 5
 noise = 0.001
 episode_length = 100
 
+iteration_max = 100
 if func_num == 1:
     func = Branin2D()
     func_idx = list(range(1, 26))
@@ -18,6 +19,7 @@ elif func_num == 3:
     func = Hartmann3D()
     func_idx = list(range(1, 26))
     delta_mov = 0.1
+    # iteration_max = 50
 elif func_num == 4:
     func = Hartmann6D()
     func_idx = list(range(1, 26))
@@ -30,6 +32,7 @@ elif func_num == 6:
     func = Michalewicz3D()
     func_idx = list(range(1, 26))
     delta_mov = 0.1
+    # iteration_max = 50
 
 num_features = np.minimum(int(2 ** (func.dim + 5)), 512)
 
@@ -38,7 +41,7 @@ file_name_outer = f'experiments/synch_benchmarks/results/' + func.name + f'/delt
     
 methods = ['MDPExplore/thompson_sampling/num_maximizers_100', 'MDPExplore/ucb/num_maximizers_25', 'TruncatedSnAKe', 'LSR/gamma_0.01']
 method_cols = ['orange','green', 'purple', 'blue']
-algo_label = ['MDP-BO-TS (100)', 'MDP-BO-UCB (25)', 'TrSnAKe', 'LSR']
+algo_label = ['MDP-BO-TS', 'MDP-BO-UCB', 'TrSnAKe', 'LSR']
 
 # methods = ['MDPExplore/thompson_sampling/num_maximizers_100', 'MDPExploreGDesign/thompson_sampling/num_maximizers_100']
 # method_cols = ['orange', 'red']
@@ -67,9 +70,8 @@ for algo_idx, algo_name in enumerate(methods):
     # plot quantiles
     plt.fill_between(np.arange(100), np.quantile(regret, 0.1, axis = 0), np.quantile(regret, 0.9, axis = 0), alpha = 0.2, color = method_cols[algo_idx])
 
-# set x limits
-# plt.xlim([20, 100]
-# set y limits depending on the function
+# set x limits
+# set y limits depending on the function
 if func_num == 1:
     plt.ylim([-0.05, 0.5])
 elif func_num == 2:
@@ -80,6 +82,8 @@ elif func_num == 4:
     plt.ylim([-0.05, 3.05])
 elif func_num == 5:
     plt.ylim([-0.005, 0.1])
+
+plt.xlim([0, iteration_max])
 
 # set labels
 plt.xlabel('Iteration', fontsize = 14)
@@ -95,7 +99,8 @@ fig.set_size_inches(6, 2.5)
 plt.legend(fontsize = 14)
 
 # save the figure
-title = f'{func.name}_synch_experiment_main.png'
+# title = f'{func.name}_synch_experiment_main.png'
+title = f'{func.name}_synch_experiment.png'
 # title = f'{func.name}_synch_XYvsG_experiment.png'
 # title = f'{func.name}_ucb_ablation_synch_experiment.png'
 plt.savefig(title, bbox_inches='tight', dpi = 300)
