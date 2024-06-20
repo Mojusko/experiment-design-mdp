@@ -50,41 +50,6 @@ class Branin2D():
 
         return -(s1 + s2) / 51.95
 
-class ModifiedBranin2D():
-    def __init__(self):
-        # taken from website: https://www.sfu.ca/~ssurjano/branin.html, slightly modified to have a unique optimum
-
-        self.optimum = 1.2943814926103765
-        self.dim = 2
-        
-        # set the hyper-parameters for this function
-        self.kappa = 0.65
-        self.gamma = 0.15
-
-        self.name = 'ModifiedBranin2D'
-
-        self.beta = np.array([10, 10, 2, 4, 4, 6, 3, 7, 5, 5])
-        self.C = np.array([[2, 6.7, 8, 6, 3, 2, 5, 8, 6, 7], \
-            [9, 2, 8, 6, 7, 9, 3, 1, 2, 3.6], \
-            [4, 1, 8, 6, 3, 2, 5, 8, 6, 7], \
-            [4, 1, 8, 6, 7, 9, 3, 1, 2, 3.6]])
-    
-    def query_function(self, x):
-        x1 = x[:, 0] + 0.5
-        x2 = x[:, 1] + 0.5
-
-        x1bar = 15 * x1 - 5
-        x2bar = 15 * x2
-
-        s1 = (x2bar - 5.1 * x1bar**2 / (4 * np.pi**2) + 5 * x1bar / np.pi - 6)**2
-        s2 = (10 - 10 / (8 * np.pi)) * np.cos(x1bar) - 44.81
-
-        # now add a very small linear function of x1 to have a unique optimum
-        s3 = 0.02 * x1bar
-        s4 = 0.02 * x2bar
-
-        return -(s1 + s2) / 51.95 + s3 + s4
-
 class Hartmann3D():
     def __init__(self):
         # taken from website: https://www.sfu.ca/~ssurjano/hart3.html
@@ -184,7 +149,7 @@ class Michalewicz3D():
         self.kappa = 0.85
         self.gamma = 0.179485
 
-        self.name = 'Michaelwicz2D'
+        self.name = 'Michaelwicz3D'
 
         self.m = 10
     

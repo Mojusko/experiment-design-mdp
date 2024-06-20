@@ -1,24 +1,103 @@
 import numpy as np
 import matplotlib.pyplot as plt
+from PIL import Image
+
+# initialize the figure
+fig, ax = plt.subplots(figsize=(16, 5), ncols=2)
+ax = np.flip(ax)
+
+# read the image and convert it to grayscale using Image package
+lake = Image.open('ypacarai_lake.jpg').convert('L')
+
+# convert the image to a numpy array
+lake = np.asarray(lake)
+
+# turn into a binary image
+lake = (lake < 128).astype(int)
+# rotate the image three times
+lake = np.rot90(lake, 3)
+
+# define the grid of actions
+grid1 = np.linspace(-0.5, 0.5, lake.shape[0])
+grid2 = np.linspace(-0.5, 0.5, lake.shape[1])
+grid = np.array(np.meshgrid(grid1, grid2)).T.reshape(-1, 2)
+
+# obtain the action space
+lake_scatter = grid[lake.flatten() == 1]
+
+# load the action space
+ypacarai_action_space = np.load('ypacarai_centroids.npy')
+
+# load the adjacency matrix
+ypacarai_adjacency_matrix = np.load('ypacarai_adjacency_matrix.npy')
+
+# make the background green
+ax[0].set_facecolor('darkseagreen')
+
+# plot the lake first as a scatter plot
+ax[0].scatter(lake_scatter[:, 1], lake_scatter[:, 0], s=0.1)
+
+# plot the centroids dark orange
+ax[0].scatter(ypacarai_action_space[:, 1], ypacarai_action_space[:, 0], s=30, c='darkorange')
+
+# define the initial state
+init_state = 59
+# define the terminal state
+terminal_state = 43
+optimal_state = 95
+# plot a diamond near the initial state and a square near the terminal state
+ax[0].scatter(ypacarai_action_space[init_state, 1], ypacarai_action_space[init_state, 0], marker='s', s=150, c='k', label='initial state')
+# plt.scatter(ypacarai_action_space[terminal_state, 0], ypacarai_action_space[terminal_state, 1], marker='s', s=100, c='k', label='terminal state')
+ax[0].scatter(ypacarai_action_space[95, 1], ypacarai_action_space[95, 0], marker='*', s=150, c='darkorange', label='global optima', zorder = 10)
+ax[0].scatter(ypacarai_action_space[95, 1], ypacarai_action_space[95, 0], marker='*', s=500, c='k', zorder = 9)
+
+ax[0].scatter(ypacarai_action_space[53, 1], ypacarai_action_space[53, 0], marker='s', s=100, c='darkorange', label='local optima', zorder = 10)
+ax[0].scatter(ypacarai_action_space[53, 1], ypacarai_action_space[53, 0], marker='s', s=200, c='k', zorder = 9)
+
+# create a line between the centroids if they are connected
+for i in range(ypacarai_action_space.shape[0]):
+    for j in range(ypacarai_action_space.shape[0]):
+        if ypacarai_adjacency_matrix[i, j] == 1:
+            ax[0].plot([ypacarai_action_space[i, 1], ypacarai_action_space[j, 1]], [ypacarai_action_space[i, 0], ypacarai_action_space[j, 0]], c = 'black')
+
+# now load a trajectory chosen by the algorithm
+file_name = 'experiments/ypacarai/results/episodic_feedback/noise_var_0.001/num_features_100/num_episodes_5/episode_length_50/MDPExplore/policy_type_density/num_components_1/seed_3'
+
+x_evals = np.load(file_name + '/x_evaluations.npy')
+
+# plot the x_eval trajectory in red
+ax[0].plot(x_evals[:50, 1], x_evals[:50, 0], c='k', linewidth=6)
+ax[0].plot(x_evals[:50, 1], x_evals[:50, 0], c='red', linewidth=3, label='chosen trajectory')
+
+# remove xticks and yticks
+ax[0].set_xticks([])
+ax[0].set_yticks([])
+
+# rotate the whole plot 90 degrees
+# plt.gca().invert_yaxis()
+# plt.gca().invert_xaxis()
+
+# plot legend in top right
+ax[0].legend(loc='upper right', fontsize=14)
 
 # arguments of the problem
-noise = 0.01
+noise = 0.001
 num_features = 100
-episodes = 10
+episodes = 5
 episode_length = 50
 num_repetitions = 25
-episodic = False
+episodic = True
 
 if episodic:
     file_name = f'experiments/ypacarai/results/episodic_feedback/noise_var_{noise}/num_features_{num_features}/num_episodes_{episodes}/episode_length_{episode_length}/'
 else:
     file_name = f'experiments/ypacarai/results/immediate_feedback/noise_var_{noise}/num_features_{num_features}/num_episodes_{episodes}/episode_length_{episode_length}/'
 
-algo_names = ['MDPExplore/policy_type_density/num_components_1', 'MDPExplore/policy_type_density/num_components_10', 'MDPExplore/policy_type_density/num_components_25']
-algo_labels = ['MDP-BO (1)', 'MDP-BO (10)', 'MDP-BO (25)']
-# algo_names = ['greedyEI','EI', 'MDPExplore/policy_type_density/num_components_1']
-# algo_labels = ['Greedy-UCB', 'MDP-EI', 'MDP-B0']
-cols = ['orange', 'blue', 'green']
+# algo_names = ['EI', 'MDPExplore/policy_type_density/num_components_1', 'MDPExplore/policy_type_density/num_components_10', 'MDPExplore/policy_type_density/num_components_25']
+# algo_labels = ['MDP-EI', 'MDP-BO (1)', 'MDP-BO (10)', 'MDP-BO (25)']
+algo_names = ['greedyEI', 'EI', 'MDPExplore/policy_type_density/num_components_1']
+algo_labels = ['Greedy-UCB', 'MDP-EI', 'MDP-B0']
+cols = ['green', 'blue', 'orange']
 
 # get the real function
 from experiments.ypacarai.fit_ypacarai import Schekel2D
@@ -30,8 +109,6 @@ optimal_action = action_space[np.argmax(theta_star(action_space))]
 # obtain the optimal observation
 optimal_observation = theta_star(optimal_action.reshape(1, -1))
 
-# initialize the figure
-fig, ax = plt.subplots(figsize=(8, 5))
 
 # initial regret
 # init_regret = np.log(optimal_observation - theta_star(action_space[59].reshape(1, -1)) + 1e-8)
@@ -81,8 +158,8 @@ for algo_idx, algo in enumerate(algo_names):
 
         upper_percentile = np.percentile(regret, 90, axis=0)
         # upper_percentile = np.append(init_regret, upper_percentile)
-        ax.plot(np.arange(1, episodes + 1), mean_regret, color='k', linewidth = 5)
-        ax.plot(np.arange(1, episodes + 1), mean_regret, label=algo_labels[algo_idx], markerfacecolor='black', marker='o', markersize=10, color=cols[algo_idx], linewidth = 3)
+        ax[1].plot(np.arange(1, episodes + 1), mean_regret, color='k', linewidth = 5)
+        ax[1].plot(np.arange(1, episodes + 1), mean_regret, label=algo_labels[algo_idx], markerfacecolor='black', marker='o', markersize=10, color=cols[algo_idx], linewidth = 3)
         # ax2.plot(range(0, episodes + 1), median_regret, label=algo, color=cols[algo_idx])
         # ax2.fill_between(np.arange(0, episodes + 1), lower_percentile, upper_percentile, alpha=0.2, color=cols[algo_idx])
 
@@ -97,17 +174,17 @@ for algo_idx, algo in enumerate(algo_names):
 
         # ax.plot(np.arange(1, episodes * episode_length + 1), mean_regret, color='black', linewidth = 5)
         # ax.plot(np.arange(1, episodes * episode_length + 1), mean_regret, label=algo_labels[algo_idx], color=cols[algo_idx], linewidth = 3)
-        ax.plot(episode_break_points + 1, mean_regret[episode_break_points], color='black', linewidth = 5)
-        ax.plot(episode_break_points + 1, mean_regret[episode_break_points], label=algo_labels[algo_idx], color=cols[algo_idx], linewidth = 3, markerfacecolor='black', marker='o', markersize=10)
+        ax[1].plot(episode_break_points + 1, mean_regret[episode_break_points], color='black', linewidth = 5)
+        ax[1].plot(episode_break_points + 1, mean_regret[episode_break_points], label=algo_labels[algo_idx], color=cols[algo_idx], linewidth = 3, markerfacecolor='black', marker='o', markersize=10)
         # ax2.plot(np.median(regret), label=algo, color=cols[algo_idx])
         # ax2.fill_between(np.arange(len(regret)), lower_percentile, upper_percentile, alpha=0.2, color=cols[algo_idx])
 
 
 if episodic:
-    ax.patch.set_visible(False)
+    ax[1].patch.set_visible(False)
     # do a group bar chart with the percentage of seeds where the regret is zero
-    ax2 = ax.twinx()
-    ax2.set_zorder(ax.get_zorder() - 1)
+    ax2 = ax[1].twinx()
+    ax2.set_zorder(ax[1].get_zorder() - 1)
     # plot the group bar chart
     width = 0.2
     x = np.arange(1, episodes + 1)
@@ -116,15 +193,15 @@ if episodic:
     ax2.bar(x + 1 * width, zero_regret[2, :], width, label = algo_labels[2], color = cols[2])
     # ax2.bar(x + 1.5 * width, zero_regret[3, :], width, label = algo_labels[3], color = cols[3])
 
-    ax.set_xlabel('Episode', fontsize=20)
-    ax.set_ylabel('Average Regret', fontsize=20)
-    ax.tick_params(axis='both', which='major', labelsize=15)
+    ax[1].set_xlabel('Episode', fontsize=20)
+    ax[1].set_ylabel('Average Regret', fontsize=20)
+    ax[1].tick_params(axis='both', which='major', labelsize=15)
     # set y ticks at 0 and 0.035
     # calculate the maximum regret
     max_regret = np.max(mean_regret)
     # reduce to 3 decimal places
     max_regret = np.round(max_regret, 3)
-    ax.set_yticks([0, max_regret])
+    ax[1].set_yticks([0, max_regret])
 
     # flip the labels for the second axis
     ax2.set_ylabel('Best Arm Identified (%)', rotation=270, labelpad=20, fontsize=20)
@@ -133,23 +210,23 @@ if episodic:
     # set y ticks at 0, 0.5 and 1
     ax2.set_yticks([0, 0.5, 1])
 
-    ax.legend(loc='upper right', fontsize=15)
+    ax[1].legend(loc='upper right', fontsize=15)
 
 else:
-    ax.patch.set_visible(False)
+    ax[1].patch.set_visible(False)
 
-    ax.set_xlabel('Iteration', fontsize=20)
-    ax.set_ylabel('Log Regret', fontsize=20)
-    ax.tick_params(axis='both', which='major', labelsize=15)
+    ax[1].set_xlabel('Iteration', fontsize=20)
+    ax[1].set_ylabel('Log Regret', fontsize=20)
+    ax[1].tick_params(axis='both', which='major', labelsize=15)
     # calculate the maximum regret
     max_regret = np.max(mean_regret)
     min_regret = np.min(mean_regret)
     # reduce to 2 decimal places
     max_regret = np.round(max_regret, 0)
     min_regret = np.round(min_regret, 0)
-    ax.set_yticks([min_regret, max_regret])
+    ax[1].set_yticks([min_regret, max_regret])
     
-    ax.legend(loc='upper right', fontsize=15)
+    ax[1].legend(loc='upper right', fontsize=15)
 
     ax2 = ax.twinx()
     ax2.set_zorder(ax.get_zorder() - 1)
@@ -167,12 +244,9 @@ else:
     ax2.bar(episode_break_points + 1 + 1 * width, zero_regret[2, episode_break_points], width, label = algo_labels[2], color = cols[2])
     # ax2.bar(episode_break_points + 1 + 1.5 * width, zero_regret[3, episode_break_points], width, label = algo_labels[3], color = cols[3])
 
+plt.subplots_adjust(wspace=0.4)
+
 # save the figure
-if episodic:
-    # fig.savefig(f'ypacari_episodic_results.png', bbox_inches='tight', dpi=300)
-    fig.savefig(f'ablation_ypacari_episodic_results.png', bbox_inches='tight', dpi=300)
-else:
-    # fig.savefig(f'ypacari_immediate_results.png', bbox_inches='tight', dpi=300)
-    fig.savefig(f'ablation_ypacari_immediate_results.png', bbox_inches='tight', dpi=300)
+fig.savefig(f'ypacari_joint.png', bbox_inches='tight', dpi=300)
 
 plt.show()

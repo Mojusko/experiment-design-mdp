@@ -11,14 +11,14 @@ num_features = 512
 episode_length = 100
 delay = 25
 
-algo_names = ['MDPExplore/thompson_sampling/num_maximizers_100', 'TruncatedSnAKe', 'MDPExplore/ucb/num_maximizers_25']
-algo_labels = ['MDP-BO-TS (100)', 'TrSnAKe', 'MDP-BO-UCB (25)']
-cols = ['orange', 'purple', 'green']
+algo_names = ['MDPExplore/thompson_sampling/num_maximizers_100', 'MDPExplore/ucb/num_maximizers_25', 'TruncatedSnAKe']
+algo_labels = ['MDP-BO-TS', 'MDP-BO-UCB', 'TrSnAKe']
+cols = ['orange', 'green', 'purple']
 
 file_name_outer = f'experiments/snar/results/asynchSnarBenchmark/delay_{delay}/delta_mov_{delta_mov}/noise_var_{noise}/num_features_{num_features}/episode_length_{episode_length}/'
 
 # plot the results
-fig, ax = plt.subplots(figsize=(8, 6))
+# fig, ax = plt.subplots(figsize=(8, 6))
 
 pre_load_regret = True
 
@@ -48,5 +48,23 @@ for algo_idx, algo_name in enumerate(algo_names):
     # plot quantiles
     plt.fill_between(np.arange(100), np.quantile(regret, 0.1, axis = 0), np.quantile(regret, 0.9, axis = 0), alpha = 0.2, color = cols[algo_idx])
 
-plt.legend()
+# set x limits
+plt.xlim([20, 100])
+# set y limits
+plt.ylim([-0.05, 1.5])
+# increase tick font size
+plt.xticks(fontsize = 14)
+plt.yticks(fontsize = 14)
+
+plt.xlabel('Iteration', fontsize = 14)
+plt.ylabel('Median Regret', fontsize = 14)
+# plt.legend(fontsize = 14)
+
+# set figure size
+fig = plt.gcf()
+fig.set_size_inches(6, 2.5)
+
+# save the figure
+plt.savefig('snar_asynch_experiment_main.png', bbox_inches='tight', dpi = 300)
+
 plt.show()

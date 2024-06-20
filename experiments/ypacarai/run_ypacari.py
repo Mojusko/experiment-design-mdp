@@ -11,7 +11,7 @@ import argparse
 from mdpexplore.solvers.dp import DP
 from mdpexplore.convex_solvers.frank_wolfe import FrankWolfe
 from mdpexplore.mdpexplore import MdpExplore
-from mdpexplore.functionals.bandit_functionals import DesignBestArmLinearBanditNoDenominator, DesignBestArmLinearBanditEIDummy
+from mdpexplore.functionals.bandit_functionals import DesignBestArmLinearBanditNoDenominator, DesignBestArmLinearBanditEIDummy, GreedyEIDummy
 from mdpexplore.policies.summary_policies.density_policy import DensityPolicy, MarginalDensityPolicy
 from mdpexplore.feedback.bandit_feedback import BanditFeedback
 
@@ -32,6 +32,7 @@ if __name__ == "__main__":
     parser.add_argument('--num_components', default=1, type=int, help='Number of MaxEnt components (basic policies)')
     parser.add_argument('--episodes', default=3, type=int, help='Number of episodes')
     parser.add_argument('--EI', default=False, type=bool, help='Wether we use EI or not')
+    parser.add_argument('--greedyEI', default=False, type=bool, help='Wether we use greedy EI or not')
     parser.add_argument('--video', default=False, type=bool, help='Wether we want to save a video')
     parser.add_argument('--policy', default='density', type=str, help='Summarized policy type (mixed/average/density)')
     # extra arguments
@@ -104,17 +105,22 @@ if __name__ == "__main__":
         init_state = init_state,
         terminal_state = terminal_state)
     
-    if not args.EI:
+    if args.EI:
+        design = DesignBestArmLinearBanditEIDummy(
+            env = env,
+            init_ucb = 0.0
+        )
+    elif args.greedyEI:
+        design = GreedyEIDummy(
+            env = env,
+            init_ucb = 0.0
+        )
+    else:
         design = DesignBestArmLinearBanditNoDenominator(
             env = env,
             lambd=lambd,
             sigma=sigma,
             init_ucb = 1.0
-        )
-    elif args.EI:
-        design = DesignBestArmLinearBanditEIDummy(
-            env = env,
-            init_ucb = 0.0
         )
 
     # choose the policy
@@ -126,7 +132,11 @@ if __name__ == "__main__":
     # define the convex solver
     convex_solver = FrankWolfe(env, objective=design, num_components = args.num_components, solver = DP, SummarizedPolicyType = SummarizedPolicyType)
     # define the feedback class
-    feedback = BanditFeedback(env, design, estimator, theta_star = theta_star, sigma = sigma, video = args.video, markovian = args.episodic_feedback, update_mean = args.EI)
+    if args.EI or args.greedyEI:
+        update_mean = True
+    else:
+        update_mean = False
+    feedback = BanditFeedback(env, design, estimator, theta_star = theta_star, sigma = sigma, video = args.video, markovian = args.episodic_feedback, update_mean = update_mean)
 
     # define the MDP explore algorithm
     me = MdpExplore(
@@ -158,6 +168,8 @@ if __name__ == "__main__":
     
     if args.EI:
         algo_name = '/EI'
+    elif args.greedyEI:
+        algo_name = '/greedyEI'
     else:
         algo_name = f'/MDPExplore/policy_type_{args.policy}/num_components_{args.num_components}'
 
