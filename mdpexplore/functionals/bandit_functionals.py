@@ -135,6 +135,7 @@ class DesignBestArmLinearBandit(RewardFunctional):
 
 class DesignBestArmLinearBanditNoDenominator(RewardFunctional):
 
+<<<<<<< HEAD
     def __init__(self,
                  env,
                  lambd,
@@ -145,6 +146,9 @@ class DesignBestArmLinearBanditNoDenominator(RewardFunctional):
                  mix_objectives=(False, 0),
                  init_ucb = np.inf,
                  sigma_fun = None):
+=======
+    def __init__(self, env, lambd, variant: int = 0, eps=0.01, sigma=0.01, scale_reg=True, init_ucb = np.inf):
+>>>>>>> b5d0890bff89c5c2b242b5119effbfd95e3a048e
 
         super().__init__()
 
