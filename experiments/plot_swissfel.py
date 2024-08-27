@@ -17,7 +17,7 @@ for index, method in enumerate(methods):
     q10 = np.quantile(np.array(vals), q=0.1, axis=0)
     q90 = np.quantile(np.array(vals), q=0.9, axis=0)
     xaxis = np.arange(1, median.shape[0] + 1, 1)
-    plt.plot(xaxis, median, color=color[index], label=names[index])
+    plt.plot(xaxis, median, color=color[index], label=names[index], lw = 3)
     plt.fill_between(xaxis, q10, q90, alpha=0.3, color=color[index])
 
 #plt.plot(xaxis, 2 ** 4 / np.sqrt(xaxis), 'k--', label='1/\u221Ax')

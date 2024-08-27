@@ -99,7 +99,7 @@ class MdpExplore():
         """Precomputes an emission matrix given the saved environment
         """
         emissions = []
-        for i in range(self.env.states_num):
+        for i in range(self.env.emiss_num):
             emissions.append(self.env.emissions[i])
         emissions = np.array(emissions)
         self.emissions = emissions

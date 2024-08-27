@@ -6,12 +6,19 @@ from abc import ABC, abstractmethod
 from mdpexplore.env.discrete_env import Environment
 from mdpexplore.functionals.reward_functional import RewardFunctional
 
-class DesignA(RewardFunctional):
+class ExperimentDesignFunctional(RewardFunctional):
+
+    def __init__(self, dim = 0):
+        super().__init__()
+        self.dim = dim
+
+class DesignA(ExperimentDesignFunctional):
 
     def __init__(self,
                  env: Environment,
-                 lambd: float = 1e-3):
-        super().__init__()
+                 lambd: float = 1e-3,
+                 dim = 0):
+        super().__init__(dim = dim)
         self.lambd = lambd
         self.type = "static"
         self.env = env
@@ -21,12 +28,28 @@ class DesignA(RewardFunctional):
              distribution: np.ndarray,
              episodes: int = 0
              ) -> float:
-        distribution = np.sum(np.sum(distribution, axis = 2), axis = 0)
-        z = emissions.T @ np.diag(distribution) @ emissions
-        return -np.trace(la.inv(z + self.lambd * np.eye(z.shape[0])))
+        if self.dim == 0:
+            distribution = np.sum(np.sum(distribution, axis = 2), axis = 0)
+        elif self.dim == 1: # actions matter 
+            distribution = np.sum(np.sum(distribution, axis = 1), axis = 0)
+        #z = emissions.T @ np.diag(distribution) @ emissions
+        z = np.einsum('ij,j,jk->ik', emissions.T, distribution, emissions)
+        return -np.trace(la.inv(z + self.lambd/episodes * np.eye(z.shape[0])))
 
+    def eval_full(self,
+                  emissions: np.ndarray,
+                  distribution: np.ndarray,
+                  episodes: int,
+                  ) -> float:
+        if self.dim == 0:
+            distribution = np.sum(np.sum(distribution, axis = 2), axis = 0)
+        elif self.dim == 1: # actions matter 
+            distribution = np.sum(np.sum(distribution, axis = 1), axis = 0)
+        #z = emissions.T @ np.diag(distribution) @ emissions
+        z = np.einsum('ij,j,jk->ik', emissions.T, distribution, emissions)
+        return -np.trace(la.inv(z + self.lambd/episodes * np.eye(z.shape[0])))
 
-class DesignD(RewardFunctional):
+class DesignD(ExperimentDesignFunctional):
     def __init__(self,
                  env: Environment,
                  lambd: float = 1e-3,
@@ -52,7 +75,10 @@ class DesignD(RewardFunctional):
              distribution: np.ndarray,
              episodes: int
              ) -> float:
-        distribution = np.sum(np.sum(distribution, axis = 2), axis = 0)
+        if self.dim == 0: #states matter 
+            distribution = np.sum(np.sum(distribution, axis = 2), axis = 0)
+        elif self.dim == 1: # actions matter
+            distribution = np.sum(np.sum(distribution, axis = 1), axis = 0)
         z = emissions.T @ np.diag(distribution / (self.Sigma ** 2)) @ emissions
         return np.linalg.slogdet(z + self.lambd / episodes)[1]
 
@@ -61,12 +87,41 @@ class DesignD(RewardFunctional):
                   distribution: np.ndarray,
                   episodes: int,
                   ) -> float:
-        distribution = np.sum(np.sum(distribution, axis = 2), axis = 0)
+        if self.dim == 0:
+            distribution = np.sum(np.sum(distribution, axis = 2), axis = 0)
+        elif self.dim == 1: 
+            distribution = np.sum(np.sum(distribution, axis = 1), axis = 0)
         z = emissions.T @ np.diag(distribution / (self.Sigma_true ** 2)) @ emissions
         return np.linalg.slogdet(z + self.lambd / episodes)[1]
 
 
-class DesignC(RewardFunctional):
+class DesignE(DesignD):
+    def eval(self,
+             emissions: np.ndarray,
+             distribution: np.ndarray,
+             episodes: int
+             ) -> float:
+        if self.dim == 0: #states matter 
+            distribution = np.sum(np.sum(distribution, axis = 2), axis = 0)
+        elif self.dim == 1: # actions matter
+            distribution = np.sum(np.sum(distribution, axis = 1), axis = 0)
+
+        z = emissions.T @ np.diag(distribution / (self.Sigma ** 2)) @ emissions
+        return np.linalg.eigvalsh(z + self.lambd / episodes)[0]
+
+    def eval_full(self,
+                  emissions: np.ndarray,
+                  distribution: np.ndarray,
+                  episodes: int,
+                  ) -> float:
+        if self.dim == 0:
+            distribution = np.sum(np.sum(distribution, axis = 2), axis = 0)
+        elif self.dim == 1: 
+            distribution = np.sum(np.sum(distribution, axis = 1), axis = 0)
+        z = emissions.T @ np.diag(distribution / (self.Sigma_true ** 2)) @ emissions
+        return np.linalg.eigvalsh(z + self.lambd / episodes)[0]
+    
+class DesignC(ExperimentDesignFunctional):
 
     def __init__(self,
                  env: Environment,

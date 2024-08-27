@@ -6,37 +6,46 @@ from mdpexplore.env.discrete_env import DiscreteEnv
 
 class Bandits(DiscreteEnv, ABC):
 
-    def __init__(self, action_space: np.array, theta_star: np.array, sigma: float) -> None:
+    def __init__(self, action_space: np.array) -> None:
         super().__init__(init_state=0)
+
         self.action_space = action_space
-        self.theta_star = theta_star
-        self.sigma = sigma
-        # TODO: For backward compatibility we treat actions as states for now,
-        #       it would be better to make the code support space actions everywhere
-        self.states_num = action_space.shape[0]
+
+        self.states_num = 1
         self.actions_num = action_space.shape[0]
+        
         # Emissions are features
         self.emissions = self.action_space
         self.max_episode_length = 1
+        self.emiss_num = self.actions_num
         self.terminal_state = None
-        self.visitations = np.zeros(self.states_num)
+        self.transition_matrix = None
+        self.h = 0 
+        self.visitations = np.zeros((self.states_num, self.actions_num))
+        self.constrained = False
 
     def available_actions(self, state):
         return list(range(self.actions_num))
 
+    def convert(self, state):
+        return super().convert(state)
+
     def next(self, state, action):
-        return action
+        return state
 
     def step(self, action: int):
-        self.visitations[action] += 1
+        self.state = self.next(self.state, action)
+        self.visitations[self.state,action] += 1
+        self.h += 1
         return action
 
-    def convert(self, state):
-        pass
-
     def get_transition_matrix(self) -> np.ndarray:
-        return np.array([1.])
-
+        if self.transition_matrix is not None:
+            return self.transition_matrix      
+        P = np.ones((1, self.actions_num, 1))
+        self.transition_matrix = P
+        return P
+    
     def is_valid_action(self, action, state) -> bool:
         return action < self.action_num
 

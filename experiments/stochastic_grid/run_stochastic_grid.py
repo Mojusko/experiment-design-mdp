@@ -20,7 +20,7 @@ from mdpexplore.convex_solvers.frank_wolfe import FrankWolfe
 
 # functionals
 from mdpexplore.functionals.doe_adaptive_functionals import AdaptiveDesignD
-from mdpexplore.functionals.doe_static_functionals import DesignD
+from mdpexplore.functionals.doe_static_functionals import DesignD, DesignA
 
 # environments
 from mdpexplore.env.grid_worlds import DummyGridWorld
@@ -48,12 +48,12 @@ if __name__ == "__main__":
     parser.add_argument('--accuracy', default=None, type=float, help='Termination criterion for optimality gap')
     parser.add_argument('--policy', default='density', type=str,
                         help='Summarized policy type (mixed/average/density)')
-    parser.add_argument('--num_components', default=10, type=int,
+    parser.add_argument('--num_components', default=100, type=int,
                         help='Number of MaxEnt components (basic policies)')
-    parser.add_argument('--episodes', default=4, type=int, help='Number of evaluation policy unrolls')
+    parser.add_argument('--episodes', default=1, type=int, help='Number of evaluation policy unrolls')
     parser.add_argument('--repeats', default=1, type=int, help='Number of repeats')
-    parser.add_argument('--adaptive', default="Bayes", type=str, help='Number of repeats')
-    parser.add_argument('--opt', default="false", type=str, help='Number of repeats')
+    parser.add_argument('--adaptive', default="No", type=str, help='adaptive or not')
+    parser.add_argument('--opt', default="false", type=str, help='output-opt')
     parser.add_argument('--linesearch', default='line-search', type=str, help="type")
     parser.add_argument('--savetrajectory', default=None, type=str, help="type")
     parser.add_argument('--probability', default=0.9, type=float, help="type")
@@ -77,7 +77,7 @@ if __name__ == "__main__":
     if args.adaptive == "Bayes":
         design = AdaptiveDesignD(env, lambd=1e-3)
     else:
-        design = DesignD(env, lambd=1e-3)
+        design = DesignA(env, lambd=1e-3)
 
 
     # define the convex solver

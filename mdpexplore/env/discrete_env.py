@@ -14,6 +14,7 @@ class DiscreteEnv(Environment):
         self.state = init_state
         self.states_num = None
         self.actions_num = None
+        self.emiss_num = self.states_num
         self.visitations = None
         self.max_episode_length = None
         self.h = 0

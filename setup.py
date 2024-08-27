@@ -1,6 +1,12 @@
 from setuptools import setup
 
-packages=['numpy']
+packages=['numpy',
+          'autograd',
+          'stpy',
+          'torch',
+          'pytest',
+          'scipy',
+          ]
 
 setup(name='mdpexplore',
       version='0.0.2',

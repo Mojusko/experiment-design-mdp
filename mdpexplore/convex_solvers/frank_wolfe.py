@@ -23,7 +23,16 @@ from typing import Union
 from mdpexplore.convex_solvers.convex_solvers_base import ConvexSolverBase
 
 class FrankWolfe(ConvexSolverBase):
-    def __init__(self, env, objective, verbosity : int = 0, accuracy : float = None, num_components : int = 10, initial_policy : bool = False, step: Union[float, str] = None, solver : Union[DiscreteSolver, ContinuousSolver] = DP, SummarizedPolicyType : Policy = DensityPolicy) -> None:
+    def __init__(self, env,
+                 objective,
+                 verbosity : int = 0,
+                 accuracy : float = None,
+                 num_components : int = 10,
+                 initial_policy : bool = False,
+                 step: Union[float, str] = None,
+                 solver : Union[DiscreteSolver, ContinuousSolver] = DP,
+                 SummarizedPolicyType : Policy = DensityPolicy
+                 ) -> None:
         super().__init__(env, objective, verbosity = verbosity, accuracy = accuracy, initial_policy = initial_policy, solver = solver)
 
         if (SummarizedPolicyType != MixturePolicy) & (self.env.type == 'continuous'):
@@ -53,10 +62,12 @@ class FrankWolfe(ConvexSolverBase):
             np.ndarray: gradient of the functional wrt to the state distribution - i.e. the reward function
         """
         grad_fn = getattr(self.objective, "gradient", None)
+        
         if callable(grad_fn) and (self.objective.get_type() != "adaptive"):
             return grad_fn(emissions, distribution)
         
         if self.env.type == 'discrete':
+            
             if callable(grad_fn):
                 return grad_fn(emissions, distribution, visitations, episodes)
 
@@ -149,15 +160,15 @@ class FrankWolfe(ConvexSolverBase):
                 def fn(h):
                     if self.objective.get_type() == "adaptive":
                         return -self.objective.eval(
-                            self.emissions,
+                            emissions,
                             density * (1 - h) + h * new_density,
-                            self.visitations,
-                            self.episodes
+                            visitations,
+                            episodes
                         )
                     return -self.objective.eval(
-                        self.emissions,
+                        emissions,
                         density * (1 - h) + h * new_density,
-                        self.episodes
+                        episodes
                     )
 
                 res = minimize_scalar(

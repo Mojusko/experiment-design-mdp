@@ -25,6 +25,7 @@ torch.set_default_dtype(torch.float64)
 
 @pytest.mark.parametrize("initial_policy", [False, True])
 @pytest.mark.parametrize("solver", [DP])
+
 def test_optimize(initial_policy: bool, solver: DiscreteSolver):
 
     # define the problem
