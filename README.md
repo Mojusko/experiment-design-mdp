@@ -165,5 +165,5 @@ We welcome contributions to this repository. To set up the development environme
 
 
 ### Conventions 
-    - 
+    - the stored discrete visitations are Hx|S|x|A|
 

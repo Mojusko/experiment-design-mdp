@@ -41,7 +41,7 @@ sigma = GP.s
 phi2 = phi2/sigma
 T = 1000
 
-print ("Dimension", d, phi2.size())
+print ("Dim:", phi2.size())
 # Calculate where we want to predict
 # all 3-site mutants at 118, 119, 121, 3.2 milions of them
 # parent = "T111T+S112S+"
