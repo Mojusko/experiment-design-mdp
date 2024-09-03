@@ -1,11 +1,10 @@
 import torch
-#import numpy as np
 import random
 import torch
+import argparse
 from torch.utils.data import random_split
 import matplotlib.pyplot as plt
 from sklearn.metrics import r2_score
-import jax.numpy as np
 
 from stpy.continuous_processes.gauss_procc import GaussianProcess
 from stpy.candidate_set import CandidateDiscreteSet
@@ -24,48 +23,58 @@ from mdpexplore.feedback.feedback_base import EmptyFeedback
 from mdpexplore.solvers.dp import DP
 from mdpexplore.policies.summary_policies.density_policy import DensityPolicy
 
+parser = argparse.ArgumentParser(description='Protein capacity experiment.')
+parser.add_argument('--T', default=2, type=int, help='Name of the file')
+args = parser.parse_args()
 
-model_params = 'params/esm2final_model_params.p'
+# load the model 
+model_params = 'params/esm2linearfinal_model_params.p'
 GP, embed =  load_model(model_params,"")
+sigma = GP.s
+
+# load the data
 x, y, dts = load_first_round()
-phi = embed(x)
+phi = embed(x)[:,0,:]
 n = phi.size()[0]
 
-# Calculate Nystom Embeddings on Phi
-Nystrom = NystromFeatures(GP.kernel_object, m = 100, approx = 'svd-explained')
-Nystrom.fit_gp(phi, y, delta = 0.8)
+print (phi.size())
+
+if len(phi.size())>2:
+    phi = phi[:,0,:]
+
+# # Calculate Nystom Embeddings on Phi
+Nystrom = NystromFeatures(GP.kernel_object, m = None, approx = 'svd-explained')
+# 90% of explained variance 
+Nystrom.fit_gp(phi, y, explained_variance = 1.)
 embed2 = lambda x: Nystrom.embed(x)
 phi2 = embed2(phi)
-d = phi2.size()[1]
-sigma = GP.s
-phi2 = phi2/sigma
-T = 1000
 
-print ("Dim:", phi2.size())
-# Calculate where we want to predict
-# all 3-site mutants at 118, 119, 121, 3.2 milions of them
-# parent = "T111T+S112S+"
-# mutants = generate_all_combination([118,119,121],'NAK')
-# mutants = [parent + s for s in mutants]
-# print (mutants)
-# variants = from_variant_to_integer(from_mutation_to_variant(mutants))
-# phi_xtest = embed(variants)
-# phi2_xtest = embed2(phi_xtest)
+
+print (phi2.size())
+print (phi2)
+# # normalize the features with sigma 
+# phi2 = phi2/sigma
+
+phi2 = phi/sigma
+
+# the budget 
+T = args.T
 
 env = Bandits(
-    action_space=phi2.numpy()
+    action_space=phi2
     )
 
 design = DesignA(
     env=env,
     lambd=1.0,
-    dim = 1
+    dim = 1,
+    V = phi2.T@phi2
 )
 
 # define the convex solver
 convex_solver = FrankWolfe(env,
                            objective=design,
-                           num_components=T,
+                           num_components=2*phi.size()[1],
                            solver=DP,
                            step="line-search",
                            SummarizedPolicyType=DensityPolicy,
@@ -76,6 +85,10 @@ feedback = EmptyFeedback(env, design)
 
 initial_policy = False
 
+Ts = torch.logspace(1,10,20,base=2)
+env = Bandits(
+action_space=phi2
+)
 me = MdpExplore(
     env=env,
     objective=design,
@@ -84,12 +97,8 @@ me = MdpExplore(
     feedback=feedback,
     general_policy='markovian'
 )
-
 val, opt_val = me.run(
-    episodes=1
+    episodes=int(T)
 )
-
-print (-opt_val*T)
-
-
-
+with open("results/output-linear.txt", "a") as f:
+    f.write(f"{T},{-opt_val/T}\n")

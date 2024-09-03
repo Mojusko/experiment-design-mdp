@@ -147,7 +147,7 @@ if __name__ == "__main__":
         # # C acts on stomatch, blood
         C = torch.from_numpy(null_space(constraints_full.detach(), rcond=1e-7)).T.detach()
         # we need to append the specific variations
-        C = torch.hstack([C, torch.zeros(size=(C.size()[0], m)).double()]).numpy()
+        C = torch.hstack([C, torch.zeros(size=(C.size()[0], m)).double()])
         Cs.append(C)
 
     env = TimeChain(emb_final.embed, time_period=n, max_events=N, min_event_distance=3, dt=1. / N, max_episode_length=n)
