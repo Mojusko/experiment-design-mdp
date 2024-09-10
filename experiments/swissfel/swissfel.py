@@ -3,7 +3,7 @@ import numpy as np
 import pandas as pd
 import matplotlib.pyplot as plt
 import torch
-from stpy.helpers.helper import interval
+from stpy.helpers.helper import interval_torch
 # solvers
 from mdpexplore.solvers.lp import LP
 from mdpexplore.solvers.dp import DP
@@ -92,7 +92,7 @@ if __name__ == "__main__":
     base_sigma = 1.
     env = GlobalTransGridWorld(size=height, max_episode_length=args.horizon)
 
-    sigmas = np.zeros(shape=(size**2, size**2)) * sigma
+    sigmas = torch.zeros(size=(size**2, size**2)).double() * sigma
 
     for i in range(size **2):
         for j in range(size **2):
@@ -129,34 +129,31 @@ if __name__ == "__main__":
 
     # define a swifel function
     Fel = SwissFEL(d=2, dts = 'evaluations.hdf5')
-    F = lambda x: Fel.eval(torch.from_numpy(x)).numpy()
+    F = lambda x: Fel.eval(x)
 
     # xtest
-    action_space = interval(size, d = 2, L_infinity_ball=0.5)
-
-    print ("grid size:")
-    print (action_space.shape)
+    action_space = interval_torch(size, d = 2, L_infinity_ball=0.5)
 
     # embeddings
     kernel = KernelFunction(kernel_name='squared_exponential', gamma = 0.3, d = 2, kappa = 1.)
     embedding = NystromFeatures(m=torch.tensor(size**2), kernel_object=kernel)
-    embedding.fit_gp(torch.tensor(action_space), None)
+    embedding.fit_gp(action_space, None)
     #estimator = KernelizedFeatures(embedding, m = torch.tensor(size**2), s = 1., lam = 1., d = 2)
     estimator = GaussianProcess(kernel=kernel, d=2)
 
     # fit the surogate model to get $\theta_star$
     y = F(action_space)
     estimator_true = KernelizedFeatures(embedding, m=torch.tensor(size**2), s = 1e-3, lam=1., d=2)
-    estimator_true.add_points((torch.from_numpy(action_space),y))
+    estimator_true.add_points((action_space,y))
     estimator_true.fit()
-    F = lambda x: estimator_true.mean(torch.from_numpy(x))
+    F = lambda x: estimator_true.mean(x)
     # define the feedback class
 
     sigma_fn_states = lambda s_coord,a_coord: (base_sigma+switch_weight*np.sqrt((s_coord[0]-a_coord[0])**2 +  (s_coord[1]-a_coord[1])**2))*sigma
 
     # define the embedded space
-    env.action_space = embedding.embed(torch.tensor(action_space)).detach().numpy()
-    env.emissions = embedding.embed(torch.tensor(action_space)).detach().numpy()
+    env.action_space = embedding.embed(action_space).detach()
+    env.emissions = embedding.embed(action_space).detach()
 
     if args.worst == "No":
         feedback = BanditFeedback(env, design, estimator, F, sigma = sigma * (base_sigma + switch_weight*np.sqrt((size ** 2 + size ** 2))), sigma_fn=sigma_fn_states, wort_case=False)
@@ -184,7 +181,7 @@ if __name__ == "__main__":
         save_trajectory=args.savetrajectory,
         # return_visitations=True
     )
-    true_val = estimator_true.mean(torch.from_numpy(action_space))
+    true_val = estimator_true.mean(action_space)
     best_arm =torch.argmax(true_val)
     best_arms = [v for v in feedback.best_arm]
     regrets = [float(true_val[best_arm]-true_val[v]) for v in feedback.best_arm]

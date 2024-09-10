@@ -37,8 +37,6 @@ x, y, dts = load_first_round()
 phi = embed(x)[:,0,:]
 n = phi.size()[0]
 
-print (phi.size())
-
 if len(phi.size())>2:
     phi = phi[:,0,:]
 
@@ -49,10 +47,6 @@ Nystrom.fit_gp(phi, y, explained_variance = 1.)
 embed2 = lambda x: Nystrom.embed(x)
 phi2 = embed2(phi)
 
-
-print (phi2.size())
-print (phi2)
-# # normalize the features with sigma 
 # phi2 = phi2/sigma
 
 phi2 = phi/sigma
