@@ -1,23 +1,20 @@
 from abc import ABC
-import autograd.numpy as np
-import numpy as np
 from mdpexplore.env.continuous_env import ContinuousEnv
 import torch
-from scipy.linalg import norm
 
 class ContinuousMovementConstrainedBayesianOptimization(ContinuousEnv, ABC):
     def __init__(self, states_dim: int, 
                 actions_dim: int, 
-                theta_star: np.array, 
+                theta_star: torch.Tensor, 
                 sigma: float, 
                 discount_factor: float = 0.99, 
                 max_episode_length:int = 10, 
                 min_action:float = -0.1, 
                 max_action:float = 0.1,
-                init_state:np.array = None) -> None:
+                init_state:torch.Tensor = None) -> None:
         
         if init_state is None:
-            init_state = np.ones(states_dim).reshape(1, -1) * -0.5
+            init_state = torch.ones(states_dim).reshape(1, -1).double() * -0.5
 
         super().__init__(init_state=init_state)
 
@@ -40,11 +37,8 @@ class ContinuousMovementConstrainedBayesianOptimization(ContinuousEnv, ABC):
 
     def next(self, state, action):
         # check if state is numpy array or pytorch tensor
-        if isinstance(state, np.ndarray):
-            next_state = np.clip(state + action, -0.5, 0.5)
-        elif isinstance(state, torch.Tensor):
-            next_state = torch.clip(state + action, 0.5, 0.5)
-        
+        if isinstance(state, torch.Tensor):
+            next_state = torch.clip(state + action, -0.5, 0.5)        
         return next_state
 
     def step(self, action):
@@ -56,16 +50,16 @@ class ContinuousMovementConstrainedBayesianOptimization(ContinuousEnv, ABC):
         pass
 
     def is_valid_action(self, action, state) -> bool:
-        if np.any(action >= self.max_action):
+        if torch.any(action >= self.max_action):
             return False
         
-        elif np.any(action <= self.min_action):
+        elif torch.any(action <= self.min_action):
             return False
         
-        elif np.any(action + state >= 0.5):
+        elif torch.any(action + state >= 0.5):
             return False
 
-        elif np.any(action + state <= -0.5):
+        elif torch.any(action + state <= -0.5):
             return False
         
         else:

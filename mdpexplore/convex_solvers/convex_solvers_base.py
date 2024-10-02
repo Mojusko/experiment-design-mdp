@@ -14,7 +14,15 @@ from mdpexplore.solvers.additive_gradient import AdditiveGradient
 from mdpexplore.policies.policy_generator import PolicyGenerator
 
 class ConvexSolverBase(ABC):
-    def __init__(self, env : DiscreteEnv, objective : RewardFunctional, verbosity : int = 0, accuracy : float = None, initial_policy : bool = False, solver : DiscreteSolver = DP, summarization : str = None) -> None:
+    def __init__(self,
+                env : DiscreteEnv,
+                objective : RewardFunctional,
+                verbosity : int = 0,
+                accuracy : float = None,
+                initial_policy : bool = False,
+                solver : DiscreteSolver = DP,
+                summarization : str = None) -> None:
+        
         self.env = env
         self.objective = objective
         self.verbosity = verbosity
@@ -23,6 +31,7 @@ class ConvexSolverBase(ABC):
         self.solver = solver
         self.SummarizedPolicyType = None
         self.initialization_params = None
+        
         #TODO: this needs to be more exhaustive and will result in errors if the solver is not DP
         if self.solver in [DP, DDPG, AdditiveGradient]:
             self.stationary = False

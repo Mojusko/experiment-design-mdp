@@ -16,7 +16,7 @@ class StationaryPolicy(Policy):
         state_policy = self.p[state]
         actions = self.env.available_actions(state)
         reduced_state_policy = state_policy[actions]/np.sum(state_policy[actions])
-        return self.rng.choice(actions, p=reduced_state_policy)
+        return actions[torch.multinomial(reduced_state_policy, 1)]
 
 class StationaryPolicyContinuous(Policy):
     def __init__(self, env: ContinuousEnv, p: torch.nn.Module) -> None:

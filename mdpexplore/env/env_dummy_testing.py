@@ -1,4 +1,3 @@
-import numpy as np
 import torch
 from mdpexplore.solvers.dp import DP
 from mdpexplore.env.discrete_env import DiscreteEnv
@@ -13,7 +12,7 @@ class DummyTestEnv(DiscreteEnv):
         self.max_episode_length = max_episode_length
         self.terminal_state = None
         self.constrained = constrained
-        self.emissions = np.arange(self.actions_num)
+        self.emissions = torch.arange(self.actions_num)
 
     def available_actions(self, state):
         return [a for a in range(self.actions_num) if self.is_valid_action(a, state)]
@@ -28,8 +27,8 @@ class DummyTestEnv(DiscreteEnv):
         self.visitations[action] += 1
         return action
 
-    def get_transition_matrix(self) -> np.ndarray:
-        tm = np.zeros((self.states_num, self.actions_num, self.states_num))
+    def get_transition_matrix(self) -> torch.Tensor:
+        tm = torch.zeros((self.states_num, self.actions_num, self.states_num), dtype = torch.float64)
         for s in range(self.states_num):
             for a in range(self.states_num):
                 if self.is_valid_action(a, s):
@@ -77,9 +76,7 @@ class DummyTestEnvContinuous(ContinuousEnv):
 
     def next(self, state, action):
         # check if state is numpy array or pytorch tensor
-        if isinstance(state, np.ndarray):
-            next_state = np.clip(state + action, -0.5, 0.5)
-        elif isinstance(state, torch.Tensor):
+        if isinstance(state, torch.Tensor):
             next_state = torch.clip(state + action, 0.5, 0.5)
         
         return next_state
@@ -91,8 +88,8 @@ class DummyTestEnvContinuous(ContinuousEnv):
         self.visitations[action] += 1
         return action
 
-    def get_transition_matrix(self) -> np.ndarray:
-        tm = np.zeros((self.states_num, self.actions_num, self.states_num))
+    def get_transition_matrix(self) -> torch.Tensor:
+        tm = torch.zeros((self.states_num, self.actions_num, self.states_num), dtype= torch.float64)
         for s in range(self.states_num):
             for a in range(self.states_num):
                 if self.is_valid_action(a, s):

@@ -51,8 +51,8 @@ class PoissonFeedback(SimpleFeedback):
         
         self.estimator.fit_gp()
         if self.opt:
-            self.objective.Sigma = np.sqrt(np.array([float(self.estimator.ucb(s, dt = dt)) for s in self.basic_sets]).reshape(-1))
+            self.objective.Sigma = torch.sqrt(torch.Tensor([float(self.estimator.ucb(s, dt = dt)) for s in self.basic_sets]).reshape(-1))
         else:
-            self.objective.Sigma = np.sqrt(np.array([float(self.problem.estimator.mean_set(s, dt = dt)) for s in self.basic_sets]).reshape(-1))
+            self.objective.Sigma = torch.sqrt(torch.Tensor([float(self.problem.estimator.mean_set(s, dt = dt)) for s in self.basic_sets]).reshape(-1))
 
         

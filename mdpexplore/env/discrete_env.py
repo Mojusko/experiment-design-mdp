@@ -1,4 +1,4 @@
-import autograd.numpy as np
+import torch 
 from abc import ABC, abstractmethod
 
 class Environment(ABC):
@@ -49,7 +49,7 @@ class DiscreteEnv(Environment):
 
 
     @abstractmethod
-    def get_transition_matrix(self) -> np.ndarray:
+    def get_transition_matrix(self) -> torch.Tensor:
         '''
         Returns the transition matrix P(s'|s,a)
         '''

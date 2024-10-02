@@ -1,7 +1,9 @@
 from mdpexplore.env.discrete_env import DiscreteEnv
 from typing import List
-import numpy as np
+import torch 
 import copy 
+import numpy as np 
+from typing import List, Union, Callable, Tuple, Any
 
 class StochasticGridParticles(DiscreteEnv):
     def __init__(
@@ -17,12 +19,12 @@ class StochasticGridParticles(DiscreteEnv):
         self.actions = {0: 1, 1: -1, 2: 0, 3: None} # left, right, stay
         self.t = 0
         self.no_particles = no_particles 
-        self.width = 100
+        self.width = width
         self.max_episode_length = max_episode_length
         self.init_state = init_state
 
 
-    def next(self, state: np.array, action: int) -> int:
+    def next(self, state: torch.Tensor, action: int) -> int:
         act = self.actions[action]
         s = state
         next_s = copy.deepcopy(state)
@@ -55,7 +57,7 @@ class StochasticGridParticles(DiscreteEnv):
     def reset(self) -> None:
         """Resets the environment to its initial state
         """        
-        self.visitations = np.zeros(self.states_num)
+        self.visitations = torch.zeros(self.states_num, dtype = torch.float64)
         self.visitations[self.init_state] = 1
         super().reset()
 

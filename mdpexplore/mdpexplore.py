@@ -1,5 +1,6 @@
 from typing import Callable, Type, Union, Tuple
 from datetime import datetime
+import torch 
 import os
 import copy
 import autograd.numpy as np
@@ -100,37 +101,11 @@ class MdpExplore():
         """
         emissions = []
         for i in range(self.env.emiss_num):
-            emissions.append(self.env.emissions[i])
-        emissions = np.array(emissions)
-        self.emissions = emissions
+            emissions.append(self.env.emissions[i].view(1,-1))
+            
+        self.emissions = torch.vstack(emissions)
 
-    # def _density_oracle_single(self, policy: Policy) -> np.ndarray:
-    #     """Computes state distribution induced by the given policy over a specified horizon
-
-    #     Args:
-    #         policy (Policy): inducing policy
-
-    #     Returns:
-    #         np.ndarray: S x A (stationary) or H x S x A (non-stationary) array with density for each state
-    #     """
-    #     return self.density_estimator.density_oracle_single(policy)
-    
-    # def _density_oracle(self) -> np.ndarray:
-    #     """Computes the combined state (or state-action) distribution induced by the saved policies
-
-    #     Args:
-    #         actions (bool, optional): if True, computes state-action distribution instead of state distribution. Defaults to False.
-
-    #     Returns:
-    #         np.ndarray: 1-D array with density for each state
-
-    #     Raises:
-    #         TypeError: if the saved policies are non-stationary
-    #     """
-    #     return self.density_estimator.density_oracle(self.policies, self.weights, self.densities, self.convex_solver.stationary)
-
-
-
+   
     def evaluate(
             self,
             episodes: int = 100,
@@ -236,6 +211,8 @@ class MdpExplore():
             objective_values = run_objective_values
 
         else:
+            if self.verbosity > 0:
+                print ("Optimizing starting with budget: ", episodes)
             self._reset()
             self.episodes = episodes
             self.optimize_general_policy()

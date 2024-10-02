@@ -1,5 +1,4 @@
 from typing import List
-import numpy as np
 import torch
 from mdpexplore.env.grid_world_base import DeterministicGridWorldBase
 from mdpexplore.env.stochastic_grid_world_base import StochasticGridWorldBase

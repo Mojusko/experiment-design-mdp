@@ -1,6 +1,6 @@
-import autograd.numpy as np
 from abc import ABC, abstractmethod
 from mdpexplore.env.discrete_env import Environment
+import torch 
 
 class ContinuousEnv(Environment):
     def __init__(self, init_state) -> None:
@@ -8,7 +8,7 @@ class ContinuousEnv(Environment):
         self.type = 'continuous'
         self.init_state = init_state
         self.state = init_state
-        self.states_dim = init_state.shape[1]
+        self.states_dim = init_state.size()[1]
         self.actions_dim = None
         self.min_action = None
         self.max_action = None
@@ -39,7 +39,7 @@ class ContinuousEnv(Environment):
 
 
     @abstractmethod
-    def get_transition_matrix(self) -> np.ndarray:
+    def get_transition_matrix(self) -> torch.Tensor:
         '''
         Returns the transition matrix P(s'|s,a)
         '''

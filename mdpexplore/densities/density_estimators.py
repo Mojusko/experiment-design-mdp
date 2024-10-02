@@ -1,5 +1,6 @@
 from abc import ABC, abstractmethod
 import numpy as np
+import torch 
 
 from mdpexplore.policies.policy_base import Policy
 from mdpexplore.policies.base_policies.non_stationary_policy import NonStationaryPolicy, NonStationaryPolicyContinuous
@@ -41,45 +42,45 @@ class TabularDensity(DensityEstimator):
 
             if type(policy) is StationaryPolicy:
 
-                v0 = np.zeros((self.env.states_num, self.env.actions_num))
+                v0 = torch.zeros(size = (self.env.states_num, self.env.actions_num), dtype = torch.float64)
                 # initialize with the initial state and corresponding actions
                 for act in self.env.available_actions(self.env.init_state):
                     v0[self.env.init_state, act] = policy.p[self.env.init_state, act]
 
-                v = np.array(v0)
-                temp = np.array(v0).sum(axis = -1)
+                v = torch.Tensor(v0, dtype = torch.float64)
+                temp = torch.Tensor(v0).sum(dim = -1)
+                
+                p_pi = (self.env.get_transition_matrix() * torch.unsqueeze(policy.ps[i], dim=2)).sum(dim = 1)
 
-                p_pi = (self.env.get_transition_matrix() *
-                        np.expand_dims(policy.p, axis=2)).sum(axis=1)
-                assert (np.allclose(p_pi.sum(axis=1), 1, rtol=1e-05, atol=1e-05))
+                assert (torch.allclose(p_pi.sum(dim=1), 1, rtol=1e-05, atol=1e-05))
 
                 for _ in range(self.env.max_episode_length):
                     temp = p_pi.T @ temp
-                    v += np.expand_dims(temp, axis=-1) * policy.p
+                    expanded_temp = torch.unsqueeze(temp, dim=-1)
+                    v += expanded_temp * policy.p
                 
                 v = v / v.sum()
 
             elif type(policy) is NonStationaryPolicy:
 
-                v0 = np.zeros((self.env.max_episode_length - self.env.h, self.env.states_num, self.env.actions_num))
+                v0 = torch.zeros(size = (self.env.max_episode_length - self.env.h, self.env.states_num, self.env.actions_num), dtype = torch.float64)
                 # initialize with the initial state and corresponding actions
                 for act in self.env.available_actions(self.env.state):
                     v0[0, self.env.state, act] = policy.ps[0, self.env.state, act]
 
-                v = np.array(v0)
+                v = torch.Tensor(v0)
                 # get marginal state distribution for initial temp
-                temp = np.array(v0)[0].sum(axis = -1)
+                temp = torch.Tensor(v0)[0].sum(dim = -1)
                 
                 for i in range(self.env.max_episode_length - self.env.h - 1):
-                    p_pi = (self.env.get_transition_matrix() *
-                            np.expand_dims(policy.ps[i], axis=2)).sum(axis=1)
+                    p_pi = (self.env.get_transition_matrix() * torch.unsqueeze(policy.ps[i], dim=2)).sum(dim = 1)
                     # assert (np.allclose(p_pi.sum(axis=1), 1, rtol=1e-05, atol=1e-05))
                     temp = p_pi.T @ temp
-                    v[i + 1] += np.expand_dims(temp, axis=-1) * policy.ps[i + 1]
-
+                    expanded_temp = torch.unsqueeze(temp, dim=-1)
+                    v[i + 1] += expanded_temp * policy.ps[i + 1]
             return v
 
-    def density_oracle(self, policies, weights, densities, stationary = False) -> np.ndarray:
+    def density_oracle(self, policies, weights, densities, stationary = False) -> torch.Tensor:
         """Computes the combined state (or state-action) distribution induced by the saved policies
 
         Args:
@@ -94,10 +95,11 @@ class TabularDensity(DensityEstimator):
 
         # if the first policy is non-stationary, we define a total density with time index
         if stationary:
-            total_density = np.zeros((self.env.states_num, self.env.actions_num))
+            total_density = torch.zeros(size = (self.env.states_num, self.env.actions_num))
         else:
-            total_density = np.zeros((self.env.max_episode_length - self.env.h, self.env.states_num, self.env.actions_num))
+            total_density = torch.zeros(size = (self.env.max_episode_length - self.env.h, self.env.states_num, self.env.actions_num))
 
+        # TODO: this can be sped up 
         for i, policy in enumerate(policies):
             if i >= len(densities):
                 d = self.density_oracle_single(policy)
@@ -132,7 +134,7 @@ class DeltaDensityEstimator(DensityEstimator):
 
             # record the current time at the policy
             policy_time = policy.time
-            for h in range(self.env.max_episode_length - self.env.h):
+            for _ in range(self.env.max_episode_length - self.env.h):
                 action = policy.next_action(state)
                 densities.append(SimpleDeltaDensity(self.env, state, action))
                 state = self.env.next(state, action)
@@ -147,6 +149,7 @@ class DeltaDensityEstimator(DensityEstimator):
         return density
 
     def density_oracle(self, policies, weights, densities, stationary = False):
+        
         if stationary:
             total_density = SimpleDeltaDensity(self.env)
         else:

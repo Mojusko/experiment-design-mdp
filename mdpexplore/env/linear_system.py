@@ -20,13 +20,13 @@ class LinearSystem(ContinuousEnv):
         # Work only with zero state so far
         assert (init_state is None)
         if init_state is None:
-            self.init_state = np.zeros(dim)
+            self.init_state = torch.zeros(dim)
 
 
         if A is None:
-            self.A = np.eye(dim) * 0.99
+            self.A = torch.eye(dim) * 0.99
         if B is None:
-            self.B = np.eye(dim) * 1.0
+            self.B = torch.eye(dim) * 1.0
         self.max_episode_length = max_episode_length
 
         self.emb = emb
@@ -37,27 +37,27 @@ class LinearSystem(ContinuousEnv):
         self.state_dim = dim
         self.dim = self.emit(self.init_state).shape[0]
 
-    def emit(self, state: np.array):
+    def emit(self, state: torch.Tensor):
         return self.emb.embed(state.reshape(1,-1)).reshape(-1)
 
     def reset(self) -> None:
         self.state = self.init_state
 
-    def convert(self, state: np.array):
+    def convert(self, state: torch.Tensor):
         return state
 
-    def next(self, state: np.array, action: np.array):
+    def next(self, state: torch.Tensor, action: torch.Tensor):
         new_state = self.A @ state + self.B @ action + np.random.randn(self.state_dim) * self.sigma
         return new_state
 
-    def step(self, action: np.array ):
+    def step(self, action: torch.Tensor):
         self.state = self.next(self.state, action)
         self.visitations.append(self.state)
         return self.state
 
     def density_oracle(self, policies: List[LinearPolicy], weights : List[float]):
         mu = np.zeros(self.state_dim)
-        Sigma = np.zeros(shape = (self.state_dim,self.state_dim))
+        Sigma = torch.zeros(shape = (self.state_dim,self.state_dim))
         for weight,policy in zip(weights,policies):
             mu_single, Sigma_single = self.density_oracle_single(policy)
             mu += mu_single*weight
@@ -67,18 +67,18 @@ class LinearSystem(ContinuousEnv):
     def density_oracle_single(self, policy: LinearPolicy):
         mu = self.init_state*0
         K = policy.K
-        Sigma = np.zeros(shape = (self.state_dim, self.state_dim))
-        I = np.eye(self.state_dim)
+        Sigma = torch.zeros(shape = (self.state_dim, self.state_dim))
+        I = torch.eye(self.state_dim)
 
         for i in range(self.max_episode_length):
             # this impelments an array
             temps = []
-            temp = np.eye(self.state_dim)
+            temp = torch.eye(self.state_dim)
             for k in range(i):
                 temp = (self.A + self.B @ K) @ temp
                 temps.append(temp)
 
-            arr = [temp @ I @ temp.T for temp in temps] + [np.eye(self.state_dim)]
+            arr = [temp @ I @ temp.T for temp in temps] + [torch.eye(self.state_dim)]
 
             Sigma_temp = self.sigma**2 * sum(arr)
 
@@ -99,7 +99,7 @@ if __name__ == "__main__":
 
     emb = Embedding()
     env = LinearSystem(max_episode_length = 3, emb = emb)
-    K = np.eye(env.state_dim)
+    K = torch.eye(env.state_dim)
     pi = LinearPolicy(env,K)
 
     d = env.density_oracle_single(pi)

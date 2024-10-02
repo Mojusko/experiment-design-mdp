@@ -1,7 +1,7 @@
 from mdpexplore.env.grid_world_base import DeterministicGridWorldBase
 import numpy as np 
 from abc import ABC, abstractmethod
-
+import torch 
 
 class StochasticGridWorldBase(DeterministicGridWorldBase, ABC):
 
@@ -17,32 +17,18 @@ class StochasticGridWorldBase(DeterministicGridWorldBase, ABC):
 		super().__init__(init_state, width, height, max_episode_length, discount_factor, max_sectors_num, seed, teleport, constrained, terminal_state)
 	
 		
-	def get_transition_matrix(self) -> np.ndarray:
+	def get_transition_matrix(self) -> torch.Tensor:
 		if self.transition_matrix is not None:
 			return self.transition_matrix
 		
-		P = np.zeros((self.states_num, self.actions_num, self.states_num))
+		P = torch.zeros(size= (self.states_num, self.actions_num, self.states_num), dtype = torch.float64)
 		
 		for s in range(self.states_num):
-			
-			# if s == self.teleport:
-			# 	for a in range(self.actions_num):
-			# 		if self.is_valid_action(a, s):
-			# 			P[s, a, self.init_state] = 1.0
 
-			#else:
-			#print ('======')
-			#print ('state:',self.convert_to_grid(s))
 			for a in range(self.actions_num):
 				if self.is_valid_action(a, s):
-					#print('-----')
-
-					#print ('action:',self.actions[a])
 					probs = self.p_next(s, a)
-					#print(probs)
-
 					for s_state in probs.keys():
-
 						P[s, a, s_state] = probs[s_state]
 
 		self.transition_matrix = P

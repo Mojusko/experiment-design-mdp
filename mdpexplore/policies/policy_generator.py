@@ -1,4 +1,4 @@
-import autograd.numpy as np
+import torch 
 
 from mdpexplore.env.discrete_env import DiscreteEnv
 from mdpexplore.env.linear_system import ContinuousEnv
@@ -17,7 +17,7 @@ class PolicyGenerator():
         Returns a uniform policy within the environment
         '''
         if stationary:
-            p = np.ones((self.env.states_num, self.env.actions_num))
+            p = torch.ones(size = (self.env.states_num, self.env.actions_num), dtype = torch.float64)
             for s in range(self.env.states_num):
                 for a in range(self.env.actions_num):
                     if not self.env.is_valid_action(a, s):
@@ -26,16 +26,16 @@ class PolicyGenerator():
             return StationaryPolicy(self.env, p)
         
         else:
-            p = np.ones((self.env.max_episode_length, self.env.states_num, self.env.actions_num))
+            p = torch.ones((self.env.max_episode_length, self.env.states_num, self.env.actions_num),dtype=torch.float64)
             for h in range(self.env.max_episode_length):
 
-                p_h = np.ones((self.env.states_num, self.env.actions_num))
+                p_h = torch.ones((self.env.states_num, self.env.actions_num),dtype=torch.float64)
                 for s in range(self.env.states_num):
                     for a in range(self.env.actions_num):
                         if not self.env.is_valid_action(a, s):
                             p_h[s, a] = 0
 
-                p_h /= np.sum(p_h, axis=1, keepdims=True)
+                p_h /= torch.sum(p_h, dim=1, keepdims=True)
                 p[h] = p_h
 
             return NonStationaryPolicy(self.env, p)
@@ -50,5 +50,5 @@ class ContinuousPolicyGenerator():
         Returns a uniform policy within the environment
         '''
         d = self.env.state_dim
-        K = np.random.randn(d,d)
+        K = torch.randn(d,d, dtype=torch.float64)
         return LinearPolicy(self.env, K)

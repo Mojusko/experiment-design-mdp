@@ -1,5 +1,5 @@
+import torch 
 from typing import List, Tuple, Union, Any
-import autograd.numpy as np
 from numpy.random import default_rng
 from abc import ABC, abstractmethod
 
@@ -61,7 +61,7 @@ class DeterministicGridWorldBase(DiscreteEnv, ABC):
         self._generate_emissions()
 
         # tracking to plot later
-        self.visitations = np.zeros(self.states_num)
+        self.visitations = torch.zeros(self.states_num, dtype = torch.float64)
         self.visitations[self.init_state] = 1
 
         # to be initialized when get_transition_matrix is first called
@@ -74,18 +74,23 @@ class DeterministicGridWorldBase(DiscreteEnv, ABC):
     def get_dim(self):
         return self.dim
 
+    def get_emiss_dim(self):
+        return self.emiss_num
+
     def get_states_num(self):
         return self.states_num
 
     def _generate_emissions(self):
-        vectors = np.eye(self.max_sectors_num)
+        vectors = torch.eye(self.max_sectors_num).double()
         sector_ids = self._generate_sector_ids(self.max_sectors_num)
 
         for i, ids in enumerate(sector_ids):
             for idx in ids:
                 self.emissions[idx] = vectors[i]
+        
         self.dim = self.max_sectors_num
         self.theta = self.rng.random(self.max_sectors_num)
+        self.emiss_num = len(self.emissions.values())
 
     def _generate_sector_ids(self, sectors_num: int) -> List[List[int]]:
         """Generates a list of sector ID allocations
@@ -112,8 +117,10 @@ class DeterministicGridWorldBase(DiscreteEnv, ABC):
                     choices = list(range(sectors_num)); choices.remove(sector)
                     sector = self.rng.choice(choices)
                 grid_coordinates = self.convert_to_grid(s)
+                
                 sector_width = self.rng.integers(2, 4)
                 sector_height = self.rng.integers(2, 4)
+
                 for i in range(sector_width):
                     for j in range(sector_height):
                         candidate = self.convert_from_grid((grid_coordinates[0] + i, grid_coordinates[1] + j))
@@ -191,7 +198,7 @@ class DeterministicGridWorldBase(DiscreteEnv, ABC):
         self.visitations[self.state] += 1
         return self.state
 
-    def get_transition_matrix(self) -> np.ndarray:
+    def get_transition_matrix(self) -> torch.Tensor:
         """Returns the transition matrix P(s'|s,a)
 
         Returns:
@@ -200,7 +207,7 @@ class DeterministicGridWorldBase(DiscreteEnv, ABC):
         if self.transition_matrix is not None:
             return self.transition_matrix
         
-        P = np.zeros((self.states_num, self.actions_num, self.states_num))
+        P = torch.zeros((self.states_num, self.actions_num, self.states_num), dtype = torch.float64)
         for s in range(self.states_num):
             
             if s == self.teleport:
@@ -243,6 +250,6 @@ class DeterministicGridWorldBase(DiscreteEnv, ABC):
     def reset(self) -> None:
         """Resets the environment to its initial state
         """        
-        self.visitations = np.zeros(self.states_num)
+        self.visitations = torch.zeros(self.states_num, dtype=torch.float64)
         self.visitations[self.init_state] = 1
         super().reset()

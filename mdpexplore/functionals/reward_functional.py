@@ -1,5 +1,3 @@
-import autograd.numpy as np
-import autograd.numpy.linalg as la
 import torch
 from typing import List, Union
 from abc import ABC, abstractmethod
@@ -15,8 +13,8 @@ class RewardFunctional(ABC):
 
     @abstractmethod
     def eval(self,
-             emissions: np.ndarray,
-             distribution: np.ndarray,
+             emissions: torch.Tensor,
+             distribution: torch.Tensor,
              episodes: int):
         pass
 
@@ -24,14 +22,14 @@ class RewardFunctional(ABC):
         return self.type
     
     def build_density_from_trajectories(self,
-                                        trajectories: List[np.ndarray]):
+                                        trajectories: List[torch.Tensor]):
 
         t = len(trajectories)
         H = self.env.max_episode_length
         S = self.env.states_num
         A = self.env.actions_num
 
-        d = np.zeros((H, S, A))
+        d = torch.zeros(size = (H, S, A), dtype = torch.float64)
 
         for tau in trajectories:
             # add visitations to density
@@ -53,8 +51,8 @@ class ContinuousRewardFunctional(ABC):
 
     @abstractmethod
     def eval(self,
-             emissions: np.ndarray,
-             distribution: np.ndarray,
+             emissions: torch.Tensor,
+             distribution: torch.Tensor,
              episodes: int):
         pass
 
@@ -62,7 +60,7 @@ class ContinuousRewardFunctional(ABC):
         return self.type
     
     def build_density_from_trajectories(self,
-                                        trajectories: List[np.ndarray]):
+                                        trajectories: List[torch.Tensor]):
 
         densities = [SimpleDeltaDensity(self.env) for _ in range(self.env.max_episode_length)]
 

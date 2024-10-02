@@ -1,5 +1,5 @@
 from typing import Callable, Type, Union, Tuple
-import numpy as np
+import torch 
 import warnings
 from mdpexplore.env.discrete_env import DiscreteEnv
 from mdpexplore.policies.policy_base import Policy
@@ -12,8 +12,12 @@ from mdpexplore.solvers.dp import DP
 from mdpexplore.densities.density_estimators import TabularDensity, DeltaDensityEstimator
 from mdpexplore.densities.continous_densities import ContinuousDensity, SimpleDeltaDensity, NonStationaryDeltaDensity
 from scipy.optimize import minimize_scalar
-from autograd import grad, hessian
-import numpy.linalg as la
+
+#from autograd import grad, hessian
+from torch.autograd import grad 
+
+import torch.linalg as la
+
 # cvxpy imports
 import cvxpy as cp 
 import mosek
@@ -52,7 +56,11 @@ class FrankWolfe(ConvexSolverBase):
         else:
             raise NotImplementedError
     
-    def _reward_fn_gradient(self, distribution: Union[np.ndarray, ContinuousDensity], emissions, visitations, episodes) -> Union[np.ndarray, Callable]:
+    def _reward_fn_gradient(self,
+                            distribution: Union[torch.Tensor, ContinuousDensity],
+                            emissions: torch.Tensor,
+                            visitations,
+                            episodes: int)-> Union[torch.Tensor, Callable]:
         """Computes the reward functional differentiated wrt to the state distribution
 
         Args:
@@ -62,7 +70,7 @@ class FrankWolfe(ConvexSolverBase):
             np.ndarray: gradient of the functional wrt to the state distribution - i.e. the reward function
         """
         grad_fn = getattr(self.objective, "gradient", None)
-        
+
         if callable(grad_fn) and (self.objective.get_type() != "adaptive"):
             return grad_fn(emissions, distribution)
         
@@ -72,13 +80,16 @@ class FrankWolfe(ConvexSolverBase):
                 return grad_fn(emissions, distribution, visitations, episodes)
 
             if self.objective.get_type() == "adaptive":
-                grad_fn = grad(lambda d: self.objective.eval(emissions, d, visitations, episodes))
+                grad_fn = lambda d: grad(outputs=self.objective.eval(
+                    emissions, d,visitations, episodes),
+                      inputs=d)[0]
             else:
-                grad_fn = grad(lambda d: self.objective.eval(emissions, d, episodes))
-        
+                grad_fn = lambda d: grad(outputs=self.objective.eval(
+                    emissions, d, episodes),
+                      inputs=d)[0]
+                
             return grad_fn(distribution)
 
-        #TODO: if we want a terminal state, we could modify the reward function here to include it by adding h dependence
         elif self.env.type == 'continuous':
 
             # run objective pre-computations
@@ -97,7 +108,7 @@ class FrankWolfe(ConvexSolverBase):
             
             return grad_fn
 
-    def _planning_oracle(self, reward: Union[np.ndarray, Callable]) -> Policy:
+    def _planning_oracle(self, reward: Union[torch.Tensor, Callable]) -> Policy:
         """Computes the optimal policy given a reward function and internal environment
 
         Args:
@@ -133,13 +144,13 @@ class FrankWolfe(ConvexSolverBase):
             counter = 0
 
         gap = -10e10 if self.accuracy is None else self.accuracy
-        empirical_gap = 1e10
+        empirical_gap = torch.Tensor([1e10]).double()
 
         while counter < self.num_components and empirical_gap > gap:
 
             # calculate the current density
             density = self.density_estimator.density_oracle(self.policies, self.weights, self.densities, self.stationary)
-
+            density.requires_grad_(True)
             # gradient of the reward
             reward = self._reward_fn_gradient(density, emissions, visitations, episodes)
             
@@ -164,12 +175,12 @@ class FrankWolfe(ConvexSolverBase):
                             density * (1 - h) + h * new_density,
                             visitations,
                             episodes
-                        )
+                        ).detach().numpy()
                     return -self.objective.eval(
                         emissions,
                         density * (1 - h) + h * new_density,
                         episodes
-                    )
+                    ).detach().numpy()
 
                 res = minimize_scalar(
                     fn,
@@ -180,6 +191,7 @@ class FrankWolfe(ConvexSolverBase):
             elif self.step is not None and isinstance(self.step, float):
                 # fixed step size
                 step_size = self.step
+            
             else:
                 # greedy simulation
                 step_size = 1.0 / (1 + counter)
@@ -190,7 +202,7 @@ class FrankWolfe(ConvexSolverBase):
                 objective = self.objective.eval(emissions, density, episodes)
 
             if self.env.type == 'discrete':
-                empirical_gap = np.minimum((reward * (new_density - density)).sum(), empirical_gap)
+                empirical_gap = torch.minimum((reward * (new_density - density)).sum(), empirical_gap)
 
                 if self.verbosity > 0:
                     print(f'component: {counter}, gap: {empirical_gap}, objective: {objective}, stepsize: {step_size}, gradient:{la.norm(reward)}, hess_max:{hess_max}, hess_min:{hess_min}')

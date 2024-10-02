@@ -1,6 +1,7 @@
 from mdpexplore.env.grid_worlds import DeterministicGridWorldBase
-import numpy as np
-from stpy.helpers.helper import interval
+from stpy.helpers.helper import interval_torch
+import torch 
+
 class GlobalTransGridWorld(DeterministicGridWorldBase):
 
     def __init__(self, size, max_episode_length):
@@ -9,6 +10,7 @@ class GlobalTransGridWorld(DeterministicGridWorldBase):
         self.actions = dict([(j,j) for j in range(no_states)])
         self.m = 100
         self.dim = self.m
+        
 
         super().__init__(
             init_state=0,
@@ -22,16 +24,21 @@ class GlobalTransGridWorld(DeterministicGridWorldBase):
             constrained=False,
             terminal_state=None
         )
-
-        self.action_space_pre_embedding = interval(size, 2, L_infinity_ball= 0.5)
+        self.emiss_num = self.states_num
+        self.action_space_pre_embedding = interval_torch(size, 2, L_infinity_ball= 0.5)
         self.action_space = self._generate_emissions()
+        
 
     def _generate_emissions(self):
-        vectors = np.eye(self.m)
+        vectors = torch.eye(self.m).double()
+    
         for i in range(self.states_num):
             self.emissions[i] = vectors[i % self.m]
-        self.theta = self.rng.random(self.max_sectors_num)
+
+        self.theta = torch.randn(self.max_sectors_num)
+        
         return self.emissions
+    
     def next(self, state: int, action: int) -> int:
         act = self.actions[action]
         return act

@@ -42,6 +42,7 @@ class TimeChain(DiscreteEnv, ABC):
         self.max_events = max_events
         self.min_event_distance = min_event_distance
         self.states_num = self.time_period *  self.max_events * (self.min_event_distance+1)
+        self.emiss_num = self.states_num
 
         self.terminal_state = self.convert_from_grid((511,max_events,min_event_distance))
         self.init_state = self.convert_from_grid((0,0,min_event_distance))
@@ -57,8 +58,8 @@ class TimeChain(DiscreteEnv, ABC):
         self._generate_emissions()
 
         # tracking to plot later
-        self.visitations = np.zeros(self.states_num)
-        self.visitations[self.init_state] = 1
+        self.visitations = torch.zeros(size = (1, self.states_num, 1), dtype = torch.float64)
+        self.visitations[0, self.init_state,0] = 1
 
         # to be initialized when get_transition_matrix is first called
         self.transition_matrix = None
@@ -76,10 +77,10 @@ class TimeChain(DiscreteEnv, ABC):
             time, count ,distance = self.convert_to_grid(i)
             if distance == 0:
                 t = torch.Tensor([self.dt*time]).view(1,1).double()
-                self.emissions[i] = self.embed(t).view(-1).numpy()
+                self.emissions[i] = self.embed(t).view(-1)
             else:
-                self.emissions[i] = self.embed(t).view(-1).numpy()*0
-        self.dim = self.emissions[0].shape[0]
+                self.emissions[i] = self.embed(t).view(-1)*0
+        self.dim = self.emissions[0].size()[0]
 
     def convert(self, state: int):
         return self.convert_to_grid(state)
@@ -152,7 +153,7 @@ class TimeChain(DiscreteEnv, ABC):
         self.visitations[self.state] += 1
         return self.state
 
-    def get_transition_matrix(self) -> np.ndarray:
+    def get_transition_matrix(self) -> torch.Tensor:
         """Returns the transition matrix P(s'|s,a)
 
         Returns:
@@ -161,15 +162,12 @@ class TimeChain(DiscreteEnv, ABC):
         if self.transition_matrix is not None:
             return self.transition_matrix
 
-        P = np.zeros((self.states_num, self.actions_num, self.states_num))
+        P = torch.zeros(size = (self.states_num, self.actions_num, self.states_num), dtype = torch.float64)
         for s in range(self.states_num):
-            #print (self.convert_to_grid(s))
             for a in range(self.actions_num):
                 if self.is_valid_action(a, s):
                     s_next = self.next(s, a)
-                    #print (a, self.convert_to_grid(s_next))
                     P[s, a, s_next] = 1.0
-            #print('------')
         self.transition_matrix = P
         return P
 
@@ -199,6 +197,6 @@ class TimeChain(DiscreteEnv, ABC):
     def reset(self) -> None:
         """Resets the environment to its initial state
         """
-        self.visitations = np.zeros(self.states_num)
+        self.visitations = torch.zeros(self.states_num, dtype=torch.float64)
         self.visitations[self.init_state] = 1
         super().reset()
