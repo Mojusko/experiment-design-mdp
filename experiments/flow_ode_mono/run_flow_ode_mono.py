@@ -6,12 +6,12 @@ import torch
 from stpy.continuous_processes.kernelized_features import KernelizedFeatures
 import argparse
 
-from mdpexplore.solvers.dp import DP
-from mdpexplore.convex_solvers.frank_wolfe import FrankWolfe
-from mdpexplore.mdpexplore import MdpExplore
-from mdpexplore.functionals.bandit_functionals import DesignBestArmLinearBanditEIDummy, DesignBestArmLinearBanditNoDenominator, GreedyEIDummy
-from mdpexplore.policies.summary_policies.density_policy import DensityPolicy, MarginalDensityPolicy
-from mdpexplore.feedback.bandit_feedback import BanditFeedback
+from doexpy.solvers.dp import DP
+from doexpy.convex_solvers.frank_wolfe import FrankWolfe
+from doexpy.mdpexplore import MdpExplore
+from doexpy.functionals.bandit_functionals import DesignBestArmLinearBanditEIDummy, DesignBestArmLinearBanditNoDenominator, GreedyEIDummy
+from doexpy.policies.summary_policies.density_policy import DensityPolicy, MarginalDensityPolicy
+from doexpy.feedback.bandit_feedback import BanditFeedback
 
 import matplotlib.pyplot as plt
 

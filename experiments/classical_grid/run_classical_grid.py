@@ -3,19 +3,19 @@ import numpy as np
 import pandas as pd
 import matplotlib.pyplot as plt
 import torch
-from mdpexplore.solvers.lp import LP
+from doexpy.solvers.lp import LP
 from sklearn.cluster import KMeans
 from scipy.linalg import null_space, orth
-from mdpexplore.env.time_chain import TimeChain
-from mdpexplore.policies.summary_policies.density_policy import DensityPolicy
-from mdpexplore.policies.summary_policies.mixture_policy import MixturePolicy
-from mdpexplore.policies.summary_policies.average_policy import AveragePolicy
-from mdpexplore.policies.summary_policies.tracking_policy import TrackingPolicy
+from doexpy.env.time_chain import TimeChain
+from doexpy.policies.summary_policies.density_policy import DensityPolicy
+from doexpy.policies.summary_policies.mixture_policy import MixturePolicy
+from doexpy.policies.summary_policies.average_policy import AveragePolicy
+from doexpy.policies.summary_policies.tracking_policy import TrackingPolicy
 
-from mdpexplore.functionals.reward_functional import DesignBayesD, DesignBayesC, DesignC, DesignD
-from mdpexplore.policies.summary_policies.density_policy import DensityPolicy
-from mdpexplore.env.grid_worlds import DummyGridWorld
-from mdpexplore.mdpexplore import MdpExplore
+from doexpy.functionals.reward_functional import DesignBayesD, DesignBayesC, DesignC, DesignD
+from doexpy.policies.summary_policies.density_policy import DensityPolicy
+from doexpy.env.grid_worlds import DummyGridWorld
+from doexpy.mdpexplore import MdpExplore
 from scipy.integrate import odeint
 import argparse
 

@@ -7,13 +7,13 @@ from stpy.kernels import KernelFunction
 from stpy.embeddings.embedding import HermiteEmbedding, RFFEmbedding, LatticeEmbedding
 from stpy.embeddings.polynomial_embedding import CustomEmbedding
 from stpy.continuous_processes.kernelized_features import KernelizedFeatures
-from mdpexplore.solvers.lp import LP
+from doexpy.solvers.lp import LP
 from sklearn.cluster import KMeans
 from scipy.linalg import null_space, orth
-from mdpexplore.env.time_chain import TimeChain
-from mdpexplore.functionals.reward_functional import DesignBayesD, DesignBayesC, DesignC
-from mdpexplore.policies.summary_policies.density_policy import DensityPolicy
-from mdpexplore.mdpexplore import MdpExplore
+from doexpy.env.time_chain import TimeChain
+from doexpy.functionals.reward_functional import DesignBayesD, DesignBayesC, DesignC
+from doexpy.policies.summary_policies.density_policy import DensityPolicy
+from doexpy.mdpexplore import MdpExplore
 from scipy.integrate import odeint
 from stpy.helpers.helper import cartesian
 

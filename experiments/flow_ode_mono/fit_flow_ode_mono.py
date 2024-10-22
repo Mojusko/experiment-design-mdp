@@ -1,7 +1,7 @@
 import numpy as np
 from scipy.integrate import odeint
 import torch
-from mdpexplore.env.bandits import MovementConstrainedBayesianOptimization
+from doexpy.env.bandits import MovementConstrainedBayesianOptimization
 
 # define the environment class
 class ODEMonoEnv(MovementConstrainedBayesianOptimization):

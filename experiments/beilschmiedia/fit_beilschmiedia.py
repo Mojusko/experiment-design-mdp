@@ -10,14 +10,14 @@ from stpy.point_processes.poisson_rate_estimator import PoissonRateEstimator
 from stpy.kernels import KernelFunction
 from sensepy.benchmarks.spatial_problem import SpatialProblem
 from stpy.continuous_processes.gauss_procc import GaussianProcess
-from mdpexplore.solvers.lp import LP
+from doexpy.solvers.lp import LP
 from sklearn.cluster import KMeans
 
 from sensepy.benchmarks.bels.bels_problem import BeilschmiediaProblem
-from mdpexplore.env.quad_tree_env import QuadTreeGrid
-from mdpexplore.functionals.reward_functional import DesignBayesD
-from mdpexplore.policies.summary_policies.density_policy import DensityPolicy
-from mdpexplore.mdpexplore import MdpExplore
+from doexpy.env.quad_tree_env import QuadTreeGrid
+from doexpy.functionals.reward_functional import DesignBayesD
+from doexpy.policies.summary_policies.density_policy import DensityPolicy
+from doexpy.mdpexplore import MdpExplore
 
 
 if __name__ == "__main__":

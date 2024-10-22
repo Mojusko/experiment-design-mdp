@@ -1,6 +1,6 @@
 import numpy as np
-from mdpexplore.solvers.dp import DP
-from mdpexplore.env.env_dummy_testing import DummyTestEnv
+from doexpy.solvers.dp import DP
+from doexpy.env.env_dummy_testing import DummyTestEnv
 
 # initialize reward
 reward = np.zeros((10, 5, 5))

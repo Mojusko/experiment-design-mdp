@@ -12,19 +12,19 @@ import argparse
 from tqdm.contrib.concurrent import process_map
 import multiprocessing as mp
 
-from mdpexplore.solvers.ddpg import DDPG
-from mdpexplore.solvers.additive_gradient import AdditiveGradient
-from mdpexplore.solvers.dp import DP
-from mdpexplore.convex_solvers.frank_wolfe import FrankWolfe
-from mdpexplore.convex_solvers.cyipopt import InteriorPoint
-from mdpexplore.mdpexplore import MdpExplore
-from mdpexplore.env.bandits import Bandits, Bandits_Left_Right, ConstrainedMaxMovement
-from mdpexplore.env.continuous_bandits import ContinuousMovementConstrainedBayesianOptimization
-from mdpexplore.functionals.bandit_functionals import DesignRewardBandit, DesignBestArmLinearBandit, DesignBestArmLinearBanditNoDenominator, DesignBestArmLinearBanditNoDenominatorContinuous
-from mdpexplore.functionals.doe_adaptive_functionals import AdaptiveDesignD
-from mdpexplore.policies.summary_policies.density_policy import DensityPolicy, MarginalDensityPolicy
-from mdpexplore.policies.summary_policies.mixture_policy import MixturePolicy
-from mdpexplore.feedback.bandit_feedback import BanditFeedback, ContinuousBanditFeedback
+from doexpy.solvers.ddpg import DDPG
+from doexpy.solvers.additive_gradient import AdditiveGradient
+from doexpy.solvers.dp import DP
+from doexpy.convex_solvers.frank_wolfe import FrankWolfe
+from doexpy.convex_solvers.cyipopt import InteriorPoint
+from doexpy.mdpexplore import MdpExplore
+from doexpy.env.bandits import Bandits, Bandits_Left_Right, ConstrainedMaxMovement
+from doexpy.env.continuous_bandits import ContinuousMovementConstrainedBayesianOptimization
+from doexpy.functionals.bandit_functionals import DesignRewardBandit, DesignBestArmLinearBandit, DesignBestArmLinearBanditNoDenominator, DesignBestArmLinearBanditNoDenominatorContinuous
+from doexpy.functionals.doe_adaptive_functionals import AdaptiveDesignD
+from doexpy.policies.summary_policies.density_policy import DensityPolicy, MarginalDensityPolicy
+from doexpy.policies.summary_policies.mixture_policy import MixturePolicy
+from doexpy.feedback.bandit_feedback import BanditFeedback, ContinuousBanditFeedback
 
 import matplotlib
 import matplotlib.pyplot as plt

@@ -8,13 +8,13 @@ packages=['numpy',
           'scipy',
           ]
 
-setup(name='mdpexplore',
+setup(name='doexpy',
       version='0.0.2',
       description='',
       url='',
       author='Mojmir Mutny, Tadeusz Janik, Jose Pablo Folch',
       author_email='mojmir.mutny@inf.ethz.ch',
       license='MIT Licence',
-      packages=['mdpexplore'],
+      packages=['doexpy'],
 	    zip_safe=False,
       install_requires=packages)

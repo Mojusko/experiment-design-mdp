@@ -1,13 +1,13 @@
 import numpy as np
 import torch
 
-from mdpexplore.env.bandits import ConstrainedMaxMovement
-from mdpexplore.functionals.bandit_functionals import DesignBestArmLinearBanditNoDenominator
-from mdpexplore.feedback.bandit_feedback import BanditFeedback
-from mdpexplore.convex_solvers.frank_wolfe import FrankWolfe
-from mdpexplore.solvers.dp import DP
-from mdpexplore.policies.summary_policies.density_policy import DensityPolicy
-from mdpexplore.mdpexplore import MdpExplore
+from doexpy.env.bandits import ConstrainedMaxMovement
+from doexpy.functionals.bandit_functionals import DesignBestArmLinearBanditNoDenominator
+from doexpy.feedback.bandit_feedback import BanditFeedback
+from doexpy.convex_solvers.frank_wolfe import FrankWolfe
+from doexpy.solvers.dp import DP
+from doexpy.policies.summary_policies.density_policy import DensityPolicy
+from doexpy.mdpexplore import MdpExplore
 
 from stpy.continuous_processes.gauss_procc import GaussianProcess
 from stpy.kernels import KernelFunction

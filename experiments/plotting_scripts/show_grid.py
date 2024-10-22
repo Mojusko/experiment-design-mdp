@@ -6,7 +6,7 @@ from matplotlib.colors import ListedColormap
 from matplotlib.offsetbox import OffsetImage, AnnotationBbox
 from matplotlib.cbook import get_sample_data
 
-from mdpexplore.env.grid_worlds import DummyGridWorld
+from doexpy.env.grid_worlds import DummyGridWorld
 
 GRID_WIDTH, GRID_HEIGHT = 7, 6
 TRAJECTORY_FILES = [ f"test{i}.txt" for i in range(10) ]

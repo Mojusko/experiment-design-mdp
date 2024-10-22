@@ -1,18 +1,18 @@
 import numpy as np
 import torch
 
-from mdpexplore.env.bandits import ConstrainedMaxMovement
-from mdpexplore.env.continuous_bandits import ContinuousMovementConstrainedBayesianOptimization
-from mdpexplore.env.env_dummy_testing import DummyTestEnvContinuous
-from mdpexplore.functionals.bandit_functionals import DesignBestArmLinearBanditNoDenominator, DesignBestArmLinearBanditNoDenominatorContinuous
-from mdpexplore.feedback.bandit_feedback import BanditFeedback
-from mdpexplore.convex_solvers.frank_wolfe import FrankWolfe
-from mdpexplore.solvers.dp import DP
-from mdpexplore.solvers.lp import LP
-from mdpexplore.solvers.ddpg import DDPG
-from mdpexplore.policies.summary_policies.density_policy import DensityPolicy
-from mdpexplore.policies.summary_policies.mixture_policy import MixturePolicy
-from mdpexplore.solvers.solver_base import DiscreteSolver
+from doexpy.env.bandits import ConstrainedMaxMovement
+from doexpy.env.continuous_bandits import ContinuousMovementConstrainedBayesianOptimization
+from doexpy.env.env_dummy_testing import DummyTestEnvContinuous
+from doexpy.functionals.bandit_functionals import DesignBestArmLinearBanditNoDenominator, DesignBestArmLinearBanditNoDenominatorContinuous
+from doexpy.feedback.bandit_feedback import BanditFeedback
+from doexpy.convex_solvers.frank_wolfe import FrankWolfe
+from doexpy.solvers.dp import DP
+from doexpy.solvers.lp import LP
+from doexpy.solvers.ddpg import DDPG
+from doexpy.policies.summary_policies.density_policy import DensityPolicy
+from doexpy.policies.summary_policies.mixture_policy import MixturePolicy
+from doexpy.solvers.solver_base import DiscreteSolver
 
 from stpy.continuous_processes.gauss_procc import GaussianProcess
 from stpy.kernels import KernelFunction

@@ -8,15 +8,15 @@ from stpy.continuous_processes.nystrom_fea import NystromFeatures
 from stpy.continuous_processes.kernelized_features import KernelizedFeatures
 import argparse
 
-from mdpexplore.solvers.additive_gradient import AdditiveGradient
-from mdpexplore.convex_solvers.frank_wolfe import FrankWolfe
-# from mdpexplore.convex_solvers.cyipopt import InteriorPoint
-from mdpexplore.convex_solvers.greedy_approximation import ContinuousGreedyApproximation
-from mdpexplore.convex_solvers.first_action_random_path import RandomPaths
-from mdpexplore.mdpexplore import MdpExplore
-from mdpexplore.env.continuous_bandits import ContinuousMovementConstrainedBayesianOptimization
-from mdpexplore.functionals.bandit_functionals import DesignBestArmLinearBanditNoDenominatorContinuous
-from mdpexplore.feedback.bandit_feedback import ContinuousBanditFeedback
+from doexpy.solvers.additive_gradient import AdditiveGradient
+from doexpy.convex_solvers.frank_wolfe import FrankWolfe
+# from doexpy.convex_solvers.cyipopt import InteriorPoint
+from doexpy.convex_solvers.greedy_approximation import ContinuousGreedyApproximation
+from doexpy.convex_solvers.first_action_random_path import RandomPaths
+from doexpy.mdpexplore import MdpExplore
+from doexpy.env.continuous_bandits import ContinuousMovementConstrainedBayesianOptimization
+from doexpy.functionals.bandit_functionals import DesignBestArmLinearBanditNoDenominatorContinuous
+from doexpy.feedback.bandit_feedback import ContinuousBanditFeedback
 
 from  experiments.snar.fit_snar import SnAr, LSR
 from experiments.asynch_benchmarks.fit_asynch_benchmarks import TruncatedSnAKeSolver

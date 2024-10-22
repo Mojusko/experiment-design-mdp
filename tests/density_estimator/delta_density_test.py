@@ -1,13 +1,13 @@
 import numpy as np
 
-from mdpexplore.densities.density_estimators import DeltaDensityEstimator
-from mdpexplore.densities.continous_densities import SimpleDeltaDensity, NonStationaryDeltaDensity
-from mdpexplore.env.env_dummy_testing import DummyTestEnvContinuous
+from doexpy.densities.density_estimators import DeltaDensityEstimator
+from doexpy.densities.continous_densities import SimpleDeltaDensity, NonStationaryDeltaDensity
+from doexpy.env.env_dummy_testing import DummyTestEnvContinuous
 
-from mdpexplore.policies.base_policies.stationary_policy import StationaryPolicyContinuous
-from mdpexplore.policies.base_policies.non_stationary_policy import NonStationaryPolicyContinuous
+from doexpy.policies.base_policies.stationary_policy import StationaryPolicyContinuous
+from doexpy.policies.base_policies.non_stationary_policy import NonStationaryPolicyContinuous
 
-from mdpexplore.functionals.doe_adaptive_functionals import AdaptiveDesignD
+from doexpy.functionals.doe_adaptive_functionals import AdaptiveDesignD
 
 import torch
 import torch.nn as nn

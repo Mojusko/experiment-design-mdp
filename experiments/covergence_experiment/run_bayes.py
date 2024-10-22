@@ -2,14 +2,14 @@ import matplotlib.pyplot as plt
 import numpy as np
 import os
 
-from mdpexplore.utils.argparser import Parser
+from doexpy.utils.argparser import Parser
 
-from mdpexplore.functionals.reward_functional import Design_BayesD, DesignD
-from mdpexplore.env.env_builder import EnvBuilder
-from mdpexplore.mdpexplore import MdpExplore
-from mdpexplore.policies.summary_policies.average_policy import AveragePolicy
-from mdpexplore.policies.summary_policies.density_policy import DensityPolicy
-from mdpexplore.policies.summary_policies.mixture_policy import MixturePolicy
+from doexpy.functionals.reward_functional import Design_BayesD, DesignD
+from doexpy.env.env_builder import EnvBuilder
+from doexpy.mdpexplore import MdpExplore
+from doexpy.policies.summary_policies.average_policy import AveragePolicy
+from doexpy.policies.summary_policies.density_policy import DensityPolicy
+from doexpy.policies.summary_policies.mixture_policy import MixturePolicy
 
 from tqdm.contrib.concurrent import process_map 
 import multiprocessing as mp

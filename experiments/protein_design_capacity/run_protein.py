@@ -15,13 +15,13 @@ from mutedpy.utils.sequences.sequence_utils import generate_all_combination, fro
 from mutedpy.protein_learning.active_learning.generate_predictions import load_model
 from mutedpy.experiments.streptavidin.streptavidin_loader import load_everything_we_have, load_first_round
 
-from mdpexplore.env.bandits import Bandits
-from mdpexplore.functionals.doe_static_functionals import DesignA
-from mdpexplore.mdpexplore import MdpExplore
-from mdpexplore.convex_solvers.frank_wolfe import FrankWolfe
-from mdpexplore.feedback.feedback_base import EmptyFeedback
-from mdpexplore.solvers.dp import DP
-from mdpexplore.policies.summary_policies.density_policy import DensityPolicy
+from doexpy.env.bandits import Bandits
+from doexpy.functionals.doe_static_functionals import DesignA
+from doexpy.mdpexplore import MdpExplore
+from doexpy.convex_solvers.frank_wolfe import FrankWolfe
+from doexpy.feedback.feedback_base import EmptyFeedback
+from doexpy.solvers.dp import DP
+from doexpy.policies.summary_policies.density_policy import DensityPolicy
 
 parser = argparse.ArgumentParser(description='Protein capacity experiment.')
 parser.add_argument('--T', default=2, type=int, help='Name of the file')

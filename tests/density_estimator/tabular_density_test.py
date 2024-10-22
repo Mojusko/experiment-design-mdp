@@ -1,9 +1,9 @@
 import numpy as np
-from mdpexplore.env.env_dummy_testing import DummyTestEnv
-from mdpexplore.functionals.doe_adaptive_functionals import AdaptiveDesignD
-from mdpexplore.densities.density_estimators import TabularDensity
-from mdpexplore.policies.base_policies.stationary_policy import StationaryPolicy
-from mdpexplore.policies.base_policies.non_stationary_policy import NonStationaryPolicy
+from doexpy.env.env_dummy_testing import DummyTestEnv
+from doexpy.functionals.doe_adaptive_functionals import AdaptiveDesignD
+from doexpy.densities.density_estimators import TabularDensity
+from doexpy.policies.base_policies.stationary_policy import StationaryPolicy
+from doexpy.policies.base_policies.non_stationary_policy import NonStationaryPolicy
 
 import pytest
 

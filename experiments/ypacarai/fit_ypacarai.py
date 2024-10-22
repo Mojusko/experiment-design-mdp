@@ -1,7 +1,7 @@
 import numpy as np
 import matplotlib.pyplot as plt
 from PIL import Image
-from mdpexplore.env.bandits import MovementConstrainedBayesianOptimization
+from doexpy.env.bandits import MovementConstrainedBayesianOptimization
 
 '''
 In this script we define the Ypacarai function to be solved. As in previous works, we base it off the Scheckel function.

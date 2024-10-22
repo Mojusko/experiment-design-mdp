@@ -5,32 +5,32 @@ import matplotlib.pyplot as plt
 import torch
 
 # solvers
-from mdpexplore.solvers.lp import LP
-from mdpexplore.solvers.dp import DP
+from doexpy.solvers.lp import LP
+from doexpy.solvers.dp import DP
 
 # policy summarizations
-from mdpexplore.policies.summary_policies.density_policy import DensityPolicy
-from mdpexplore.policies.summary_policies.mixture_policy import MixturePolicy
-from mdpexplore.policies.summary_policies.average_policy import AveragePolicy
-from mdpexplore.policies.summary_policies.tracking_policy import TrackingPolicy
+from doexpy.policies.summary_policies.density_policy import DensityPolicy
+from doexpy.policies.summary_policies.mixture_policy import MixturePolicy
+from doexpy.policies.summary_policies.average_policy import AveragePolicy
+from doexpy.policies.summary_policies.tracking_policy import TrackingPolicy
 
 # convex solvers 
-from mdpexplore.convex_solvers.frank_wolfe import FrankWolfe
-#from mdpexplore.convex_solvers.cyipopt import InteriorPoint
+from doexpy.convex_solvers.frank_wolfe import FrankWolfe
+#from doexpy.convex_solvers.cyipopt import InteriorPoint
 
 # functionals
-from mdpexplore.functionals.doe_adaptive_functionals import AdaptiveDesignD
-from mdpexplore.functionals.doe_static_functionals import DesignD, DesignA
+from doexpy.functionals.doe_adaptive_functionals import AdaptiveDesignD
+from doexpy.functionals.doe_static_functionals import DesignD, DesignA
 
 # environments
-from mdpexplore.env.grid_worlds import DummyGridWorld
-from mdpexplore.env.stochastic_grid_world import StochasticGridWorld, StochasticDummyGridWorld
+from doexpy.env.grid_worlds import DummyGridWorld
+from doexpy.env.stochastic_grid_world import StochasticGridWorld, StochasticDummyGridWorld
 
 # feedbacks
-from mdpexplore.feedback.feedback_base import EmptyFeedback, SimpleFeedback
+from doexpy.feedback.feedback_base import EmptyFeedback, SimpleFeedback
 
 # general algorithm
-from mdpexplore.mdpexplore import MdpExplore
+from doexpy.mdpexplore import MdpExplore
 from scipy.integrate import odeint
 import argparse
 

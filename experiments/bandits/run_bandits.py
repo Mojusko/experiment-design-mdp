@@ -9,11 +9,11 @@ import argparse
 from tqdm.contrib.concurrent import process_map
 import multiprocessing as mp
 
-from mdpexplore.solvers.max import MaxSolver
-from mdpexplore.mdpexplore import MdpExplore
-from mdpexplore.env.bandits import Bandits
-from mdpexplore.functionals.reward_functional import DesignRewardBandit, DesignBestArmLinearBandit, DesignBestArmLinearBanditNoDenominator
-from mdpexplore.policies.summary_policies.density_policy import DensityPolicy
+from doexpy.solvers.max import MaxSolver
+from doexpy.mdpexplore import MdpExplore
+from doexpy.env.bandits import Bandits
+from doexpy.functionals.reward_functional import DesignRewardBandit, DesignBestArmLinearBandit, DesignBestArmLinearBanditNoDenominator
+from doexpy.policies.summary_policies.density_policy import DensityPolicy
 
 if __name__ == "__main__":
 

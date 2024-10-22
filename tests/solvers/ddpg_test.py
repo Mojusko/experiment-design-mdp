@@ -1,6 +1,6 @@
 import numpy as np
-from mdpexplore.solvers.ddpg import DDPG
-from mdpexplore.env.env_dummy_testing import DummyTestEnvContinuous
+from doexpy.solvers.ddpg import DDPG
+from doexpy.env.env_dummy_testing import DummyTestEnvContinuous
 import torch
 
 # set default tensor type
