@@ -16,21 +16,23 @@ from stpy.continuous_processes.nystrom_fea import NystromFeatures
 
 import pytest
 
+# set default tensor type
+torch.set_default_tensor_type(torch.DoubleTensor)
+
 # define the problem
 sigma = 0.05
 delta = 1
 lambd = 1
-mix_objective = False
 
-theta_star = np.array([1.0, 1.0]).reshape(-1)
-action_space = np.array([[-0.5, 0.5],
+theta_star = torch.tensor([1.0, 1.0]).reshape(-1)
+action_space = torch.tensor([[-0.5, 0.5],
                          [0.0, 0.0],
                          [0.5, -0.5],
                          [0.5, 0.5], 
                          [-0.5, -0.5]])
 
 real_mu = theta_star @ action_space.T
-optimal_action = np.argmax(real_mu)
+optimal_action = torch.argmax(real_mu).item()
 
 @pytest.mark.parametrize("policy_type", ['markovian', 'non-markovian'])
 def test_bandits(policy_type: str):
@@ -56,7 +58,6 @@ def test_bandits(policy_type: str):
                 env = env,
                 lambd=lambd,
                 sigma=sigma,
-                mix_objectives=(mix_objective, 0.5),
                 init_ucb = 3
             )
     
@@ -79,8 +80,9 @@ def test_bandits(policy_type: str):
         )
     
     # check the valid set
-    mask = np.max(design.lcbs) <= design.ucbs
+    mask = torch.max(design.lcbs) <= design.ucbs
+    mask = mask.reshape(-1)
     # assert there is only one optimal action
-    assert np.sum(mask) == 1, "There should be only one optimal action"
+    assert torch.sum(mask) == 1, "There should be only one optimal action"
     # assert the optimal action is the one we expect
-    assert np.all(action_space[mask] == action_space[optimal_action]), "The optimal action is incorrect"
+    assert torch.all(action_space[mask] == action_space[optimal_action]), "The optimal action is incorrect"
