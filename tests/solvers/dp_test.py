@@ -1,9 +1,10 @@
 import numpy as np
+import torch
 from doexpy.solvers.dp import DP
 from doexpy.env.env_dummy_testing import DummyTestEnv
 
 # initialize reward
-reward = np.zeros((10, 5, 5))
+reward = torch.zeros((10, 5, 5))
 # reward for staying in the rightmost state
 reward[:, 4, 4] = 1.0
 # reward for transitioning to the right
@@ -26,8 +27,8 @@ def test_policy_is_valid():
 
 def test_policy_is_optimal():
     for i in range(10):
-        assert np.all( policy.ps[i] == np.array([[0., 1., 0., 0., 0.],
+        assert np.all(np.isclose(policy.ps[i], torch.tensor([[0., 1., 0., 0., 0.],
                                                 [0., 0., 1., 0., 0.],
                                                 [0., 0., 0., 1., 0.],
                                                 [0., 0., 0., 0., 1.],
-                                                [0., 0., 0., 0., 1.]])), 'policy is not optimal'
+                                                [0., 0., 0., 0., 1.]]))), 'policy is not optimal'
