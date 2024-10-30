@@ -8,18 +8,15 @@ from stpy.continuous_processes.nystrom_fea import NystromFeatures
 from stpy.continuous_processes.kernelized_features import KernelizedFeatures
 import argparse
 
-from doexpy.solvers.additive_gradient import AdditiveGradient
-from doexpy.convex_solvers.frank_wolfe import FrankWolfe
-# from doexpy.convex_solvers.cyipopt import InteriorPoint
 from doexpy.convex_solvers.greedy_approximation import ContinuousGreedyApproximation
 from doexpy.convex_solvers.first_action_random_path import RandomPaths
 from doexpy.mdpexplore import MdpExplore
 from doexpy.env.continuous_bandits import ContinuousMovementConstrainedBayesianOptimization
-from doexpy.functionals.bandit_functionals import DesignBestArmLinearBanditNoDenominatorContinuous, G_DesignBestArmLinearBanditNoDenominatorContinuous
-from doexpy.feedback.bandit_feedback import ContinuousBanditFeedback
+from doexpy.functionals.bandit_functionals_continuous import DesignBestArmLinearBanditNoDenominatorContinuous, G_DesignBestArmLinearBanditNoDenominatorContinuous
+from doexpy.feedback.continuous_bandit_feedback import ContinuousBanditFeedback
 
-from experiments.snar.fit_snar import SnAr, LSR
-from experiments.asynch_benchmarks.fit_asynch_benchmarks import Branin2D, Michalewicz2D, Hartmann3D, Hartmann6D, ModifiedBranin2D, Levy4D, Michalewicz3D
+from experiments.snar.fit_snar import LSR
+from experiments.asynch_benchmarks.fit_asynch_benchmarks import Branin2D, Michalewicz2D, Hartmann3D, Hartmann6D, Levy4D, Michalewicz3D
 from experiments.asynch_benchmarks.fit_asynch_benchmarks import TruncatedSnAKeSolver
 
 from scipy.stats.qmc import Sobol
@@ -41,7 +38,7 @@ if __name__ == "__main__":
     parser.add_argument('--episodes', default=1, type=int, help='Number of episodes')
     parser.add_argument('--policy', default='density', type=str, help='Summarized policy type (mixed/average/density)')
     parser.add_argument('--snake', default=False, type=bool, help='Wether to use the snake algorithm or not')
-    parser.add_argument('--lsr', default=False, type=bool, help='Wether to use the lsr algorithm or not')
+    parser.add_argument('--lsr', default=True, type=bool, help='Wether to use the lsr algorithm or not')
     parser.add_argument('--lsr_gamma', default=0.01, type=float, help='Gamma parameter for the lsr algorithm')
     parser.add_argument('--random_paths', default=False, type=bool, help='Wether to use the random paths algorithm or not')
     parser.add_argument('--num_random_paths', default=100, type=int, help='Number of random paths')
@@ -220,7 +217,7 @@ if __name__ == "__main__":
 
     best_guesses = np.array(feedback.best_arm)
 
-    file_name = f'experiments/synch_benchmarks/results/' + func.name + f'/delta_mov_{args.delta_mov}/noise_var_{args.noise}/num_features_{args.num_features}/episode_length_{args.episode_length}/'
+    file_name = 'experiments/synch_benchmarks/results/' + func.name + f'/delta_mov_{args.delta_mov}/noise_var_{args.noise}/num_features_{args.num_features}/episode_length_{args.episode_length}/'
     
     if args.snake:
         algo_name = '/TruncatedSnAKe'
@@ -229,9 +226,9 @@ if __name__ == "__main__":
     elif args.random_paths:
         algo_name = f'/MDPExploreRandomPaths/num_paths_{args.num_random_paths}'
     elif args.g_design:
-        algo_name = f'/MDPExploreGDesign/' +  maximization_set_method + f'/num_maximizers_{num_maximizers}'
+        algo_name = '/MDPExploreGDesign/' +  maximization_set_method + f'/num_maximizers_{num_maximizers}'
     else:
-        algo_name = f'/MDPExplore/' + maximization_set_method + f'/num_maximizers_{num_maximizers}'
+        algo_name = '/MDPExplore/' + maximization_set_method + f'/num_maximizers_{num_maximizers}'
 
     file_name = file_name + algo_name + f'/seed_{args.seed}/'
 
