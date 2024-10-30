@@ -255,9 +255,7 @@ class TruncatedSnAKeSolver(ConvexSolverBase):
         tsp = nx.algorithms.approximation.traveling_salesman_problem
         SA_tsp = nx.algorithms.approximation.simulated_annealing_tsp
         # solve the TSP
-        method = lambda G, wt: SA_tsp(G, 'greedy', weight = wt, source = 0)
-        # obtain the path
-        new_path_idx = tsp(graph, cycle = True, method = method)
+        new_path_idx = tsp(graph, cycle = True, method = SA_tsp, source = 0, init_cycle = "greedy")
         # obtain the path
         new_path = potential_maximizers[new_path_idx, :]
         # remove the last element of the path (which is the same as the first, since it is a cycle)

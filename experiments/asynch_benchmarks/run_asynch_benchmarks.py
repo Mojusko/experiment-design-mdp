@@ -8,17 +8,14 @@ from stpy.continuous_processes.nystrom_fea import NystromFeatures
 from stpy.continuous_processes.kernelized_features import KernelizedFeatures
 import argparse
 
-from doexpy.solvers.additive_gradient import AdditiveGradient
-from doexpy.convex_solvers.frank_wolfe import FrankWolfe
-# from doexpy.convex_solvers.cyipopt import InteriorPoint
 from doexpy.convex_solvers.greedy_approximation import ContinuousGreedyApproximation
 from doexpy.convex_solvers.first_action_random_path import RandomPaths
 from doexpy.mdpexplore import MdpExplore
 from doexpy.env.continuous_bandits import ContinuousMovementConstrainedBayesianOptimization
-from doexpy.functionals.bandit_functionals import DesignBestArmLinearBanditNoDenominatorContinuous, G_DesignBestArmLinearBanditNoDenominatorContinuous
-from doexpy.feedback.bandit_feedback import ContinuousBanditFeedbackAsynchronous
+from doexpy.functionals.bandit_functionals_continuous import DesignBestArmLinearBanditNoDenominatorContinuous, G_DesignBestArmLinearBanditNoDenominatorContinuous
+from doexpy.feedback.continuous_bandit_feedback import ContinuousBanditFeedbackAsynchronous
 
-from  experiments.asynch_benchmarks.fit_asynch_benchmarks import Branin2D, Michalewicz2D, Hartmann3D, Hartmann6D, ModifiedBranin2D, Levy4D, Michalewicz3D
+from  experiments.asynch_benchmarks.fit_asynch_benchmarks import Branin2D, Michalewicz2D, Hartmann3D, Hartmann6D, Levy4D, Michalewicz3D
 from  experiments.asynch_benchmarks.fit_asynch_benchmarks import TruncatedSnAKeSolver
 
 from scipy.stats.qmc import Sobol
@@ -82,7 +79,7 @@ if __name__ == "__main__":
 
     # number of features
     if args.num_features == -1:
-        args.num_features = np.minimum(2 ** (func.dim + 5), 512)
+        args.num_features = min(2 ** (func.dim + 5), 512)
     else:
         args.num_features = args.num_features
     
@@ -118,6 +115,8 @@ if __name__ == "__main__":
 
     sobol_generator = Sobol(d=func.dim, scramble=True, seed=args.seed)
     action_space = sobol_generator.random(grid_points) - 0.5
+    # transform the action space to tensor
+    action_space = torch.tensor(action_space)
 
     # define the embedding
     kernel_rbf = KernelFunction(kernel_name='squared_exponential', d = func.dim, kappa = func.kappa, gamma = func.gamma)
@@ -216,16 +215,16 @@ if __name__ == "__main__":
 
     best_guesses = np.array(feedback.best_arm)
 
-    file_name = f'experiments/asynch_benchmarks/results/' + func.name + f'/delay_{args.delay}/delta_mov_{args.delta_mov}/noise_var_{args.noise}/num_features_{args.num_features}/episode_length_{args.episode_length}/'
+    file_name = 'experiments/asynch_benchmarks/results/' + func.name + f'/delay_{args.delay}/delta_mov_{args.delta_mov}/noise_var_{args.noise}/num_features_{args.num_features}/episode_length_{args.episode_length}/'
     
     if args.snake:
         algo_name = '/TruncatedSnAKe'
     elif args.random_paths:
         algo_name = f'/MDPExploreRandomPaths/num_paths_{args.num_random_paths}'
     elif args.g_design:
-        algo_name = f'/MDPExploreGDesign/' +  maximization_set_method + f'/num_maximizers_{num_maximizers}'
+        algo_name = '/MDPExploreGDesign/' +  maximization_set_method + f'/num_maximizers_{num_maximizers}'
     else:
-        algo_name = f'/MDPExplore/' + maximization_set_method + f'/num_maximizers_{num_maximizers}'
+        algo_name = '/MDPExplore/' + maximization_set_method + f'/num_maximizers_{num_maximizers}'
 
     file_name = file_name + algo_name + f'/seed_{args.seed}/'
 

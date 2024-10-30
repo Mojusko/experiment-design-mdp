@@ -1,5 +1,8 @@
+import numpy as np
+import torch
 from doexpy.functionals.reward_functional import ContinuousRewardFunctional
-
+from doexpy.densities.continous_densities import NonStationaryDeltaDensity
+from doexpy.utils.embedding import EmptyEmbedding
 
 class DesignBestArmLinearBanditNoDenominatorContinuous(ContinuousRewardFunctional):
 

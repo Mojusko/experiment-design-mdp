@@ -1,4 +1,5 @@
 from typing import List, Union
+import numpy as np
 
 from doexpy.policies.policy_base import Policy, SummarizedPolicy
 from doexpy.env.discrete_env import DiscreteEnv
@@ -10,7 +11,7 @@ class MixturePolicy(SummarizedPolicy):
         super().__init__(env)
         self.ps = ps
         self.p_weights = weights
-        self.policy_picked = self.rng.choice(self.ps, p=self.p_weights)
+        self.policy_picked = np.random.choice(self.ps, p=self.p_weights)
 
     def next_action(self, state):
         return self.policy_picked.next_action(state)
