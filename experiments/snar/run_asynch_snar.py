@@ -8,17 +8,15 @@ from stpy.continuous_processes.nystrom_fea import NystromFeatures
 from stpy.continuous_processes.kernelized_features import KernelizedFeatures
 import argparse
 
-from doexpy.solvers.additive_gradient import AdditiveGradient
-from doexpy.convex_solvers.frank_wolfe import FrankWolfe
 # from doexpy.convex_solvers.cyipopt import InteriorPoint
 from doexpy.convex_solvers.greedy_approximation import ContinuousGreedyApproximation
 from doexpy.convex_solvers.first_action_random_path import RandomPaths
 from doexpy.mdpexplore import MdpExplore
 from doexpy.env.continuous_bandits import ContinuousMovementConstrainedBayesianOptimization
-from doexpy.functionals.bandit_functionals import DesignBestArmLinearBanditNoDenominatorContinuous
-from doexpy.feedback.bandit_feedback import ContinuousBanditFeedbackAsynchronous
+from doexpy.functionals.bandit_functionals_continuous import DesignBestArmLinearBanditNoDenominatorContinuous
+from doexpy.feedback.continuous_bandit_feedback import ContinuousBanditFeedbackAsynchronous
 
-from  experiments.snar.fit_snar import SnAr, LSR
+from  experiments.snar.fit_snar import SnAr
 from experiments.asynch_benchmarks.fit_asynch_benchmarks import TruncatedSnAKeSolver
 
 from scipy.stats.qmc import Sobol
@@ -169,14 +167,14 @@ if __name__ == "__main__":
 
     best_guesses = np.array(feedback.best_arm)
 
-    file_name = f'experiments/snar/results/asynch' + func.name + f'/delay_{args.delay}/delta_mov_{args.delta_mov}/noise_var_{args.noise}/num_features_{args.num_features}/episode_length_{args.episode_length}/'
+    file_name = 'experiments/snar/results/asynch' + func.name + f'/delay_{args.delay}/delta_mov_{args.delta_mov}/noise_var_{args.noise}/num_features_{args.num_features}/episode_length_{args.episode_length}/'
     
     if args.snake:
         algo_name = '/TruncatedSnAKe'
     elif args.random_paths:
         algo_name = f'/MDPExploreRandomPaths/num_paths_{args.num_random_paths}'
     else:
-        algo_name = f'/MDPExplore/' + maximization_set_method + f'/num_maximizers_{num_maximizers}'
+        algo_name = '/MDPExplore/' + maximization_set_method + f'/num_maximizers_{num_maximizers}'
 
     file_name = file_name + algo_name + f'/seed_{args.seed}/'
 
