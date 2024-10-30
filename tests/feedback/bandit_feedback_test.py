@@ -16,21 +16,23 @@ from stpy.continuous_processes.nystrom_fea import NystromFeatures
 
 import pytest
 
+# set default tensor type
+torch.set_default_tensor_type(torch.DoubleTensor)
+
 # define the problem
 sigma = 0.05
 delta = 1
 lambd = 1
-mix_objective = False
 
-theta_star = np.array([1.0, 1.0]).reshape(-1)
-action_space = np.array([[-0.5, -0.5],
+theta_star = torch.tensor([1.0, 1.0]).reshape(-1)
+action_space = torch.tensor([[-0.5, -0.5],
                         [-0.5, 0.5],
                          [0.0, 0.0],
                          [0.5, -0.5],
                          [0.5, 0.5]])
 
 real_mu = theta_star @ action_space.T
-optimal_action = np.argmax(real_mu)
+optimal_action = torch.argmax(real_mu).item()
 
 @pytest.mark.parametrize("markovian", [True, False])
 def test_feedback(markovian: bool):
@@ -52,11 +54,10 @@ def test_feedback(markovian: bool):
                 env = env,
                 lambd=lambd,
                 sigma=sigma,
-                mix_objectives=(mix_objective, 0.5),
                 init_ucb = 3
             )
 
-    initial_ucbs = design.ucbs.copy()
+    initial_ucbs = design.ucbs.clone()
 
     feedback = BanditFeedback(env, design, estimator, theta_star = theta_star, sigma = sigma, markovian = markovian)
 
@@ -72,17 +73,19 @@ def test_feedback(markovian: bool):
         assert len(feedback.action_trajectory) == h + 1, "action trajectory length is wrong"
     
     if markovian:
-        assert np.all(initial_ucbs == feedback.objective.ucbs), "ucbs should not change until the end of the episode in markovian case"
+        assert torch.all(initial_ucbs == feedback.objective.ucbs), "ucbs should not change until the end of the episode in markovian case"
     else:
-        assert np.all(initial_ucbs != feedback.objective.ucbs), "ucbs should change at each step in non-markovian case"
+        assert torch.all(initial_ucbs != feedback.objective.ucbs), "ucbs should change at each step in non-markovian case"
     
     feedback.step_episode()
 
     if markovian:
-        assert np.all(initial_ucbs != feedback.objective.ucbs), "ucbs should change at the end of the episode in markovian case"
+        assert torch.all(initial_ucbs != feedback.objective.ucbs), "ucbs should change at the end of the episode in markovian case"
     
     assert len(feedback.state_trajectory) == 0, "state trajectory should be empty after episode"
     assert len(feedback.action_trajectory) == 0, "action trajectory should be empty after episode"
 
     assert torch.all(torch.isclose(feedback.estimator.x, torch.tensor(np.array([action_space[act_idx] for act_idx in [1, 2, 3, 4, 3]])))), "data stored in estimator is wrong"
-    assert np.all(feedback.objective.ucbs >= feedback.objective.lcbs), "ucbs should be greater than lcbs"
+    assert torch.all(feedback.objective.ucbs >= feedback.objective.lcbs), "ucbs should be greater than lcbs"
+
+test_feedback(True)

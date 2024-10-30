@@ -124,7 +124,7 @@ class BanditFeedback(SimpleFeedback):
                 z = self.estimator.embed(state_x)
                 fun_value = z @ self.theta_star + eps - self.prior_mean[action]
 
-            fun_value = fun_value.reshape(-1) #.item()
+            fun_value = fun_value.reshape(-1, 1) #.item()
             
 
             print ('y:', fun_value)
@@ -199,7 +199,7 @@ class BanditFeedback(SimpleFeedback):
                     z = self.estimator.embed(state)
                     fun_value = z @ self.theta_star + eps - self.prior_mean[action]
                 
-                fun_value = fun_value.reshape(-1) #.item()
+                fun_value = fun_value.reshape(-1, 1) # .reshape(-1) #.item()
 
                 self.estimator.add_data_point(state, fun_value)
                 
