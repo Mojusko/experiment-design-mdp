@@ -1,4 +1,3 @@
-from enum import Enum
 import random
 
 import numpy as np
@@ -11,7 +10,8 @@ import argparse
 from doexpy.solvers.dp import DP
 from doexpy.convex_solvers.frank_wolfe import FrankWolfe
 from doexpy.mdpexplore import MdpExplore
-from doexpy.functionals.bandit_functionals import DesignBestArmLinearBanditNoDenominator, DesignBestArmLinearBanditEIDummy, GreedyEIDummy
+from doexpy.functionals.bandit_functionals import DesignBestArmLinearBanditNoDenominator
+from doexpy.functionals.custom_functionals import DesignBestArmLinearBanditEIDummy, GreedyEIDummy
 from doexpy.policies.summary_policies.density_policy import DensityPolicy, MarginalDensityPolicy
 from doexpy.feedback.bandit_feedback import BanditFeedback
 
@@ -24,7 +24,7 @@ if __name__ == "__main__":
     # arguments I know I will need
     parser.add_argument('--seed', default=121, type=int, help='Use this to set the seed for the random number generator')
     parser.add_argument('--verbosity', default=3, type=int, help='Use this to increase debug ouput')
-    parser.add_argument('--episodic_feedback', default=False, type=bool, help='Wether we use episodic feedback or not')
+    parser.add_argument('--episodic_feedback', default=True, type=bool, help='Wether we use episodic feedback or not')
     parser.add_argument('--episode_length', default=50, type=int, help='Length of the episode')
     parser.add_argument('--noise', default=0.001, type=float, help='Noise variance')
     parser.add_argument('--num_features', default=100, type=int, help='Number of features')
@@ -63,6 +63,7 @@ if __name__ == "__main__":
 
     # define the action space
     action_space = np.load('ypacarai_centroids.npy')
+    action_space = torch.from_numpy(action_space)
 
     if args.video:
         ucbs = np.empty(shape = (0, action_space.shape[0]))
@@ -85,9 +86,9 @@ if __name__ == "__main__":
 
     # now define the nystrom embedding
     embedding = NystromFeatures(m = torch.tensor(args.num_features), kernel_object=kernel_rbf)
-    embedding.fit_gp(torch.tensor(action_space), None)
+    embedding.fit_gp(action_space, None)
     # define the embedded action space for the discrete case
-    embedded_action_space = embedding.embed(torch.tensor(action_space)).detach().numpy()
+    embedded_action_space = embedding.embed(action_space).detach()
 
     # finally define the estimator
     estimator = KernelizedFeatures(embedding, m = args.num_features, s = sigma, lam = lambd, d = 2, diameter = 0.5)
@@ -147,12 +148,12 @@ if __name__ == "__main__":
         feedback=feedback,
         general_policy = 'non-markovian'
     )
-
-    # run the experiment
-    val, opt_val, visitations = me.run(
-        episodes=args.episodes,
-        return_visitations = True
-    )
+    with torch.no_grad():
+        # run the experiment
+        val, opt_val, visitations = me.run(
+            episodes=args.episodes,
+            return_visitations = True
+        )
     # save the results
     x_evaluations = action_space[visitations[0][0]]
     f_evaluations = []
