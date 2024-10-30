@@ -1,5 +1,6 @@
 from abc import ABC, abstractmethod
 import numpy as np
+import torch
 
 class ContinuousDensity(ABC):
     def __init__(self) -> None:
@@ -12,25 +13,25 @@ class SimpleDeltaDensity(ContinuousDensity):
 
         if initial_states is None:
             assert initial_actions is None, "initial_actions must be None if initial_states is None"
-            self.delta_states = np.zeros((0, env.states_dim))
+            self.delta_states = torch.zeros((0, env.states_dim))
         else:
             assert initial_actions is not None, "initial_actions must be provided if initial_states is provided"
             assert initial_states.shape[0] == initial_actions.shape[0], "initial_states and initial_actions must have the same number of rows"
             self.delta_states = initial_states
         
         if initial_actions is None:
-            self.delta_actions = np.zeros((0, env.actions_dim))
+            self.delta_actions = torch.zeros((0, env.actions_dim))
         else:
             self.delta_actions = initial_actions
         
         if weights is None:
-            self.weights = np.ones(self.delta_states.shape[0])
+            self.weights = torch.ones(self.delta_states.shape[0])
         else:
             assert weights.shape[0] == self.delta_states.shape[0], "weights must have the same number of rows as initial_states"
             self.weights = weights
 
     def __add__(self, other):
-        return SimpleDeltaDensity(self.env, np.vstack((self.delta_states, other.delta_states)), np.vstack((self.delta_actions, other.delta_actions)), np.hstack((self.weights, other.weights)))
+        return SimpleDeltaDensity(self.env, torch.vstack((self.delta_states, other.delta_states)), torch.vstack((self.delta_actions, other.delta_actions)), torch.hstack((self.weights, other.weights)))
 
     def __mul__(self, other):
         return SimpleDeltaDensity(self.env, self.delta_states, self.delta_actions, self.weights * other)
