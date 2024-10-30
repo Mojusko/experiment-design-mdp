@@ -126,23 +126,25 @@ class DDPG(ContinuousSolver):
         '''
         # on the first iteration, initialize the buffer randomly to obtain a diverse set of states
         if i == 0:
-            states = np.random.uniform(-0.5, 0.5, size = (self.buffer_size, self.env.states_dim))
+            states = torch.rand((self.buffer_size, self.env.states_dim)) - 0.5
         
         # on the following iterations, initialize the buffer with the initial state to focus on the region of interest
         else:
             initial_state = self.env.state
             states = initial_state
             # repeat state for buffer size
-            states = np.repeat(states, self.buffer_size, axis = 0)
+            # states = np.repeat(states, self.buffer_size, axis = 0)
+            # do the same but with torch
+            states = states.repeat(self.buffer_size, 1)
 
         # states = np.random.uniform(-0.5, 0.5, size = (self.buffer_size, self.env.states_dim))
 
         for h in range(self.env.max_episode_length - self.env.h):
 
-            actions = self.policies[h](torch.tensor(states)).detach().numpy()
-            noise = np.random.normal(0, self.exploration_noise, size = actions.shape)
+            actions = self.policies[h](torch.tensor(states)).detach()
+            noise = torch.randn_like(actions) * self.exploration_noise
             actions += noise
-            actions = np.clip(actions, self.env.min_action, self.env.max_action)
+            actions = torch.clip(actions, self.env.min_action, self.env.max_action)
 
             reward = self.reward(h, states, actions).reshape(self.buffer_size, 1)
 
@@ -164,7 +166,7 @@ class DDPG(ContinuousSolver):
         
         else:
             action = self.target_policies[h](next_states)
-            noise = torch.tensor(np.random.normal(0, self.exploration_noise, size = action.shape))
+            noise = torch.randn_like(action) * self.exploration_noise
             noise = torch.clip(noise, - self.target_policy_smoothing_c, self.target_policy_smoothing_c)
             action += noise
             action = torch.clip(action, self.env.min_action, self.env.max_action)

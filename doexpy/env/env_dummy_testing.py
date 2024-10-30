@@ -62,7 +62,7 @@ class DummyTestEnv(DiscreteEnv):
         return self.states_num
 
 class DummyTestEnvContinuous(ContinuousEnv):
-    def __init__(self, max_episode_length = 3, constrained = False, min_action = -0.2, max_action = 0.2, init_state = np.array([-0.5]).reshape(1, 1)):
+    def __init__(self, max_episode_length = 3, constrained = False, min_action = -0.2, max_action = 0.2, init_state = torch.tensor([-0.5]).reshape(1, 1)):
         super().__init__(init_state)
         self.states_dim = 1
         self.actions_dim = 1
@@ -77,7 +77,7 @@ class DummyTestEnvContinuous(ContinuousEnv):
     def next(self, state, action):
         # check if state is numpy array or pytorch tensor
         if isinstance(state, torch.Tensor):
-            next_state = torch.clip(state + action, 0.5, 0.5)
+            next_state = torch.clip(state + action, -0.5, 0.5)
         
         return next_state
     
