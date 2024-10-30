@@ -9,13 +9,12 @@ import argparse
 from doexpy.solvers.dp import DP
 from doexpy.convex_solvers.frank_wolfe import FrankWolfe
 from doexpy.mdpexplore import MdpExplore
-from doexpy.functionals.bandit_functionals import DesignBestArmLinearBanditEIDummy, DesignBestArmLinearBanditNoDenominator, GreedyEIDummy
+from doexpy.functionals.bandit_functionals import DesignBestArmLinearBanditNoDenominator
+from doexpy.functionals.custom_functionals import DesignBestArmLinearBanditEIDummy, GreedyEIDummy
 from doexpy.policies.summary_policies.density_policy import DensityPolicy, MarginalDensityPolicy
 from doexpy.feedback.bandit_feedback import BanditFeedback
 
-import matplotlib.pyplot as plt
-
-from experiments.flow_ode.fit_flow_ode import ode_kernel, SchreckerODE, ode_embedding
+from experiments.flow_ode.fit_flow_ode import SchreckerODE, ode_embedding
 from experiments.flow_ode_mono.fit_flow_ode_mono import ODEMonoEnv
 
 if __name__ == "__main__":
@@ -25,7 +24,7 @@ if __name__ == "__main__":
     parser.add_argument('--seed', default=1, type=int, help='Use this to set the seed for the random number generator')
     parser.add_argument('--save', default="experiment.csv", type=str, help='name of the file')
     parser.add_argument('--verbosity', default=3, type=int, help='Use this to increase debug ouput')
-    parser.add_argument('--episodic_feedback', default=False, type=bool, help='Wether we use episodic feedback or not')
+    parser.add_argument('--episodic_feedback', default=True, type=bool, help='Wether we use episodic feedback or not')
     parser.add_argument('--episode_length', default=10, type=int, help='Length of the episode')
     parser.add_argument('--noise', default=0.0001, type=float, help='Noise variance')
     parser.add_argument('--delta_mov', default=0.15, type=float, help='Maximum movement constraint')
@@ -66,17 +65,17 @@ if __name__ == "__main__":
     # generate a 2 by 2 uniform grid of points, then embed them in the 2d space
     grid_1d = np.linspace(-0.5, 0.5, 11)
     grid = np.array(np.meshgrid(grid_1d, grid_1d)).T.reshape(-1, 2)
-    action_space = grid
+    action_space = torch.from_numpy(grid)
 
     # create a finer grid for the nyström embedding
     grid_1d = np.linspace(-0.5, 0.5, 11)
     grid = np.array(np.meshgrid(grid_1d, grid_1d)).T.reshape(-1, 2)
-    nystrom_space = grid
+    nystrom_space = torch.from_numpy(grid)
 
     prior_var = 0.0225
     embedding = ode_embedding(num_features = args.num_features, action_space = nystrom_space, alpha_ode = 1.0, alpha_rbf = 0.001, ard = False)
     # define the embedded action space for the discrete case
-    embedded_action_space = embedding.embed(torch.tensor(action_space)).detach().numpy()
+    embedded_action_space = embedding.embed(action_space).detach()
     # define the prior mean and variance of the ode model
     prior_mean = (embedded_action_space[:, 0] * 0.6)
     prior_var = 0.0225
@@ -138,10 +137,11 @@ if __name__ == "__main__":
     )
 
     # run the experiment
-    val, opt_val, visitations = me.run(
-        episodes=args.episodes,
-        return_visitations = True
-    )
+    with torch.no_grad():
+        val, opt_val, visitations = me.run(
+            episodes=args.episodes,
+            return_visitations = True
+        )
 
     if args.plot:
         # save the paths, and the potential maximizers
