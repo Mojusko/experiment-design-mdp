@@ -1,6 +1,7 @@
 import torch
 import argparse
 
+from image_generator import StableDiffusionGenerator
 from doexpy.env.llm import LLMGrid
 from doexpy.functionals.doe_static_functionals import DesignA, DesignD
 from doexpy.mdpexplore import MdpExplore
@@ -10,7 +11,7 @@ from doexpy.solvers.dp import DP
 from doexpy.policies.summary_policies.density_policy import DensityPolicy
 
 parser = argparse.ArgumentParser(description='Protein capacity experiment.')
-parser.add_argument('--episodes', default=10, type=int, help='Name of the file')
+parser.add_argument('--episodes', default=9, type=int, help='Name of the file')
 parser.add_argument('--no_tokens', default=2, type=int, help='Name of the file')
 parser.add_argument('--feedback', default='markovian', type=str, help='Name of the file')
 
@@ -39,8 +40,9 @@ convex_solver = FrankWolfe(env,
                            SummarizedPolicyType=DensityPolicy,
                            accuracy=1e-15)
 
+
 # define the feedback class
-feedback = EmptyFeedback(env, design)
+feedback = BanditFeedback(env, design, )
 
 initial_policy = False
 
@@ -58,10 +60,28 @@ val, opt_val, visits = me.run(
     return_visitations = True
 )
 print (visits)
+
+image_generator = StableDiffusionGenerator("CompVis/stable-diffusion-v1-4",
+                                           device = 'cuda',
+                                           image_height = 256,
+                                           image_width = 256, num_inference_steps=200)
+image_generator.resample_random()
+images = []
+
 for no, episode in enumerate(visits):
     states, actions = episode
     print (f"Trajectory {no}:",end = ' ')
     #print (actions)
+    prompt = 'A plate with '
     for action in actions:
-        print (env.unique_elements[action],end = ', ')
-    print()
+        prompt += env.unique_elements[action] +" "
+    
+    image = image_generator.sample(prompt)
+    images.append(image)
+    print (prompt)
+
+import matplotlib.pyplot as plt
+fig, axs = plt.subplots(3, 3)
+for i, ax in enumerate(axs.flat):
+    ax.imshow(images[i])
+plt.show()
