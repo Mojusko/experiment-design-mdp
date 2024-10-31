@@ -47,12 +47,12 @@ class TabularDensity(DensityEstimator):
                 for act in self.env.available_actions(self.env.init_state):
                     v0[self.env.init_state, act] = policy.p[self.env.init_state, act]
 
-                v = torch.Tensor(v0, dtype = torch.float64)
+                v = torch.Tensor(v0)
                 temp = torch.Tensor(v0).sum(dim = -1)
                 
-                p_pi = (self.env.get_transition_matrix() * torch.unsqueeze(policy.ps[i], dim=2)).sum(dim = 1)
+                p_pi = (self.env.get_transition_matrix() * torch.unsqueeze(policy.p, dim=2)).sum(dim = 1)
 
-                assert (torch.allclose(p_pi.sum(dim=1), 1, rtol=1e-05, atol=1e-05))
+                assert (torch.allclose(p_pi.sum(dim=1), torch.ones_like(p_pi.sum(dim = 1)), rtol=1e-05, atol=1e-05))
 
                 for _ in range(self.env.max_episode_length):
                     temp = p_pi.T @ temp

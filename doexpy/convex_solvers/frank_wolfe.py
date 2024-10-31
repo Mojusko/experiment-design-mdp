@@ -150,7 +150,8 @@ class FrankWolfe(ConvexSolverBase):
 
             # calculate the current density
             density = self.density_estimator.density_oracle(self.policies, self.weights, self.densities, self.stationary)
-            density.requires_grad_(True)
+            if self.env.type == 'discrete':
+                density.requires_grad_(True)
             # gradient of the reward
             reward = self._reward_fn_gradient(density, emissions, visitations, episodes)
             

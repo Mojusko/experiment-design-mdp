@@ -2,16 +2,13 @@ from summit.benchmarks import SnarBenchmark
 from summit.utils.dataset import DataSet
 
 import numpy as np
-from doexpy.densities.continous_densities import NonStationaryDeltaDensity
 from doexpy.densities.density_estimators import DeltaDensityEstimator
 from doexpy.env.continuous_env import ContinuousEnv
 from torch.nn import ModuleList
 from doexpy.utils.nn import DeterministicModule
 from doexpy.policies.summary_policies.mixture_policy import MixturePolicy
-from typing import Callable, Type, Union, Tuple
 from doexpy.convex_solvers.convex_solvers_base import ConvexSolverBase
 from doexpy.policies.base_policies.non_stationary_policy import NonStationaryPolicyContinuous
-from doexpy.densities.continous_densities import ContinuousDensity
 from scipy.optimize import minimize
 from scipy.stats import norm
 from stpy.continuous_processes.kernelized_features import KernelizedFeatures
@@ -87,7 +84,7 @@ class LSR(ConvexSolverBase):
         # now optimize
         res = minimize(self.EI, current_state.reshape(-1), bounds = bounds, tol = 1e-4)
         # get the optimal state
-        optimal_state = res.x
+        optimal_state = torch.from_numpy(res.x)
         # get optimal value
         optimal_value = res.fun * -1
         # check if optimal values is larger than gamma
@@ -108,7 +105,7 @@ class LSR(ConvexSolverBase):
                 # now optimize
                 res = minimize(self.EI, x0, bounds = bounds, tol = 1e-4)
                 # get the optimal state
-                optimal_state = res.x
+                optimal_state = torch.from_numpy(res.x)
                 # get optimal value
                 optimal_value = res.fun
                 # check if optimal values is larger than gamma

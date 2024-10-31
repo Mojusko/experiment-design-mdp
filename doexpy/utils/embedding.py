@@ -225,7 +225,17 @@ class EmptyEmbedding(Embedding):
     """
 
     def __init__(self, **kwargs):
+        # get m from the kwargs
+        m = kwargs.get("m", 1)
+        # if odd replace it with even
+        if m % 2 == 1:
+            m_parent = m + 1
+        else:
+            m_parent = m
+        # replace the m with m_parent
+        kwargs["m"] = m_parent
         Embedding.__init__(self, **kwargs)
+        self.m = m
 
     def embed(self, x):
         """

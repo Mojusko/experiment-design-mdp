@@ -1,3 +1,13 @@
+import numpy as np
+from typing import Union, Callable
+import torch
+from scipy.optimize import minimize
+from scipy.linalg import norm
+from doexpy.feedback.feedback_base import SimpleFeedback
+from doexpy.env.bandits import MovementConstrainedBayesianOptimization
+from doexpy.functionals.reward_functional import RewardFunctional
+from stpy.continuous_processes.gauss_procc import GaussianProcess
+from stpy.continuous_processes.kernelized_features import KernelizedFeatures
 
 
 
@@ -449,7 +459,7 @@ class ContinuousBanditFeedbackAsynchronous(SimpleFeedback):
             # sample thetas from the posterior and maximize
             maximizers, _ = self.estimator.sample_and_optimize(size = self.objective.num_of_maximizers)
             
-            return maximizers.numpy()
+            return maximizers.numpy().reshape(self.objective.num_of_maximizers, self.env.states_dim)
 
         else:
             raise NotImplementedError('Thompson sampling for GPs not implemented yet')

@@ -23,8 +23,7 @@ class StationaryPolicyContinuous(Policy):
         super().__init__(env)
         self.p = p
     
-    def next_action(self, state: np.array):
+    def next_action(self, state: torch.Tensor):
         with torch.no_grad():
-            state = torch.from_numpy(state)
-            action = torch.clip(self.p(state), self.env.min_action, self.env.max_action).numpy()
+            action = torch.clip(self.p(state), self.env.min_action, self.env.max_action)
         return action

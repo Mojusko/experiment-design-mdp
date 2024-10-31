@@ -1,9 +1,12 @@
+import numpy as np
+import torch
 from doexpy.functionals.reward_functional import ContinuousRewardFunctional
-
+from doexpy.densities.continous_densities import NonStationaryDeltaDensity
+from doexpy.utils.embedding import EmptyEmbedding
 
 class DesignBestArmLinearBanditNoDenominatorContinuous(ContinuousRewardFunctional):
 
-    def __init__(self, env, lambd, embedding , variant: int = 0, eps=0.01, sigma=0.01, scale_reg=True, num_of_maximizers = 25):
+    def __init__(self, env, lambd, embedding = None, variant: int = 0, eps=0.01, sigma=0.01, scale_reg=True, num_of_maximizers = 25):
 
         super().__init__()
 
@@ -17,17 +20,17 @@ class DesignBestArmLinearBanditNoDenominatorContinuous(ContinuousRewardFunctiona
         self.scale_reg = scale_reg
         # initialize the set of maximizers uniformly
         self.num_of_maximizers = num_of_maximizers
-        self.set_of_maximizers = np.random.uniform(low = -0.5, high = 0.5, size = (self.num_of_maximizers, self.env.states_dim))
+        self.set_of_maximizers = torch.rand((self.num_of_maximizers, self.env.states_dim)) - 0.5
 
         # define the embedding
         if embedding is None:
-            self.embedding = EmptyEmbedding()
+            self.embedding = EmptyEmbedding(m = self.env.states_dim)
         else:
             self.embedding = embedding
 
     def _estimate_building_blocks(self, emissions, V_eta_inv):
 
-        set_of_maximizers = self.embedding.embed(torch.tensor(self.set_of_maximizers)).numpy()
+        set_of_maximizers = self.embedding.embed(torch.tensor(self.set_of_maximizers))
         n, m = set_of_maximizers.shape
         # Reshape the arrays to have compatible shapes for broadcasting
         # and compute differences between all possible row pairs. Choosing
@@ -35,13 +38,16 @@ class DesignBestArmLinearBanditNoDenominatorContinuous(ContinuousRewardFunctiona
         arr1_reshaped = set_of_maximizers.reshape(n, 1, m)
         arr2_reshaped = set_of_maximizers.reshape(1, n, m)
         diffs = arr1_reshaped - arr2_reshaped
-        diffs = diffs.reshape((-1, diffs.shape[-1]))
+        diffs = diffs.reshape((-1, diffs.shape[-1]))    
 
-        nominators = np.apply_along_axis(lambda x: x @ V_eta_inv @ x.T, 1, diffs)        
-        star_id = np.argmax(nominators)
+        variance = lambda x: x @ V_eta_inv @ x.T
+        results = [variance(x.view(1,-1)) for x in diffs] 
+        nominators = torch.vstack(results)
+
+        star_id = torch.argmax(nominators)
         diff_star = diffs[star_id].reshape(1, -1)
 
-        val_star = np.max(nominators)
+        val_star = torch.max(nominators)
 
         return diffs, diff_star, val_star
     
@@ -58,11 +64,11 @@ class DesignBestArmLinearBanditNoDenominatorContinuous(ContinuousRewardFunctiona
         diffs = diffs.reshape((-1, diffs.shape[-1]))
 
         # now compute outer product
-        diffs_outer = np.einsum('ij,ik->ijk', diffs, diffs)
+        diffs_outer = torch.einsum('ij,ik->ijk', diffs, diffs)
         diffs_outer = diffs_outer.reshape((-1, diffs_outer.shape[-1]))
 
         # finally compute the sum
-        diffs_outer_sum = np.mean(diffs_outer, axis = 0).reshape(1, -1)
+        diffs_outer_sum = torch.mean(diffs_outer, axis = 0).reshape(1, -1)
 
         return diffs_outer_sum
 
@@ -84,10 +90,10 @@ class DesignBestArmLinearBanditNoDenominatorContinuous(ContinuousRewardFunctiona
         if len(unrolls) > 0:
             aggregated_density = self.build_density_from_trajectories(unrolls)
             aggregated_density = aggregated_density.average_density()
-            aggregated_emissions = self.embedding.embed(torch.tensor(aggregated_density.delta_states)).numpy()
+            aggregated_emissions = self.embedding.embed(torch.tensor(aggregated_density.delta_states))
             aggregated_weights = aggregated_density.weights
 
-            agg_V_eta = aggregated_emissions.T @ (np.diag(aggregated_weights)/(self.sigma ** 2)) @ aggregated_emissions
+            agg_V_eta = aggregated_emissions.T @ (torch.diag(aggregated_weights)/(self.sigma ** 2)) @ aggregated_emissions
 
         else:
             aggregated_density = 0
@@ -97,10 +103,10 @@ class DesignBestArmLinearBanditNoDenominatorContinuous(ContinuousRewardFunctiona
             agg_V_eta = 0
 
         average_distribution = distribution.average_density()
-        emissions = self.embedding.embed(torch.tensor(average_distribution.delta_states)).numpy()
+        emissions = self.embedding.embed(torch.tensor(average_distribution.delta_states))
         weights = average_distribution.weights
 
-        new_V_eta = emissions.T @ (np.diag(weights)/ (self.sigma ** 2)) @ emissions
+        new_V_eta = emissions.T @ (torch.diag(weights)/ (self.sigma ** 2)) @ emissions
 
         if self.uniform_alpha:
             V_eta = 1. / episodes * new_V_eta + \
@@ -110,9 +116,9 @@ class DesignBestArmLinearBanditNoDenominatorContinuous(ContinuousRewardFunctiona
                 alpha * agg_V_eta
         
         if not self.scale_reg:
-            V_eta_inv = np.linalg.inv(V_eta + (1 - alpha) * self.lambd * np.identity(self.embedding.m))
+            V_eta_inv = torch.linalg.inv(V_eta + (1 - alpha) * self.lambd * torch.identity(self.embedding.m))
         else:
-            V_eta_inv = np.linalg.inv(V_eta + self.lambd * np.identity(self.embedding.m))
+            V_eta_inv = torch.linalg.inv(V_eta + self.lambd * torch.eye(self.embedding.m))
 
         _, diff_star, _ = self._estimate_building_blocks(emissions, V_eta_inv)
 
@@ -136,10 +142,10 @@ class DesignBestArmLinearBanditNoDenominatorContinuous(ContinuousRewardFunctiona
         if len(unrolls) > 0:
             aggregated_density = self.build_density_from_trajectories(unrolls)
             aggregated_density = aggregated_density.average_density()
-            aggregated_emissions = self.embedding.embed(torch.tensor(aggregated_density.delta_states)).numpy()
+            aggregated_emissions = self.embedding.embed(torch.tensor(aggregated_density.delta_states))
             aggregated_weights = aggregated_density.weights
 
-            agg_V_eta = aggregated_emissions.T @ (np.diag(aggregated_weights)/(self.sigma ** 2)) @ aggregated_emissions
+            agg_V_eta = aggregated_emissions.T @ (torch.diag(aggregated_weights)/(self.sigma ** 2)) @ aggregated_emissions
 
         else:
             aggregated_density = 0
@@ -149,10 +155,10 @@ class DesignBestArmLinearBanditNoDenominatorContinuous(ContinuousRewardFunctiona
             agg_V_eta = 0
 
         average_distribution = distribution.average_density()
-        emissions = self.embedding.embed(torch.tensor(average_distribution.delta_states)).numpy()
+        emissions = self.embedding.embed(torch.tensor(average_distribution.delta_states))
         weights = average_distribution.weights
 
-        new_V_eta = emissions.T @ (np.diag(weights)/ (self.sigma ** 2)) @ emissions
+        new_V_eta = emissions.T @ (torch.diag(weights)/ (self.sigma ** 2)) @ emissions
 
         if self.uniform_alpha:
             V_eta = 1. / episodes * new_V_eta + \
@@ -162,9 +168,9 @@ class DesignBestArmLinearBanditNoDenominatorContinuous(ContinuousRewardFunctiona
                 alpha * agg_V_eta
         
         if not self.scale_reg:
-            V_eta_inv = np.linalg.inv(V_eta + (1 - alpha) * self.lambd * np.identity(self.embedding.m))
+            V_eta_inv = torch.linalg.inv(V_eta + (1 - alpha) * self.lambd * torch.eye(self.embedding.m))
         else:
-            V_eta_inv = np.linalg.inv(V_eta + self.lambd * np.identity(self.embedding.m))
+            V_eta_inv = torch.linalg.inv(V_eta + self.lambd * torch.eye(self.embedding.m))
 
         self.z_star = self._estimate_diff_sum()
         self.precomputed_V_eta_inv = V_eta_inv
@@ -177,13 +183,20 @@ class DesignBestArmLinearBanditNoDenominatorContinuous(ContinuousRewardFunctiona
             alpha = 0
 
         # calculate the aggregated action state
-        if (len(unrolls) > 0) & (len(unrolls[0][1]) > 0):
-            aggregated_density = self.build_density_from_trajectories(unrolls)
-            aggregated_density = aggregated_density.average_density()
-            aggregated_emissions = self.embedding.embed(torch.tensor(aggregated_density.delta_states)).numpy()
-            aggregated_weights = aggregated_density.weights
+        if (len(unrolls) > 0):
+            if len(unrolls[0][1]) > 0:
+                aggregated_density = self.build_density_from_trajectories(unrolls)
+                aggregated_density = aggregated_density.average_density()
+                aggregated_emissions = self.embedding.embed(torch.tensor(aggregated_density.delta_states))
+                aggregated_weights = aggregated_density.weights
 
-            agg_V_eta = aggregated_emissions.T @ (np.diag(aggregated_weights)/ (self.sigma ** 2)) @ aggregated_emissions
+                agg_V_eta = aggregated_emissions.T @ (torch.diag(aggregated_weights)/ (self.sigma ** 2)) @ aggregated_emissions
+            else:
+                aggregated_density = 0
+                aggregated_emissions = 0
+                aggregated_weights = 0
+
+                agg_V_eta = 0
 
         else:
             aggregated_density = 0
@@ -247,13 +260,20 @@ class DesignBestArmLinearBanditNoDenominatorContinuous(ContinuousRewardFunctiona
             alpha = 0
 
         # calculate the aggregated action state
-        if (len(unrolls) > 0) & (len(unrolls[0][1]) > 0):
-            aggregated_density = self.build_density_from_trajectories(unrolls)
-            aggregated_density = aggregated_density.average_density()
-            aggregated_emissions = self.embedding.embed(torch.tensor(aggregated_density.delta_states)).numpy()
-            aggregated_weights = aggregated_density.weights
+        if len(unrolls) > 0:
+            if len(unrolls[0][1]) > 0:
+                aggregated_density = self.build_density_from_trajectories(unrolls)
+                aggregated_density = aggregated_density.average_density()
+                aggregated_emissions = self.embedding.embed(torch.tensor(aggregated_density.delta_states))
+                aggregated_weights = aggregated_density.weights
 
-            agg_V_eta = aggregated_emissions.T @ (np.diag(aggregated_weights)/ (self.sigma ** 2)) @ aggregated_emissions
+                agg_V_eta = aggregated_emissions.T @ (np.diag(aggregated_weights)/ (self.sigma ** 2)) @ aggregated_emissions
+            else:
+                aggregated_density = 0
+                aggregated_emissions = 0
+                aggregated_weights = 0
+
+                agg_V_eta = 0
 
         else:
             aggregated_density = 0
@@ -264,10 +284,10 @@ class DesignBestArmLinearBanditNoDenominatorContinuous(ContinuousRewardFunctiona
 
 
         average_distribution = distribution.average_density()
-        emissions = self.embedding.embed(torch.tensor(average_distribution.delta_states)).numpy()
+        emissions = self.embedding.embed(torch.tensor(average_distribution.delta_states))
         weights = average_distribution.weights
 
-        new_V_eta = emissions.T @ (np.diag(weights)/ (self.sigma ** 2)) @ emissions
+        new_V_eta = emissions.T @ (torch.diag(weights)/ (self.sigma ** 2)) @ emissions
 
         if self.uniform_alpha:
             V_eta = 1. / episodes * new_V_eta + \
@@ -277,9 +297,9 @@ class DesignBestArmLinearBanditNoDenominatorContinuous(ContinuousRewardFunctiona
                 alpha * agg_V_eta
 
         if not self.scale_reg:
-            V_eta_inv = np.linalg.inv(V_eta + (1 - alpha) * self.lambd * np.identity(self.embedding.m))
+            V_eta_inv = torch.linalg.inv(V_eta + (1 - alpha) * self.lambd * torch.eye(self.embedding.m))
         else:
-            V_eta_inv = np.linalg.inv(V_eta + self.lambd * np.identity(self.embedding.m))
+            V_eta_inv = torch.linalg.inv(V_eta + self.lambd * np.identity(self.embedding.m))
 
         _, _, val_star = self._estimate_building_blocks(emissions, V_eta_inv)
 
@@ -315,7 +335,7 @@ class DesignBestArmLinearBanditNoDenominatorContinuous(ContinuousRewardFunctiona
             # estimate with building blocks using numpy
             with torch.no_grad():
                 # create numpy copy of V_eta_inv
-                V_eta_inv_numpy = V_eta_inv.clone().numpy()
+                V_eta_inv_numpy = V_eta_inv.clone()
                 _, diff_star, val_star = self._estimate_building_blocks(None, V_eta_inv_numpy)
                 diff_star = torch.tensor(diff_star).reshape(-1, 1)
 
@@ -350,16 +370,16 @@ class DesignBestArmLinearBanditNoDenominatorContinuous(ContinuousRewardFunctiona
         return - val_star
 
     def eval_full(self,
-                  emissions: np.ndarray,
-                  distribution: np.ndarray,
+                  emissions: torch.Tensor,
+                  distribution,
                   episodes: int = 0) -> float:
         
         average_distribution = distribution.average_density()
-        emissions = self.embedding.embed(torch.tensor(average_distribution.delta_states)).numpy()
+        emissions = self.embedding.embed(torch.tensor(average_distribution.delta_states))
         weights = average_distribution.weights
 
-        V_eta = emissions.T @ (np.diag(weights)/ (self.sigma ** 2)) @ emissions
-        V_eta_inv = np.linalg.inv(V_eta + self.lambd * np.identity(self.embedding.m))
+        V_eta = emissions.T @ (torch.diag(weights)/ (self.sigma ** 2)) @ emissions
+        V_eta_inv = torch.linalg.inv(V_eta + self.lambd * torch.eye(self.embedding.m))
         _, _, val_star = self._estimate_building_blocks(emissions, V_eta_inv)
 
         return - val_star

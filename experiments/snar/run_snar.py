@@ -8,8 +8,6 @@ from stpy.continuous_processes.nystrom_fea import NystromFeatures
 from stpy.continuous_processes.kernelized_features import KernelizedFeatures
 import argparse
 
-from doexpy.solvers.additive_gradient import AdditiveGradient
-from doexpy.convex_solvers.frank_wolfe import FrankWolfe
 # from doexpy.convex_solvers.cyipopt import InteriorPoint
 from doexpy.convex_solvers.greedy_approximation import ContinuousGreedyApproximation
 from doexpy.convex_solvers.first_action_random_path import RandomPaths

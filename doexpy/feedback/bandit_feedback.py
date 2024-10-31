@@ -122,7 +122,7 @@ class BanditFeedback(SimpleFeedback):
                 z = self.estimator.embed(state_x)
                 fun_value = z @ self.theta_star + eps - self.prior_mean[action]
 
-            fun_value = fun_value#.item()
+            fun_value = fun_value.reshape(-1, 1) #.item()
             
 
             print ('y:', fun_value)
@@ -140,19 +140,19 @@ class BanditFeedback(SimpleFeedback):
                     self.estimator.add_data_point(state_x, fun_value)
 
             self.estimator.fit()
-            self.objective.ucbs = self.estimator.ucb(self.action_space) + self.prior_mean
-            self.objective.lcbs = self.estimator.lcb(self.action_space) + self.prior_mean
+            self.objective.ucbs = self.estimator.ucb(self.action_space) + self.prior_mean.reshape(-1, 1)
+            self.objective.lcbs = self.estimator.lcb(self.action_space) + self.prior_mean.reshape(-1, 1)
             # update the mean if required
             if self.update_mean:
-                means, stds = self.estimator.mean_std(self.action_space).reshape(-1)
+                means, stds = self.estimator.mean_std(self.action_space)
                 self.objective.means = means.reshape(-1) + self.prior_mean.reshape(-1)
                 self.objective.stds = stds.reshape(-1)
-                self.objective.best_obs = torch.maximum(self.objective.best_obs, fun_value + self.prior_mean[action])
+                self.objective.best_obs = max(self.objective.best_obs, (fun_value + self.prior_mean[action]).item())
 
             # Compute the differences to get the UCBs and LCBs for the objective denominator, no longer used
             # calculate the best arm guess
             mean_estimates = self.estimator.mean(self.action_space).reshape(-1) + self.prior_mean.reshape(-1)
-            self.best_arm.append(torch.argmax(mean_estimates))
+            self.best_arm.append(torch.argmax(mean_estimates).item())
 
             if self.video:
                 # save the relevant stuff for plotting
@@ -197,24 +197,24 @@ class BanditFeedback(SimpleFeedback):
                     z = self.estimator.embed(state)
                     fun_value = z @ self.theta_star + eps - self.prior_mean[action]
                 
-                fun_value = fun_value.item()
+                fun_value = fun_value.reshape(-1, 1) # .reshape(-1) #.item()
 
                 self.estimator.add_data_point(state, fun_value)
                 
                 if self.update_mean:
-                    self.objective.best_obs = torch.maximum(self.objective.best_obs, fun_value + self.prior_mean[action])
+                    self.objective.best_obs = max(self.objective.best_obs, (fun_value + self.prior_mean[action]).item())
             
             self.estimator.fit()
             self.objective.ucbs = self.estimator.ucb(self.action_space).reshape(-1) + self.prior_mean.reshape(-1)
             self.objective.lcbs = self.estimator.lcb(self.action_space).reshape(-1) + self.prior_mean.reshape(-1)
             # update the mean if required
             if self.update_mean:
-                means, stds = self.estimator.mean_std(self.action_space).reshape(-1)
+                means, stds = self.estimator.mean_std(self.action_space)
                 self.objective.means = means.reshape(-1) + self.prior_mean.reshape(-1)
                 self.objective.stds = stds.reshape(-1)
 
             # calculate the best arm guess
             mean_estimates = self.estimator.mean(self.action_space).reshape(-1) + self.prior_mean.reshape(-1)
-            self.best_arm.append(torch.argmax(mean_estimates))       
+            self.best_arm.append(torch.argmax(mean_estimates).item())       
         else:
             pass

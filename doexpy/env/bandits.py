@@ -59,8 +59,9 @@ class MovementConstrainedBayesianOptimization(DiscreteEnv, ABC):
         self.action_space_pre_embedding = action_space_pre_embedding
         self.theta_star = theta_star
         self.sigma = sigma
-        self.states_num = action_space.size()[0]
-        self.actions_num = action_space.size()[0]
+        self.states_num = action_space.shape[0]
+        self.actions_num = action_space.shape[0]
+        self.emiss_num = action_space.shape[0]
         # Emissions are features
         self.emissions = self.action_space
         self.max_episode_length = max_episode_length

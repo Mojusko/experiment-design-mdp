@@ -14,7 +14,7 @@ import torch.nn as nn
 
 import pytest
 
-env = DummyTestEnvContinuous(max_episode_length = 5, init_state = np.array([-0.4]).reshape(1, 1))
+env = DummyTestEnvContinuous(max_episode_length = 5, init_state = torch.tensor([-0.4]).reshape(1, 1))
 design = None
 density_estimator = DeltaDensityEstimator(env, design)
 
@@ -35,7 +35,7 @@ def test_density_oracle_single(policy_type):
         policy = StationaryPolicyContinuous(env, policy)
         density = density_estimator.density_oracle_single(policy)
 
-        assert np.isclose(density.delta_states, np.array([-0.4, -0.3, -0.2, -0.1, 0.0]).reshape(5, 1)).all(), 'density is not correct'
+        assert np.isclose(density.delta_states, np.array([-0.4, -0.3, -0.2, -0.1, 0.0]).reshape(5, 1), atol = 1e-6).all(), 'density is not correct'
     
     elif policy_type == 'NonStationaryPolicy':
         policies = nn.ModuleList()
@@ -53,7 +53,7 @@ def test_density_oracle_single(policy_type):
         assert np.isclose(density.densities[0].delta_states, np.array([-0.4])).all(), 'density is not correct'
         assert np.isclose(density.densities[1].delta_states, np.array([-0.3])).all(), 'density is not correct'
         assert np.isclose(density.densities[2].delta_states, np.array([-0.2])).all(), 'density is not correct'
-        assert np.isclose(density.densities[3].delta_states, np.array([0.0])).all(), 'density is not correct'
+        assert np.isclose(density.densities[3].delta_states, np.array([0.0]), atol = 1e-6).all(), 'density is not correct'
         assert np.isclose(density.densities[4].delta_states, np.array([0.2])).all(), 'density is not correct'
 
         assert np.isclose(density.densities[0].delta_actions, np.array([0.1])).all(), 'density is not correct'
@@ -80,15 +80,15 @@ def test_density_oracle(policy_type):
 
         assert np.isclose(density.delta_states, np.array([-0.4, -0.3, -0.2, -0.1, 0.0,
                                                         -0.4, -0.25, -0.1, 0.05, 0.2,
-                                                        -0.4, -0.2, 0.0, 0.2, 0.4]).reshape(15, 1)).all(), 'density is not correct'
+                                                        -0.4, -0.2, 0.0, 0.2, 0.4]).reshape(15, 1), atol = 1e-6).all(), 'density is not correct'
 
         assert np.isclose(density.delta_actions, np.array([0.1, 0.1, 0.1, 0.1, 0.1,
                                                         0.15, 0.15, 0.15, 0.15, 0.15,
-                                                        0.2, 0.2, 0.2, 0.2, 0.2,]).reshape(15, 1)).all(), 'density is not correct'
+                                                        0.2, 0.2, 0.2, 0.2, 0.2,]).reshape(15, 1), atol = 1e-6).all(), 'density is not correct'
 
         assert np.isclose(density.weights, np.array([0.4, 0.4, 0.4, 0.4, 0.4,
                                                      0.3, 0.3, 0.3, 0.3, 0.3,
-                                                     0.3, 0.3, 0.3, 0.3, 0.3])).all(), 'weighting is not correct'
+                                                     0.3, 0.3, 0.3, 0.3, 0.3]), atol = 1e-6).all(), 'weighting is not correct'
 
     if policy_type == 'NonStationaryPolicy':
 
@@ -111,7 +111,7 @@ def test_density_oracle(policy_type):
         assert np.isclose(density.densities[1].delta_states, np.array([-0.3, -0.25, -0.2, -0.2]).reshape(-1, 1)).all(), 'density is not correct'
         assert np.isclose(density.densities[2].delta_states, np.array([-0.2, -0.1, 0.0, 0.0]).reshape(-1, 1)).all(), 'density is not correct'
         assert np.isclose(density.densities[3].delta_states, np.array([-0.1, 0.05, 0.2, 0.2]).reshape(-1, 1)).all(), 'density is not correct'
-        assert np.isclose(density.densities[4].delta_states, np.array([0.0, 0.2, 0.4, 0.4]).reshape(-1, 1)).all(), 'density is not correct'
+        assert np.isclose(density.densities[4].delta_states, np.array([0.0, 0.2, 0.4, 0.4]).reshape(-1, 1), atol = 1e-6).all(), 'density is not correct'
 
         for h in range(5):
             assert np.isclose(density.densities[h].delta_actions, np.array([0.1, 0.15, 0.2, 0.2]).reshape(-1, 1)).all(), 'density is not correct'
