@@ -128,7 +128,7 @@ if __name__ == "__main__":
                                accuracy=args.accuracy)
 
     # define a swifel function
-    Fel = SwissFEL(d=2, dts = 'evaluations.hdf5')
+    Fel = SwissFEL(d=2, dts = 'experiments/swissfel/evaluations.hdf5')
     F = lambda x: Fel.eval(x)
 
     # xtest

@@ -129,7 +129,7 @@ class BanditFeedback(SimpleFeedback):
             if not self.worst_case:
                 if self.sigma_fn is not None:
                     print ("constrained sigma:", Sigma)
-                    self.estimator.add_data_point(state_x, fun_value, Sigma = Sigma.view(1,1))
+                    self.estimator.add_data_point(state_x, fun_value, Sigma = torch.tensor(Sigma).view(1,1))
                 else:
                     self.estimator.add_data_point(state_x, fun_value)
             else:
