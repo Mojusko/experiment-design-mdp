@@ -126,7 +126,7 @@ class StableDiffusionGenerator():
         )
 
     @torch.no_grad()
-    def sample(self, prompt: str) -> np.ndarray:
+    def sample(self, prompt: str, raw: bool = False) -> np.ndarray:
         """Samples an image from a text prompt.
 
         Args:
@@ -175,11 +175,16 @@ class StableDiffusionGenerator():
         latents = 1 / 0.18215 * latents
         with torch.no_grad():
             image = self._vae.decode(latents).sample
+ 
+        image_raw = image.clone()
 
         image = (image / 2 + 0.5).clamp(0, 1)
         image = image.detach().cpu().permute(0, 2, 3, 1).numpy()
         image = (image * 255).round().astype("uint8")[0, ...]
-        return image
+        if raw:
+            return image, image_raw
+        else:
+            return image
 
     @property
     def embeddings_size(self) -> Tuple[int]:

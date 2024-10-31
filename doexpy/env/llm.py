@@ -49,12 +49,32 @@ class LLMGrid(DiscreteEnv):
 		self.states_num = self.max_episode_length
 		self.actions_num = total_tokens
 		self.h = 0 
+		self.action_space_pre_embedding = torch.arange(self.actions_num, dtype=torch.float64).reshape(-1, 1)
 		self.emiss_num = self.actions_num 
 		self.transition_matrix = None
 		self._generate_emissions()
+		self.action_space = self.emissions
 		self.visitations = torch.zeros(self.states_num, self.actions_num, dtype=torch.float64)
 		#print (self.max_episode_length)
 
+	def embed_text(self, 
+				list_of_texts:str
+				)->torch.Tensor:
+		emissions = []
+		for text in list_of_texts:
+			text_input = self._tokenizer(
+					text,
+					padding="max_length",
+					max_length=self._tokenizer.model_max_length,
+					truncation=True,
+					return_tensors="pt",
+				)
+			feat = self._model.get_text_features(**text_input)  # projected CLIP embeddings
+			feat = feat.detach().double()
+			emissions.append(feat)
+		emissions = torch.vstack(emissions)
+		return emissions
+	
 	def embed_clip(
 				self,
 				actions:List

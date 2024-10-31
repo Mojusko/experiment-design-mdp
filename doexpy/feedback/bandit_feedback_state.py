@@ -16,7 +16,7 @@ from doexpy.policies.summary_policies.mixture_policy import MixturePolicy
 from stpy.continuous_processes.gauss_procc import GaussianProcess
 from stpy.continuous_processes.kernelized_features import KernelizedFeatures
 
-
+import numpy as np 
 import torch 
 
 class BanditFeedbackState(BanditFeedback):
@@ -35,52 +35,43 @@ class BanditFeedbackState(BanditFeedback):
                 wort_case:bool = True,
                 markovian:bool = False,    
                 update_mean: bool = False,
-                prior_mean: Union[torch.Tensor,None] = None) -> None:     
+                prior_mean: Union[torch.Tensor,None] = None,
+                aggregation: bool = False) -> None:      # sums all the past feedbacks
         
         super().__init__(env, objective, estimator, theta_star, sigma, sigma_fn, video, wort_case, markovian, update_mean, prior_mean)
-
-    def step_episode(self):
-        pass
+        self.aggregation = aggregation
 
     def step_update(self):
-        pass 
+        if self.markovian:
+            action_list = self.action_trajectory
+            if self.aggregation:
+                # TODO: needs to be finished and made compatible with the rest of the code
+                # sum all the past feedbacks
+                actions = action_list
+            else:
+                # only the last feedback
+                actions = [action_list[-1]]
+            
+            print ("Giving feedback on", actions)
+
+            eps = torch.randn(size = (len(actions),1))*self.sigma
+
+            if callable(self.theta_star):
+                     fun_value = self.theta_star(torch.Tensor(actions)).int().view(-1,1) + eps
+            else:
+                raise ValueError("Non-callable theta_star needs to be callable")
+            print ("Feedback given:", fun_value)
+
+            for i,a in enumerate(actions):
+                self.estimator.add_data_point(torch.Tensor([a]).int().view(-1,1), fun_value[i].view(-1,1))
+            
+            
+            #print('actions taken: ', action_list)
+
 
     def episode_update(self):
-         if self.markovian:
-            action_list = self.action_trajectory
-            print('actions taken: ', action_list)
-
-            for action in action_list:
-                # obtain the value of the action
-                state = self.env.action_space_pre_embedding[action].reshape(1, -1)
-                
-                # obtain the noise
-                eps = np.random.normal(0, self.sigma)
-
-                if callable(self.theta_star):
-                    fun_value = self.theta_star(state) + eps - self.prior_mean[action]
-                else:
-                    z = self.estimator.embed(state)
-                    fun_value = z @ self.theta_star + eps - self.prior_mean[action]
-                
-                fun_value = fun_value.reshape(-1, 1) # .reshape(-1) #.item()
-
-                self.estimator.add_data_point(state, fun_value)
-                
-                if self.update_mean:
-                    self.objective.best_obs = max(self.objective.best_obs, (fun_value + self.prior_mean[action]).item())
-            
+        if self.markovian:
             self.estimator.fit()
-            self.objective.ucbs = self.estimator.ucb(self.action_space).reshape(-1) + self.prior_mean.reshape(-1)
-            self.objective.lcbs = self.estimator.lcb(self.action_space).reshape(-1) + self.prior_mean.reshape(-1)
-            # update the mean if required
-            if self.update_mean:
-                means, stds = self.estimator.mean_std(self.action_space)
-                self.objective.means = means.reshape(-1) + self.prior_mean.reshape(-1)
-                self.objective.stds = stds.reshape(-1)
-
-            # calculate the best arm guess
-            mean_estimates = self.estimator.mean(self.action_space).reshape(-1) + self.prior_mean.reshape(-1)
-            self.best_arm.append(torch.argmax(mean_estimates).item())       
+            print ("Updating the model.")
         else:
-            pass
+            raise NotImplementedError("Non-Markovian feedback not implemented yet for this feedback model")

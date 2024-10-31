@@ -1,5 +1,6 @@
 import torch
 import argparse
+from PIL import Image
 
 from image_generator import StableDiffusionGenerator
 
@@ -49,10 +50,44 @@ convex_solver = FrankWolfe(env,
 
 
 # define the true function returning the reward
-theta_star = lambda state: torch.sum(env.embeddings[state])**2
+m = 768
+# dummy theta_star
+theta_star_vector = env.embed_text(["Cheese"]).double()
+#theta_star = lambda actions:  env.embed_clip(actions.view(-1).int().tolist()).view(-1,m) @ theta_star_vector.T
+
+
+image_generator = StableDiffusionGenerator("CompVis/stable-diffusion-v1-4",
+                                            device = 'cuda',
+                                            image_height = 256,
+                                            image_width = 256,
+                                            num_inference_steps=50)
+image_generator.resample_random()
+
+def theta_star(actions):
+    prompt = 'A plate with '
+    print (actions)
+    for action in actions:
+        prompt += env.unique_elements[int(action)]    
+
+    # generate an image
+    image = image_generator.sample(prompt)
+    
+    # for debugging purposes
+    # from matplotlib import pyplot as plt
+    # plt.imshow(image)
+    # plt.show()
+
+    # embed an image 
+    image_pil = Image.fromarray(image)
+    inputs = env._processor(images=image_pil, return_tensors="pt")
+    feat = env._model.get_image_features(**inputs)
+
+    # TODO: aesthetics model goes here
+    val = feat.double() @ theta_star_vector.T
+    return val 
+
 
 # defines a custom Embedding for the estimator 
-m = 768
 embedding = CustomEmbedding(1,env.embed_clip,m)
 estimator = KernelizedFeatures(embedding, m)
 
@@ -75,30 +110,3 @@ val, opt_val, visits = me.run(
     episodes=T,
     return_visitations = True # returns visitations as list of episodes with tuples of states and actions
 )
-print (visits)
-
-image_generator = StableDiffusionGenerator("CompVis/stable-diffusion-v1-4",
-                                           device = 'cuda',
-                                           image_height = 256,
-                                           image_width = 256,
-                                           num_inference_steps=200)
-image_generator.resample_random()
-images = []
-
-for no, episode in enumerate(visits):
-    states, actions = episode
-    print (f"Trajectory {no}:",end = ' ')
-    #print (actions)
-    prompt = 'A plate with '
-    for action in actions:
-        prompt += env.unique_elements[action] +" "
-    
-    image = image_generator.sample(prompt)
-    images.append(image)
-    print (prompt)
-
-import matplotlib.pyplot as plt
-fig, axs = plt.subplots(3, 3)
-for i, ax in enumerate(axs.flat):
-    ax.imshow(images[i])
-plt.show()
