@@ -27,6 +27,7 @@ class ExperimentDesignFunctional(RewardFunctional):
 
         if self.dim == 0:
             distribution = torch.sum(torch.sum(distribution, dim = 2), dim = 0)
+        
         elif self.dim == 1: # actions matter 
             distribution = torch.sum(torch.sum(distribution, dim = 1), dim = 0)
         z = torch.einsum('ij,j,jk->ik', emissions.T, distribution/ Sigma**2, emissions)

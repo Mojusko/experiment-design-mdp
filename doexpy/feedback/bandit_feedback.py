@@ -116,8 +116,6 @@ class BanditFeedback(SimpleFeedback):
                 Sigma = self.sigma_fn(state_coord,action_coord)
                 eps = np.random.normal(0, Sigma)
 
-
-
             if callable(self.theta_star):
                 fun_value = self.theta_star(state_x) + eps - self.prior_mean[action]
             else:
