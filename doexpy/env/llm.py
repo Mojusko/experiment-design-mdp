@@ -55,7 +55,34 @@ class LLMGrid(DiscreteEnv):
 		self.visitations = torch.zeros(self.states_num, self.actions_num, dtype=torch.float64)
 		#print (self.max_episode_length)
 
+	def embed_clip(
+				self,
+				actions:List
+				)->torch.Tensor:
+		"""
+		Embeds a list of actions using the CLIP model.
+		"""
+		emissions = []
+		for i in actions:
+			text = self.unique_elements[i]
+			text_input = self._tokenizer(
+				text,
+				padding="max_length",
+				max_length=self._tokenizer.model_max_length,
+				truncation=True,
+				return_tensors="pt",
+			)
+			feat = self._model.get_text_features(**text_input)  # projected CLIP embeddings
+			feat = feat.detach().double()
+			emissions.append(feat)
+		emissions = torch.vstack(emissions)
+		return emissions
+
+
 	def _generate_emissions(self):
+		"""
+		Generates the emissions for the environment.
+		"""
 		if self.verbose:
 			print ("PREPROCESS: Generating emissions")
 		self.emissions = []
