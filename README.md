@@ -40,6 +40,7 @@ Informative trajectories in the environment maximizing the diverse landscapes vi
 To ensure you have a compatible environment to run the code in, we recommend using the [`environment.yaml`](environment.yaml) file to create a conda environment using `conda` or `mamba`. If you are curious, the detailed dependencies are listed in [`pyproject.toml`](pyproject.toml).
 
 ```bash
+git clone https://github.com/Mojusko/experiment-design-mdp
 pip install -e . 
 ```
 
