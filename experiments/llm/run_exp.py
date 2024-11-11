@@ -1,10 +1,13 @@
 import torch
 import argparse
+from stpy.helpers.helper import cartesian
 from PIL import Image
 
 from image_generator import StableDiffusionGenerator
 
+
 from doexpy.env.llm import LLMGrid
+
 from doexpy.functionals.doe_static_functionals import DesignA, DesignD
 from doexpy.mdpexplore import MdpExplore
 from doexpy.convex_solvers.frank_wolfe import FrankWolfe
@@ -13,40 +16,65 @@ from doexpy.feedback.bandit_feedback_state import BanditFeedbackState
 from doexpy.solvers.dp import DP
 from doexpy.policies.summary_policies.density_policy import DensityPolicy
 
-from stpy.continuous_processes.kernelized_features import KernelizedFeatures
-from stpy.embeddings.polynomial_embedding import CustomEmbedding
+# IF DOES NOT WORK UNCOMMEND THE FOLLOWING LINE
+from stpy.regression.kernelized_features import KernelizedFeatures
+#from stpy.continuous_process.kernelized_features import KernelizedFeatures
 
-parser = argparse.ArgumentParser(description='Protein capacity experiment.')
-parser.add_argument('--episodes', default=9, type=int, help='Name of the file')
-parser.add_argument('--no_tokens', default=2, type=int, help='Name of the file')
-parser.add_argument('--feedback', default='markovian', type=str, help='Name of the file')
+
+from stpy.embeddings.polynomial_embedding import CustomEmbedding
+import torch.nn as nn
+import numpy as np
+
+parser = argparse.ArgumentParser(description='LLM experiment.')
+parser.add_argument('--episodes', default=10, type=int, help='Episodes')
+parser.add_argument('--no_tokens', default=2, type=int, help='Horizon')
+parser.add_argument('--feedback', default='markovian', type=str, help='what type of feedback (end) mid episode')
+parser.add_argument('--algorithm', default='greedy', type=str, help='type of algorithm')
+parser.add_argument('--num_components', default=100, type=int, help='Number of components in FW')
+parser.add_argument('--save', default="results/experiment.csv", type=str, help='name of the file')
+parser.add_argument('--seed', default=12, type=str, help='Use this to set the seed for the random number generator')
+parser.add_argument('--accuracy', default=None, type=float, help='Termination criterion for optimality gap')
+parser.add_argument('--opt', default=None, type=str, help='whether to return opt')
 
 args = parser.parse_args()
 
-file_path = 'dummy.txt'
+args.seed = int(args.seed)
 
+
+file_path = 'dummy.txt'
 with open(file_path, 'r') as file:
-    words_list = [line.strip() for line in file]
+    words_list_1 = [line.strip() for line in file]
+file_path = 'dummy.txt'
+with open(file_path, 'r') as file:
+    words_list_2 = [line.strip() for line in file]
 
 # number of episodes
 T = args.episodes
 
-# initializes the environment, the horizon is number of separates token lists 
-env = LLMGrid(list_of_text_tokens = [words_list,words_list, words_list, words_list], verbose=True)
+
+# create a cartesian version of the word_list
+words = cartesian([words_list_1,words_list_2])
+words_list = []
+
+for i in range(words.shape[0]):
+    if words[i][0] != " ":
+        pp = words[i][0]+", "+words[i][1]
+    else:
+        pp = words[i][1]
+    words_list.append(pp)
+
+if args.algorithm == "optim":
+    env = LLMGrid(list_of_text_tokens = [words_list], verbose=True)
+else:
+    # initializes the environment, the horizon is number of separates token lists
+    env = LLMGrid(list_of_text_tokens = [words_list_1,words_list_2], verbose=True)
 
 design = DesignA(
     env=env, 
     lambd=1., # regularization constant without any info
-    dim = 1, # this signifies the actions matter for the desgin
+    dim = 1, # this signifies the actions matter for the design
 )
 
-# define the convex solver
-convex_solver = FrankWolfe(env,
-                           objective=design,
-                           num_components=100, # number of FW steps
-                           solver=DP, # type of RL solver
-                           SummarizedPolicyType=DensityPolicy, # this type of policy summarizes the components from FW steps
-                           accuracy=1e-15) # accuracy of the solver FW
 
 
 # define the true function returning the reward
@@ -56,57 +84,178 @@ theta_star_vector = env.embed_text(["Cheese"]).double()
 #theta_star = lambda actions:  env.embed_clip(actions.view(-1).int().tolist()).view(-1,m) @ theta_star_vector.T
 
 
-image_generator = StableDiffusionGenerator("CompVis/stable-diffusion-v1-4",
-                                            device = 'cuda',
-                                            image_height = 256,
-                                            image_width = 256,
-                                            num_inference_steps=50)
-image_generator.resample_random()
+# image_generator = StableDiffusionGenerator("CompVis/stable-diffusion-v1-4",
+#                                             device = 'cuda',
+#                                             image_height = 256,
+#                                             image_width = 256,
+#                                             num_inference_steps=50)
+# image_generator.resample_random()
 
-def theta_star(actions):
+
+model = nn.Linear(768, 1).double()
+state = torch.load("vit_14_weights.pth")
+model.load_state_dict(state)
+model.eval()
+
+# this is shortcut for working with
+def embed_clip(prompt):
+    text_input = env._tokenizer(
+        prompt,
+        padding="max_length",
+        max_length=env._tokenizer.model_max_length,
+        truncation=True,
+        return_tensors="pt",
+    )
+    feat = env._model.get_text_features(**text_input)  # projected CLIP embeddings
+    feat = feat.detach().double().view(1,-1)
+    return feat
+
+def theta_star(actions, returnx = False):
     prompt = 'A plate with '
     print (actions)
+    added = None
     for action in actions:
-        prompt += env.unique_elements[int(action)]    
+        if added is None:
+            added = env.unique_elements[int(action)]
+        else:
+            if added != " ":
+                added += ", " + env.unique_elements[int(action)]
+            else:
+                added = env.unique_elements[int(action)]
+    prompt = prompt + added
 
-    # generate an image
-    image = image_generator.sample(prompt)
-    
-    # for debugging purposes
-    # from matplotlib import pyplot as plt
-    # plt.imshow(image)
-    # plt.show()
+    # TODO: Uncomment when working with images
 
-    # embed an image 
-    image_pil = Image.fromarray(image)
-    inputs = env._processor(images=image_pil, return_tensors="pt")
-    feat = env._model.get_image_features(**inputs)
+    # # generate an image
+    # image = image_generator.sample(prompt)
+    #
+    # # for debugging purposes
+    # # from matplotlib import pyplot as plt
+    # # plt.imshow(image)
+    # # plt.show()
+    #
+    # # embed an image
+    # image_pil = Image.fromarray(image)
+    # inputs = env._processor(images=image_pil, return_tensors="pt")
+    # feat = env._model.get_image_features(**inputs)
 
-    # TODO: aesthetics model goes here
-    val = feat.double() @ theta_star_vector.T
-    return val 
+    text_input = env._tokenizer(
+        prompt,
+        padding="max_length",
+        max_length=env._tokenizer.model_max_length,
+        truncation=True,
+        return_tensors="pt",
+    )
+    feat = env._model.get_text_features(**text_input)  # projected CLIP embeddings
+    feat = feat.detach().double()
+    print ("Evaluating prompt", prompt)
+    val = model.forward(feat)
+    if returnx:
+        return val, feat
+    else:
+        return val
 
 
-# defines a custom Embedding for the estimator 
+# defines a custom Embedding for the estimator
 embedding = CustomEmbedding(1,env.embed_clip,m)
 estimator = KernelizedFeatures(embedding, m)
 
 # define the feedback class
-feedback = BanditFeedbackState(env, design, estimator, theta_star, sigma=0.1, markovian=True)
+# TODO: This feedback is when using non-Markovina or directed design
+#feedback = BanditFeedbackState(env, design, estimator, theta_star, sigma=0.1, markovian=True)
+
+# This is for designs not requiring any feedback
+feedback = EmptyFeedback(env, design)
 
 # This stars without a policy, and first one is generated after first FW step
 initial_policy = False
 
+if args.algorithm == 'greedy':
+    pass
+elif args.algorithm == "optim":
+    pass
+elif args.algorithm == "random":
+    initial_policy = True
+    args.num_components = 1
+else:
+    raise NotImplementedError("This algorithm is not implemented yet.")
+
+# define the convex solver
+convex_solver = FrankWolfe(env,
+                           objective=design,
+                           num_components=args.num_components, # number of FW steps
+                           solver=DP, # type of RL solver
+                           initial_policy=initial_policy, # initial policy
+                           SummarizedPolicyType=DensityPolicy, # this type of policy summarizes the components from FW steps
+                           accuracy=args.accuracy) # accuracy of the solver FW
+
 me = MdpExplore(
     env=env,
     objective=design,
-    convex_solver=convex_solver, 
-    verbosity=3, # verbosity level
+    convex_solver=convex_solver,
+    verbosity=3,  # verbosity level
     feedback=feedback,
-    general_policy='markovian' # this means the feedback is called only after episode execution 
+    general_policy='markovian'  # this means the feedback is called only after episode execution
 )
 
 val, opt_val, visits = me.run(
     episodes=T,
     return_visitations = True # returns visitations as list of episodes with tuples of states and actions
 )
+
+# These are the visited trajectories of the model
+print (visits)
+
+### Testing part of the code #######
+####################################
+
+# Lets generate a feedback for the estimator from the asthetics model
+x = []
+y = []
+actions = []
+for i in range(T):
+        action = visits[i][1]
+        actions.append(action)
+        yy,xx = theta_star(action, returnx = True)
+        x.append(xx)
+        y.append(yy)
+
+x = torch.vstack(x).detach()
+y = torch.vstack(y).detach()
+
+print (actions)
+
+acts = torch.Tensor(actions)
+print (y.size())
+print (x.size())
+print (acts.size())
+
+# load data
+estimator.load_data((x,y))
+
+# fit the model
+estimator.fit()
+
+
+
+
+# sample random list of words
+N_random = 200
+selected_words = np.random.choice(words_list, N_random)
+
+xtest = []
+ytest = []
+for i in range(len(words_list)):
+    fea = embed_clip(words_list[i])
+    yy = model(fea)
+    xtest.append(fea)
+    ytest.append(yy)
+
+xtest = torch.vstack(xtest)
+ytest = torch.vstack(ytest)
+
+ypred = estimator_test.mean(xtest)
+error = torch.mean((ypred - ytest)**2)
+
+vals = np.array(val)
+np.savetxt(args.save, error.detach().view(1,1).numpy())
