@@ -284,6 +284,28 @@ STOCH0: STOCH_ada0 STOCH_opt0 STOCH_static0
 
 STOCH: STOCH1 STOCH2 STOCH3 STOCH0
 
+
+########################### LLMS
+
+REPEATS_LLM=10
+NUMBERS_LLM := $(shell seq 1 ${REPEATS_LLM})
+
+JOBS_LLM_ALG := $(addprefix job-llm-alg,${NUMBERS_LLM})
+JOBS_LLM_RAN := $(addprefix job-llm-ran,${NUMBERS_LLM})
+JOBS_LLM_GRD := $(addprefix job-llm-grd,${NUMBERS_LLM})
+
+${JOBS_LLM_ALG}: job-llm-alg%: ; cd llm && OMP_NUM_THREADS=1 MKL_NUM_THREADS=1 ${PYTHONPATH} run_exp.py --save="results/alg-$*.txt" --seed=$* --accuracy=1e-12 --algorithm="optim" --episodes=100
+${JOBS_LLM_RAN}: job-llm-ran%: ; cd llm && OMP_NUM_THREADS=1 MKL_NUM_THREADS=1 ${PYTHONPATH} run_exp.py --save="results/rand-$*.txt" --seed=$* --accuracy=1e-12 --algorithm="random" --episodes=100
+${JOBS_LLM_GRD}: job-llm-grd%: ; cd llm && OMP_NUM_THREADS=1 MKL_NUM_THREADS=1 ${PYTHONPATH} run_exp.py --save="results/greedy-$*.txt" --seed=$* --accuracy=1e-12 --algorithm="greedy" --episodes=100
+
+llm_alg: ${JOBS_LLM_ALG}
+llm_ran: ${JOBS_LLM_RAN}
+llm_grd: ${JOBS_LLM_GRD}
+
+llm: llm_alg llm_ran llm_grd
+
+
+
 PLOTS: 
 	${PYTHONPATH} plot_grids.py && ${PYTHONPATH} plot_pharma.py && ${PYTHONPATH} plot.py
 

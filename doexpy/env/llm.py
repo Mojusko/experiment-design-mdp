@@ -75,7 +75,7 @@ class LLMGrid(DiscreteEnv):
 		emissions = torch.vstack(emissions)
 		return emissions
 	
-	def embed_clip(
+	def embed_action_clip(
 				self,
 				actions:List
 				)->torch.Tensor:

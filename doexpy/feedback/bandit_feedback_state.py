@@ -13,8 +13,8 @@ from doexpy.functionals.reward_functional import RewardFunctional
 from doexpy.policies.summary_policies.density_policy import DensityPolicy, MarginalDensityPolicy
 from doexpy.policies.summary_policies.mixture_policy import MixturePolicy
 
-from stpy.continuous_processes.gauss_procc import GaussianProcess
-from stpy.continuous_processes.kernelized_features import KernelizedFeatures
+from stpy.regression.gauss_procc import GaussianProcess
+from stpy.regression.kernelized_features import KernelizedFeatures
 
 import numpy as np 
 import torch 

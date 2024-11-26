@@ -3,11 +3,11 @@ from enum import Enum
 import random
 import numpy as np
 import torch
-from stpy.continuous_processes.gauss_procc import GaussianProcess
-from stpy.continuous_processes.kernelized_features import KernelizedFeatures
-from stpy.kernels import KernelFunction
+from stpy.regression.gauss_procc import GaussianProcess
+from stpy.regression.kernelized_features import KernelizedFeatures
+from stpy.kernel import KernelFunction
 from stpy.embeddings.embedding import HermiteEmbedding
-from stpy.continuous_processes.nystrom_fea import NystromFeatures
+from stpy.embeddings.nystrom_fea import NystromFeatures
 import argparse
 from tqdm.contrib.concurrent import process_map
 import multiprocessing as mp
