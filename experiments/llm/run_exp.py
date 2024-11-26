@@ -2,7 +2,7 @@ import torch
 import argparse
 from stpy.helpers.helper import cartesian
 from PIL import Image
-
+import time
 from image_generator import StableDiffusionGenerator
 
 
@@ -41,16 +41,16 @@ args = parser.parse_args()
 args.seed = int(args.seed)
 
 
-file_path = 'dummy.txt'
+file_path = 'mediums_small.txt'
 with open(file_path, 'r') as file:
     words_list_1 = [line.strip() for line in file]
-file_path = 'dummy.txt'
+
+file_path = 'movements_small.txt'
 with open(file_path, 'r') as file:
     words_list_2 = [line.strip() for line in file]
 
 # number of episodes
 T = args.episodes
-
 
 # create a cartesian version of the word_list
 words = cartesian([words_list_1,words_list_2])
@@ -65,6 +65,7 @@ for i in range(words.shape[0]):
 
 if args.algorithm == "optim":
     env = LLMGrid(list_of_text_tokens = [words_list], verbose=True)
+
 else:
     # initializes the environment, the horizon is number of separates token lists
     env = LLMGrid(list_of_text_tokens = [words_list_1,words_list_2], verbose=True)
@@ -74,8 +75,6 @@ design = DesignA(
     lambd=1., # regularization constant without any info
     dim = 1, # this signifies the actions matter for the design
 )
-
-
 
 # define the true function returning the reward
 m = 768
@@ -157,7 +156,7 @@ def theta_star(actions, returnx = False):
 
 
 # defines a custom Embedding for the estimator
-embedding = CustomEmbedding(1,env.embed_clip,m)
+embedding = CustomEmbedding(m,lambda x: x,m)
 estimator = KernelizedFeatures(embedding, m)
 
 # define the feedback class
@@ -172,8 +171,10 @@ initial_policy = False
 
 if args.algorithm == 'greedy':
     pass
+    args.num_components = 100
 elif args.algorithm == "optim":
     pass
+    args.num_components = 1000
 elif args.algorithm == "random":
     initial_policy = True
     args.num_components = 1
@@ -214,21 +215,14 @@ x = []
 y = []
 actions = []
 for i in range(T):
-        action = visits[i][1]
-        actions.append(action)
-        yy,xx = theta_star(action, returnx = True)
-        x.append(xx)
-        y.append(yy)
+    action = visits[i][1]
+    actions.append(action)
+    yy,xx = theta_star(action, returnx = True)
+    x.append(xx)
+    y.append(yy)
 
 x = torch.vstack(x).detach()
 y = torch.vstack(y).detach()
-
-print (actions)
-
-acts = torch.Tensor(actions)
-print (y.size())
-print (x.size())
-print (acts.size())
 
 # load data
 estimator.load_data((x,y))
@@ -236,25 +230,26 @@ estimator.load_data((x,y))
 # fit the model
 estimator.fit()
 
-
-
-
 # sample random list of words
 N_random = 200
 selected_words = np.random.choice(words_list, N_random)
 
 xtest = []
 ytest = []
-for i in range(len(words_list)):
-    fea = embed_clip(words_list[i])
+for i in range(len(selected_words)):
+    t1 = time.time()
+    fea = embed_clip(selected_words[i])
+    #print ("i", time.time()-t1)
     yy = model(fea)
+    #print("i", time.time() - t1)
+    #print ("-----")
     xtest.append(fea)
     ytest.append(yy)
 
 xtest = torch.vstack(xtest)
 ytest = torch.vstack(ytest)
 
-ypred = estimator_test.mean(xtest)
+ypred = estimator.mean(xtest)
 error = torch.mean((ypred - ytest)**2)
 
 vals = np.array(val)
