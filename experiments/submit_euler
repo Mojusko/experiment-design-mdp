@@ -1,5 +1,12 @@
 #!/bin/bash
 
+### Mojmir, Nov 2024, ETH Zurich
+### Usage
+################
+### make job --dry-run | ./submit_job --server=yoruname@euler.ethz.ch
+###
+### Notes: its best to have no login password to submit these jobs elegantly.
+
 # Function to display usage
 usage() {
     echo "Usage: $0 --server <server_address> [file_path]"
@@ -27,8 +34,9 @@ if [ -z "$SERVER" ]; then
     usage
 fi
 
-# Prefix and Suffix
+# Prefix
 PREFIX="--wrap="       # Define your desired prefix here
+# Define the conditions for execution there 
 SUFFIX="--time=2:00:00 --mem-per-cpu=2G --ntasks=8 --gpus=1 --gres=gpumem:8g"       # Define your desired suffix here
 
 # Check if input is from a pipe or a file
