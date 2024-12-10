@@ -1,4 +1,4 @@
-from typing import Callable, Type, Union, Tuple
+from typing import Callable, Type, Union, Tuple, List
 from datetime import datetime
 import torch 
 import os
@@ -243,3 +243,229 @@ class MdpExplore():
             return objective_values, opt, self.visitations
 
         return objective_values, opt
+
+
+class MdpExploreMultiPolicy:
+    def __init__(
+            self,
+            env: DiscreteEnv,
+            objective: RewardFunctional,
+            convex_solver: Type[ConvexSolverBase],
+            num_policies: int,
+            verbosity: int = 0,
+            optimize_repetitions: bool = False,
+            feedback: Feedback = EmptyFeedback(),
+            general_policy: str = 'markovian',
+    ) -> None:
+        """Class containing components required to run the maximum entropy exploration algorithm with multiple policies
+        
+        Args:
+            env: environment to be solved with max-ent
+            objective: reward functional to generate the reward functions
+            convex_solver: MDP solver to be used as planning oracle
+            num_policies: number of policies to maintain
+            verbosity: level of information logging
+            optimize_repetitions: whether to optimize repetitions
+            feedback: feedback mechanism
+            general_policy: type of policy ('markovian' or 'non-markovian')
+        """
+        self.env = env
+        self.objective = objective
+        self.convex_solver = convex_solver
+        self.verbosity = verbosity
+        self.convex_solver.verbosity = verbosity
+        self.feedback = feedback
+        self.num_policies = num_policies
+        
+        # Initialize lists to store per-policy information
+        self.general_policies = []
+        self.densities_per_policy = [[] for _ in range(num_policies)]
+        self.objective_values_baseline_per_policy = [[] for _ in range(num_policies)]
+        self.visitations_per_policy = [[] for _ in range(num_policies)]
+        
+        # Initialize policies
+        policy_class = MarkovianPolicy if general_policy == 'markovian' else NonMarkovianPolicy
+        for _ in range(num_policies):
+            self.general_policies.append(policy_class(self.env, self.convex_solver))
+            
+        # density estimator
+        if self.env.type == 'discrete':
+            self.density_estimator = TabularDensity(self.env, self.objective)
+        elif self.env.type == 'continuous':
+            self.density_estimator = DeltaDensityEstimator(self.env, self.objective)
+        else:
+            raise NotImplementedError(f'Density estimator for {self.env.type} environments not implemented')
+        
+        self.optimize_repetitions = optimize_repetitions
+        
+        # Precompute emissions for discrete environments
+        if self.env.type == 'discrete':
+            self._precompute_emissions()
+        else:
+            self.emissions = None
+            
+    def _reset(self, reset_visitations=True) -> None:
+        """Resets trajectories and visitations for all policies"""
+        self.env.reset()
+        self.convex_solver.reset()
+        
+        # Reset per-policy tracking
+        self.state_visitations_per_policy = [[] for _ in range(self.num_policies)]
+        self.action_visitations_per_policy = [[] for _ in range(self.num_policies)]
+        self.trajectory_per_policy = [[] for _ in range(self.num_policies)]
+        
+        if reset_visitations:
+            self.visitations_per_policy = [[] for _ in range(self.num_policies)]
+            self.objective_values_baseline_per_policy = [[] for _ in range(self.num_policies)]
+            
+    def _precompute_emissions(self) -> None:
+        """Precomputes emission matrix for discrete environments"""
+        emissions = []
+        for i in range(self.env.emiss_num):
+            emissions.append(self.env.emissions[i].view(1,-1))
+        self.emissions = torch.vstack(emissions)
+        
+    def _copy_policy_to_others(self) -> None:
+        """Copies the first policy to all other policies"""
+        for i in range(1, self.num_policies):
+            self.general_policies[i].summarized_policy = copy.deepcopy(self.general_policies[0].summarized_policy)
+            self.general_policies[i].policies = copy.deepcopy(self.general_policies[0].policies)
+            self.general_policies[i].weights = copy.deepcopy(self.general_policies[0].weights)
+            self.general_policies[i].densities = copy.deepcopy(self.general_policies[0].densities)
+            
+    def optimize_general_policy(self) -> None:
+        """Optimizes the first policy and copies to others"""
+        self.general_policies[0].optimize(self.emissions, self.visitations_per_policy[0], self.episodes)
+        self._copy_policy_to_others()
+        
+    def evaluate(self, episodes: int = 100, keep: bool = False) -> None:
+        """Evaluates all policies for given number of episodes
+        
+        Args:
+            episodes: number of episodes to evaluate
+            keep: whether to keep existing optimization or reoptimize
+        """
+        for _ in range(episodes):
+            self._reset(reset_visitations=False)
+            self.env.reset()
+            
+            # Initialize trajectories for all policies with initial state
+            for policy_idx in range(self.num_policies):
+                self.trajectory_per_policy[policy_idx].append(self.env.init_state)
+                self.state_visitations_per_policy[policy_idx].append(self.env.init_state)
+            
+            # Step through episode
+            for h in range(self.env.max_episode_length):
+                # Get actions from all policies
+                for policy_idx, policy in enumerate(self.general_policies):
+                    # Check if first policy needs optimization
+                    if policy_idx == 0 and policy.time == 0 and not keep:
+                        action = policy.next_action(self.env.state, self.emissions, 
+                                                 self.visitations_per_policy[0], self.episodes, keep)
+                        self._copy_policy_to_others()
+                    else:
+                        action = policy.next_action(self.env.state, self.emissions, 
+                                                 self.visitations_per_policy[policy_idx], self.episodes, True)
+                    
+                    state = copy.copy(self.env.state)
+                    self.feedback.step_single(state, action)
+                    next_state = self.env.step(action)
+                    
+                    if self.verbosity > 3:
+                        print(f"Policy {policy_idx}, Step {h}: {state} -> {action} -> {next_state}")
+                    
+                    self.trajectory_per_policy[policy_idx].append(next_state)
+                    self.state_visitations_per_policy[policy_idx].append(next_state)
+                    self.action_visitations_per_policy[policy_idx].append(action)
+                    
+                    # Reset environment for next policy
+                    if policy_idx < self.num_policies - 1:
+                        self.env.state = state
+            
+            self.feedback.step_episode()
+            
+            # Update visitations for each policy
+            for policy_idx in range(self.num_policies):
+                self.visitations_per_policy[policy_idx].append(
+                    (self.state_visitations_per_policy[policy_idx],
+                     self.action_visitations_per_policy[policy_idx])
+                )
+                
+    def run(
+            self,
+            episodes: int = 100,
+            save_trajectory: Union[str, None] = None,
+            return_visitations: bool = False,
+    ) -> Union[Tuple[List[np.ndarray], List[float], List], None]:
+        """Runs the full max-ent procedure for all policies
+        
+        Args:
+            episodes: number of episodes to evaluate
+            save_trajectory: path to save trajectories (if None, don't save)
+            return_visitations: whether to return visitations
+            
+        Returns:
+            List of objective values per policy, optimal values per policy, and optionally visitations
+        """
+        if self.objective.type == "adaptive":
+            self.episodes = episodes
+            self._reset()
+            run_objective_values_per_policy = [[] for _ in range(self.num_policies)]
+            
+            for i in range(episodes):
+                if self.verbosity > 2:
+                    print("Episode:", i)
+                
+                self.evaluate(1)
+                
+                for policy_idx in range(self.num_policies):
+                    aggregate_distribution = self.objective.build_density_from_trajectories(
+                        self.visitations_per_policy[policy_idx])
+                    
+                    if save_trajectory is not None:
+                        np.savetxt(f"{save_trajectory}_policy{policy_idx}_{i}.txt",
+                                 np.array([self.env.convert(state) for state in self.trajectory_per_policy[policy_idx]]))
+                    
+                    objective = self.objective.eval_full(
+                        self.emissions, aggregate_distribution, episodes
+                    )
+                    
+                    print(f'Policy {policy_idx}, Episode {i}, Value: {objective}')
+                    self.objective_values_baseline_per_policy[policy_idx].append(objective)
+                    run_objective_values_per_policy[policy_idx].append(objective)
+            
+            objective_values_per_policy = run_objective_values_per_policy
+            
+        else:
+            if self.verbosity > 0:
+                print("Optimizing starting with budget:", episodes)
+            self._reset()
+            self.episodes = episodes
+            self.optimize_general_policy()
+            self.visitations_per_policy = [[] for _ in range(self.num_policies)]
+            
+            self.evaluate(episodes, keep=True)
+            
+            run_objective_values_per_policy = [[] for _ in range(self.num_policies)]
+            
+            for policy_idx in range(self.num_policies):
+                aggregate_distribution = 0
+                for i, d in enumerate(self.visitations_per_policy[policy_idx]):
+                    aggregate_distribution = (i * aggregate_distribution + 
+                                           self.objective.build_density_from_trajectories([d])) / (i + 1)
+                    run_objective_values_per_policy[policy_idx].append(
+                        self.objective.eval_full(self.emissions, aggregate_distribution, self.episodes))
+                    
+            objective_values_per_policy = [np.array(values) for values in run_objective_values_per_policy]
+        
+        if self.objective.get_type() != "adaptive":
+            opt_per_policy = [self.objective.eval_full(
+                self.emissions, policy.return_density(), self.episodes
+            ) for policy in self.general_policies]
+        else:
+            opt_per_policy = [None] * self.num_policies
+            
+        if return_visitations:
+            return objective_values_per_policy, opt_per_policy, self.visitations_per_policy
+            
+        return objective_values_per_policy, opt_per_policy

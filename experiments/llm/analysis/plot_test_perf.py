@@ -1,29 +1,45 @@
 import numpy as np
 import matplotlib.pyplot as plt
+import glob
+import os
+import argparse
 
-R = 5
-ALGS = ["alg","rand","greedy"]
-prefix = "../results/"
-suffix = ".txt"
-d = {}
-for alg in ALGS:
-    d[alg] = (0,0)
+def parse_filename(filename):
+    # Extract alg type and feedback type from filename like "alg-numerical-1.txt"
+    base = os.path.basename(filename)
+    alg_type, feedback_type, _ = base.rsplit('-', 2)
+    return alg_type, feedback_type
 
-for alg in ALGS:
-    vals = []
-    for i in range(R):
-        path = prefix + alg +"-"+str(i+1)+ suffix
-        val = np.loadtxt(path)
-        vals.append(val)
-    d[alg] = (np.mean(vals),np.std(vals))
+def plot_results(directory):
+    pattern = os.path.join(directory, "*.txt")
+    files = glob.glob(pattern)
+    
+    # Group results by algorithm and feedback type
+    results = {}
+    for f in files:
+        alg_type, feedback_type = parse_filename(f)
+        key = f"{alg_type}-{feedback_type}"
+        if key not in results:
+            results[key] = []
+        val = np.loadtxt(f)
+        results[key].append(val)
+    
+    # Calculate means and stds
+    alg_keys = sorted(results.keys())
+    means = [np.mean(results[k]) for k in alg_keys]
+    stds = [np.std(results[k]) for k in alg_keys]
 
-means = [d[alg][0] for alg in ALGS]
-std_devs = [d[alg][1] for alg in ALGS]
+    # Plot
+    plt.figure(figsize=(10, 6))
+    plt.bar(alg_keys, means, yerr=stds, capsize=5)
+    plt.xlabel("Algorithm-Feedback Type")
+    plt.ylabel("MSE of Aesthetics model")
+    plt.xticks(rotation=45)
+    plt.tight_layout()
+    plt.show()
 
-# Plotting
-plt.figure(figsize=(8, 6))
-plt.bar(ALGS, means, yerr=std_devs, capsize=5, color='skyblue', edgecolor='black')
-plt.xlabel("Algorithms")
-plt.ylabel("MSE of Aesthetics model")
-plt.title("Algorithms and their MSE with Error Bars")
-plt.show()
+if __name__ == "__main__":
+    parser = argparse.ArgumentParser()
+    parser.add_argument('directory', help='Directory containing results with different algs / feedback models.')
+    args = parser.parse_args()
+    plot_results(args.directory)

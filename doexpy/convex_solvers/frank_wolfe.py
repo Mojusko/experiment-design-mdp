@@ -164,7 +164,7 @@ class FrankWolfe(ConvexSolverBase):
             hess_max = 0
             # new base density to be added
             new_density = self.density_estimator.density_oracle_single(new_policy)
-            # print("new density states:", new_density.average_density().delta_states)
+            # print("new density states:", new_density.average_density().delta_states)
 
             if self.step == "line-search" and self.num_components > 1:
                 # line search to determine optimal step-size
