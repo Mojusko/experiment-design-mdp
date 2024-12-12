@@ -3,61 +3,61 @@
 ### Mojmir, Nov 2024, ETH Zurich
 ### Usage
 ################
-### make job --dry-run | ./submit_job --server=yoruname@euler.ethz.ch
+### make job --dry-run | ./submit_euler --server=username@euler.ethz.ch --precommand='cd dir && conda activate env'
 ###
 ### Notes: its best to have no login password to submit these jobs elegantly.
 
 # Function to display usage
 usage() {
-    echo "Usage: $0 --server <server_address> [file_path]"
-    echo "       Or use: cat <file> | $0 --server <server_address>"
-    exit 1
+   echo "Usage: $0 --server <server_address> [--precommand <commands>] [file_path]"
+   echo "       Or use: cat <file> | $0 --server <server_address> [--precommand <commands>]"
+   exit 1
 }
 
 # Parse arguments
 SERVER=""
+PRE_CMD=""
 while [[ "$#" -gt 0 ]]; do
-    case "$1" in
-        --server)
-            SERVER="$2"
-            shift 2
-            ;;
-        *)
-            FILE_PATH="$1"
-            shift
-            ;;
-    esac
+   case "$1" in
+       --server)
+           SERVER="$2"
+           shift 2
+           ;;
+       --precommand)
+           PRE_CMD="$2"
+           shift 2
+           ;;
+       *)
+           FILE_PATH="$1"
+           shift
+           ;;
+   esac
 done
 
 # Validate the server argument
 if [ -z "$SERVER" ]; then
-    usage
+   usage
 fi
 
-# Prefix
-PREFIX="--wrap="       # Define your desired prefix here
-# Define the conditions for execution there 
-SUFFIX="--time=2:00:00 --mem-per-cpu=2G --ntasks=8 --gpus=1 --gres=gpumem:8g"       # Define your desired suffix here
+# Prefix for sbatch
+PREFIX="--wrap="
+# Suffix for job specs
+SUFFIX="--time=2:00:00 --mem-per-cpu=2G --ntasks=8 --gpus=1 --gres=gpumem:8g"
 
-# Check if input is from a pipe or a file
+# Check if input is from pipe or file
 if [ -p /dev/stdin ]; then
-    INPUT_SOURCE="/dev/stdin"
+   INPUT_SOURCE="/dev/stdin"
 elif [ -n "$FILE_PATH" ]; then
-    INPUT_SOURCE="$FILE_PATH"
+   INPUT_SOURCE="$FILE_PATH"
 else
-    echo "Error: No input provided. Use a file or pipe content via stdin."
-    usage
+   echo "Error: No input provided. Use a file or pipe content via stdin."
+   usage
 fi
 
-# Iterate over each line of the input
+# Process each line
 while IFS= read -r line || [ -n "$line" ]; do
-    # Add prefix and suffix
-    MODIFIED_LINE="${PREFIX}\"${line}\"${SUFFIX}"
-    
-    # Formulate the sbatch command
-    COMMAND="sbatch $MODIFIED_LINE"
-
-    # Execute the command via SSH
-    echo "Executing on $SERVER: $COMMAND"
-    ssh "$SERVER" "$COMMAND"
+   MODIFIED_LINE="${PREFIX}\"${line}\" ${SUFFIX}"
+   COMMAND="$PRE_CMD && sbatch $MODIFIED_LINE"
+   echo "Executing on $SERVER: $COMMAND"
+   ssh "$SERVER" "$COMMAND"
 done < "$INPUT_SOURCE"
