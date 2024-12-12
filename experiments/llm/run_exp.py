@@ -204,8 +204,8 @@ else:
     estimator.fit(trajectory_indices, labels, sum_dim=1)
 
 # Evaluation
-N_random = 200
-N_pairs_pme = 100  # Number of pairs to evaluate preference alignment
+N_random = 300
+N_pairs_pme = 200  # Number of pairs to evaluate preference alignment
 selected_words = np.random.choice(words_list, N_random)
 
 xtest = []
