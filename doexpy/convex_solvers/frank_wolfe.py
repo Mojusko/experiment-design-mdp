@@ -33,7 +33,7 @@ class FrankWolfe(ConvexSolverBase):
                  accuracy : float = None,
                  num_components : int = 10,
                  initial_policy : bool = False,
-                 step: Union[float, str] = None,
+                 step: Union[float, str] = None, # text or float line-search
                  solver : Union[DiscreteSolver, ContinuousSolver] = DP,
                  SummarizedPolicyType : Policy = DensityPolicy
                  ) -> None:

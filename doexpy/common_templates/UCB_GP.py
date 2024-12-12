@@ -3,10 +3,10 @@ import torch
 import matplotlib.pyplot as plt
 import numpy as np
 
-from stpy.continuous_processes.kernelized_features import KernelizedFeatures
+from stpy.regression.kernelized_features import KernelizedFeatures
 from stpy.embeddings.embedding import HermiteEmbedding
 
-from doexpy.bandits.Bandit import Bandit
+from doexpy.common_templates.Bandit import Bandit
 
 warnings.filterwarnings("ignore",".*GUI is implemented.*")
 
@@ -15,8 +15,15 @@ warnings.filterwarnings("ignore",".*GUI is implemented.*")
 
 class UCB_GP(Bandit):
 
-	def __init__(self,x,F,estimator, epsilon = 0.001, opt = "discrete", multistart = 25, verbose = False,
-				 beta = None, delta = 0.01):
+	def __init__(self,x,
+				 F,
+				 estimator,
+				 epsilon = 0.001,
+				 opt = "discrete",
+				 multistart = 25,
+				 verbose = False,
+				 beta = None,
+				 delta = 0.01):
 		"""
 		Constructor of UCB-GP Algorithm
 		:param x: intiail data, torch array 2 dim
