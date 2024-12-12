@@ -285,7 +285,7 @@ STOCH0: STOCH_ada0 STOCH_opt0 STOCH_static0
 STOCH: STOCH1 STOCH2 STOCH3 STOCH0
 
 ########################### LLMS
-REPEATS_LLM=1
+REPEATS_LLM=3
 NUMBERS_LLM := $(shell seq 1 ${REPEATS_LLM})
 
 # Jobs for additivity experiment
@@ -300,14 +300,15 @@ ${JOBS_LLM_GRD_ADD}: job-llm-add-grd%: ; cd llm && mkdir -p results/additivity &
 llm-additivity: ${JOBS_LLM_ALG_ADD} ${JOBS_LLM_RAN_ADD} ${JOBS_LLM_GRD_ADD}
 
 # Jobs for feedback comparison
-JOBS_LLM_ALG_NUM := $(addprefix job-llm-feedback-alg-num,${NUMBERS_LLM})
-JOBS_LLM_ALG_MULTI := $(addprefix job-llm-feedback-alg-multi,${NUMBERS_LLM})
+JOBS_LLM_GRD_NUM := $(addprefix job-llm-feedback-grd-num,${NUMBERS_LLM})
+JOBS_LLM_GRD_MULTI := $(addprefix job-llm-feedback-grd-multi,${NUMBERS_LLM})
 JOBS_LLM_RAN_MULTI := $(addprefix job-llm-feedback-ran-multi,${NUMBERS_LLM})
 
-${JOBS_LLM_ALG_NUM}: job-llm-feedback-alg-num%: ; cd llm && mkdir -p results/feedback-comparison && OMP_NUM_THREADS=1 MKL_NUM_THREADS=1 ${PYTHONPATH} run_exp.py --save="results/feedback-comparison/alg-numerical-$*.txt" --seed=$* --accuracy=1e-12 --algorithm="optim" --episodes=100 --feedback_type=numerical
-${JOBS_LLM_ALG_MULTI}: job-llm-feedback-alg-multi%: ; cd llm && mkdir -p results/feedback-comparison && OMP_NUM_THREADS=1 MKL_NUM_THREADS=1 ${PYTHONPATH} run_exp.py --save="results/feedback-comparison/alg-multinomial-$*.txt" --seed=$* --accuracy=1e-12 --algorithm="optim" --episodes=100 --feedback_type=multinomial
+${JOBS_LLM_GRD_NUM}: job-llm-feedback-grd-num%: ; cd llm && mkdir -p results/feedback-comparison && OMP_NUM_THREADS=1 MKL_NUM_THREADS=1 ${PYTHONPATH} run_exp.py --save="results/feedback-comparison/grd-numerical-$*.txt" --seed=$* --accuracy=1e-12 --algorithm="greedy" --episodes=100 --feedback_type=numerical
+${JOBS_LLM_GRD_MULTI}: job-llm-feedback-grd-multi%: ; cd llm && mkdir -p results/feedback-comparison && OMP_NUM_THREADS=1 MKL_NUM_THREADS=1 ${PYTHONPATH} run_exp.py --save="results/feedback-comparison/grd-multinomial-$*.txt" --seed=$* --accuracy=1e-12 --algorithm="greedy" --episodes=100 --feedback_type=multinomial
 ${JOBS_LLM_RAN_MULTI}: job-llm-feedback-ran-multi%: ; cd llm && mkdir -p results/feedback-comparison && OMP_NUM_THREADS=1 MKL_NUM_THREADS=1 ${PYTHONPATH} run_exp.py --save="results/feedback-comparison/rand-multinomial-$*.txt" --seed=$* --accuracy=1e-12 --algorithm="random" --episodes=100 --feedback_type=multinomial
-llm-feedback-comparison: ${JOBS_LLM_ALG_NUM} ${JOBS_LLM_ALG_MULTI} ${JOBS_LLM_RAN_MULTI}
+
+llm-feedback-comparison: ${JOBS_LLM_GRD_NUM} ${JOBS_LLM_GRD_MULTI} ${JOBS_LLM_RAN_MULTI}
 
 
 PLOTS: 
