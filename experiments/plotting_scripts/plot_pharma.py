@@ -7,14 +7,23 @@ color = ["tab:blue", "tab:orange","tab:red", "tab:green", "tab:purple"]
 labels = ["adaptive-1","adaptive","tracking", "non-adaptive", "random"]
 #NAMES = ["ONE-STEP","EXACT","TRACKING","NON-ADAPTIVE","RANDOM"]
 NAMES = ["LINEAR","EXACT","TRACKING","RESAMPLING","RANDOM"]
-name = "pharmacokinetics/results/opt.txt"
+
+
+methods = ["adaptive-un",  "density-un", "random-un"]
+color = ["tab:blue", "tab:green", "tab:purple"]
+labels = ["adaptive-1", "non-adaptive", "random"]
+#NAMES = ["ONE-STEP","EXACT","TRACKING","NON-ADAPTIVE","RANDOM"]
+NAMES = ["ADAPTIVE","NON-ADAPTIVE","RANDOM"]
+
+
+name = "../pharmacokinetics/results/opt.txt"
 opt = np.loadtxt(name)
 
 ax = plt.axes()
 for index, method in enumerate(methods):
     vals = []
     for i in range(10):
-        name = "pharmacokinetics/results/"+ method + "-" + str(i+1)  + ".txt"
+        name = "../pharmacokinetics/results/"+ method + "-" + str(i+1)  + ".txt"
         val = np.loadtxt(name)
         vals.append(val)
     median = np.median(opt-np.array(vals),axis = 0)
@@ -43,5 +52,5 @@ plt.ylabel("$F(p_t) - F(p^*)$")
 plt.xscale('log', base =2 )
 plt.yscale('log', base =2 )
 plt.legend(fontsize="x-large")
-plt.savefig("figs/pharmacokinetics.png",dpi = 100, bbox_inches = 'tight',pad_inches = 0)
+plt.savefig("pharmacokinetics.png",dpi = 100, bbox_inches = 'tight',pad_inches = 0)
 plt.show()

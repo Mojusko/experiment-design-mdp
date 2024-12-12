@@ -1,7 +1,7 @@
 import numpy as np
 import matplotlib.pyplot as plt
-from tueplots import bundles
-plt.rcParams.update(bundles.icml2022())
+#from tueplots import bundles
+#plt.rcParams.update(bundles.icml2022())
 
 means_opt = []
 means_eq= []
