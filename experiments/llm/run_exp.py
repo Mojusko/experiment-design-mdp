@@ -5,7 +5,7 @@ from PIL import Image
 import time
 from image_generator import StableDiffusionGenerator
 
-
+import os
 from doexpy.env.llm import LLMGrid
 
 from doexpy.functionals.doe_static_functionals import DesignA, DesignD
@@ -35,6 +35,7 @@ parser.add_argument('--save', default="results/experiment.csv", type=str, help='
 parser.add_argument('--seed', default=12, type=str, help='Use this to set the seed for the random number generator')
 parser.add_argument('--accuracy', default=None, type=float, help='Termination criterion for optimality gap')
 parser.add_argument('--opt', default=None, type=str, help='whether to return opt')
+parser.add_argument('--store_folder', default='/cluster/project/krause/mmutny', type=str, help='whether to return opt')
 
 args = parser.parse_args()
 
@@ -51,6 +52,7 @@ with open(file_path, 'r') as file:
 
 # number of episodes
 T = args.episodes
+os.environ['TORCH_HOME'] =args.store_folder
 
 # create a cartesian version of the word_list
 words = cartesian([words_list_1,words_list_2])
@@ -64,11 +66,11 @@ for i in range(words.shape[0]):
     words_list.append(pp)
 
 if args.algorithm == "optim":
-    env = LLMGrid(list_of_text_tokens = [words_list], verbose=True)
+    env = LLMGrid(list_of_text_tokens = [words_list], verbose=True, MODELS_CACHE_DIR = args.store_folder)
 
 else:
     # initializes the environment, the horizon is number of separates token lists
-    env = LLMGrid(list_of_text_tokens = [words_list_1,words_list_2], verbose=True)
+    env = LLMGrid(list_of_text_tokens = [words_list_1,words_list_2], verbose=True, MODELS_CACHE_DIR = args.store_folder)
 
 design = DesignA(
     env=env, 
@@ -186,6 +188,7 @@ convex_solver = FrankWolfe(env,
                            objective=design,
                            num_components=args.num_components, # number of FW steps
                            solver=DP, # type of RL solver
+                           step = "line-search",
                            initial_policy=initial_policy, # initial policy
                            SummarizedPolicyType=DensityPolicy, # this type of policy summarizes the components from FW steps
                            accuracy=args.accuracy) # accuracy of the solver FW
