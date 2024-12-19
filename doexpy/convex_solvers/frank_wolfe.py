@@ -216,6 +216,92 @@ class FrankWolfe(ConvexSolverBase):
         return self.summarized_policy, self.policies, self.weights, self.densities
 
     def optimize(self, emissions, visitations, episodes):
+        if self.num_summarized_policies == 1:
+            return self._optimize_single(emissions, visitations, episodes)
+        
+        # Multi-policy setup
+        self.policies = [[] for _ in range(self.num_summarized_policies)]
+        self.weights = [[] for _ in range(self.num_summarized_policies)]
+        self.densities = [[] for _ in range(self.num_summarized_policies)]
+        
+        num_rounds = 2  # Number of complete cycles through all policies
+        gap = -10e10 if self.accuracy is None else self.accuracy
+        
+        for round_idx in range(num_rounds):
+            # For each round, optimize each policy in turn
+            for policy_idx in range(self.num_summarized_policies):
+                counter = 1 if self.initial_policy else 0
+                empirical_gap = torch.Tensor([1e10]).double()
+                
+                while counter < self.num_components and empirical_gap > gap:
+                    # Get current density for all policies
+                    densities = []
+                    for i in range(self.num_summarized_policies):
+                        density = self.density_estimator.density_oracle(
+                            self.policies[i], 
+                            self.weights[i], 
+                            self.densities[i], 
+                            self.stationary
+                        )
+                        if self.env.type == 'discrete':
+                            density.requires_grad_(True)
+                        densities.append(density)
+                    
+                    # Get gradients for all policies
+                    rewards = self._reward_fn_gradient(densities, emissions, visitations, episodes)
+                    
+                    # Only update the current policy
+                    new_policy = self._planning_oracle(rewards[policy_idx])
+                    self.policies[policy_idx].append(new_policy)
+                    new_density = self.density_estimator.density_oracle_single(new_policy)
+                    
+                    # Compute step size for current policy
+                    if self.step == "line-search" and self.num_components > 1:
+                        def fn(h):
+                            temp_densities = densities.copy()
+                            temp_densities[policy_idx] = densities[policy_idx] * (1 - h) + h * new_density
+                            if self.objective.get_type() == "adaptive":
+                                return -self.objective.eval(emissions, temp_densities, visitations, episodes).detach().numpy()
+                            return -self.objective.eval(emissions, temp_densities, episodes).detach().numpy()
+                        
+                        res = minimize_scalar(fn, bounds=(1e-5, 1. - 1e-5), method='bounded')
+                        step_size = res.x
+                    elif self.step is not None and isinstance(self.step, float):
+                        step_size = self.step
+                    else:
+                        # Reset counter for each policy in each round
+                        step_size = 1.0 / (1 + counter)
+                    
+                    if self.env.type == 'discrete':
+                        empirical_gap = torch.minimum(
+                            (rewards[policy_idx] * (new_density - densities[policy_idx])).sum(), 
+                            empirical_gap
+                        )
+                    
+                    # Update weights for current policy
+                    self.weights[policy_idx] = [(1 - step_size) * w for w in self.weights[policy_idx]] + [step_size]
+                    
+                    if self.objective.get_type() == "adaptive":
+                        objective = self.objective.eval(emissions, densities, visitations, episodes)
+                    else:
+                        objective = self.objective.eval(emissions, densities, episodes)
+                    
+                    if self.verbosity > 0:
+                        if self.env.type == 'discrete':
+                            total_grad_norm = sum(la.norm(r) for r in rewards)
+                            print(f'Round: {round_idx}, Policy: {policy_idx}, Component: {counter}, '
+                                  f'Gap: {empirical_gap}, Objective: {objective}, '
+                                  f'Stepsize: {step_size}, Gradient: {total_grad_norm}')
+                        elif self.env.type == 'continuous':
+                            print(f'Round: {round_idx}, Policy: {policy_idx}, '
+                                  f'Objective: {objective}')
+                    
+                    counter += 1
+        
+        self.summarize()
+        return self.summarized_policies, self.policies, self.weights, self.densities
+
+    def optimize_legacy(self, emissions, visitations, episodes):
 
         if self.num_summarized_policies == 1:
             return self._optimize_single(emissions, visitations, episodes)

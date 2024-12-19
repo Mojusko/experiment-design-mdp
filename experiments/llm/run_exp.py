@@ -46,8 +46,8 @@ file_path = 'movements.txt'
 with open(file_path, 'r') as file:
     words_list_2 = [line.strip() for line in file]
 
-words_list_1 = words_list_1[:5]
-words_list_2 = words_list_1
+#words_list_1 = words_list_1[:5]
+#words_list_2 = words_list_1
 
 # Create cartesian product
 words = cartesian([words_list_1,words_list_2])
@@ -130,9 +130,9 @@ initial_policy = False
 
 # Configure algorithm
 if args.algorithm == 'greedy':
-    args.num_components = 100
+    args.num_components = 15
 elif args.algorithm == "optim":
-    args.num_components = 100
+    args.num_components = 15
 elif args.algorithm == "random":
     initial_policy = True
     args.num_components = 1
@@ -153,7 +153,8 @@ convex_solver = FrankWolfe(
     solver=DP,
     initial_policy=initial_policy,
     SummarizedPolicyType=DensityPolicy,
-    accuracy=args.accuracy
+    accuracy=args.accuracy,
+    step='line-search',
 )
 
 # Run exploration
