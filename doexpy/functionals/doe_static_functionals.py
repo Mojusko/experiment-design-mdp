@@ -215,3 +215,66 @@ class SinglePolicyAggDesignA(ExperimentDesignFunctional):
                   distribution: torch.Tensor,
                   episodes: int) -> float:
         return self.eval(emissions, distribution, episodes)
+
+class MultiPolicyAggDesignA(ExperimentDesignFunctional):
+    def __init__(self,
+                 env: Environment,
+                 lambd: float = 1e-3,
+                 dim = 0,
+                 V = None):
+        super().__init__(dim=dim)
+        self.lambd = lambd 
+        self.type = "static"
+        self.env = env
+        self.V = V
+
+    def _calculate_z(self,
+                emissions: torch.Tensor,
+                distributions: List[torch.Tensor],
+                episodes: int = 0,
+                Sigma: Union[None, float] = None) -> torch.Tensor:
+
+        if Sigma is None:
+            Sigma = 1.
+
+        z = torch.zeros((emissions.shape[1], emissions.shape[1]))
+        
+        # Sum z over all distributions
+        for distribution in distributions:
+            emissions = emissions.type(distribution.dtype)
+            
+            # For each horizon step
+            for h in range(distribution.shape[0]):
+                if self.dim == 0:
+                    d_h = torch.sum(distribution[h], dim=1) 
+                elif self.dim == 1:
+                    d_h = torch.sum(distribution[h], dim=0)
+
+                d_h = d_h/Sigma**2
+
+                # Diagonal term
+                z_diag = torch.einsum('ij,j,jk->ik', emissions.T, d_h, emissions)
+
+                # Outer product term
+                z_outer = torch.einsum('ij,j,k,kl->il', emissions.T, d_h, d_h, emissions)
+
+                z += z_diag - z_outer
+
+        return z
+
+    def eval(self,
+         emissions: torch.Tensor,
+         distributions: List[torch.Tensor],
+         episodes: int = 0) -> float:
+        z = self._calculate_z(emissions, distributions, episodes)
+        if self.V is None:
+            return -torch.trace(la.inv(z + self.lambd/episodes * torch.eye(z.shape[0])))
+        else:
+            return -torch.trace(self.V@la.inv(z + self.lambd/episodes * torch.eye(z.shape[0])))
+
+    def eval_full(self,
+              emissions: torch.Tensor,
+              distributions: List[torch.Tensor],
+              episodes: int) -> float:
+        return self.eval(emissions, distributions, episodes)
+        

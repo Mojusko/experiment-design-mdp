@@ -33,7 +33,7 @@ def plot_results(directory):
     plt.figure(figsize=(10, 6))
     plt.bar(alg_keys, means, yerr=stds, capsize=5)
     plt.xlabel("Algorithm-Feedback Type")
-    plt.ylabel("MSE of Aesthetics model")
+    plt.ylabel("Preference Misalignment Error")
     plt.xticks(rotation=45)
     plt.tight_layout()
     plt.show()

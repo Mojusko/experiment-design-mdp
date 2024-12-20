@@ -6,7 +6,7 @@ import time
 from image_generator import StableDiffusionGenerator
 
 from doexpy.env.llm import LLMGrid
-from doexpy.functionals.doe_static_functionals import DesignA, DesignD, SinglePolicyAggDesignA
+from doexpy.functionals.doe_static_functionals import DesignA, DesignD, SinglePolicyAggDesignA, MultiPolicyAggDesignA
 from doexpy.mdpexplore import MdpExplore, MdpExploreMultiPolicy
 from doexpy.convex_solvers.frank_wolfe import FrankWolfe
 from doexpy.feedback.feedback_base import EmptyFeedback
@@ -36,16 +36,18 @@ args = parser.parse_args()
 args.seed = int(args.seed)
 
 # Load word lists
-file_path = 'mediums_small.txt'
+#file_path = 'mediums_small.txt'
+file_path = 'mediums.txt'
 with open(file_path, 'r') as file:
     words_list_1 = [line.strip() for line in file]
 
-file_path = 'movements_small.txt'
+#file_path = 'movements_small.txt'
+file_path = 'movements.txt'
 with open(file_path, 'r') as file:
     words_list_2 = [line.strip() for line in file]
 
-words_list_1 = words_list_1[:5]
-words_list_2 = words_list_1
+#words_list_1 = words_list_1[:5]
+#words_list_2 = words_list_1
 
 # Create cartesian product
 words = cartesian([words_list_1,words_list_2])
@@ -117,7 +119,8 @@ if args.feedback_type == 'numerical':
     design = DesignA(env=env, lambd=1., dim=1)
     estimator = KernelizedFeatures(embedding, m)
 else:
-    design = SinglePolicyAggDesignA(env=env, lambd=1., dim=1)
+    #design = SinglePolicyAggDesignA(env=env, lambd=1., dim=1)
+    design = MultiPolicyAggDesignA(env=env, lambd=1., dim=1)
     likelihood = MultinomialLikelihood()
     regularizer = L2Regularizer(lam=1.0)
     estimator = RegularizedMultinomialEstimator(embedding, likelihood, regularizer)
@@ -127,24 +130,31 @@ initial_policy = False
 
 # Configure algorithm
 if args.algorithm == 'greedy':
-    args.num_components = 100
+    args.num_components = 15
 elif args.algorithm == "optim":
-    args.num_components = 100
+    args.num_components = 15
 elif args.algorithm == "random":
     initial_policy = True
     args.num_components = 1
 else:
     raise NotImplementedError("This algorithm is not implemented yet.")
 
+if args.feedback_type == 'numerical':
+    num_summarized_policies=1
+else:
+    num_summarized_policies=2
+
 # Setup solver
 convex_solver = FrankWolfe(
     env,
     objective=design,
     num_components=args.num_components,
+    num_summarized_policies=num_summarized_policies,
     solver=DP,
     initial_policy=initial_policy,
     SummarizedPolicyType=DensityPolicy,
-    accuracy=args.accuracy
+    accuracy=args.accuracy,
+    step='line-search',
 )
 
 # Run exploration
@@ -159,7 +169,7 @@ if args.feedback_type == 'numerical':
     )
 else:
     me = MdpExploreMultiPolicy(
-        num_policies=2,
+        num_policies=num_summarized_policies,
         env=env,
         objective=design,
         convex_solver=convex_solver,
@@ -202,7 +212,8 @@ else:
     estimator.fit(trajectory_indices, labels, sum_dim=1)
 
 # Evaluation
-N_random = 20
+N_random = 300
+N_pairs_pme = 200  # Number of pairs to evaluate preference alignment
 selected_words = np.random.choice(words_list, N_random)
 
 xtest = []
@@ -218,6 +229,26 @@ xtest = torch.vstack(xtest)
 ytest = torch.vstack(ytest)
 
 ypred = estimator.mean(xtest)
-error = torch.mean((ypred - ytest)**2)
 
-np.savetxt(args.save, error.detach().view(1,1).numpy())
+
+# Sample random pairs and compute preference alignment
+correct_preferences = 0
+# Sample N_pairs_pme unique pairs
+pair_indices = np.array([(i, j) for i in range(N_random) for j in range(i+1, N_random)])
+selected_pairs = pair_indices[np.random.choice(len(pair_indices), N_pairs_pme, replace=False)]
+
+for i, j in selected_pairs:
+    # Get ground truth preference
+    gt_prefers_i = (ytest[i] >= ytest[j]).item()
+    
+    # Get predicted preference
+    pred_prefers_i = (ypred[i] >= ypred[j]).item()
+    
+    # Check if preferences align
+    if gt_prefers_i == pred_prefers_i:
+        correct_preferences += 1
+
+# Calculate preference alignment error (percentage of misaligned preferences)
+error = 1.0 - (correct_preferences / N_pairs_pme)
+
+np.savetxt(args.save, np.array([[error]]))
