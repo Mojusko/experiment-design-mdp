@@ -8,6 +8,7 @@ from doexpy.policies.base_policies.non_stationary_policy import NonStationaryPol
 from doexpy.policies.base_policies.stationary_policy import StationaryPolicy
 from doexpy.policies.summary_policies.density_policy import DensityPolicy
 from doexpy.policies.summary_policies.mixture_policy import MixturePolicy
+from doexpy.policies.summary_policies.tracking_policy import TrackingPolicy
 from doexpy.solvers.solver_base import DiscreteSolver, ContinuousSolver
 from doexpy.solvers.dp import DP
 from doexpy.densities.density_estimators import TabularDensity, DeltaDensityEstimator
@@ -30,16 +31,16 @@ from doexpy.convex_solvers.convex_solvers_base import ConvexSolverBase
 class FrankWolfe(ConvexSolverBase):
     def __init__(self, env,
                  objective,
-                 verbosity : int = 0,
-                 accuracy : float = None,
-                 num_components : int = 10,
-                 initial_policy : bool = False,
+                 verbosity: int = 0,
+                 accuracy: float = None,
+                 num_components: int = 10,
+                 initial_policy: bool = False,
                  step: Union[float, str] = None,
-                 solver : Union[DiscreteSolver, ContinuousSolver] = DP,
-                 SummarizedPolicyType : Policy = DensityPolicy,
+                 solver: Union[DiscreteSolver, ContinuousSolver] = DP,
+                 SummarizedPolicyType: Policy = DensityPolicy,
                  num_summarized_policies: int = 1
                  ) -> None:
-        super().__init__(env, objective, verbosity = verbosity, accuracy = accuracy, initial_policy = initial_policy, solver = solver)
+        super().__init__(env, objective, verbosity=verbosity, accuracy=accuracy, initial_policy=initial_policy, solver=solver)
     
         if (SummarizedPolicyType != MixturePolicy) & (self.env.type == 'continuous'):
             warnings.warn("SummarizedPolicyType is not MixturePolicy, but env is continuous. SummarizedPolicyType was automatically changed to MixturePolicy.")
@@ -51,7 +52,18 @@ class FrankWolfe(ConvexSolverBase):
         self.step = step
         self.type = 'frank-wolfe'
         self.num_summarized_policies = num_summarized_policies
-
+    
+        # If multiple policies, convert the single lists into lists of lists
+        if num_summarized_policies > 1:
+            if self.initial_policy:
+                policy = self.policies[0]  # Get the uniform policy created by base class
+                self.policies = [[policy] for _ in range(num_summarized_policies)]
+                self.weights = [[1.0] for _ in range(num_summarized_policies)]
+            else:
+                self.policies = [[] for _ in range(num_summarized_policies)]
+                self.weights = [[] for _ in range(num_summarized_policies)]
+            self.densities = [[] for _ in range(num_summarized_policies)]
+    
         # density estimator
         if self.env.type == 'discrete':
             self.density_estimator = TabularDensity(self.env, self.objective)
@@ -59,7 +71,8 @@ class FrankWolfe(ConvexSolverBase):
             self.density_estimator = DeltaDensityEstimator(self.env, self.objective)
         else:
             raise NotImplementedError
-    
+
+
     def _reward_fn_gradient(self,
                            distributions: Union[List[torch.Tensor], List[ContinuousDensity]],
                            emissions: torch.Tensor,
@@ -148,7 +161,9 @@ class FrankWolfe(ConvexSolverBase):
                 density.requires_grad_(True)
             # gradient of the reward
             reward = self._reward_fn_gradient(density, emissions, visitations, episodes)
-            
+            if len(reward) > 1:
+                raise ValueError("_optimize_single received multiple rewards")
+            reward = reward[0]
             new_policy = self._planning_oracle(reward)
             self.policies.append(new_policy)
             #
@@ -386,34 +401,37 @@ class FrankWolfe(ConvexSolverBase):
         return self.summarized_policies, self.policies, self.weights, self.densities
 
     def summarize(self) -> None:
-        empirical = np.zeros(len(self.policies[0]))  # assume all have same length
-
-        summarized_policies = []
-        
-        for i in range(self.num_summarized_policies):
+        def create_policy(policies, weights, densities, empirical=None):
             if self.SummarizedPolicyType == DensityPolicy:
-                summarized = self.SummarizedPolicyType(
+                return self.SummarizedPolicyType(
                     self.env, 
-                    self.density_estimator.density_oracle(self.policies[i], self.weights[i], self.densities[i])
+                    self.density_estimator.density_oracle(policies, weights, densities)
                 )
             elif self.SummarizedPolicyType == MarginalDensityPolicy:
-                summarized = self.SummarizedPolicyType(
-                    self.env,
-                    self.density_estimator.density_oracle(self.policies[i], self.weights[i], self.densities[i])
+                return self.SummarizedPolicyType(
+                    self.env, 
+                    self.density_estimator.density_oracle(policies, weights, densities)
                 )
             elif self.SummarizedPolicyType == TrackingPolicy:
-                summarized = self.SummarizedPolicyType(
-                    self.env, self.policies[i], self.weights[i], empirical
+                policy = self.SummarizedPolicyType(
+                    self.env, policies, weights, empirical
                 )
-                empirical[summarized.get_picked_policy_id()] += 1
+                empirical[policy.get_picked_policy_id()] += 1
+                return policy
             else:
-                self.density_estimator.density_oracle(self.policies[i], self.weights[i], self.densities[i])
-                summarized = self.SummarizedPolicyType(
-                    self.env, self.policies[i], self.weights[i]
+                self.density_estimator.density_oracle(policies, weights, densities)
+                return self.SummarizedPolicyType(
+                    self.env, policies, weights
                 )
-            summarized_policies.append(summarized)
 
+        # It would've been cleaner to always have summarize_policies list,
+        # but not to mess with current API, to set summarized_policy for the singleton case
         if self.num_summarized_policies == 1:
-            self.summarized_policy = summarized_policies[0]
+            empirical = np.zeros(len(self.policies)) if self.SummarizedPolicyType == TrackingPolicy else None
+            self.summarized_policy = create_policy(self.policies, self.weights, self.densities, empirical)
         else:
-            self.summarized_policies = summarized_policies
+            empirical = np.zeros(len(self.policies[0])) if self.SummarizedPolicyType == TrackingPolicy else None
+            self.summarized_policies = [
+                create_policy(self.policies[i], self.weights[i], self.densities[i], empirical)
+                for i in range(self.num_summarized_policies)
+            ]
