@@ -53,16 +53,11 @@ class FrankWolfe(ConvexSolverBase):
         self.type = 'frank-wolfe'
         self.num_summarized_policies = num_summarized_policies
     
-        # If multiple policies, convert the single lists into lists of lists
+        # For multiple policies, replicate the base initialization
         if num_summarized_policies > 1:
-            if self.initial_policy:
-                policy = self.policies[0]  # Get the uniform policy created by base class
-                self.policies = [[policy] for _ in range(num_summarized_policies)]
-                self.weights = [[1.0] for _ in range(num_summarized_policies)]
-            else:
-                self.policies = [[] for _ in range(num_summarized_policies)]
-                self.weights = [[] for _ in range(num_summarized_policies)]
-            self.densities = [[] for _ in range(num_summarized_policies)]
+            self.policies = [self.policies.copy() for _ in range(num_summarized_policies)]
+            self.weights = [self.weights.copy() for _ in range(num_summarized_policies)]
+            self.densities = [self.densities.copy() for _ in range(num_summarized_policies)]
     
         # density estimator
         if self.env.type == 'discrete':
@@ -71,7 +66,6 @@ class FrankWolfe(ConvexSolverBase):
             self.density_estimator = DeltaDensityEstimator(self.env, self.objective)
         else:
             raise NotImplementedError
-
 
     def _reward_fn_gradient(self,
                            distributions: Union[List[torch.Tensor], List[ContinuousDensity]],
@@ -233,11 +227,6 @@ class FrankWolfe(ConvexSolverBase):
     def optimize(self, emissions, visitations, episodes):
         if self.num_summarized_policies == 1:
             return self._optimize_single(emissions, visitations, episodes)
-        
-        # Multi-policy setup
-        self.policies = [[] for _ in range(self.num_summarized_policies)]
-        self.weights = [[] for _ in range(self.num_summarized_policies)]
-        self.densities = [[] for _ in range(self.num_summarized_policies)]
         
         num_rounds = 2  # Number of complete cycles through all policies
         gap = -10e10 if self.accuracy is None else self.accuracy
@@ -435,3 +424,12 @@ class FrankWolfe(ConvexSolverBase):
                 create_policy(self.policies[i], self.weights[i], self.densities[i], empirical)
                 for i in range(self.num_summarized_policies)
             ]
+
+    def reset(self):
+        super().reset()  # Get base class reset
+        
+        # Convert to nested structure for multiple policies
+        if self.num_summarized_policies > 1:
+            self.policies = [self.policies.copy() for _ in range(self.num_summarized_policies)]
+            self.weights = [self.weights.copy() for _ in range(self.num_summarized_policies)]
+            self.densities = [self.densities.copy() for _ in range(self.num_summarized_policies)]
