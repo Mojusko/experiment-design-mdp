@@ -130,9 +130,9 @@ initial_policy = False
 
 # Configure algorithm
 if args.algorithm == 'greedy':
-    args.num_components = 100
+    args.num_components = 200
 elif args.algorithm == "optim":
-    args.num_components = 100
+    args.num_components = 200
 elif args.algorithm == "random":
     initial_policy = True
     args.num_components = 1
