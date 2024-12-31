@@ -35,6 +35,8 @@ parser.add_argument('--opt', default=None, type=str, help='whether to return opt
 args = parser.parse_args()
 args.seed = int(args.seed)
 
+set_all_seeds(args.seed)
+
 # Load word lists
 #file_path = 'mediums_small.txt'
 file_path = 'mediums.txt'
@@ -70,6 +72,10 @@ model = nn.Linear(768, 1).double()
 state = torch.load("vit_14_weights.pth")
 model.load_state_dict(state)
 model.eval()
+
+def set_all_seeds(seed):
+    np.random.seed(seed)
+    torch.manual_seed(seed)
 
 def embed_clip(prompt):
     text_input = env._tokenizer(
