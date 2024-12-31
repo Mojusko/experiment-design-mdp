@@ -229,37 +229,27 @@ class MultiPolicyAggDesignA(ExperimentDesignFunctional):
         self.V = V
 
     def _calculate_z(self,
-                emissions: torch.Tensor,
-                distributions: List[torch.Tensor],
-                episodes: int = 0,
-                Sigma: Union[None, float] = None) -> torch.Tensor:
-
+                    emissions: torch.Tensor,
+                    distributions: List[torch.Tensor],
+                    episodes: int = 0,
+                    Sigma: Union[None, float] = None) -> torch.Tensor:
         if Sigma is None:
             Sigma = 1.
-
+    
         z = torch.zeros((emissions.shape[1], emissions.shape[1]))
+        emissions = emissions.type(distributions[0].dtype)
         
-        # Sum z over all distributions
-        for distribution in distributions:
-            emissions = emissions.type(distribution.dtype)
+        # For each horizon step
+        for h in range(distributions[0].shape[0]):
+            if self.dim == 0:
+                d_h_sum = sum(torch.sum(d[h], dim=1) for d in distributions)/Sigma**2  # Sum over states
+            elif self.dim == 1:
+                d_h_sum = sum(torch.sum(d[h], dim=0) for d in distributions)/Sigma**2  # Sum over actions
             
-            # For each horizon step
-            for h in range(distribution.shape[0]):
-                if self.dim == 0:
-                    d_h = torch.sum(distribution[h], dim=1) 
-                elif self.dim == 1:
-                    d_h = torch.sum(distribution[h], dim=0)
-
-                d_h = d_h/Sigma**2
-
-                # Diagonal term
-                z_diag = torch.einsum('ij,j,jk->ik', emissions.T, d_h, emissions)
-
-                # Outer product term
-                z_outer = torch.einsum('ij,j,k,kl->il', emissions.T, d_h, d_h, emissions)
-
-                z += z_diag - z_outer
-
+            z_diag = torch.einsum('ij,j,jk->ik', emissions.T, d_h_sum, emissions)
+            z_outer = 0.5 * torch.einsum('ij,j,k,kl->il', emissions.T, d_h_sum, d_h_sum, emissions)
+            z += z_diag - z_outer
+    
         return z
 
     def eval(self,

@@ -127,8 +127,8 @@ if args.feedback_type == 'numerical':
     estimator = KernelizedFeatures(embedding, m)
 else:
     #design = SinglePolicyAggDesignA(env=env, lambd=1., dim=1)
-    #design = MultiPolicyAggDesignA(env=env, lambd=1., dim=1)
-    design = MultiPolicyAggDesignD(env=env, lambd=1., dim=1)
+    design = MultiPolicyAggDesignA(env=env, lambd=1., dim=1)
+    #design = MultiPolicyAggDesignD(env=env, lambd=1., dim=1)
     likelihood = MultinomialLikelihood()
     regularizer = L2Regularizer(lam=1.0)
     estimator = RegularizedMultinomialEstimator(embedding, likelihood, regularizer)
