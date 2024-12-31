@@ -21,6 +21,11 @@ from stpy.embeddings.polynomial_embedding import CustomEmbedding
 import torch.nn as nn
 import numpy as np
 
+def set_all_seeds(seed):
+    np.random.seed(seed)
+    torch.manual_seed(seed)
+
+
 parser = argparse.ArgumentParser(description='LLM experiment.')
 parser.add_argument('--episodes', default=10, type=int, help='Episodes')
 parser.add_argument('--no_tokens', default=2, type=int, help='Horizon')
@@ -72,10 +77,6 @@ model = nn.Linear(768, 1).double()
 state = torch.load("vit_14_weights.pth")
 model.load_state_dict(state)
 model.eval()
-
-def set_all_seeds(seed):
-    np.random.seed(seed)
-    torch.manual_seed(seed)
 
 def embed_clip(prompt):
     text_input = env._tokenizer(
