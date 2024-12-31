@@ -277,4 +277,13 @@ class MultiPolicyAggDesignA(ExperimentDesignFunctional):
               distributions: List[torch.Tensor],
               episodes: int) -> float:
         return self.eval(emissions, distributions, episodes)
-        
+
+class MultiPolicyAggDesignD(MultiPolicyAggDesignA):
+    def eval(self,
+             emissions: torch.Tensor,
+             distributions: List[torch.Tensor],
+             episodes: int = 0) -> float:
+        z = self._calculate_z(emissions, distributions, episodes)
+        return torch.linalg.slogdet(z + self.lambd/episodes * torch.eye(z.shape[0]))[1]
+
+

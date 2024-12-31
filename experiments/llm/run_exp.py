@@ -6,7 +6,7 @@ import time
 from image_generator import StableDiffusionGenerator
 
 from doexpy.env.llm import LLMGrid
-from doexpy.functionals.doe_static_functionals import DesignA, DesignD, SinglePolicyAggDesignA, MultiPolicyAggDesignA
+from doexpy.functionals.doe_static_functionals import DesignA, DesignD, SinglePolicyAggDesignA, MultiPolicyAggDesignA, MultiPolicyAggDesignD
 from doexpy.mdpexplore import MdpExplore, MdpExploreMultiPolicy
 from doexpy.convex_solvers.frank_wolfe import FrankWolfe
 from doexpy.feedback.feedback_base import EmptyFeedback
@@ -120,7 +120,8 @@ if args.feedback_type == 'numerical':
     estimator = KernelizedFeatures(embedding, m)
 else:
     #design = SinglePolicyAggDesignA(env=env, lambd=1., dim=1)
-    design = MultiPolicyAggDesignA(env=env, lambd=1., dim=1)
+    #design = MultiPolicyAggDesignA(env=env, lambd=1., dim=1)
+    design = MultiPolicyAggDesignD(env=env, lambd=1., dim=1)
     likelihood = MultinomialLikelihood()
     regularizer = L2Regularizer(lam=1.0)
     estimator = RegularizedMultinomialEstimator(embedding, likelihood, regularizer)
