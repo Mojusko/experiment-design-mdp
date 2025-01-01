@@ -151,7 +151,7 @@ if args.algorithm != 'random':
         args.num_components = 250
     else:
         # we have multiple rounds, don't need many iterations
-        args.num_components = 200
+        args.num_components = 100
 
 else:
     initial_policy = True
