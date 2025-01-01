@@ -52,18 +52,18 @@ file_path = 'movements.txt'
 with open(file_path, 'r') as file:
     words_list_2 = [line.strip() for line in file]
 
-file_path = 'subjects.txt'
-with open(file_path, 'r') as file:
-    words_list_3 = [line.strip() for line in file]
+#file_path = 'subjects.txt'
+#with open(file_path, 'r') as file:
+#    words_list_3 = [line.strip() for line in file]
 
-horizon = 3
+horizon = 2
 
 #words_list_1 = words_list_1[:10]
 #words_list_2 = words_list_2[:10]
 #words_list_3 = words_list_3[:10]
 
 # Create cartesian product
-words = cartesian([words_list_1,words_list_2,words_list_3])
+words = cartesian([words_list_1,words_list_2])
 words_list = []
 for i in range(words.shape[0]):
     if words[i][0] != " ":
@@ -76,7 +76,7 @@ for i in range(words.shape[0]):
 if args.algorithm == "optim":
     env = LLMGrid(list_of_text_tokens=[words_list], verbose=True)
 else:
-    env = LLMGrid(list_of_text_tokens=[words_list_1,words_list_2,words_list_3], verbose=True)
+    env = LLMGrid(list_of_text_tokens=[words_list_1,words_list_2], verbose=True)
 
 # Load aesthetics model
 model = nn.Linear(768, 1).double()
@@ -156,7 +156,7 @@ else:
 if args.feedback_type == 'numerical':
     num_summarized_policies=1
 else:
-    num_summarized_policies=2
+    num_summarized_policies=3
 
 # Setup solver
 convex_solver = FrankWolfe(
