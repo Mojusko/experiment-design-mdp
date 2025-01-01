@@ -35,6 +35,7 @@ parser.add_argument('--save', default="results/experiment.csv", type=str, help='
 parser.add_argument('--seed', default=12, type=str, help='Use this to set the seed for the random number generator')
 parser.add_argument('--accuracy', default=None, type=float, help='Termination criterion for optimality gap')
 parser.add_argument('--opt', default=None, type=str, help='whether to return opt')
+parser.add_argument('--lambda_reg', default=1.0, type=float, help='Regularization parameter lambda')
 
 args = parser.parse_args()
 args.seed = int(args.seed)
@@ -131,29 +132,34 @@ m = 768
 embedding = CustomEmbedding(m, lambda x: x, m)
 
 if args.feedback_type == 'numerical':
-    design = DesignA(env=env, lambd=1., dim=1)
+    design = DesignA(env=env, lambd=args.lambda_reg, dim=1)
     estimator = KernelizedFeatures(embedding, m)
 else:
     #design = MultiPolicyAggDesignA(env=env, lambd=1., dim=1)
     #design = MultiPolicyAggDesignD(env=env, lambd=1., dim=1)
-    design = MultiPolicyOrigDesignD(env=env, lambd=1., dim=1)
+    design = MultiPolicyOrigDesignD(env=env, lambd=args.lambda_reg, dim=1)
     likelihood = MultinomialLikelihood()
-    regularizer = L2Regularizer(lam=1.0)
+    regularizer = L2Regularizer(lam=args.lambda_reg)
     estimator = RegularizedMultinomialEstimator(embedding, likelihood, regularizer)
 
 feedback = EmptyFeedback(env, design)
 initial_policy = False
 
 # Configure algorithm
-if args.algorithm == 'greedy':
-    args.num_components = 200
-elif args.algorithm == "optim":
-    args.num_components = 200
-elif args.algorithm == "random":
+if args.algorithm != 'random':
+    if args.feedback_type == 'numerical':
+        args.num_components = 250
+    else:
+        # we have multiple rounds, don't need many iterations
+        args.num_components = 75
+else:
     initial_policy = True
     args.num_components = 1
-else:
-    raise NotImplementedError("This algorithm is not implemented yet.")
+
+#if args.algorithm == "optim":
+#    args.num_components = 200
+#else:
+#    raise NotImplementedError("This algorithm is not implemented yet.")
 
 if args.feedback_type == 'numerical':
     num_summarized_policies=1
