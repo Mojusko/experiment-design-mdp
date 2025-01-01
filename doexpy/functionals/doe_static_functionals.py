@@ -248,8 +248,12 @@ class MultiPolicyOrigDesignD(ExperimentDesignFunctional):
             z_diag = torch.einsum('ij,j,jk->ik', emissions.T, d_h_sum, emissions)
             z += z_diag
             
-            for d1 in distributions:
-                for d2 in distributions:
+            # Compute all cross terms except self-terms
+            for i, d1 in enumerate(distributions):
+                for j, d2 in enumerate(distributions):
+                    if i == j:  # Skip only when d1 == d2
+                        continue
+                        
                     if self.dim == 0:
                         d1_h = torch.sum(d1[h], dim=1)/Sigma**2
                         d2_h = torch.sum(d2[h], dim=1)/Sigma**2

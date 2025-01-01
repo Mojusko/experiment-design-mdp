@@ -137,8 +137,7 @@ if args.feedback_type == 'numerical':
 else:
     #design = MultiPolicyAggDesignA(env=env, lambd=1., dim=1)
     #design = MultiPolicyAggDesignD(env=env, lambd=1., dim=1)
-    #design = MultiPolicyOrigDesignD(env=env, lambd=args.lambda_reg, dim=1)
-    design = MultiPolicyAggDesignD(env=env, lambd=args.lambda_reg, dim=1)
+    design = MultiPolicyOrigDesignD(env=env, lambd=args.lambda_reg, dim=1)
     likelihood = MultinomialLikelihood()
     regularizer = L2Regularizer(lam=args.lambda_reg)
     estimator = RegularizedMultinomialEstimator(embedding, likelihood, regularizer)
