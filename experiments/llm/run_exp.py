@@ -55,11 +55,11 @@ file_path = 'movements.txt'
 with open(file_path, 'r') as file:
     words_list_2 = [line.strip() for line in file]
 
-file_path = 'subjects.txt'
-with open(file_path, 'r') as file:
-    words_list_3 = [line.strip() for line in file]
+#file_path = 'subjects.txt'
+#with open(file_path, 'r') as file:
+#    words_list_3 = [line.strip() for line in file]
 
-horizon = 3
+horizon = 2
 
 #words_list_1 = words_list_1[:10]
 #words_list_2 = words_list_2[:10]
@@ -137,7 +137,8 @@ if args.feedback_type == 'numerical':
 else:
     #design = MultiPolicyAggDesignA(env=env, lambd=1., dim=1)
     #design = MultiPolicyAggDesignD(env=env, lambd=1., dim=1)
-    design = MultiPolicyOrigDesignD(env=env, lambd=args.lambda_reg, dim=1)
+    #design = MultiPolicyOrigDesignD(env=env, lambd=args.lambda_reg, dim=1)
+    design = MultiPolicyAggDesignD(env=env, lambd=args.lambda_reg, dim=1)
     likelihood = MultinomialLikelihood()
     regularizer = L2Regularizer(lam=args.lambda_reg)
     estimator = RegularizedMultinomialEstimator(embedding, likelihood, regularizer)
