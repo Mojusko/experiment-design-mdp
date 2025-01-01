@@ -295,7 +295,7 @@ class FrankWolfe(ConvexSolverBase):
                             total_grad_norm = sum(la.norm(r) for r in rewards)
                             print(f'Round: {round_idx}, Policy: {policy_idx}, Component: {counter}, '
                                   f'Gap: {empirical_gap}, Objective: {objective}, '
-                                  f'Stepsize: {step_size}, Gradient: {total_grad_norm}')
+                                  f'Stepsize: {step_size} ({self.step}), Gradient: {total_grad_norm}')
                         elif self.env.type == 'continuous':
                             print(f'Round: {round_idx}, Policy: {policy_idx}, '
                                   f'Objective: {objective}')
