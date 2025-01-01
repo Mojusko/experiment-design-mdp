@@ -28,7 +28,6 @@ def set_all_seeds(seed):
 
 parser = argparse.ArgumentParser(description='LLM experiment.')
 parser.add_argument('--episodes', default=10, type=int, help='Episodes')
-parser.add_argument('--no_tokens', default=2, type=int, help='Horizon')
 parser.add_argument('--feedback_type', default='multinomial', type=str, choices=['multinomial', 'numerical'], help='Type of feedback')
 parser.add_argument('--algorithm', default='greedy', type=str, help='type of algorithm')
 parser.add_argument('--num_components', default=100, type=int, help='Number of components in FW')
@@ -56,6 +55,8 @@ with open(file_path, 'r') as file:
 file_path = 'subjects.txt'
 with open(file_path, 'r') as file:
     words_list_3 = [line.strip() for line in file]
+
+horizon = 3
 
 #words_list_1 = words_list_1[:10]
 #words_list_2 = words_list_2[:10]
@@ -210,7 +211,7 @@ if args.feedback_type == 'numerical':
 else:
     estimator.load_data((env.emissions, torch.zeros(len(env.emissions))))
     labels = torch.zeros((args.episodes, 2))
-    trajectory_indices = torch.zeros((args.episodes, args.no_tokens, 2), dtype=torch.long)
+    trajectory_indices = torch.zeros((args.episodes, horizon, 2), dtype=torch.long)
     
     for t in range(args.episodes):
         trajectory_indices[t,:,0] = torch.tensor(visits[0][t][1])
