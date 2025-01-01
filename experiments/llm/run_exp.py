@@ -6,7 +6,7 @@ import time
 from image_generator import StableDiffusionGenerator
 
 from doexpy.env.llm import LLMGrid
-from doexpy.functionals.doe_static_functionals import DesignA, DesignD, SinglePolicyAggDesignA, MultiPolicyAggDesignA, MultiPolicyAggDesignD
+from doexpy.functionals.doe_static_functionals import DesignA, DesignD, MultiPolicyAggDesignA, MultiPolicyAggDesignD
 from doexpy.mdpexplore import MdpExplore, MdpExploreMultiPolicy
 from doexpy.convex_solvers.frank_wolfe import FrankWolfe
 from doexpy.feedback.feedback_base import EmptyFeedback
@@ -53,8 +53,8 @@ file_path = 'movements.txt'
 with open(file_path, 'r') as file:
     words_list_2 = [line.strip() for line in file]
 
-#words_list_1 = words_list_1[:30]
-#words_list_2 = words_list_2[:30]
+#words_list_1 = words_list_1[:10]
+#words_list_2 = words_list_2[:10]
 
 # Create cartesian product
 words = cartesian([words_list_1,words_list_2])
@@ -126,7 +126,6 @@ if args.feedback_type == 'numerical':
     design = DesignA(env=env, lambd=1., dim=1)
     estimator = KernelizedFeatures(embedding, m)
 else:
-    #design = SinglePolicyAggDesignA(env=env, lambd=1., dim=1)
     design = MultiPolicyAggDesignA(env=env, lambd=1., dim=1)
     #design = MultiPolicyAggDesignD(env=env, lambd=1., dim=1)
     likelihood = MultinomialLikelihood()

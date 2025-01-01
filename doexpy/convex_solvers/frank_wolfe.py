@@ -246,7 +246,7 @@ class FrankWolfe(ConvexSolverBase):
                             self.weights[i], 
                             self.densities[i], 
                             self.stationary
-                        )
+                        ).double()
                         if self.env.type == 'discrete':
                             density.requires_grad_(True)
                         densities.append(density)
