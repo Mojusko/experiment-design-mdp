@@ -43,12 +43,14 @@ set_all_seeds(args.seed)
 
 # Load word lists
 #file_path = 'mediums_small.txt'
-file_path = 'mediums.txt'
+#file_path = 'mediums.txt'
+file_path = 'mediums_large.txt'
 with open(file_path, 'r') as file:
     words_list_1 = [line.strip() for line in file]
 
 #file_path = 'movements_small.txt'
-file_path = 'movements.txt'
+#file_path = 'movements.txt'
+file_path = 'movements_large.txt'
 with open(file_path, 'r') as file:
     words_list_2 = [line.strip() for line in file]
 
@@ -156,7 +158,7 @@ else:
 if args.feedback_type == 'numerical':
     num_summarized_policies=1
 else:
-    num_summarized_policies=3
+    num_summarized_policies=2
 
 # Setup solver
 convex_solver = FrankWolfe(
