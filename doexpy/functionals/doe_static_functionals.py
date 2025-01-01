@@ -216,4 +216,60 @@ class MultiPolicyAggDesignD(MultiPolicyAggDesignA):
         z = self._calculate_z(emissions, distributions, episodes)
         return torch.linalg.slogdet(z + self.lambd/episodes * torch.eye(z.shape[0]))[1]
 
+class MultiPolicyOrigDesignD(ExperimentDesignFunctional):
+    def __init__(self,
+                 env: Environment,
+                 lambd: float = 1e-3,
+                 dim = 0,
+                 V = None):
+        super().__init__(dim=dim)
+        self.lambd = lambd 
+        self.type = "static"
+        self.env = env
+        self.V = V
 
+    def _calculate_z(self,
+                    emissions: torch.Tensor,
+                    distributions: List[torch.Tensor],
+                    episodes: int = 0,
+                    Sigma: Union[None, float] = None) -> torch.Tensor:
+        if Sigma is None:
+            Sigma = 1.
+            
+        z = torch.zeros((emissions.shape[1], emissions.shape[1]), dtype=distributions[0].dtype)
+        emissions = emissions.type(distributions[0].dtype)
+        
+        for h in range(distributions[0].shape[0]):
+            if self.dim == 0:
+                d_h_sum = sum(torch.sum(d[h], dim=1) for d in distributions)/Sigma**2
+            elif self.dim == 1:
+                d_h_sum = sum(torch.sum(d[h], dim=0) for d in distributions)/Sigma**2
+            
+            z_diag = torch.einsum('ij,j,jk->ik', emissions.T, d_h_sum, emissions)
+            z += z_diag
+            
+            for d1 in distributions:
+                for d2 in distributions:
+                    if self.dim == 0:
+                        d1_h = torch.sum(d1[h], dim=1)/Sigma**2
+                        d2_h = torch.sum(d2[h], dim=1)/Sigma**2
+                    elif self.dim == 1:
+                        d1_h = torch.sum(d1[h], dim=0)/Sigma**2
+                        d2_h = torch.sum(d2[h], dim=0)/Sigma**2
+                    
+                    z -= torch.einsum('ij,j,k,kl->il', emissions.T, d1_h, d2_h, emissions)
+        
+        return z
+
+    def eval(self,
+             emissions: torch.Tensor,
+             distributions: List[torch.Tensor],
+             episodes: int = 0) -> float:
+        z = self._calculate_z(emissions, distributions, episodes)
+        return torch.linalg.slogdet(z + self.lambd/episodes * torch.eye(z.shape[0]))[1]
+
+    def eval_full(self,
+                  emissions: torch.Tensor,
+                  distributions: List[torch.Tensor],
+                  episodes: int) -> float:
+        return self.eval(emissions, distributions, episodes)
