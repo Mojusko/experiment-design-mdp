@@ -55,11 +55,11 @@ file_path = 'movements.txt'
 with open(file_path, 'r') as file:
     words_list_2 = [line.strip() for line in file]
 
-#file_path = 'subjects.txt'
-#with open(file_path, 'r') as file:
-#    words_list_3 = [line.strip() for line in file]
+file_path = 'subjects.txt'
+with open(file_path, 'r') as file:
+    words_list_3 = [line.strip() for line in file]
 
-horizon = 2
+horizon = 3
 
 #words_list_1 = words_list_1[:10]
 #words_list_2 = words_list_2[:10]
@@ -151,7 +151,7 @@ if args.algorithm != 'random':
         args.num_components = 250
     else:
         # we have multiple rounds, don't need many iterations
-        args.num_components = 100
+        args.num_components = 50
 
 else:
     initial_policy = True
