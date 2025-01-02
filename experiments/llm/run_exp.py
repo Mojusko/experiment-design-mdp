@@ -283,7 +283,7 @@ else:
 
 # Evaluation
 N_random = 100
-N_pairs_pme = 50  # Number of pairs to evaluate preference alignment
+N_pairs_pme = 500  # Number of pairs to evaluate preference alignment
 
 # First randomly sample from individual word lists, with possibility of " "
 selected_combinations = []
@@ -304,7 +304,6 @@ ytest = []
 for combo in selected_combinations:
     tokens = [t for t in combo if t != " "]  # Using existing filtering
     prompt = 'A plate with ' + ", ".join(tokens)
-    print(prompt)
     fea = embed_clip(prompt)
     yy = model(fea)
     xtest.append(fea)

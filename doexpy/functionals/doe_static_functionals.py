@@ -246,7 +246,7 @@ class MultiPolicyOrigDesignD(ExperimentDesignFunctional):
         
         for h in range(H):
             # Weight for timestep h is (H-h)
-            time_weight = H - h if self.time_weigh else 1.0
+            time_weight = (H - h)/H if self.time_weigh else 1.0
             if self.dim == 0:
                 d_h_sum = sum(torch.sum(d[h], dim=1) for d in distributions)/Sigma**2
             elif self.dim == 1:
