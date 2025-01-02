@@ -79,9 +79,9 @@ for i in range(words.shape[0]):
 
 # Initialize environment
 if args.algorithm == "optim":
-    env = LLMGrid(list_of_text_tokens=[words_list], verbose=True, MODELS_CACHE_DIR=args.cache_dir)
+    env = LLMGrid(list_of_text_tokens=[words_list], MODELS_CACHE_DIR=args.cache_dir)
 else:
-    env = LLMGrid(list_of_text_tokens=[words_list_1,words_list_2,words_list_3], verbose=True, MODELS_CACHE_DIR=args.cache_dir)
+    env = LLMGrid(list_of_text_tokens=[words_list_1,words_list_2,words_list_3], MODELS_CACHE_DIR=args.cache_dir)
 
 # Load aesthetics model
 model = nn.Linear(768, 1).double()
@@ -203,6 +203,8 @@ else:
 
 val, opt_val, visits = me.run(episodes=args.episodes, return_visitations=True)
 
+print('Finished exploration, estimating...')
+
 # Fit estimator based on feedback type
 #if args.feedback_type == 'numerical':
 #    x = []
@@ -316,4 +318,9 @@ for i, j in selected_pairs:
 # Calculate preference alignment error (percentage of misaligned preferences)
 error = 1.0 - (correct_preferences / N_pairs_pme)
 
+print('Finished estimation, saving error')
+
 np.savetxt(args.save, np.array([[error]]))
+
+print('Finished all, bye!')
+
