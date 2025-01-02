@@ -67,7 +67,7 @@ with open(file_path, 'r') as file:
 #words_list_2 = words_list_2[:10]
 #words_list_3 = words_list_3[:10]
 
-all_words_lists = [words_list_1,words_list_2]
+all_words_lists = [words_list_1,words_list_2, words_list_3]
 horizon = len(all_words_lists)
 
 # Create cartesian product
@@ -102,7 +102,7 @@ def embed_clip(prompt):
     feat = feat.detach().double().view(1,-1)
     return feat
 
-def theta_star(actions, returnx=False):
+def theta_star(actions, returnx=False, verbose=False):
     # No actions case should not occur with proper truncation
     assert len(actions) > 0  
     
@@ -112,6 +112,9 @@ def theta_star(actions, returnx=False):
     
     if valid_tokens:
         prompt += ", ".join(valid_tokens)
+
+    if verbose:
+        print(prompt)
 
     text_input = env._tokenizer(
         prompt,
@@ -319,7 +322,7 @@ for i, j in selected_pairs:
 # Calculate preference alignment error (percentage of misaligned preferences)
 error = 1.0 - (correct_preferences / N_pairs_pme)
 
-print('Finished estimation, saving error')
+print('Finished estimation, saving accuracy to file...')
 
 np.savetxt(args.save, np.array([[error]]))
 
