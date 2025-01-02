@@ -172,7 +172,8 @@ class LLMGrid(DiscreteEnv):
 		for s in range(self.states_num):
 			for a in range(self.actions_num):
 				if self.is_valid_action(a, s):
-					print (f"Valid action {a} in state {s}")
+                    if self.verbose:
+					    print (f"Valid action {a} in state {s}")
 					probs = self.p_next(s, a)
 					for s_state in probs.keys():
 						P[s, a, s_state] = probs[s_state]

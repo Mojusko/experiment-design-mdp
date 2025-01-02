@@ -63,14 +63,14 @@ file_path = 'subjects.txt'
 with open(file_path, 'r') as file:
     words_list_3 = [line.strip() for line in file]
 
-horizon = 3
+horizon = 2
 
 #words_list_1 = words_list_1[:10]
 #words_list_2 = words_list_2[:10]
 #words_list_3 = words_list_3[:10]
 
 # Create cartesian product
-words = cartesian([words_list_1,words_list_2,words_list_3])
+words = cartesian([words_list_1,words_list_2])
 words_list = []
 for i in range(words.shape[0]):
     tokens = [t for t in words[i] if t != " "]
@@ -81,7 +81,7 @@ for i in range(words.shape[0]):
 if args.algorithm == "optim":
     env = LLMGrid(list_of_text_tokens=[words_list], MODELS_CACHE_DIR=args.cache_dir)
 else:
-    env = LLMGrid(list_of_text_tokens=[words_list_1,words_list_2,words_list_3], MODELS_CACHE_DIR=args.cache_dir)
+    env = LLMGrid(list_of_text_tokens=[words_list_1,words_list_2], MODELS_CACHE_DIR=args.cache_dir)
 
 # Load aesthetics model
 model = nn.Linear(768, 1).double()
