@@ -1,4 +1,5 @@
 import torch
+import os
 import argparse
 from stpy.helpers.helper import cartesian
 from PIL import Image
@@ -37,6 +38,8 @@ parser.add_argument('--accuracy', default=None, type=float, help='Termination cr
 parser.add_argument('--opt', default=None, type=str, help='whether to return opt')
 parser.add_argument('--lambda_reg', default=1.0, type=float, help='Regularization parameter lambda')
 parser.add_argument('--dense_feedback', action='store_true', help='Use dense feedback along trajectory')
+parser.add_argument('--cache_dir', default=os.path.expanduser('~/.cache/huggingface/hub'), 
+                    type=str, help='Model cache directory')
 
 args = parser.parse_args()
 args.seed = int(args.seed)
@@ -76,9 +79,9 @@ for i in range(words.shape[0]):
 
 # Initialize environment
 if args.algorithm == "optim":
-    env = LLMGrid(list_of_text_tokens=[words_list], verbose=True)
+    env = LLMGrid(list_of_text_tokens=[words_list], verbose=True, MODELS_CACHE_DIR=args.cache_dir)
 else:
-    env = LLMGrid(list_of_text_tokens=[words_list_1,words_list_2,words_list_3], verbose=True)
+    env = LLMGrid(list_of_text_tokens=[words_list_1,words_list_2,words_list_3], verbose=True, MODELS_CACHE_DIR=args.cache_dir)
 
 # Load aesthetics model
 model = nn.Linear(768, 1).double()
