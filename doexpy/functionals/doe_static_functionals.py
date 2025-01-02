@@ -239,14 +239,19 @@ class MultiPolicyOrigDesignD(ExperimentDesignFunctional):
         z = torch.zeros((emissions.shape[1], emissions.shape[1]), dtype=distributions[0].dtype)
         emissions = emissions.type(distributions[0].dtype)
         
-        for h in range(distributions[0].shape[0]):
+        # Get horizon length H from the first distribution's shape
+        H = distributions[0].shape[0]
+        
+        for h in range(H):
+            # Weight for timestep h is (H-h)
+            time_weight = H - h
             if self.dim == 0:
                 d_h_sum = sum(torch.sum(d[h], dim=1) for d in distributions)/Sigma**2
             elif self.dim == 1:
                 d_h_sum = sum(torch.sum(d[h], dim=0) for d in distributions)/Sigma**2
             
             z_diag = torch.einsum('ij,j,jk->ik', emissions.T, d_h_sum, emissions)
-            z += z_diag
+            z += time_weight * z_diag
             
             # Compute all cross terms except self-terms
             for i, d1 in enumerate(distributions):
@@ -261,7 +266,7 @@ class MultiPolicyOrigDesignD(ExperimentDesignFunctional):
                         d1_h = torch.sum(d1[h], dim=0)/Sigma**2
                         d2_h = torch.sum(d2[h], dim=0)/Sigma**2
                     
-                    z -= torch.einsum('ij,j,k,kl->il', emissions.T, d1_h, d2_h, emissions)
+                    z -= time_weight * torch.einsum('ij,j,k,kl->il', emissions.T, d1_h, d2_h, emissions)
         
         return z
 
