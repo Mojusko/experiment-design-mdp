@@ -70,16 +70,16 @@ with open(file_path, 'r') as file:
 all_words_lists = [words_list_1,words_list_2, words_list_3]
 horizon = len(all_words_lists)
 
-# Create cartesian product
-words = cartesian(all_words_lists)
-words_list = []
-for i in range(words.shape[0]):
-    tokens = [t for t in words[i] if t != " "]
-    pp = ", ".join(tokens)
-    words_list.append(pp)
 
 # Initialize environment
 if args.algorithm == "optim":
+    # Only calculate cartesian product for optim algorithm
+    words = cartesian(all_words_lists)
+    words_list = []
+    for i in range(words.shape[0]):
+        tokens = [t for t in words[i] if t != " "]
+        pp = ", ".join(tokens)
+        words_list.append(pp)
     env = LLMGrid(list_of_text_tokens=[words_list], MODELS_CACHE_DIR=args.cache_dir)
 else:
     env = LLMGrid(list_of_text_tokens=all_words_lists, MODELS_CACHE_DIR=args.cache_dir)
@@ -282,15 +282,29 @@ else:
 
 
 # Evaluation
-N_random = 300
-N_pairs_pme = 200  # Number of pairs to evaluate preference alignment
-selected_words = np.random.choice(words_list, N_random)
-# TODO: add " " possiblity in testing?
+N_random = 100
+N_pairs_pme = 50  # Number of pairs to evaluate preference alignment
 
+# First randomly sample from individual word lists, with possibility of " "
+selected_combinations = []
+for _ in range(N_random):
+    combination = []
+    for word_list in all_words_lists:
+        # For each position, either pick a word from word_list or " "
+        if np.random.random() < 0.1:  # 20% chance of picking " "
+            word = " "
+        else:
+            word = np.random.choice(word_list)
+        combination.append(word)
+    selected_combinations.append(combination)
+
+# Now create the combined strings
 xtest = []
 ytest = []
-for i in range(len(selected_words)):
-    prompt = 'A plate with ' + selected_words[i]
+for combo in selected_combinations:
+    tokens = [t for t in combo if t != " "]  # Using existing filtering
+    prompt = 'A plate with ' + ", ".join(tokens)
+    print(prompt)
     fea = embed_clip(prompt)
     yy = model(fea)
     xtest.append(fea)
