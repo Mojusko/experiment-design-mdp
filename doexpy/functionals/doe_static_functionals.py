@@ -221,12 +221,14 @@ class MultiPolicyOrigDesignD(ExperimentDesignFunctional):
                  env: Environment,
                  lambd: float = 1e-3,
                  dim = 0,
-                 V = None):
+                 V = None,
+                 time_weigh=True):
         super().__init__(dim=dim)
         self.lambd = lambd 
         self.type = "static"
         self.env = env
         self.V = V
+        self.time_weigh = time_weigh
 
     def _calculate_z(self,
                     emissions: torch.Tensor,
@@ -244,7 +246,7 @@ class MultiPolicyOrigDesignD(ExperimentDesignFunctional):
         
         for h in range(H):
             # Weight for timestep h is (H-h)
-            time_weight = H - h
+            time_weight = H - h if self.time_weigh else 1.0
             if self.dim == 0:
                 d_h_sum = sum(torch.sum(d[h], dim=1) for d in distributions)/Sigma**2
             elif self.dim == 1:
