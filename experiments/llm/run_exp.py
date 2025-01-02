@@ -36,6 +36,7 @@ parser.add_argument('--seed', default=12, type=str, help='Use this to set the se
 parser.add_argument('--accuracy', default=None, type=float, help='Termination criterion for optimality gap')
 parser.add_argument('--opt', default=None, type=str, help='whether to return opt')
 parser.add_argument('--lambda_reg', default=1.0, type=float, help='Regularization parameter lambda')
+parser.add_argument('--dense_feedback', action='store_false', help='Use dense feedback along trajectory')
 
 args = parser.parse_args()
 args.seed = int(args.seed)
@@ -69,10 +70,8 @@ horizon = 3
 words = cartesian([words_list_1,words_list_2,words_list_3])
 words_list = []
 for i in range(words.shape[0]):
-    if words[i][0] != " ":
-        pp = words[i][0]+", "+words[i][1]
-    else:
-        pp = words[i][1]
+    tokens = [t for t in words[i] if t != " "]
+    pp = ", ".join(tokens)
     words_list.append(pp)
 
 # Initialize environment
@@ -100,17 +99,16 @@ def embed_clip(prompt):
     return feat
 
 def theta_star(actions, returnx=False):
+    # No actions case should not occur with proper truncation
+    assert len(actions) > 0  
+    
     prompt = 'A plate with '
-    added = None
-    for action in actions:
-        if added is None:
-            added = env.unique_elements[int(action)]
-        else:
-            if added != " ":
-                added += ", " + env.unique_elements[int(action)]
-            else:
-                added = env.unique_elements[int(action)]
-    prompt = prompt + added
+    tokens = [env.unique_elements[int(action)] for action in actions]
+    valid_tokens = [t for t in tokens if t != " "]
+    
+    if valid_tokens:
+        prompt += ", ".join(valid_tokens)
+    print(prompt)
 
     text_input = env._tokenizer(
         prompt,
@@ -204,40 +202,83 @@ else:
 val, opt_val, visits = me.run(episodes=args.episodes, return_visitations=True)
 
 # Fit estimator based on feedback type
+#if args.feedback_type == 'numerical':
+#    x = []
+#    y = []
+#    for i in range(args.episodes):
+#        action = visits[i][1]
+#        yy, xx = theta_star(action, returnx=True)
+#        x.append(xx)
+#        y.append(yy)
+#    
+#    x = torch.vstack(x).detach()
+#    y = torch.vstack(y).detach()
+#    estimator.load_data((x, y))
+#    estimator.fit()
+#else:
+#    estimator.load_data((env.emissions, torch.zeros(len(env.emissions))))
+#    labels = torch.zeros((args.episodes, 2))
+#    trajectory_indices = torch.zeros((args.episodes, horizon, 2), dtype=torch.long)
+#    
+#    for t in range(args.episodes):
+#        trajectory_indices[t,:,0] = torch.tensor(visits[0][t][1])
+#        trajectory_indices[t,:,1] = torch.tensor(visits[1][t][1])
+#        
+#        val1 = theta_star(visits[0][t][1])
+#        val2 = theta_star(visits[1][t][1])
+#        logits = torch.tensor([val1, val2])
+#        label = torch.multinomial(torch.nn.functional.softmax(logits, dim=0), 1)
+#        labels[t, label] = 1
+#    
+
+prefix_range = range(1, len(actions) + 1) if args.dense_feedback else range(len(actions), len(actions) + 1)
+
 if args.feedback_type == 'numerical':
     x = []
     y = []
     for i in range(args.episodes):
-        action = visits[i][1]
-        yy, xx = theta_star(action, returnx=True)
-        x.append(xx)
-        y.append(yy)
-    
+        actions = visits[i][1]
+        for prefix_len in prefix_range:
+            truncated_actions = actions[:prefix_len]
+            yy, xx = theta_star(truncated_actions, returnx=True)
+            x.append(xx)
+            y.append(yy)
     x = torch.vstack(x).detach()
     y = torch.vstack(y).detach()
     estimator.load_data((x, y))
     estimator.fit()
 else:
-    estimator.load_data((env.emissions, torch.zeros(len(env.emissions))))
-    labels = torch.zeros((args.episodes, 2))
-    trajectory_indices = torch.zeros((args.episodes, horizon, 2), dtype=torch.long)
+    num_policies = len(visits)
+    trajectory_indices = torch.zeros((args.episodes * horizon, horizon, num_policies), dtype=torch.long)
+    labels = torch.zeros((args.episodes * horizon, num_policies))
     
+    sample_idx = 0
     for t in range(args.episodes):
-        trajectory_indices[t,:,0] = torch.tensor(visits[0][t][1])
-        trajectory_indices[t,:,1] = torch.tensor(visits[1][t][1])
+        policy_actions = [visits[p][t][1] for p in range(num_policies)]
         
-        val1 = theta_star(visits[0][t][1])
-        val2 = theta_star(visits[1][t][1])
-        logits = torch.tensor([val1, val2])
-        label = torch.multinomial(torch.nn.functional.softmax(logits, dim=0), 1)
-        labels[t, label] = 1
-    
+        for prefix_len in prefix_range:
+            # Store raw action indices, let theta_star handle token conversion
+            truncated_actions = [actions[:prefix_len] + [0] * (horizon - prefix_len) for actions in policy_actions]
+            
+            vals = torch.tensor([theta_star(trunc) for trunc in truncated_actions])
+            logits = torch.nn.functional.softmax(vals, dim=0)
+            label = torch.multinomial(logits, 1)
+            
+            trajectory_indices[sample_idx,:,:] = torch.tensor(truncated_actions).T
+            labels[sample_idx, label] = 1
+            
+            sample_idx += 1
+
+    estimator.load_data((env.emissions, torch.zeros(len(env.emissions))))
     estimator.fit(trajectory_indices, labels, sum_dim=1)
+
+estimator.fit(trajectory_indices, labels, sum_dim=1)
 
 # Evaluation
 N_random = 300
 N_pairs_pme = 200  # Number of pairs to evaluate preference alignment
 selected_words = np.random.choice(words_list, N_random)
+# TODO: add " " possiblity in testing?
 
 xtest = []
 ytest = []
