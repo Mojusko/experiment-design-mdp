@@ -36,7 +36,7 @@ parser.add_argument('--seed', default=12, type=str, help='Use this to set the se
 parser.add_argument('--accuracy', default=None, type=float, help='Termination criterion for optimality gap')
 parser.add_argument('--opt', default=None, type=str, help='whether to return opt')
 parser.add_argument('--lambda_reg', default=1.0, type=float, help='Regularization parameter lambda')
-parser.add_argument('--dense_feedback', action='store_false', help='Use dense feedback along trajectory')
+parser.add_argument('--dense_feedback', action='store_true', help='Use dense feedback along trajectory')
 
 args = parser.parse_args()
 args.seed = int(args.seed)
@@ -108,7 +108,6 @@ def theta_star(actions, returnx=False):
     
     if valid_tokens:
         prompt += ", ".join(valid_tokens)
-    print(prompt)
 
     text_input = env._tokenizer(
         prompt,
@@ -161,16 +160,16 @@ else:
 #    raise NotImplementedError("This algorithm is not implemented yet.")
 
 if args.feedback_type == 'numerical':
-    num_summarized_policies=1
+    num_policies=1
 else:
-    num_summarized_policies=2
+    num_policies=2
 
 # Setup solver
 convex_solver = FrankWolfe(
     env,
     objective=design,
     num_components=args.num_components,
-    num_summarized_policies=num_summarized_policies,
+    num_summarized_policies=num_policies,
     solver=DP,
     initial_policy=initial_policy,
     SummarizedPolicyType=DensityPolicy,
@@ -190,7 +189,7 @@ if args.feedback_type == 'numerical':
     )
 else:
     me = MdpExploreMultiPolicy(
-        num_policies=num_summarized_policies,
+        num_policies=num_policies,
         env=env,
         objective=design,
         convex_solver=convex_solver,
@@ -231,7 +230,9 @@ val, opt_val, visits = me.run(episodes=args.episodes, return_visitations=True)
 #        labels[t, label] = 1
 #    
 
-prefix_range = range(1, len(actions) + 1) if args.dense_feedback else range(len(actions), len(actions) + 1)
+prefix_range = range(1, horizon + 1) if args.dense_feedback else range(horizon, horizon + 1)
+num_samples = args.episodes * (horizon if args.dense_feedback else 1)
+trajectory_indices = torch.zeros((num_samples, horizon, num_policies), dtype=torch.long)
 
 if args.feedback_type == 'numerical':
     x = []
@@ -248,9 +249,7 @@ if args.feedback_type == 'numerical':
     estimator.load_data((x, y))
     estimator.fit()
 else:
-    num_policies = len(visits)
-    trajectory_indices = torch.zeros((args.episodes * horizon, horizon, num_policies), dtype=torch.long)
-    labels = torch.zeros((args.episodes * horizon, num_policies))
+    labels = torch.zeros((num_samples, num_policies))
     
     sample_idx = 0
     for t in range(args.episodes):
@@ -272,7 +271,6 @@ else:
     estimator.load_data((env.emissions, torch.zeros(len(env.emissions))))
     estimator.fit(trajectory_indices, labels, sum_dim=1)
 
-estimator.fit(trajectory_indices, labels, sum_dim=1)
 
 # Evaluation
 N_random = 300
