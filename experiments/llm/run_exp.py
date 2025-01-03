@@ -298,10 +298,12 @@ else:
             
             sample_idx += 1
 
+    estimator.load_data((env.emissions, torch.zeros(len(env.emissions))))
+    estimator.fit(trajectory_indices, labels, sum_dim=1)
 
 # Evaluation constants
 N_random = 100  # Number of random combinations to evaluate
-N_pairs_pme = 200  # Number of pairs to evaluate preference alignment
+N_pairs_pme = 250  # Number of pairs to evaluate preference alignment
 
 # Use testing set for evaluation
 selected_combinations = []
