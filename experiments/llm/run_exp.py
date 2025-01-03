@@ -49,25 +49,32 @@ set_all_seeds(args.seed)
 # Load word lists
 #file_path = 'mediums_small.txt'
 #file_path = 'mediums.txt'
-file_path = 'mediums_large.txt'
-with open(file_path, 'r') as file:
-    words_list_1 = [line.strip() for line in file]
+#file_path = 'mediums_large.txt'
+#with open(file_path, 'r') as file:
+#    words_list_1 = [line.strip() for line in file]
+#
+##file_path = 'movements_small.txt'
+##file_path = 'movements.txt'
+#file_path = 'movements_large.txt'
+#with open(file_path, 'r') as file:
+#    words_list_2 = [line.strip() for line in file]
+#
+#file_path = 'subjects.txt'
+#with open(file_path, 'r') as file:
+#    words_list_3 = [line.strip() for line in file]
 
-#file_path = 'movements_small.txt'
-#file_path = 'movements.txt'
-file_path = 'movements_large.txt'
+file_path = 'diverse.txt'
 with open(file_path, 'r') as file:
-    words_list_2 = [line.strip() for line in file]
-
-file_path = 'subjects.txt'
-with open(file_path, 'r') as file:
-    words_list_3 = [line.strip() for line in file]
+    diverse_list = [line.strip() for line in file]
 
 #words_list_1 = words_list_1[:10]
 #words_list_2 = words_list_2[:10]
 #words_list_3 = words_list_3[:10]
 
-all_words_lists = [words_list_1,words_list_2, words_list_3]
+#all_words_lists = [words_list_1,words_list_2, words_list_3]
+horizon = 3
+all_words_lists = [diverse_list] * horizon
+
 horizon = len(all_words_lists)
 
 
