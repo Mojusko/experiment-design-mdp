@@ -63,7 +63,7 @@ set_all_seeds(args.seed)
 #with open(file_path, 'r') as file:
 #    words_list_3 = [line.strip() for line in file]
 
-file_path = 'diverse.txt'
+file_path = 'o1.txt'
 with open(file_path, 'r') as file:
     diverse_list = [line.strip() for line in file]
 
