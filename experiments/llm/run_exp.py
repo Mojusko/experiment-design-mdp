@@ -63,7 +63,7 @@ set_all_seeds(args.seed)
 #with open(file_path, 'r') as file:
 #    words_list_3 = [line.strip() for line in file]
 
-file_path = 'o1.txt'
+file_path = 'diverse.txt'
 with open(file_path, 'r') as file:
     diverse_list = [line.strip() for line in file]
 
@@ -72,7 +72,7 @@ with open(file_path, 'r') as file:
 #words_list_3 = words_list_3[:10]
 
 #all_words_lists = [words_list_1,words_list_2, words_list_3]
-horizon = 3
+horizon = 5
 all_words_lists = [diverse_list] * horizon
 
 horizon = len(all_words_lists)
