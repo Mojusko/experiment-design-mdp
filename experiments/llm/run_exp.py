@@ -97,9 +97,9 @@ if args.algorithm == "optim":
         tokens = [t for t in words[i] if t != " "]
         pp = ", ".join(tokens)
         words_list.append(pp)
-    env = LLMGrid(list_of_text_tokens=[words_list], MODELS_CACHE_DIR=args.cache_dir)
+    env = LLMGrid(list_of_text_tokens=[words_list], MODELS_CACHE_DIR=args.cache_dir, allow_duplicates=True)
 else:
-    env = LLMGrid(list_of_text_tokens=allowed_words_per_timestep, MODELS_CACHE_DIR=args.cache_dir)
+    env = LLMGrid(list_of_text_tokens=allowed_words_per_timestep, MODELS_CACHE_DIR=args.cache_dir,allow_duplicates=True)
 
 # Load aesthetics model
 model = nn.Linear(768, 1).double()
@@ -294,6 +294,10 @@ else:
             
             sample_idx += 1
 
+
+# Evaluation constants
+N_random = 100  # Number of random combinations to evaluate
+N_pairs_pme = 200  # Number of pairs to evaluate preference alignment
 
 # Use testing set for evaluation
 selected_combinations = []
