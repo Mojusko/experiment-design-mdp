@@ -67,7 +67,7 @@ set_all_seeds(args.seed)
 #with open(file_path, 'r') as file:
 #    words_list_3 = [line.strip() for line in file]
 
-file_path = 'diverse.txt'
+file_path = 'claude.txt'
 with open(file_path, 'r') as file:
     diverse_list = [line.strip() for line in file]
 
@@ -301,22 +301,23 @@ else:
     estimator.load_data((env.emissions, torch.zeros(len(env.emissions))))
     estimator.fit(trajectory_indices, labels, sum_dim=1)
 
-# Evaluation constants
-N_random = 100  # Number of random combinations to evaluate
-N_pairs_pme = 250  # Number of pairs to evaluate preference alignment
+print('Finished estimation, testing...')
 
-# Use testing set for evaluation
+# Evaluation constant
+N_pairs_pme = 500  # Number of pairs to evaluate preference alignment
+
+# Create test combinations using testing set
 selected_combinations = []
-for _ in range(N_random):
+for _ in range(horizon):  # Create combinations with same horizon as training
     combination = []
     for _ in range(horizon):  # Use same horizon as training
         # For each position, either pick a word from testing set or " "
         if np.random.random() < 0.1:  # 10% chance of picking " "
             word = " "
         else:
-            word = np.random.choice(testing_words_list)
+            word = np.random.choice(testing_words_list, replace=True)
         combination.append(word)
-        selected_combinations.append(combination)
+    selected_combinations.append(combination)
 
 # Now create the combined strings
 xtest = []
@@ -337,8 +338,9 @@ ypred = estimator.mean(xtest)
 
 # Sample random pairs and compute preference alignment
 correct_preferences = 0
-# Sample N_pairs_pme unique pairs
-pair_indices = np.array([(i, j) for i in range(N_random) for j in range(i+1, N_random)])
+# Sample N_pairs_pme unique pairs from testing set
+n_test = len(testing_words_list)
+pair_indices = np.array([(i, j) for i in range(n_test) for j in range(i+1, n_test)])
 selected_pairs = pair_indices[np.random.choice(len(pair_indices), N_pairs_pme, replace=False)]
 
 for i, j in selected_pairs:
