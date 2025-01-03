@@ -67,21 +67,31 @@ file_path = 'diverse.txt'
 with open(file_path, 'r') as file:
     diverse_list = [line.strip() for line in file]
 
-#words_list_1 = words_list_1[:10]
-#words_list_2 = words_list_2[:10]
-#words_list_3 = words_list_3[:10]
+# Split diverse_list into training (75%) and testing (25%) sets
+np.random.seed(args.seed)  # Ensure reproducible splits
+n_train = int(0.75 * len(diverse_list))
+indices = np.random.permutation(len(diverse_list))
+train_indices = indices[:n_train]
+test_indices = indices[n_train:]
 
-#all_words_lists = [words_list_1,words_list_2, words_list_3]
-horizon = 5
-all_words_lists = [diverse_list] * horizon
+training_words_list = [diverse_list[i] for i in train_indices]
+testing_words_list = [diverse_list[i] for i in test_indices]
 
-horizon = len(all_words_lists)
+# Add the repeated first element to training set only
+training_words_list = training_words_list + training_words_list[:1] * 1000
+
+
+horizon = 3
+# Use only training set for the main algorithm
+allowed_words_per_timestep = [training_words_list] * horizon
+
+horizon = len(allowed_words_per_timestep)
 
 
 # Initialize environment
 if args.algorithm == "optim":
     # Only calculate cartesian product for optim algorithm
-    words = cartesian(all_words_lists)
+    words = cartesian(allowed_words_per_timestep)
     words_list = []
     for i in range(words.shape[0]):
         tokens = [t for t in words[i] if t != " "]
@@ -89,7 +99,7 @@ if args.algorithm == "optim":
         words_list.append(pp)
     env = LLMGrid(list_of_text_tokens=[words_list], MODELS_CACHE_DIR=args.cache_dir)
 else:
-    env = LLMGrid(list_of_text_tokens=all_words_lists, MODELS_CACHE_DIR=args.cache_dir)
+    env = LLMGrid(list_of_text_tokens=allowed_words_per_timestep, MODELS_CACHE_DIR=args.cache_dir)
 
 # Load aesthetics model
 model = nn.Linear(768, 1).double()
@@ -284,26 +294,19 @@ else:
             
             sample_idx += 1
 
-    estimator.load_data((env.emissions, torch.zeros(len(env.emissions))))
-    estimator.fit(trajectory_indices, labels, sum_dim=1)
 
-
-# Evaluation
-N_random = 100
-N_pairs_pme = 500  # Number of pairs to evaluate preference alignment
-
-# First randomly sample from individual word lists, with possibility of " "
+# Use testing set for evaluation
 selected_combinations = []
 for _ in range(N_random):
     combination = []
-    for word_list in all_words_lists:
-        # For each position, either pick a word from word_list or " "
-        if np.random.random() < 0.1:  # 20% chance of picking " "
+    for _ in range(horizon):  # Use same horizon as training
+        # For each position, either pick a word from testing set or " "
+        if np.random.random() < 0.1:  # 10% chance of picking " "
             word = " "
         else:
-            word = np.random.choice(word_list)
+            word = np.random.choice(testing_words_list)
         combination.append(word)
-    selected_combinations.append(combination)
+        selected_combinations.append(combination)
 
 # Now create the combined strings
 xtest = []
