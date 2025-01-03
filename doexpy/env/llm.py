@@ -11,12 +11,10 @@ class LLMGrid(DiscreteEnv):
         device: str = 'cpu',
         MODELS_CACHE_DIR: str = '/tmp/models_cache_dir/',
         verbose: bool = False,
-        allow_duplicates: bool=False
     ):
         self.verbose = verbose
         self.device = device
         self.constrained = False
-        self.allow_duplicates = allow_duplicates
         super().__init__(
             init_state=0,
         )
@@ -32,7 +30,7 @@ class LLMGrid(DiscreteEnv):
         self.unique_elements = [' ']
         for order, list in enumerate(list_of_text_tokens):
             for token in list:
-                if token not in self.tokens or self.allow_duplicates:
+                if token not in self.tokens:
                     self.unique_elements.append(token)
                     self.tokens[token] = [order]
                     index += 1

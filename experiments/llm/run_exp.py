@@ -44,6 +44,10 @@ parser.add_argument('--cache_dir', default=os.path.expanduser('~/.cache/huggingf
 args = parser.parse_args()
 args.seed = int(args.seed)
 
+# Delete existing results file if it exists
+if os.path.exists(args.save):
+    os.remove(args.save)
+
 set_all_seeds(args.seed)
 
 # Load word lists
@@ -78,7 +82,7 @@ training_words_list = [diverse_list[i] for i in train_indices]
 testing_words_list = [diverse_list[i] for i in test_indices]
 
 # Add the repeated first element to training set only
-training_words_list = training_words_list + training_words_list[:1] * 1000
+#training_words_list = training_words_list + training_words_list[:1] * 1000
 
 
 horizon = 3
@@ -97,9 +101,9 @@ if args.algorithm == "optim":
         tokens = [t for t in words[i] if t != " "]
         pp = ", ".join(tokens)
         words_list.append(pp)
-    env = LLMGrid(list_of_text_tokens=[words_list], MODELS_CACHE_DIR=args.cache_dir, allow_duplicates=True)
+    env = LLMGrid(list_of_text_tokens=[words_list], MODELS_CACHE_DIR=args.cache_dir)
 else:
-    env = LLMGrid(list_of_text_tokens=allowed_words_per_timestep, MODELS_CACHE_DIR=args.cache_dir,allow_duplicates=True)
+    env = LLMGrid(list_of_text_tokens=allowed_words_per_timestep, MODELS_CACHE_DIR=args.cache_dir)
 
 # Load aesthetics model
 model = nn.Linear(768, 1).double()
