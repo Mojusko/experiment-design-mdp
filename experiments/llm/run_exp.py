@@ -303,15 +303,14 @@ else:
 
 print('Finished estimation, testing...')
 
-# Evaluation constant
-N_pairs_pme = 500  # Number of pairs to evaluate preference alignment
+# how many testing prompts we want
+N_test_prompts = 100
 
 # Create test combinations using testing set
 selected_combinations = []
-for _ in range(horizon):  # Create combinations with same horizon as training
+for _ in range(N_test_prompts):
     combination = []
-    for _ in range(horizon):  # Use same horizon as training
-        # For each position, either pick a word from testing set or " "
+    for _ in range(horizon):
         if np.random.random() < 0.1:  # 10% chance of picking " "
             word = " "
         else:
@@ -319,7 +318,7 @@ for _ in range(horizon):  # Create combinations with same horizon as training
         combination.append(word)
     selected_combinations.append(combination)
 
-# Now create the combined strings
+# Now create the combined strings from selected_combinations
 xtest = []
 ytest = []
 for combo in selected_combinations:
@@ -336,12 +335,14 @@ ytest = torch.vstack(ytest)
 ypred = estimator.mean(xtest)
 
 
+N_pairs_pme = 500
+
+
 # Sample random pairs and compute preference alignment
 correct_preferences = 0
-# Sample N_pairs_pme unique pairs from testing set
-n_test = len(testing_words_list)
-pair_indices = np.array([(i, j) for i in range(n_test) for j in range(i+1, n_test)])
-selected_pairs = pair_indices[np.random.choice(len(pair_indices), N_pairs_pme, replace=False)]
+# Sample N_pairs_pme unique pairs from our test combinations
+pair_indices = np.array([(i, j) for i in range(N_test_prompts) for j in range(i+1, N_test_prompts)])
+selected_pairs = pair_indices[np.random.choice(len(pair_indices), N_pairs_pme, replace=True)]
 
 for i, j in selected_pairs:
     # Get ground truth preference
