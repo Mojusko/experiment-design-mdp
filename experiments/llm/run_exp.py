@@ -84,10 +84,6 @@ testing_words_list = [diverse_list[i] for i in test_indices]
 # Add the repeated first element to training set only
 #training_words_list = training_words_list + training_words_list[:1] * 1000
 
-# TODO: remove after benchmark
-duplicate_token = training_words_list[0]
-duplicate_variants = [duplicate_token + str(i) for i in range(1000)]
-
 
 horizon = 3
 # Use only training set for the main algorithm
@@ -107,15 +103,7 @@ if args.algorithm == "optim":
         words_list.append(pp)
     env = LLMGrid(list_of_text_tokens=[words_list], MODELS_CACHE_DIR=args.cache_dir)
 else:
-    # TODO: remove after benchmark
-    env = LLMGrid(list_of_text_tokens=[training_words_list + duplicate_variants] * horizon,MODELS_CACHE_DIR=args.cache_dir)
-    #env = LLMGrid(list_of_text_tokens=allowed_words_per_timestep, MODELS_CACHE_DIR=args.cache_dir)
-
-# TODO: remove after benchmark
-original_embedding = env.emissions[env.unique_elements.index(duplicate_token)]
-for variant in duplicate_variants:
-    variant_idx = env.unique_elements.index(variant)
-    env.emissions[variant_idx] = original_embedding
+    env = LLMGrid(list_of_text_tokens=allowed_words_per_timestep, MODELS_CACHE_DIR=args.cache_dir)
 
 # Load aesthetics model
 model = nn.Linear(768, 1).double()
