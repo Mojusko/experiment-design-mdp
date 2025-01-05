@@ -83,9 +83,9 @@ for file_path in file_paths:
 # Remove duplicates while preserving order
 diverse_list = list(dict.fromkeys(diverse_list))
 
-if len(diverse_list) > 2000:
-    print(f"Randomly capping diverse_list from {len(diverse_list)} to 2000 items")
-    diverse_list = list(np.random.choice(diverse_list, size=2000, replace=False))
+if len(diverse_list) > 1000:
+    print(f"Randomly capping diverse_list from {len(diverse_list)} to 1000 items")
+    diverse_list = list(np.random.choice(diverse_list, size=1000, replace=False))
 
 # Split diverse_list into training (75%) and testing (25%) sets
 
@@ -101,7 +101,7 @@ testing_words_list = [diverse_list[i] for i in test_indices]
 #training_words_list = training_words_list + training_words_list[:1] * 1000
 
 
-horizon = 3
+horizon = 1
 # Use only training set for the main algorithm
 allowed_words_per_timestep = [training_words_list] * horizon
 
@@ -189,10 +189,10 @@ initial_policy = False
 # Configure algorithm
 if args.algorithm != 'random':
     if args.feedback_type == 'numerical':
-        args.num_components = 1000
+        args.num_components = 500
     else:
         # we have multiple rounds, don't need many iterations
-        args.num_components = 250
+        args.num_components = 200
 
 else:
     initial_policy = True

@@ -301,8 +301,8 @@ llm-additivity: ${JOBS_LLM_ALG_ADD} ${JOBS_LLM_RAN_ADD} ${JOBS_LLM_GRD_ADD}
 
 # Jobs for feedback comparison
 JOBS_LLM_GRD_NUM := $(addprefix job-llm-feedback-grd-num,${NUMBERS_LLM})
-JOBS_LLM_GRD_MULTI := $(addprefix job-llm-feedback-grd-multi,${NUMBERS_LLM})
-JOBS_LLM_RAN_MULTI := $(addprefix job-llm-feedback-ran-multi,${NUMBERS_LLM})
+#JOBS_LLM_GRD_MULTI := $(addprefix job-llm-feedback-grd-multi,${NUMBERS_LLM})
+#JOBS_LLM_RAN_MULTI := $(addprefix job-llm-feedback-ran-multi,${NUMBERS_LLM})
 JOBS_LLM_RAN_NUM := $(addprefix job-llm-feedback-ran-num,${NUMBERS_LLM})
 
 ${JOBS_LLM_GRD_NUM}: job-llm-feedback-grd-num%: ; cd llm && mkdir -p results/feedback-comparison && OMP_NUM_THREADS=1 MKL_NUM_THREADS=1 ${PYTHONPATH} run_exp.py --save="results/feedback-comparison/grd-numerical-$*.txt" --seed=$* --accuracy=1e-12 --algorithm="greedy" --episodes=100 --feedback_type=numerical --dense_feedback
