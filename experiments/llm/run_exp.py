@@ -101,7 +101,7 @@ testing_words_list = [diverse_list[i] for i in test_indices]
 #training_words_list = training_words_list + training_words_list[:1] * 1000
 
 
-horizon = 1
+horizon = 2
 # Use only training set for the main algorithm
 allowed_words_per_timestep = [training_words_list] * horizon
 
