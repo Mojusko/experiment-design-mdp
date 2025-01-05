@@ -67,9 +67,26 @@ set_all_seeds(args.seed)
 #with open(file_path, 'r') as file:
 #    words_list_3 = [line.strip() for line in file]
 
-file_path = 'claude.txt'
-with open(file_path, 'r') as file:
-    diverse_list = [line.strip() for line in file]
+#file_path = 'claude.txt'
+
+file_paths = ['claude.txt','o1.txt', 'flavors.txt','diverse.txt','artists.txt','movements.txt','subjects.txt', 'mediums.txt']
+
+# Combine all files into one list
+diverse_list = []
+for file_path in file_paths:
+    try:
+        with open(file_path, 'r') as file:
+            diverse_list.extend([line.strip() for line in file])
+    except FileNotFoundError:
+        print(f"Warning: Could not find file {file_path}")
+
+# Remove duplicates while preserving order
+diverse_list = list(dict.fromkeys(diverse_list))
+
+# Cap the list at 1200 items
+if len(diverse_list) > 1200:
+    print(f"Capping diverse_list from {len(diverse_list)} to 1200 items")
+    diverse_list = diverse_list[:1200]
 
 # Split diverse_list into training (75%) and testing (25%) sets
 np.random.seed(args.seed)  # Ensure reproducible splits
