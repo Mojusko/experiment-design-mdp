@@ -83,10 +83,10 @@ for file_path in file_paths:
 # Remove duplicates while preserving order
 diverse_list = list(dict.fromkeys(diverse_list))
 
-# Cap the list at 1200 items
-if len(diverse_list) > 1200:
-    print(f"Capping diverse_list from {len(diverse_list)} to 1200 items")
-    diverse_list = diverse_list[:1200]
+# Cap the list at 1200 items by random selection
+if len(diverse_list) > 3000:
+    print(f"Randomly capping diverse_list from {len(diverse_list)} to 1200 items")
+    diverse_list = list(np.random.choice(diverse_list, size=3000, replace=False))
 
 # Split diverse_list into training (75%) and testing (25%) sets
 np.random.seed(args.seed)  # Ensure reproducible splits
@@ -190,10 +190,10 @@ initial_policy = False
 # Configure algorithm
 if args.algorithm != 'random':
     if args.feedback_type == 'numerical':
-        args.num_components = 250
+        args.num_components = 1000
     else:
         # we have multiple rounds, don't need many iterations
-        args.num_components = 50
+        args.num_components = 250
 
 else:
     initial_policy = True
