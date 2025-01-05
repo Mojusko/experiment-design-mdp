@@ -321,7 +321,7 @@ else:
 print('Finished estimation, testing...')
 
 # how many testing prompts we want
-N_test_prompts = 100
+N_test_prompts = 250
 
 # Create test combinations using testing set
 selected_combinations = []
@@ -352,7 +352,7 @@ ytest = torch.vstack(ytest)
 ypred = estimator.mean(xtest)
 
 
-N_pairs_pme = 500
+N_pairs_pme = 1500
 
 
 # Sample random pairs and compute preference alignment
