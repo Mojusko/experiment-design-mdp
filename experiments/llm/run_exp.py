@@ -121,8 +121,7 @@ if args.algorithm == "optim":
 else:
     env = LLMGrid(list_of_text_tokens=allowed_words_per_timestep, MODELS_CACHE_DIR=args.cache_dir)
 
-# L2 normalize all environment emissions
-env.emissions = env.emissions / torch.norm(env.emissions, p=2, dim=1, keepdim=True)
+
 
 # Load aesthetics model
 model = nn.Linear(768, 1).double()
@@ -143,8 +142,7 @@ def embed_clip(prompt):
     )
     feat = env._model.get_text_features(**text_input)
     feat = feat.detach().double().view(1,-1)
-    # L2 normalize
-    feat = feat / torch.norm(feat, p=2, dim=1, keepdim=True)
+    
     return feat
 
 def theta_star(actions, returnx=False, verbose=False):
@@ -170,7 +168,7 @@ def theta_star(actions, returnx=False, verbose=False):
     )
     feat = env._model.get_text_features(**text_input)
     feat = feat.detach().double()
-    feat = feat / torch.norm(feat, p=2, dim=1, keepdim=True)
+    
     val = model.forward(feat)
     if returnx:
         return val, feat
