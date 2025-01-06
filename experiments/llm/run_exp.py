@@ -96,7 +96,7 @@ else:
     env = LLMGrid(list_of_text_tokens=allowed_words_per_timestep, MODELS_CACHE_DIR=args.cache_dir)
 
 # L2 normalize all environment emissions
-env.emissions = env.emissions / torch.norm(env.emissions, p=2, dim=1, keepdim=True)
+#env.emissions = env.emissions / torch.norm(env.emissions, p=2, dim=1, keepdim=True)
 
 
 
