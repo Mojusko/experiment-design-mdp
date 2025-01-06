@@ -101,7 +101,7 @@ testing_words_list = [diverse_list[i] for i in test_indices]
 #training_words_list = training_words_list + training_words_list[:1] * 1000
 
 
-horizon = 2
+horizon = 3
 # Use only training set for the main algorithm
 allowed_words_per_timestep = [training_words_list] * horizon
 
@@ -121,11 +121,21 @@ if args.algorithm == "optim":
 else:
     env = LLMGrid(list_of_text_tokens=allowed_words_per_timestep, MODELS_CACHE_DIR=args.cache_dir)
 
-# Load aesthetics model
-model = nn.Linear(768, 1).double()
-state = torch.load("vit_14_weights.pth")
-model.load_state_dict(state)
-model.eval()
+# Comment out aesthetics model
+# model = nn.Linear(768, 1).double()
+# state = torch.load("vit_14_weights.pth")
+# model.load_state_dict(state)
+# model.eval()
+
+# Get CLIP embedding for 'art' once
+art_text_input = env._tokenizer(
+    'art',
+    padding="max_length",
+    max_length=env._tokenizer.model_max_length,
+    truncation=True,
+    return_tensors="pt",
+)
+art_embedding = env._model.get_text_features(**art_text_input).detach().double()
 
 def embed_clip(prompt):
     text_input = env._tokenizer(
@@ -162,7 +172,8 @@ def theta_star(actions, returnx=False, verbose=False):
     )
     feat = env._model.get_text_features(**text_input)
     feat = feat.detach().double()
-    val = model.forward(feat)
+    #val = model.forward(feat)
+    val = torch.mm(feat, art_embedding.T)
     if returnx:
         return val, feat
     else:
@@ -341,7 +352,7 @@ for combo in selected_combinations:
     tokens = [t for t in combo if t != " "]  # Using existing filtering
     prompt = 'A plate with ' + ", ".join(tokens)
     fea = embed_clip(prompt)
-    yy = model(fea)
+    yy = torch.mm(fea, art_embedding.T)
     xtest.append(fea)
     ytest.append(yy)
 
