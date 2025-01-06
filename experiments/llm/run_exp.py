@@ -22,10 +22,10 @@ from stpy.embeddings.polynomial_embedding import CustomEmbedding
 import torch.nn as nn
 import numpy as np
 
-def set_all_seeds(seed):
-    np.random.seed(seed)
-    torch.manual_seed(seed)
-
+## unused for now
+#def set_all_seeds(seed):
+#    np.random.seed(seed)
+#    torch.manual_seed(seed)
 
 parser = argparse.ArgumentParser(description='LLM experiment.')
 parser.add_argument('--episodes', default=10, type=int, help='Episodes')
@@ -42,32 +42,14 @@ parser.add_argument('--cache_dir', default=os.path.expanduser('~/.cache/huggingf
                     type=str, help='Model cache directory')
 
 args = parser.parse_args()
-args.seed = int(args.seed)
+args.seed = int(args.seed)  # Keep for compatibility but won't use
 
 # Delete existing results file if it exists
 if os.path.exists(args.save):
     os.remove(args.save)
 
-set_all_seeds(args.seed)
-
-# Load word lists
-#file_path = 'mediums_small.txt'
-#file_path = 'mediums.txt'
-#file_path = 'mediums_large.txt'
-#with open(file_path, 'r') as file:
-#    words_list_1 = [line.strip() for line in file]
-#
-##file_path = 'movements_small.txt'
-##file_path = 'movements.txt'
-#file_path = 'movements_large.txt'
-#with open(file_path, 'r') as file:
-#    words_list_2 = [line.strip() for line in file]
-#
-#file_path = 'subjects.txt'
-#with open(file_path, 'r') as file:
-#    words_list_3 = [line.strip() for line in file]
-
-#file_path = 'claude.txt'
+# Fixed test RNG for reproducible evaluation
+test_rng = np.random.RandomState(42)
 
 file_paths = ['claude.txt','o1.txt', 'flavors.txt','diverse.txt','artists.txt','movements.txt','subjects.txt', 'mediums.txt']
 
@@ -85,28 +67,20 @@ diverse_list = list(dict.fromkeys(diverse_list))
 
 if len(diverse_list) > 1000:
     print(f"Randomly capping diverse_list from {len(diverse_list)} to 1000 items")
-    diverse_list = list(np.random.choice(diverse_list, size=1000, replace=False))
+    diverse_list = list(test_rng.choice(diverse_list, size=1000, replace=False))
 
-# Split diverse_list into training (75%) and testing (25%) sets
-
+# Split diverse_list into training (75%) and testing (25%) sets using fixed seed
 n_train = int(0.75 * len(diverse_list))
-indices = np.random.permutation(len(diverse_list))
+indices = test_rng.permutation(len(diverse_list))
 train_indices = indices[:n_train]
 test_indices = indices[n_train:]
 
 training_words_list = [diverse_list[i] for i in train_indices]
 testing_words_list = [diverse_list[i] for i in test_indices]
 
-# Add the repeated first element to training set only
-#training_words_list = training_words_list + training_words_list[:1] * 1000
-
-
 horizon = 3
-# Use only training set for the main algorithm
 allowed_words_per_timestep = [training_words_list] * horizon
-
 horizon = len(allowed_words_per_timestep)
-
 
 # Initialize environment
 if args.algorithm == "optim":
@@ -344,26 +318,20 @@ else:
 
 print('Finished estimation, testing...')
 
-# how many testing prompts we want
-N_test_prompts = 250
+N_test_prompts = 1000  # Increased from 250 for better statistics
 
 # Create test combinations using testing set
-selected_combinations = []
+xtest = []
+ytest = []
 for _ in range(N_test_prompts):
     combination = []
     for _ in range(horizon):
-        if np.random.random() < 0.1:  # 10% chance of picking " "
+        if test_rng.random() < 0.1:  
             word = " "
         else:
-            word = np.random.choice(testing_words_list, replace=True)
+            word = test_rng.choice(testing_words_list, replace=True)
         combination.append(word)
-    selected_combinations.append(combination)
-
-# Now create the combined strings from selected_combinations
-xtest = []
-ytest = []
-for combo in selected_combinations:
-    tokens = [t for t in combo if t != " "]  # Using existing filtering
+    tokens = [t for t in combination if t != " "]
     prompt = 'A plate with ' + ", ".join(tokens)
     fea = embed_clip(prompt)
     yy = model(fea)
@@ -372,36 +340,24 @@ for combo in selected_combinations:
 
 xtest = torch.vstack(xtest)
 ytest = torch.vstack(ytest)
-
 ypred = estimator.mean(xtest)
 
-
-N_pairs_pme = 1500
-
-
-# Sample random pairs and compute preference alignment
-correct_preferences = 0
-# Sample N_pairs_pme unique pairs from our test combinations
+# Fixed sampling of test pairs
+N_pairs_eval = 5000  # Increased from 1500
 pair_indices = np.array([(i, j) for i in range(N_test_prompts) for j in range(i+1, N_test_prompts)])
-selected_pairs = pair_indices[np.random.choice(len(pair_indices), N_pairs_pme, replace=True)]
+selected_pairs = pair_indices[test_rng.choice(len(pair_indices), N_pairs_eval, replace=False)]
 
+correct_preferences = 0
 for i, j in selected_pairs:
-    # Get ground truth preference
     gt_prefers_i = (ytest[i] >= ytest[j]).item()
-    
-    # Get predicted preference
     pred_prefers_i = (ypred[i] >= ypred[j]).item()
-    
-    # Check if preferences align
     if gt_prefers_i == pred_prefers_i:
         correct_preferences += 1
 
-# Calculate preference alignment error (percentage of misaligned preferences)
-error = 1.0 - (correct_preferences / N_pairs_pme)
+error = 1.0 - (correct_preferences / N_pairs_eval)
 
 print('Finished estimation, saving accuracy to file...')
 
 np.savetxt(args.save, np.array([[error]]))
 
 print('Finished all, bye!')
-
