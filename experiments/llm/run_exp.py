@@ -83,9 +83,9 @@ for file_path in file_paths:
 # Remove duplicates while preserving order
 diverse_list = list(dict.fromkeys(diverse_list))
 
-if len(diverse_list) > 2500:
-    print(f"Randomly capping diverse_list from {len(diverse_list)} to 2500 items")
-    diverse_list = list(np.random.choice(diverse_list, size=2500, replace=False))
+if len(diverse_list) > 1000:
+    print(f"Randomly capping diverse_list from {len(diverse_list)} to 1000 items")
+    diverse_list = list(np.random.choice(diverse_list, size=10, replace=False))
 
 # Split diverse_list into training (75%) and testing (25%) sets
 
@@ -121,21 +121,14 @@ if args.algorithm == "optim":
 else:
     env = LLMGrid(list_of_text_tokens=allowed_words_per_timestep, MODELS_CACHE_DIR=args.cache_dir)
 
-# Comment out aesthetics model
-# model = nn.Linear(768, 1).double()
-# state = torch.load("vit_14_weights.pth")
-# model.load_state_dict(state)
-# model.eval()
-
-# Get CLIP embedding for 'art' once
-art_text_input = env._tokenizer(
-    'art',
-    padding="max_length",
-    max_length=env._tokenizer.model_max_length,
-    truncation=True,
-    return_tensors="pt",
-)
-art_embedding = env._model.get_text_features(**art_text_input).detach().double()
+# Load aesthetics model
+model = nn.Linear(768, 1).double()
+state = torch.load("vit_14_weights.pth")
+model.load_state_dict(state)
+model.eval()
+# L2 normalize the model weights
+with torch.no_grad():
+    model.weight.data = model.weight.data / torch.norm(model.weight.data, p=2, dim=1, keepdim=True)
 
 def embed_clip(prompt):
     text_input = env._tokenizer(
@@ -147,6 +140,8 @@ def embed_clip(prompt):
     )
     feat = env._model.get_text_features(**text_input)
     feat = feat.detach().double().view(1,-1)
+    # L2 normalize
+    feat = feat / torch.norm(feat, p=2, dim=1, keepdim=True)
     return feat
 
 def theta_star(actions, returnx=False, verbose=False):
@@ -165,15 +160,16 @@ def theta_star(actions, returnx=False, verbose=False):
 
     text_input = env._tokenizer(
         prompt,
-        padding="max_length",
-        max_length=env._tokenizer.model_max_length,
-        truncation=True,
+        feat = env._model.get_text_features(**text_input)
+        feat = feat.detach().double()
+        # L2 normalize
+        feat = feat / torch.norm(feat, p=2, dim=1, keepdim=True)
+        val = model.forward(feat)
         return_tensors="pt",
     )
     feat = env._model.get_text_features(**text_input)
     feat = feat.detach().double()
-    #val = model.forward(feat)
-    val = torch.mm(feat, art_embedding.T)
+    val = model.forward(feat)
     if returnx:
         return val, feat
     else:
@@ -203,7 +199,7 @@ if args.algorithm != 'random':
         args.num_components = 500
     else:
         # we have multiple rounds, don't need many iterations
-        args.num_components = 200
+        args.num_components = 100
 
 else:
     initial_policy = True
@@ -352,7 +348,7 @@ for combo in selected_combinations:
     tokens = [t for t in combo if t != " "]  # Using existing filtering
     prompt = 'A plate with ' + ", ".join(tokens)
     fea = embed_clip(prompt)
-    yy = torch.mm(fea, art_embedding.T)
+    yy = model(fea)
     xtest.append(fea)
     ytest.append(yy)
 
