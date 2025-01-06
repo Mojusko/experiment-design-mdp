@@ -85,7 +85,7 @@ diverse_list = list(dict.fromkeys(diverse_list))
 
 if len(diverse_list) > 1000:
     print(f"Randomly capping diverse_list from {len(diverse_list)} to 1000 items")
-    diverse_list = list(np.random.choice(diverse_list, size=10, replace=False))
+    diverse_list = list(np.random.choice(diverse_list, size=1000, replace=False))
 
 # Split diverse_list into training (75%) and testing (25%) sets
 
@@ -160,15 +160,14 @@ def theta_star(actions, returnx=False, verbose=False):
 
     text_input = env._tokenizer(
         prompt,
-        feat = env._model.get_text_features(**text_input)
-        feat = feat.detach().double()
-        # L2 normalize
-        feat = feat / torch.norm(feat, p=2, dim=1, keepdim=True)
-        val = model.forward(feat)
+        padding="max_length",
+        max_length=env._tokenizer.model_max_length,
+        truncation=True,
         return_tensors="pt",
     )
     feat = env._model.get_text_features(**text_input)
     feat = feat.detach().double()
+    feat = feat / torch.norm(feat, p=2, dim=1, keepdim=True)
     val = model.forward(feat)
     if returnx:
         return val, feat
