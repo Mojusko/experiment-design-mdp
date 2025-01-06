@@ -36,7 +36,7 @@ parser.add_argument('--save', default="results/experiment.csv", type=str, help='
 parser.add_argument('--seed', default=12, type=str, help='Use this to set the seed for the random number generator')
 parser.add_argument('--accuracy', default=None, type=float, help='Termination criterion for optimality gap')
 parser.add_argument('--opt', default=None, type=str, help='whether to return opt')
-parser.add_argument('--lambda_reg', default=0.1, type=float, help='Regularization parameter lambda')
+parser.add_argument('--lambda_reg', default=1.0, type=float, help='Regularization parameter lambda')
 parser.add_argument('--dense_feedback', action='store_true', help='Use dense feedback along trajectory')
 parser.add_argument('--cache_dir', default=os.path.expanduser('~/.cache/huggingface/hub'), 
                     type=str, help='Model cache directory')
@@ -123,14 +123,29 @@ else:
 
 
 
-# Load aesthetics model
-model = nn.Linear(768, 1).double()
-state = torch.load("vit_14_weights.pth")
-model.load_state_dict(state)
+# Get CLIP embedding for 'art' and use it as our model
+text_input = env._tokenizer(
+    'art',
+    padding="max_length",
+    max_length=env._tokenizer.model_max_length,
+    truncation=True,
+    return_tensors="pt",
+)
+art_embedding = env._model.get_text_features(**text_input).detach().double()
+# L2 normalize the art embedding
+art_embedding = art_embedding / torch.norm(art_embedding, p=2)
+
+# Create a model that computes dot product with art embedding
+class DotProductModel(nn.Module):
+    def __init__(self, embedding):
+        super().__init__()
+        self.embedding = embedding
+    
+    def forward(self, x):
+        return torch.mm(x, self.embedding.T)
+
+model = DotProductModel(art_embedding)
 model.eval()
-# L2 normalize the model weights
-with torch.no_grad():
-    model.weight.data = model.weight.data / torch.norm(model.weight.data, p=2, dim=1, keepdim=True)
 
 def embed_clip(prompt):
     text_input = env._tokenizer(
@@ -196,10 +211,10 @@ initial_policy = False
 # Configure algorithm
 if args.algorithm != 'random':
     if args.feedback_type == 'numerical':
-        args.num_components = 1000
+        args.num_components = 500
     else:
         # we have multiple rounds, don't need many iterations
-        args.num_components = 250
+        args.num_components = 50
 
 else:
     initial_policy = True
