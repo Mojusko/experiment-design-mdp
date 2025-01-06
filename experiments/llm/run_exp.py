@@ -121,6 +121,9 @@ if args.algorithm == "optim":
 else:
     env = LLMGrid(list_of_text_tokens=allowed_words_per_timestep, MODELS_CACHE_DIR=args.cache_dir)
 
+# L2 normalize all environment emissions
+env.emissions = env.emissions / torch.norm(env.emissions, p=2, dim=1, keepdim=True)
+
 # Load aesthetics model
 model = nn.Linear(768, 1).double()
 state = torch.load("vit_14_weights.pth")
