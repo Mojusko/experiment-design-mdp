@@ -36,7 +36,7 @@ parser.add_argument('--save', default="results/experiment.csv", type=str, help='
 parser.add_argument('--seed', default=12, type=str, help='Use this to set the seed for the random number generator')
 parser.add_argument('--accuracy', default=None, type=float, help='Termination criterion for optimality gap')
 parser.add_argument('--opt', default=None, type=str, help='whether to return opt')
-parser.add_argument('--lambda_reg', default=1.0, type=float, help='Regularization parameter lambda')
+parser.add_argument('--lambda_reg', default=0.1, type=float, help='Regularization parameter lambda')
 parser.add_argument('--dense_feedback', action='store_true', help='Use dense feedback along trajectory')
 parser.add_argument('--cache_dir', default=os.path.expanduser('~/.cache/huggingface/hub'), 
                     type=str, help='Model cache directory')
