@@ -188,10 +188,10 @@ initial_policy = False
 # Configure algorithm
 if args.algorithm != 'random':
     if args.feedback_type == 'numerical':
-        args.num_components = 500
+        args.num_components = 750
     else:
         # we have multiple rounds, don't need many iterations
-        args.num_components = 50
+        args.num_components = 75
 
 else:
     initial_policy = True
