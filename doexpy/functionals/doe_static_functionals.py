@@ -156,66 +156,6 @@ class DesignC(ExperimentDesignFunctional):
                   episodes: int = 0) -> float:
         return self.eval(emissions, distribution, episodes)
 
-class SinglePolicyAggDesignA(ExperimentDesignFunctional):
-    def __init__(self,
-                 env: Environment,
-                 lambd: float = 1e-3,
-                 dim = 0,
-                 V = None):
-        super().__init__(dim=dim)
-        self.lambd = lambd 
-        self.type = "static"
-        self.env = env
-        self.V = V
-
-    def _calculate_z(self,
-                     emissions: torch.Tensor,
-                     distribution: torch.Tensor,
-                     episodes: int = 0,
-                     Sigma: Union[None, float] = None) -> torch.Tensor:
-
-        emissions = emissions.type(distribution.dtype)
-        if Sigma is None:
-            Sigma = 1.
-
-        z = torch.zeros((emissions.shape[1], emissions.shape[1]))
-
-        # For each horizon step
-        for h in range(distribution.shape[0]):
-            if self.dim == 0:
-                d_h = torch.sum(distribution[h], dim=1) 
-            elif self.dim == 1:
-                d_h = torch.sum(distribution[h], dim=0)
-
-            d_h = d_h/Sigma**2
-
-            # Diagonal term
-            z_diag = torch.einsum('ij,j,jk->ik', emissions.T, d_h, emissions)
-
-            # Outer product term
-            z_outer = torch.einsum('ij,j,k,kl->il', emissions.T, d_h, d_h, emissions)
-
-            z += z_diag - z_outer
-
-        return z
-
-    def eval(self,
-             emissions: torch.Tensor,
-             distribution: torch.Tensor,
-             episodes: int = 0) -> float:
-        z = self._calculate_z(emissions, distribution, episodes)
-
-        if self.V is None:
-            return -torch.trace(la.inv(z + self.lambd/episodes * torch.eye(z.shape[0])))
-        else:
-            return -torch.trace(self.V@la.inv(z + self.lambd/episodes * torch.eye(z.shape[0])))
-
-    def eval_full(self,
-                  emissions: torch.Tensor,
-                  distribution: torch.Tensor,
-                  episodes: int) -> float:
-        return self.eval(emissions, distribution, episodes)
-
 class MultiPolicyAggDesignA(ExperimentDesignFunctional):
     def __init__(self,
                  env: Environment,
@@ -229,37 +169,27 @@ class MultiPolicyAggDesignA(ExperimentDesignFunctional):
         self.V = V
 
     def _calculate_z(self,
-                emissions: torch.Tensor,
-                distributions: List[torch.Tensor],
-                episodes: int = 0,
-                Sigma: Union[None, float] = None) -> torch.Tensor:
-
+                    emissions: torch.Tensor,
+                    distributions: List[torch.Tensor],
+                    episodes: int = 0,
+                    Sigma: Union[None, float] = None) -> torch.Tensor:
         if Sigma is None:
             Sigma = 1.
-
+    
         z = torch.zeros((emissions.shape[1], emissions.shape[1]))
+        emissions = emissions.type(distributions[0].dtype)
         
-        # Sum z over all distributions
-        for distribution in distributions:
-            emissions = emissions.type(distribution.dtype)
+        # For each horizon step
+        for h in range(distributions[0].shape[0]):
+            if self.dim == 0:
+                d_h_sum = sum(torch.sum(d[h], dim=1) for d in distributions)/Sigma**2  # Sum over states
+            elif self.dim == 1:
+                d_h_sum = sum(torch.sum(d[h], dim=0) for d in distributions)/Sigma**2  # Sum over actions
             
-            # For each horizon step
-            for h in range(distribution.shape[0]):
-                if self.dim == 0:
-                    d_h = torch.sum(distribution[h], dim=1) 
-                elif self.dim == 1:
-                    d_h = torch.sum(distribution[h], dim=0)
-
-                d_h = d_h/Sigma**2
-
-                # Diagonal term
-                z_diag = torch.einsum('ij,j,jk->ik', emissions.T, d_h, emissions)
-
-                # Outer product term
-                z_outer = torch.einsum('ij,j,k,kl->il', emissions.T, d_h, d_h, emissions)
-
-                z += z_diag - z_outer
-
+            z_diag = torch.einsum('ij,j,jk->ik', emissions.T, d_h_sum, emissions)
+            z_outer = 0.5 * torch.einsum('ij,j,k,kl->il', emissions.T, d_h_sum, d_h_sum, emissions)
+            z += z_diag - z_outer
+    
         return z
 
     def eval(self,
@@ -277,4 +207,80 @@ class MultiPolicyAggDesignA(ExperimentDesignFunctional):
               distributions: List[torch.Tensor],
               episodes: int) -> float:
         return self.eval(emissions, distributions, episodes)
+
+class MultiPolicyAggDesignD(MultiPolicyAggDesignA):
+    def eval(self,
+             emissions: torch.Tensor,
+             distributions: List[torch.Tensor],
+             episodes: int = 0) -> float:
+        z = self._calculate_z(emissions, distributions, episodes)
+        return torch.linalg.slogdet(z + self.lambd/episodes * torch.eye(z.shape[0]))[1]
+
+class MultiPolicyOrigDesignD(ExperimentDesignFunctional):
+    def __init__(self,
+                 env: Environment,
+                 lambd: float = 1e-3,
+                 dim = 0,
+                 V = None,
+                 time_weigh=True):
+        super().__init__(dim=dim)
+        self.lambd = lambd 
+        self.type = "static"
+        self.env = env
+        self.V = V
+        self.time_weigh = time_weigh
+
+    def _calculate_z(self,
+                    emissions: torch.Tensor,
+                    distributions: List[torch.Tensor],
+                    episodes: int = 0,
+                    Sigma: Union[None, float] = None) -> torch.Tensor:
+        if Sigma is None:
+            Sigma = 1.
+            
+        z = torch.zeros((emissions.shape[1], emissions.shape[1]), dtype=distributions[0].dtype)
+        emissions = emissions.type(distributions[0].dtype)
         
+        # Get horizon length H from the first distribution's shape
+        H = distributions[0].shape[0]
+        
+        for h in range(H):
+            # Weight for timestep h is (H-h)
+            time_weight = (H - h)/H if self.time_weigh else 1.0
+            if self.dim == 0:
+                d_h_sum = sum(torch.sum(d[h], dim=1) for d in distributions)/Sigma**2
+            elif self.dim == 1:
+                d_h_sum = sum(torch.sum(d[h], dim=0) for d in distributions)/Sigma**2
+            
+            z_diag = torch.einsum('ij,j,jk->ik', emissions.T, d_h_sum, emissions)
+            z += time_weight * z_diag
+            
+            # Compute all cross terms except self-terms
+            for i, d1 in enumerate(distributions):
+                for j, d2 in enumerate(distributions):
+                    if i == j:  # Skip only when d1 == d2
+                        continue
+                        
+                    if self.dim == 0:
+                        d1_h = torch.sum(d1[h], dim=1)/Sigma**2
+                        d2_h = torch.sum(d2[h], dim=1)/Sigma**2
+                    elif self.dim == 1:
+                        d1_h = torch.sum(d1[h], dim=0)/Sigma**2
+                        d2_h = torch.sum(d2[h], dim=0)/Sigma**2
+                    
+                    z -= time_weight * torch.einsum('ij,j,k,kl->il', emissions.T, d1_h, d2_h, emissions)
+        
+        return z
+
+    def eval(self,
+             emissions: torch.Tensor,
+             distributions: List[torch.Tensor],
+             episodes: int = 0) -> float:
+        z = self._calculate_z(emissions, distributions, episodes)
+        return torch.linalg.slogdet(z + self.lambd/episodes * torch.eye(z.shape[0]))[1]
+
+    def eval_full(self,
+                  emissions: torch.Tensor,
+                  distributions: List[torch.Tensor],
+                  episodes: int) -> float:
+        return self.eval(emissions, distributions, episodes)
