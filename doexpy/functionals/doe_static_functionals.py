@@ -269,7 +269,6 @@ class MultiPolicyOrigDesignD(ExperimentDesignFunctional):
                         d2_h = torch.sum(d2[h], dim=0)/Sigma**2
                     
                     z -= time_weight * torch.einsum('ij,j,k,kl->il', emissions.T, d1_h, d2_h, emissions)
-        
         return z
 
     def eval(self,

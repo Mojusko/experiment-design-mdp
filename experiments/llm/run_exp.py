@@ -98,8 +98,6 @@ else:
 # L2 normalize all environment emissions
 #env.emissions = env.emissions / torch.norm(env.emissions, p=2, dim=1, keepdim=True)
 
-
-
 # Get CLIP embedding for 'art' and use it as our model
 text_input = env._tokenizer(
     'art',
@@ -109,6 +107,7 @@ text_input = env._tokenizer(
     return_tensors="pt",
 )
 art_embedding = env._model.get_text_features(**text_input).detach().double()
+
 # L2 normalize the art embedding
 art_embedding = art_embedding / torch.norm(art_embedding, p=2)
 
@@ -125,16 +124,7 @@ model = DotProductModel(art_embedding)
 model.eval()
 
 def embed_clip(prompt):
-    text_input = env._tokenizer(
-        prompt,
-        padding="max_length",
-        max_length=env._tokenizer.model_max_length,
-        truncation=True,
-        return_tensors="pt",
-    )
-    feat = env._model.get_text_features(**text_input)
-    feat = feat.detach().double().view(1,-1)
-    
+    feat = LLMGrid._em(prompt)   
     return feat
 
 def theta_star(actions, returnx=False, verbose=False):
@@ -151,15 +141,16 @@ def theta_star(actions, returnx=False, verbose=False):
     if verbose:
         print(prompt)
 
-    text_input = env._tokenizer(
-        prompt,
-        padding="max_length",
-        max_length=env._tokenizer.model_max_length,
-        truncation=True,
-        return_tensors="pt",
-    )
-    feat = env._model.get_text_features(**text_input)
-    feat = feat.detach().double()
+    feat = LLMGrid._em(prompt)
+    # text_input = env._tokenizer(
+    #     prompt,
+    #     padding="max_length",
+    #     max_length=env._tokenizer.model_max_length,
+    #     truncation=True,
+    #     return_tensors="pt",
+    # )
+    # feat = env._model.get_text_features(**text_input)
+    # feat = feat.detach().double()
     
     val = model.forward(feat)
     if returnx:
