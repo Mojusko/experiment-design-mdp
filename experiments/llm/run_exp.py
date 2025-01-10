@@ -96,7 +96,7 @@ else:
     env = LLMGrid(list_of_text_tokens=allowed_words_per_timestep, MODELS_CACHE_DIR=args.cache_dir)
 
 # L2 normalize all environment emissions
-#env.emissions = env.emissions / torch.norm(env.emissions, p=2, dim=1, keepdim=True)
+env.emissions = env.emissions / torch.norm(env.emissions, p=2, dim=1, keepdim=True)
 
 
 
@@ -134,7 +134,8 @@ def embed_clip(prompt):
     )
     feat = env._model.get_text_features(**text_input)
     feat = feat.detach().double().view(1,-1)
-    
+    # L2 normalize
+    feat = feat / torch.norm(feat, p=2, dim=1, keepdim=True)
     return feat
 
 def theta_star(actions, returnx=False, verbose=False):
@@ -160,7 +161,8 @@ def theta_star(actions, returnx=False, verbose=False):
     )
     feat = env._model.get_text_features(**text_input)
     feat = feat.detach().double()
-    
+    # L2 normalize
+    feat = feat / torch.norm(feat, p=2, dim=1, keepdim=True)
     val = model.forward(feat)
     if returnx:
         return val, feat
@@ -307,7 +309,6 @@ else:
             vals = torch.tensor([theta_star(trunc) for trunc in truncated_actions])
             logits = torch.nn.functional.softmax(vals, dim=0)
             label = torch.multinomial(logits, 1)
-            
             trajectory_indices[sample_idx,:,:] = torch.tensor(truncated_actions).T
             labels[sample_idx, label] = 1
             
