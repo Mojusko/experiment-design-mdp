@@ -44,6 +44,9 @@ parser.add_argument('--cache_dir', default=os.path.expanduser('~/.cache/huggingf
 args = parser.parse_args()
 args.seed = int(args.seed)  # Keep for compatibility but won't use
 
+# Create directory if it doesn't exist
+os.makedirs(os.path.dirname(args.save), exist_ok=True)
+
 # Delete existing results file if it exists
 if os.path.exists(args.save):
     os.remove(args.save)
@@ -95,10 +98,6 @@ if args.algorithm == "optim":
 else:
     env = LLMGrid(list_of_text_tokens=allowed_words_per_timestep, MODELS_CACHE_DIR=args.cache_dir)
 
-# L2 normalize all environment emissions
-env.emissions = env.emissions / torch.norm(env.emissions, p=2, dim=1, keepdim=True)
-
-
 
 # Get CLIP embedding for 'art' and use it as our model
 text_input = env._tokenizer(
@@ -134,8 +133,7 @@ def embed_clip(prompt):
     )
     feat = env._model.get_text_features(**text_input)
     feat = feat.detach().double().view(1,-1)
-    # L2 normalize
-    feat = feat / torch.norm(feat, p=2, dim=1, keepdim=True)
+    
     return feat
 
 def theta_star(actions, returnx=False, verbose=False):
@@ -161,8 +159,7 @@ def theta_star(actions, returnx=False, verbose=False):
     )
     feat = env._model.get_text_features(**text_input)
     feat = feat.detach().double()
-    # L2 normalize
-    feat = feat / torch.norm(feat, p=2, dim=1, keepdim=True)
+    
     val = model.forward(feat)
     if returnx:
         return val, feat
@@ -177,8 +174,6 @@ if args.feedback_type == 'numerical':
     design = DesignA(env=env, lambd=args.lambda_reg, dim=1)
     estimator = KernelizedFeatures(embedding, m)
 else:
-    #design = MultiPolicyAggDesignA(env=env, lambd=1., dim=1)
-    #design = MultiPolicyAggDesignD(env=env, lambd=1., dim=1)
     design = MultiPolicyOrigDesignD(env=env, lambd=args.lambda_reg, dim=1)
     likelihood = MultinomialLikelihood()
     regularizer = L2Regularizer(lam=args.lambda_reg)
@@ -207,7 +202,7 @@ else:
 if args.feedback_type == 'numerical':
     num_policies=1
 else:
-    num_policies=2
+    num_policies=3
 
 # Setup solver
 convex_solver = FrankWolfe(
@@ -246,36 +241,6 @@ else:
 val, opt_val, visits = me.run(episodes=args.episodes, return_visitations=True)
 
 print('Finished exploration, estimating...')
-
-# Fit estimator based on feedback type
-#if args.feedback_type == 'numerical':
-#    x = []
-#    y = []
-#    for i in range(args.episodes):
-#        action = visits[i][1]
-#        yy, xx = theta_star(action, returnx=True)
-#        x.append(xx)
-#        y.append(yy)
-#    
-#    x = torch.vstack(x).detach()
-#    y = torch.vstack(y).detach()
-#    estimator.load_data((x, y))
-#    estimator.fit()
-#else:
-#    estimator.load_data((env.emissions, torch.zeros(len(env.emissions))))
-#    labels = torch.zeros((args.episodes, 2))
-#    trajectory_indices = torch.zeros((args.episodes, horizon, 2), dtype=torch.long)
-#    
-#    for t in range(args.episodes):
-#        trajectory_indices[t,:,0] = torch.tensor(visits[0][t][1])
-#        trajectory_indices[t,:,1] = torch.tensor(visits[1][t][1])
-#        
-#        val1 = theta_star(visits[0][t][1])
-#        val2 = theta_star(visits[1][t][1])
-#        logits = torch.tensor([val1, val2])
-#        label = torch.multinomial(torch.nn.functional.softmax(logits, dim=0), 1)
-#        labels[t, label] = 1
-#    
 
 prefix_range = range(1, horizon + 1) if args.dense_feedback else range(horizon, horizon + 1)
 num_samples = args.episodes * (horizon if args.dense_feedback else 1)
