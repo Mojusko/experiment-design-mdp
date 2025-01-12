@@ -2,6 +2,8 @@ import torch
 import os
 import argparse
 from stpy.helpers.helper import cartesian
+from functools import partial
+from typing import List, Tuple, Optional, Union
 from PIL import Image
 import time
 from image_generator import StableDiffusionGenerator
@@ -22,11 +24,79 @@ from stpy.embeddings.polynomial_embedding import CustomEmbedding
 import torch.nn as nn
 import numpy as np
 
-## unused for now
-#def set_all_seeds(seed):
-#    np.random.seed(seed)
-#    torch.manual_seed(seed)
+class CLIPEmbedder:
+    def __init__(self, tokenizer, model):
+        self.tokenizer = tokenizer
+        self.model = model
+    
+    def embed_text(self, text: str, normalize: bool = False) -> torch.Tensor:
+        """Embed text using CLIP model
+        
+        Args:
+            text: Text to embed
+            normalize: Whether to L2 normalize the embedding
+            
+        Returns:
+            Text embedding
+        """
+        text_input = self.tokenizer(
+            text,
+            padding="max_length",
+            max_length=self.tokenizer.model_max_length,
+            truncation=True,
+            return_tensors="pt",
+        )
+        embedding = self.model.get_text_features(**text_input).detach().double()
+        
+        if normalize:
+            embedding = embedding / torch.norm(embedding, p=2)
+            
+        return embedding.view(1, -1)
 
+class DotProductModel(nn.Module):
+    def __init__(self, embedding):
+        super().__init__()
+        self.embedding = embedding
+    
+    def forward(self, x):
+        return torch.mm(x, self.embedding.T)
+
+def create_prompt(actions: List[int], env, prefix: str = 'A plate with ') -> str:
+    """Create prompt from action sequence"""
+    tokens = [env.unique_elements[int(action)] for action in actions]
+    valid_tokens = [t for t in tokens if t != " "]
+    return prefix + ", ".join(valid_tokens) if valid_tokens else prefix.rstrip()
+
+def setup_clip_model(env) -> Tuple[CLIPEmbedder, DotProductModel]:
+    """Initialize CLIP embedder and dot product model"""
+    embedder = CLIPEmbedder(env._tokenizer, env._model)
+    art_embedding = embedder.embed_text('art', normalize=True)
+    model = DotProductModel(art_embedding).eval()
+    return embedder, model
+
+def make_theta_star(env, embedder, model):
+    """Create theta_star function with environment and models bound"""
+    def theta_star(actions: List[int], returnx: bool = False, verbose: bool = False) -> Union[torch.Tensor, Tuple[torch.Tensor, torch.Tensor]]:
+        """Compute similarity score between action sequence and art concept"""
+        assert len(actions) > 0
+        
+        prompt = create_prompt(actions, env)
+        if verbose:
+            print(prompt)
+
+        feat = embedder.embed_text(prompt)
+        val = model(feat)
+        
+        return (val, feat) if returnx else val
+    
+    return theta_star
+
+def generate_test_sequence(test_rng, testing_words_list: List[str], horizon: int) -> List[str]:
+    """Generate a single test sequence"""
+    return [" " if test_rng.random() < 0.1 else test_rng.choice(testing_words_list) 
+            for _ in range(horizon)]
+
+# Parse arguments
 parser = argparse.ArgumentParser(description='LLM experiment.')
 parser.add_argument('--episodes', default=10, type=int, help='Episodes')
 parser.add_argument('--feedback_type', default='multinomial', type=str, choices=['multinomial', 'numerical'], help='Type of feedback')
@@ -42,7 +112,7 @@ parser.add_argument('--cache_dir', default=os.path.expanduser('~/.cache/huggingf
                     type=str, help='Model cache directory')
 
 args = parser.parse_args()
-args.seed = int(args.seed)  # Keep for compatibility but won't use
+args.seed = int(args.seed)
 
 # Create directory if it doesn't exist
 os.makedirs(os.path.dirname(args.save), exist_ok=True)
@@ -87,7 +157,6 @@ horizon = len(allowed_words_per_timestep)
 
 # Initialize environment
 if args.algorithm == "optim":
-    # Only calculate cartesian product for optim algorithm
     words = cartesian(allowed_words_per_timestep)
     words_list = []
     for i in range(words.shape[0]):
@@ -98,73 +167,9 @@ if args.algorithm == "optim":
 else:
     env = LLMGrid(list_of_text_tokens=allowed_words_per_timestep, MODELS_CACHE_DIR=args.cache_dir)
 
-
-# Get CLIP embedding for 'art' and use it as our model
-text_input = env._tokenizer(
-    'art',
-    padding="max_length",
-    max_length=env._tokenizer.model_max_length,
-    truncation=True,
-    return_tensors="pt",
-)
-art_embedding = env._model.get_text_features(**text_input).detach().double()
-# L2 normalize the art embedding
-art_embedding = art_embedding / torch.norm(art_embedding, p=2)
-
-# Create a model that computes dot product with art embedding
-class DotProductModel(nn.Module):
-    def __init__(self, embedding):
-        super().__init__()
-        self.embedding = embedding
-    
-    def forward(self, x):
-        return torch.mm(x, self.embedding.T)
-
-model = DotProductModel(art_embedding)
-model.eval()
-
-def embed_clip(prompt):
-    text_input = env._tokenizer(
-        prompt,
-        padding="max_length",
-        max_length=env._tokenizer.model_max_length,
-        truncation=True,
-        return_tensors="pt",
-    )
-    feat = env._model.get_text_features(**text_input)
-    feat = feat.detach().double().view(1,-1)
-    
-    return feat
-
-def theta_star(actions, returnx=False, verbose=False):
-    # No actions case should not occur with proper truncation
-    assert len(actions) > 0  
-    
-    prompt = 'A plate with '
-    tokens = [env.unique_elements[int(action)] for action in actions]
-    valid_tokens = [t for t in tokens if t != " "]
-    
-    if valid_tokens:
-        prompt += ", ".join(valid_tokens)
-
-    if verbose:
-        print(prompt)
-
-    text_input = env._tokenizer(
-        prompt,
-        padding="max_length",
-        max_length=env._tokenizer.model_max_length,
-        truncation=True,
-        return_tensors="pt",
-    )
-    feat = env._model.get_text_features(**text_input)
-    feat = feat.detach().double()
-    
-    val = model.forward(feat)
-    if returnx:
-        return val, feat
-    else:
-        return val
+# Setup CLIP embedding and model
+embedder, model = setup_clip_model(env)
+theta_star = make_theta_star(env, embedder, model)
 
 # Setup based on feedback type
 m = 768
@@ -187,22 +192,12 @@ if args.algorithm != 'random':
     if args.feedback_type == 'numerical':
         args.num_components = 750
     else:
-        # we have multiple rounds, don't need many iterations
         args.num_components = 75
-
 else:
     initial_policy = True
     args.num_components = 1
 
-#if args.algorithm == "optim":
-#    args.num_components = 200
-#else:
-#    raise NotImplementedError("This algorithm is not implemented yet.")
-
-if args.feedback_type == 'numerical':
-    num_policies=1
-else:
-    num_policies=3
+num_policies = 1 if args.feedback_type == 'numerical' else 3
 
 # Setup solver
 convex_solver = FrankWolfe(
@@ -284,24 +279,20 @@ else:
 
 print('Finished estimation, testing...')
 
-N_test_prompts = 1000  # Increased from 250 for better statistics
+N_test_prompts = 1000
 
-# Create test combinations using testing set
+# Generate test sequences
+test_sequences = [generate_test_sequence(test_rng, testing_words_list, horizon) 
+                 for _ in range(N_test_prompts)]
+
+# Compute embeddings and predictions
 xtest = []
 ytest = []
-for _ in range(N_test_prompts):
-    combination = []
-    for _ in range(horizon):
-        if test_rng.random() < 0.1:  
-            word = " "
-        else:
-            word = test_rng.choice(testing_words_list, replace=True)
-        combination.append(word)
-    tokens = [t for t in combination if t != " "]
-    prompt = 'A plate with ' + ", ".join(tokens)
-    fea = embed_clip(prompt)
-    yy = model(fea)
-    xtest.append(fea)
+for sequence in test_sequences:
+    tokens = [t for t in sequence if t != " "]
+    feat = embedder.embed_text('A plate with ' + ", ".join(tokens))
+    yy = model(feat)
+    xtest.append(feat)
     ytest.append(yy)
 
 xtest = torch.vstack(xtest)
@@ -309,7 +300,7 @@ ytest = torch.vstack(ytest)
 ypred = estimator.mean(xtest)
 
 # Fixed sampling of test pairs
-N_pairs_eval = 5000  # Increased from 1500
+N_pairs_eval = 5000
 pair_indices = np.array([(i, j) for i in range(N_test_prompts) for j in range(i+1, N_test_prompts)])
 selected_pairs = pair_indices[test_rng.choice(len(pair_indices), N_pairs_eval, replace=False)]
 
