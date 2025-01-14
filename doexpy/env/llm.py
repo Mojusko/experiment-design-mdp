@@ -158,11 +158,20 @@ class LLMGrid(DiscreteEnv):
         self.h = 0
 
 class CLIPEmbedder:
+    """Embed text using CLIP model
+
+    Args:
+        text: Text to embed
+        normalize: Whether to L2 normalize the embedding
+
+    Returns:
+        Text embedding
+    """
     def __init__(self, tokenizer, model):
         self.tokenizer = tokenizer
         self.model = model
         self.device = next(model.parameters()).device  # Track model device
-    
+
     def embed_text(self, text: str, normalize: bool = False) -> torch.Tensor:
         text_input = self.tokenizer(
             text,
@@ -173,10 +182,10 @@ class CLIPEmbedder:
         )
         text_input = {k: v.to(self.device) for k, v in text_input.items()}
         embedding = self.model.get_text_features(**text_input).detach().double()
-        
+
         if normalize:
             embedding = embedding / torch.norm(embedding, p=2)
-            
+
         return embedding.view(1, -1)
 
 class CLIPScorer(nn.Module):
@@ -191,7 +200,7 @@ class CLIPScorer(nn.Module):
 class DotProductModel(CLIPScorer):
     def __init__(self, embedder, model_embedding):
         super().__init__(embedder)
-        self.model_embedding = model_embedding
+        self.model_embedding = model_embedding.to(embedder.device)
     
     def score_prompt(self, x):
         x_clip_embedding = self.embedder.embed_text(x)
