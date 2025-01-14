@@ -69,6 +69,8 @@ class LLMGrid(DiscreteEnv):
                 truncation=True,
                 return_tensors="pt",
             )
+            # Move input tensors to same device as model
+            text_input = {k: v.to(device) for k, v in text_input.items()}
             feat = self._model.get_text_features(**text_input)  # projected CLIP embeddings
             feat = feat.detach().double()
             emissions.append(feat)
