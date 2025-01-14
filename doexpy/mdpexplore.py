@@ -231,13 +231,9 @@ class MdpExplore():
                     self.objective.eval_full(self.emissions, aggregate_distribution, self.episodes))
 
             objective_values = run_objective_values
+            objective_values = [v.cpu().numpy() if isinstance(v, torch.Tensor) else v for v in run_objective_values]
             objective_values = np.array(objective_values)
 
-        # Move tensor to CPU before converting to numpy
-        if isinstance(objective_values, torch.Tensor):
-            objective_values = objective_values.cpu().numpy()
-        else:
-            objective_values = np.array(objective_values)
 
         if self.objective.get_type() != "adaptive":
             opt = self.objective.eval_full(self.emissions, self.general_policy.return_density(), self.episodes)
@@ -406,50 +402,37 @@ class MdpExploreMultiPolicy:
                      self.action_visitations_per_policy[policy_idx])
                 )
                 
-    def run(self, episodes: int = 100, save_trajectory: Union[str, None] = None, 
-            return_visitations: bool = False) -> Union[Tuple[np.ndarray, float, List], None]:
-        """Runs the full max-ent procedure for all policies
-            
-            Args:
-                episodes: number of episodes to evaluate
-                save_trajectory: path to save trajectories (if None, don't save)
-                return_visitations: whether to return visitations
-                
-            Returns:
-                List of objective values, optimal values, and optionally visitations
-            """
-
+    def run(self, episodes: int = 100, save_trajectory: Union[str, None] = None, return_visitations: bool = False):
         if self.objective.type == "adaptive":
             self.episodes = episodes
             self._reset()
             run_objective_values = []
-    
+
             for i in range(episodes):
                 if self.verbosity > 2:
                     print("Episode:", i)
-    
+
                 self.evaluate(1)
                 
-                # Build list of distributions for all policies
+                # Build distributions for all policies
                 aggregate_distributions = []
                 for policy_idx in range(self.num_policies):
                     agg_dist = self.objective.build_density_from_trajectories(
                         self.visitations_per_policy[policy_idx])
                     aggregate_distributions.append(agg_dist)
-    
+
                     if save_trajectory is not None:
                         np.savetxt(f"{save_trajectory}_policy{policy_idx}_{i}.txt",
                                  np.array([self.env.convert(state) for state in self.trajectory_per_policy[policy_idx]]))
-    
-                # Single objective value for all policies
+
                 objective = self.objective.eval_full(
                     self.emissions, aggregate_distributions, episodes
                 )
+                if isinstance(objective, torch.Tensor):
+                    objective = objective.detach()  # Ensure we detach before CPU conversion
                 print(f'Episode {i}, Value: {objective}')
                 run_objective_values.append(objective)
-    
-            objective_values = run_objective_values
-    
+
         else:
             if self.verbosity > 0:
                 print("Optimizing starting with budget:", episodes)
@@ -458,44 +441,41 @@ class MdpExploreMultiPolicy:
             self.optimize_policies()
             self.visitations_per_policy = [[] for _ in range(self.num_policies)]
             self.evaluate(episodes, keep=True)
-    
+
             run_objective_values = []
-            # Build aggregate distributions for all policies
-            aggregate_distributions = []
-            for policy_idx in range(self.num_policies):
-                agg_dist = 0
-                for i, d in enumerate(self.visitations_per_policy[policy_idx]):
-                    agg_dist = (i * agg_dist + self.objective.build_density_from_trajectories([d])) / (i + 1)
-                aggregate_distributions.append(agg_dist)
-                
-                if save_trajectory is not None:
-                    np.savetxt(f"{save_trajectory}_policy{policy_idx}.txt",
-                              np.array([self.env.convert(state) for state in self.trajectory_per_policy[policy_idx]]))
-                
-                # Single objective value using all policies' distributions
-                run_objective_values.append(
-                    self.objective.eval_full(self.emissions, aggregate_distributions, self.episodes))
-    
-            objective_values = np.array(run_objective_values)
-    
-        # Get optimal value from theoretical densities
+            aggregate_distributions = [0] * self.num_policies
+            
+            # Process visitations for each episode
+            for i, visitations in enumerate(zip(*self.visitations_per_policy)):
+                for policy_idx in range(self.num_policies):
+                    agg_dist = (i * aggregate_distributions[policy_idx] + 
+                              self.objective.build_density_from_trajectories([visitations[policy_idx]])) / (i + 1)
+                    aggregate_distributions[policy_idx] = agg_dist
 
-        # Convert objective values to numpy
-        if isinstance(objective_values, torch.Tensor):
-            objective_values = objective_values.cpu().numpy()
-        else:
-            objective_values = np.array(objective_values)
+                val = self.objective.eval_full(self.emissions, aggregate_distributions, self.episodes)
+                if isinstance(val, torch.Tensor):
+                    val = val.detach()
+                run_objective_values.append(val)
 
-        # Handle optimal value
+        # Convert objective values to numpy consistently
+        objective_values = []
+        for val in run_objective_values:
+            if isinstance(val, torch.Tensor):
+                objective_values.append(val.cpu().numpy())
+            else:
+                objective_values.append(val)
+        objective_values = np.array(objective_values)
+
+        # Handle optimal value computation
         if self.objective.get_type() != "adaptive":
             densities = [policy.return_density() for policy in self.general_policies]
             opt = self.objective.eval_full(self.emissions, densities, self.episodes)
             if isinstance(opt, torch.Tensor):
-                opt = opt.cpu().numpy()
+                opt = opt.detach().cpu().numpy()
         else:
             opt = None
-            
+
         if return_visitations:
             return objective_values, opt, self.visitations_per_policy
-    
+
         return objective_values, opt

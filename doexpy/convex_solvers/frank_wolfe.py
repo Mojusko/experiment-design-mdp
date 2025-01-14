@@ -179,12 +179,12 @@ class FrankWolfe(ConvexSolverBase):
                             density * (1 - h) + h * new_density,
                             visitations,
                             episodes
-                        ).detach().numpy()
+                        ).detach().cpu().numpy()
                     return -self.objective.eval(
                         emissions,
                         density * (1 - h) + h * new_density,
                         episodes
-                    ).detach().numpy()
+                    ).detach().cpu().numpy()
 
                 res = minimize_scalar(
                     fn,
@@ -265,8 +265,8 @@ class FrankWolfe(ConvexSolverBase):
                             temp_densities = densities.copy()
                             temp_densities[policy_idx] = densities[policy_idx] * (1 - h) + h * new_density
                             if self.objective.get_type() == "adaptive":
-                                return -self.objective.eval(emissions, temp_densities, visitations, episodes).detach().numpy()
-                            return -self.objective.eval(emissions, temp_densities, episodes).detach().numpy()
+                                return -self.objective.eval(emissions, temp_densities, visitations, episodes).detach().cpu().numpy()
+                            return -self.objective.eval(emissions, temp_densities, episodes).detach().cpu().numpy()
                         
                         res = minimize_scalar(fn, bounds=(1e-5, 1. - 1e-5), method='bounded')
                         step_size = res.x
@@ -347,12 +347,12 @@ class FrankWolfe(ConvexSolverBase):
                                 densities[i] * (1 - h) + h * new_density,
                                 visitations,
                                 episodes
-                            ).detach().numpy()
+                            ).detach().cpu().numpy()
                         return -self.objective.eval(
                             emissions,
                             densities[i] * (1 - h) + h * new_density,
                             episodes
-                        ).detach().numpy()
+                        ).detach().cpu().numpy()
     
                     res = minimize_scalar(
                         fn,
