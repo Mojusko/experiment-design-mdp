@@ -37,39 +37,28 @@ class ExperimentDesignFunctional(RewardFunctional):
         return z
 
 class DesignA(ExperimentDesignFunctional):
-
-    def __init__(self,
-                 env: Environment,
-                 lambd: float = 1e-3,
-                 dim = 0,
-                 V = None):
-        super().__init__(dim = dim)
+    def __init__(self, env: Environment, lambd: float = 1e-3, dim=0, V=None):
+        super().__init__(dim=dim)
         self.lambd = lambd
         self.type = "static"
         self.env = env
-        self.V = V
+        self.V = V.to(env.device) if V is not None else None
 
-    def eval(self,
-             emissions: torch.Tensor,
-             distribution: torch.Tensor,
-             episodes: int = 0
-             ) -> float:
+    def eval(self, emissions: torch.Tensor, distribution: torch.Tensor, episodes: int = 0) -> float:
         z = self._prepare(emissions, distribution, episodes)
+        eye = torch.eye(z.shape[0], device=z.device, dtype=z.dtype)
         if self.V is None:
-            return -torch.trace(la.inv(z + self.lambd/episodes * torch.eye(z.shape[0])))
+            return -torch.trace(la.inv(z + self.lambd/episodes * eye))
         else:
-            return -torch.trace(self.V@la.inv(z + self.lambd/episodes * torch.eye(z.shape[0])))
+            return -torch.trace(self.V @ la.inv(z + self.lambd/episodes * eye))
 
-    def eval_full(self,
-                  emissions: torch.Tensor,
-                  distribution: torch.Tensor,
-                  episodes: int,
-                  ) -> float:
+    def eval_full(self, emissions: torch.Tensor, distribution: torch.Tensor, episodes: int) -> float:
         z = self._prepare(emissions, distribution, episodes)
+        eye = torch.eye(z.shape[0], device=z.device, dtype=z.dtype)
         if self.V is None:
-            return -torch.trace(la.inv(z + self.lambd/episodes * torch.eye(z.shape[0])))
+            return -torch.trace(la.inv(z + self.lambd/episodes * eye))
         else:
-            return -torch.trace(self.V@la.inv(z + self.lambd/episodes * torch.eye(z.shape[0])))
+            return -torch.trace(self.V @ la.inv(z + self.lambd/episodes * eye))
 
 class DesignD(ExperimentDesignFunctional):
     def __init__(self,

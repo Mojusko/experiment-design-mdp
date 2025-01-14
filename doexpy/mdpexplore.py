@@ -233,12 +233,19 @@ class MdpExplore():
             objective_values = run_objective_values
             objective_values = np.array(objective_values)
 
+        # Move tensor to CPU before converting to numpy
+        if isinstance(objective_values, torch.Tensor):
+            objective_values = objective_values.cpu().numpy()
+        else:
+            objective_values = np.array(objective_values)
+
         if self.objective.get_type() != "adaptive":
-            # here I want to evaluate on theoretical visitations, i.e., optimal 
             opt = self.objective.eval_full(self.emissions, self.general_policy.return_density(), self.episodes)
+            if isinstance(opt, torch.Tensor):
+                opt = opt.cpu().numpy()
         else:
             opt = None
-            
+           
         if return_visitations:
             return objective_values, opt, self.visitations
 
@@ -472,12 +479,22 @@ class MdpExploreMultiPolicy:
             objective_values = np.array(run_objective_values)
     
         # Get optimal value from theoretical densities
+
+        # Convert objective values to numpy
+        if isinstance(objective_values, torch.Tensor):
+            objective_values = objective_values.cpu().numpy()
+        else:
+            objective_values = np.array(objective_values)
+
+        # Handle optimal value
         if self.objective.get_type() != "adaptive":
             densities = [policy.return_density() for policy in self.general_policies]
             opt = self.objective.eval_full(self.emissions, densities, self.episodes)
+            if isinstance(opt, torch.Tensor):
+                opt = opt.cpu().numpy()
         else:
             opt = None
-    
+            
         if return_visitations:
             return objective_values, opt, self.visitations_per_policy
     
