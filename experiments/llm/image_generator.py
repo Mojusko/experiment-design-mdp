@@ -14,8 +14,7 @@ class StableDiffusionGenerator():
         stable_diffusion_id: str,
         num_inference_steps: int = 100, 
         guidance_scale: float = 7,
-        image_height: int = 512, 
-        image_width: int = 512,
+        image_size: int = 512, 
         seed: int = 0,
         
         MODELS_CACHE_DIR: str = '/tmp/models_cache_dir/'
@@ -26,8 +25,7 @@ class StableDiffusionGenerator():
             stable_diffusion_id (str): The stable diffusion's model identifier.
             num_inference_steps (int): The number of denoising steps.
             guidance_scale (float): The guidance scale for classifier-free guidance.
-            image_height (int): Height of generated images.
-            image_width (int): Width of generated images.
+            image_size (int): size of generated images.
             seed (int): Random seed for reproducibility.
             device (str): Device to run the model on ('cpu' or 'cuda').
             MODELS_CACHE_DIR (str): Directory to cache the downloaded models.
@@ -79,19 +77,14 @@ class StableDiffusionGenerator():
             self._generator = None
             torch.seed()  # Ensure random initialization even without specific seed
 
-        if (image_width, image_height) not in [(512, 512), (256, 256)]:
-            logger.info(
-                "The requested image size is not guaranteed to generate good quality images. "
-                "Try 512x512 or 256x256 for higher quality image sampling"
-            )
-        self._image_size = (image_width, image_height)
+        self._image_size = image_size
         self.latents = None
 
     @torch.no_grad()
     def resample_random(self) -> None:
         """Generates new random latents for image generation."""
-        latents_height = self._image_size[0] // 8
-        latents_width = self._image_size[1] // 8
+        latents_height = self._image_size // 8
+        latents_width = self._image_size // 8
         self.latents = torch.randn(
             (1, self._unet.in_channels, latents_height, latents_width),
             generator=self._generator,
@@ -107,7 +100,7 @@ class StableDiffusionGenerator():
             raw (bool): If True, returns both processed and raw image tensors.
 
         Returns:
-            Union[np.ndarray, Tuple[np.ndarray, torch.Tensor]]: Generated image(s)
+            Union[np.ndarray, np.ndarray, Tuple[np.ndarray, torch.Tensor]]: Generated image(s) and text embeddings
         """
         if self.latents is None:
             self.resample_random()
@@ -171,8 +164,8 @@ class StableDiffusionGenerator():
         image = (image * 255).round().astype("uint8")[0]
 
         if raw:
-            return image, image_raw
-        return image
+            return image, image_raw, text_embeddings
+        return image, text_embeddings
 
     @property
     def image_size(self) -> Tuple[int, int, int]:
@@ -181,7 +174,7 @@ class StableDiffusionGenerator():
         Returns:
             Tuple[int, int, int]: (height, width, channels)
         """
-        return (self._image_size[0], self._image_size[1], 3)
+        return (self._image_size, self._image_size, 3)
 
 if __name__ == "__main__":
     import os

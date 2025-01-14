@@ -6,9 +6,8 @@ from functools import partial
 from typing import List, Tuple, Optional, Union
 from PIL import Image
 import time
-from image_generator import StableDiffusionGenerator
 
-from doexpy.env.llm import LLMGrid
+from doexpy.env.llm import LLMGrid, CLIPEmbedder, DotProductModel, ImageScorer, create_prompt, setup_clip_model, make_theta_star, get_scorer_model
 from doexpy.functionals.doe_static_functionals import DesignA, DesignD, MultiPolicyAggDesignA, MultiPolicyAggDesignD, MultiPolicyOrigDesignD
 from doexpy.mdpexplore import MdpExplore, MdpExploreMultiPolicy
 from doexpy.convex_solvers.frank_wolfe import FrankWolfe
@@ -23,73 +22,6 @@ from stpy.regularization.regularizer import L2Regularizer
 from stpy.embeddings.polynomial_embedding import CustomEmbedding
 import torch.nn as nn
 import numpy as np
-
-class CLIPEmbedder:
-    def __init__(self, tokenizer, model):
-        self.tokenizer = tokenizer
-        self.model = model
-    
-    def embed_text(self, text: str, normalize: bool = False) -> torch.Tensor:
-        """Embed text using CLIP model
-        
-        Args:
-            text: Text to embed
-            normalize: Whether to L2 normalize the embedding
-            
-        Returns:
-            Text embedding
-        """
-        text_input = self.tokenizer(
-            text,
-            padding="max_length",
-            max_length=self.tokenizer.model_max_length,
-            truncation=True,
-            return_tensors="pt",
-        )
-        embedding = self.model.get_text_features(**text_input).detach().double()
-        
-        if normalize:
-            embedding = embedding / torch.norm(embedding, p=2)
-            
-        return embedding.view(1, -1)
-
-class DotProductModel(nn.Module):
-    def __init__(self, embedding):
-        super().__init__()
-        self.embedding = embedding
-    
-    def forward(self, x):
-        return torch.mm(x, self.embedding.T)
-
-def create_prompt(actions: List[int], env, prefix: str = 'A plate with ') -> str:
-    """Create prompt from action sequence"""
-    tokens = [env.unique_elements[int(action)] for action in actions]
-    valid_tokens = [t for t in tokens if t != " "]
-    return prefix + ", ".join(valid_tokens) if valid_tokens else prefix.rstrip()
-
-def setup_clip_model(env) -> Tuple[CLIPEmbedder, DotProductModel]:
-    """Initialize CLIP embedder and dot product model"""
-    embedder = CLIPEmbedder(env._tokenizer, env._model)
-    art_embedding = embedder.embed_text('art', normalize=True)
-    model = DotProductModel(art_embedding).eval()
-    return embedder, model
-
-def make_theta_star(env, embedder, model):
-    """Create theta_star function with environment and models bound"""
-    def theta_star(actions: List[int], returnx: bool = False, verbose: bool = False) -> Union[torch.Tensor, Tuple[torch.Tensor, torch.Tensor]]:
-        """Compute similarity score between action sequence and art concept"""
-        assert len(actions) > 0
-        
-        prompt = create_prompt(actions, env)
-        if verbose:
-            print(prompt)
-
-        feat = embedder.embed_text(prompt)
-        val = model(feat)
-        
-        return (val, feat) if returnx else val
-    
-    return theta_star
 
 def generate_test_sequence(test_rng, testing_words_list: List[str], horizon: int) -> List[str]:
     """Generate a single test sequence"""
@@ -111,6 +43,9 @@ parser.add_argument('--dense_feedback', action='store_true', help='Use dense fee
 parser.add_argument('--cache_dir', default=os.path.expanduser('~/.cache/huggingface/hub'), 
                     type=str, help='Model cache directory')
 
+parser.add_argument('--scorer_model', default='art', type=str, 
+                    choices=['art', 'aesthetics', 'aesthetics-image', 'red'],
+                    help='Scoring model to use')
 args = parser.parse_args()
 args.seed = int(args.seed)
 
@@ -153,9 +88,13 @@ testing_words_list = [diverse_list[i] for i in test_indices]
 
 horizon = 3
 allowed_words_per_timestep = [training_words_list] * horizon
-horizon = len(allowed_words_per_timestep)
 
-# Initialize environment
+# initialize CLIP
+clip_model, clip_processor, clip_tokenizer = setup_clip_model(args.cache_dir)
+
+clip_embedder = CLIPEmbedder(clip_tokenizer, clip_model)
+
+# Prepare word lists based on algorithm type
 if args.algorithm == "optim":
     words = cartesian(allowed_words_per_timestep)
     words_list = []
@@ -163,13 +102,15 @@ if args.algorithm == "optim":
         tokens = [t for t in words[i] if t != " "]
         pp = ", ".join(tokens)
         words_list.append(pp)
-    env = LLMGrid(list_of_text_tokens=[words_list], MODELS_CACHE_DIR=args.cache_dir)
+    token_lists = [words_list]
 else:
-    env = LLMGrid(list_of_text_tokens=allowed_words_per_timestep, MODELS_CACHE_DIR=args.cache_dir)
+    token_lists = allowed_words_per_timestep
 
-# Setup CLIP embedding and model
-embedder, model = setup_clip_model(env)
-theta_star = make_theta_star(env, embedder, model)
+# Initialize environment 
+env = LLMGrid(token_lists, clip_model, clip_processor, clip_tokenizer)
+
+scorer_model = get_scorer_model(args.scorer_model, clip_embedder, clip_model, clip_processor, args.cache_dir)
+theta_star = make_theta_star(env, scorer_model)
 
 # Setup based on feedback type
 m = 768
@@ -248,7 +189,7 @@ if args.feedback_type == 'numerical':
         actions = visits[i][1]
         for prefix_len in prefix_range:
             truncated_actions = actions[:prefix_len]
-            yy, xx = theta_star(truncated_actions, returnx=True)
+            yy, xx = theta_star(truncated_actions)
             x.append(xx)
             y.append(yy)
     x = torch.vstack(x).detach()
@@ -266,7 +207,7 @@ else:
             # Store raw action indices, let theta_star handle token conversion
             truncated_actions = [actions[:prefix_len] + [0] * (horizon - prefix_len) for actions in policy_actions]
             
-            vals = torch.tensor([theta_star(trunc) for trunc in truncated_actions])
+            vals = torch.tensor([theta_star(trunc)[0] for trunc in truncated_actions])
             logits = torch.nn.functional.softmax(vals, dim=0)
             label = torch.multinomial(logits, 1)
             trajectory_indices[sample_idx,:,:] = torch.tensor(truncated_actions).T
@@ -279,28 +220,29 @@ else:
 
 print('Finished estimation, testing...')
 
-N_test_prompts = 1000
+N_test_prompts = 50 if args.scorer_model not in ['art','aesthetics'] else 1000
 
 # Generate test sequences
 test_sequences = [generate_test_sequence(test_rng, testing_words_list, horizon) 
-                 for _ in range(N_test_prompts)]
+                for _ in range(N_test_prompts)]
 
 # Compute embeddings and predictions
 xtest = []
 ytest = []
 for sequence in test_sequences:
-    tokens = [t for t in sequence if t != " "]
-    feat = embedder.embed_text('A plate with ' + ", ".join(tokens))
-    yy = model(feat)
-    xtest.append(feat)
-    ytest.append(yy)
+   tokens = [t for t in sequence if t != " "]
+   prompt = 'A plate with ' + ", ".join(tokens)
+   yy, feat = scorer_model.score_prompt(prompt)
+   xtest.append(feat)
+   ytest.append(yy)
 
 xtest = torch.vstack(xtest)
 ytest = torch.vstack(ytest)
 ypred = estimator.mean(xtest)
 
 # Fixed sampling of test pairs
-N_pairs_eval = 5000
+N_pairs_eval = 100 if args.scorer_model not in ['art','aesthetics'] else 5000
+
 pair_indices = np.array([(i, j) for i in range(N_test_prompts) for j in range(i+1, N_test_prompts)])
 selected_pairs = pair_indices[test_rng.choice(len(pair_indices), N_pairs_eval, replace=False)]
 

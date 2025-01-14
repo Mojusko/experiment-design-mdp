@@ -300,15 +300,15 @@ ${JOBS_LLM_GRD_ADD}: job-llm-add-grd%: ; cd llm && mkdir -p results/additivity &
 llm-additivity: ${JOBS_LLM_ALG_ADD} ${JOBS_LLM_RAN_ADD} ${JOBS_LLM_GRD_ADD}
 
 # Jobs for feedback comparison
-#JOBS_LLM_GRD_NUM := $(addprefix job-llm-feedback-grd-num,${NUMBERS_LLM})
+JOBS_LLM_GRD_NUM := $(addprefix job-llm-feedback-grd-num,${NUMBERS_LLM})
 JOBS_LLM_GRD_MULTI := $(addprefix job-llm-feedback-grd-multi,${NUMBERS_LLM})
 JOBS_LLM_RAN_MULTI := $(addprefix job-llm-feedback-ran-multi,${NUMBERS_LLM})
-#JOBS_LLM_RAN_NUM := $(addprefix job-llm-feedback-ran-num,${NUMBERS_LLM})
+JOBS_LLM_RAN_NUM := $(addprefix job-llm-feedback-ran-num,${NUMBERS_LLM})
 
-#${JOBS_LLM_GRD_NUM}: job-llm-feedback-grd-num%: ; cd llm && mkdir -p results/feedback-comparison && OMP_NUM_THREADS=1 MKL_NUM_THREADS=1 ${PYTHONPATH} run_exp.py --save="results/feedback-comparison/grd-numerical-$*.txt" --seed=$* --accuracy=1e-12 --algorithm="greedy" --episodes=5 --feedback_type=numerical --dense_feedback --lambda_reg=0.1
-#${JOBS_LLM_RAN_NUM}: job-llm-feedback-ran-num%: ; cd llm && mkdir -p results/feedback-comparison && OMP_NUM_THREADS=1 MKL_NUM_THREADS=1 ${PYTHONPATH} run_exp.py --save="results/feedback-comparison/rand-numerical-$*.txt" --seed=$* --accuracy=1e-12 --algorithm="random" --episodes=5 --feedback_type=numerical --dense_feedback --lambda_reg=0.1
-${JOBS_LLM_GRD_MULTI}: job-llm-feedback-grd-multi%: ; cd llm && mkdir -p results/feedback-comparison && OMP_NUM_THREADS=1 MKL_NUM_THREADS=1 ${PYTHONPATH} run_exp.py --save="results/feedback-comparison/grd-multinomial-$*.txt" --seed=$* --accuracy=1e-12 --algorithm="greedy" --episodes=5 --feedback_type=multinomial --dense_feedback --lambda_reg=4000.0
-${JOBS_LLM_RAN_MULTI}: job-llm-feedback-ran-multi%: ; cd llm && mkdir -p results/feedback-comparison && OMP_NUM_THREADS=1 MKL_NUM_THREADS=1 ${PYTHONPATH} run_exp.py --save="results/feedback-comparison/rand-multinomial-$*.txt" --seed=$* --accuracy=1e-12 --algorithm="random" --episodes=5 --feedback_type=multinomial --dense_feedback --lambda_reg=4000.0
+${JOBS_LLM_GRD_NUM}: job-llm-feedback-grd-num%: ; cd llm && mkdir -p results/feedback-comparison && OMP_NUM_THREADS=1 MKL_NUM_THREADS=1 ${PYTHONPATH} run_exp.py --save="results/feedback-comparison/grd-numerical-$*.txt" --seed=$* --accuracy=1e-12 --algorithm="greedy" --episodes=5 --feedback_type=numerical --dense_feedback --lambda_reg=0.1 --scorer_model='aesthetics'
+${JOBS_LLM_RAN_NUM}: job-llm-feedback-ran-num%: ; cd llm && mkdir -p results/feedback-comparison && OMP_NUM_THREADS=1 MKL_NUM_THREADS=1 ${PYTHONPATH} run_exp.py --save="results/feedback-comparison/rand-numerical-$*.txt" --seed=$* --accuracy=1e-12 --algorithm="random" --episodes=5 --feedback_type=numerical --dense_feedback --lambda_reg=0.1 --scorer_model='aesthetics'
+${JOBS_LLM_GRD_MULTI}: job-llm-feedback-grd-multi%: ; cd llm && mkdir -p results/feedback-comparison && OMP_NUM_THREADS=1 MKL_NUM_THREADS=1 ${PYTHONPATH} run_exp.py --save="results/feedback-comparison/grd-multinomial-$*.txt" --seed=$* --accuracy=1e-12 --algorithm="greedy" --episodes=5 --feedback_type=multinomial --dense_feedback --lambda_reg=4000.0 --scorer_model='aesthetics'
+${JOBS_LLM_RAN_MULTI}: job-llm-feedback-ran-multi%: ; cd llm && mkdir -p results/feedback-comparison && OMP_NUM_THREADS=1 MKL_NUM_THREADS=1 ${PYTHONPATH} run_exp.py --save="results/feedback-comparison/rand-multinomial-$*.txt" --seed=$* --accuracy=1e-12 --algorithm="random" --episodes=5 --feedback_type=multinomial --dense_feedback --lambda_reg=4000.0 --scorer_model='aesthetics'
 
 llm-feedback-comparison: ${JOBS_LLM_GRD_NUM} ${JOBS_LLM_GRD_MULTI} ${JOBS_LLM_RAN_MULTI} ${JOBS_LLM_RAN_NUM}
 
