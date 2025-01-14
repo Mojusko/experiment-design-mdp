@@ -190,8 +190,8 @@ if args.feedback_type == 'numerical':
         for prefix_len in prefix_range:
             truncated_actions = actions[:prefix_len]
             yy, xx = theta_star(truncated_actions)
-            x.append(xx)
-            y.append(yy)
+            x.append(xx.detach().cpu())  # Move to CPU
+            y.append(yy.detach().cpu())  # Move to CPU
     x = torch.vstack(x).detach()
     y = torch.vstack(y).detach()
     estimator.load_data((x, y))
@@ -208,14 +208,14 @@ else:
             truncated_actions = [actions[:prefix_len] + [0] * (horizon - prefix_len) for actions in policy_actions]
             
             vals = torch.tensor([theta_star(trunc)[0] for trunc in truncated_actions])
-            logits = torch.nn.functional.softmax(vals, dim=0)
+            logits = torch.nn.functional.softmax(vals.detach().cpu(), dim=0)
             label = torch.multinomial(logits, 1)
             trajectory_indices[sample_idx,:,:] = torch.tensor(truncated_actions).T
             labels[sample_idx, label] = 1
             
             sample_idx += 1
 
-    estimator.load_data((env.emissions, torch.zeros(len(env.emissions))))
+    estimator.load_data((env.emissions.detach().cpu(), torch.zeros(len(env.emissions))))
     estimator.fit(trajectory_indices, labels, sum_dim=1)
 
 print('Finished estimation, testing...')
@@ -233,8 +233,8 @@ for sequence in test_sequences:
    tokens = [t for t in sequence if t != " "]
    prompt = 'A plate with ' + ", ".join(tokens)
    yy, feat = scorer_model.score_prompt(prompt)
-   xtest.append(feat)
-   ytest.append(yy)
+   xtest.append(feat.detach().cpu())
+   ytest.append(yy.detach().cpu())
 
 xtest = torch.vstack(xtest)
 ytest = torch.vstack(ytest)
