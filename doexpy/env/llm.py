@@ -161,17 +161,9 @@ class CLIPEmbedder:
     def __init__(self, tokenizer, model):
         self.tokenizer = tokenizer
         self.model = model
+        self.device = next(model.parameters()).device  # Track model device
     
     def embed_text(self, text: str, normalize: bool = False) -> torch.Tensor:
-        """Embed text using CLIP model
-        
-        Args:
-            text: Text to embed
-            normalize: Whether to L2 normalize the embedding
-            
-        Returns:
-            Text embedding
-        """
         text_input = self.tokenizer(
             text,
             padding="max_length",
@@ -179,6 +171,7 @@ class CLIPEmbedder:
             truncation=True,
             return_tensors="pt",
         )
+        text_input = {k: v.to(self.device) for k, v in text_input.items()}
         embedding = self.model.get_text_features(**text_input).detach().double()
         
         if normalize:
