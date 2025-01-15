@@ -293,41 +293,104 @@ JOBS_LLM_ALG_ADD := $(addprefix job-llm-add-alg,${NUMBERS_LLM})
 JOBS_LLM_RAN_ADD := $(addprefix job-llm-add-ran,${NUMBERS_LLM})
 JOBS_LLM_GRD_ADD := $(addprefix job-llm-add-grd,${NUMBERS_LLM})
 
-${JOBS_LLM_ALG_ADD}: job-llm-add-alg%: ; cd llm && mkdir -p results/additivity && OMP_NUM_THREADS=1 MKL_NUM_THREADS=1 ${PYTHONPATH} run_exp.py --save="results/additivity/alg-numerical-$*.txt" --seed=$* --accuracy=1e-12 --algorithm="optim" --episodes=100 --feedback_type=numerical
-${JOBS_LLM_RAN_ADD}: job-llm-add-ran%: ; cd llm && mkdir -p results/additivity && OMP_NUM_THREADS=1 MKL_NUM_THREADS=1 ${PYTHONPATH} run_exp.py --save="results/additivity/rand-numerical-$*.txt" --seed=$* --accuracy=1e-12 --algorithm="random" --episodes=100 --feedback_type=numerical
-${JOBS_LLM_GRD_ADD}: job-llm-add-grd%: ; cd llm && mkdir -p results/additivity && OMP_NUM_THREADS=1 MKL_NUM_THREADS=1 ${PYTHONPATH} run_exp.py --save="results/additivity/greedy-numerical-$*.txt" --seed=$* --accuracy=1e-12 --algorithm="greedy" --episodes=100 --feedback_type=numerical
+${JOBS_LLM_ALG_ADD}: job-llm-add-alg%:
+    cd llm && mkdir -p results/additivity && \
+    OMP_NUM_THREADS=1 MKL_NUM_THREADS=1 ${PYTHONPATH} \
+    python run_exp.py \
+      --config-name=experiments/additivity \
+      save="results/additivity/alg-numerical-$*.txt" \
+      seed=$* \
+      accuracy=1e-12 \
+      algorithm="optim" \
+      episodes=100 \
+      feedback_type=numerical
+
+${JOBS_LLM_RAN_ADD}: job-llm-add-ran%:
+    cd llm && mkdir -p results/additivity && \
+    OMP_NUM_THREADS=1 MKL_NUM_THREADS=1 ${PYTHONPATH} \
+    python run_exp.py \
+      --config-name=experiments/additivity \
+      save="results/additivity/rand-numerical-$*.txt" \
+      seed=$* \
+      accuracy=1e-12 \
+      algorithm="random" \
+      episodes=100 \
+      feedback_type=numerical
+
+${JOBS_LLM_GRD_ADD}: job-llm-add-grd%:
+    cd llm && mkdir -p results/additivity && \
+    OMP_NUM_THREADS=1 MKL_NUM_THREADS=1 ${PYTHONPATH} \
+    python run_exp.py \
+      --config-name=experiments/additivity \
+      save="results/additivity/greedy-numerical-$*.txt" \
+      seed=$* \
+      accuracy=1e-12 \
+      algorithm="greedy" \
+      episodes=100 \
+      feedback_type=numerical
 
 llm-additivity: ${JOBS_LLM_ALG_ADD} ${JOBS_LLM_RAN_ADD} ${JOBS_LLM_GRD_ADD}
 
 # Jobs for feedback comparison
 JOBS_LLM_GRD_NUM := $(addprefix job-llm-feedback-grd-num,${NUMBERS_LLM})
-#JOBS_LLM_GRD_MULTI := $(addprefix job-llm-feedback-grd-multi,${NUMBERS_LLM})
-#JOBS_LLM_RAN_MULTI := $(addprefix job-llm-feedback-ran-multi,${NUMBERS_LLM})
 JOBS_LLM_RAN_NUM := $(addprefix job-llm-feedback-ran-num,${NUMBERS_LLM})
 
-${JOBS_LLM_GRD_NUM}: job-llm-feedback-grd-num%: ; cd llm && mkdir -p results/feedback-comparison && OMP_NUM_THREADS=1 MKL_NUM_THREADS=1 ${PYTHONPATH} run_exp.py --save="results/feedback-comparison/grd-numerical-$*.txt" --seed=$* --accuracy=1e-12 --algorithm="greedy" --episodes=50 --feedback_type=numerical --dense_feedback --lambda_reg=0.01 --scorer_model='aesthetics'
-${JOBS_LLM_RAN_NUM}: job-llm-feedback-ran-num%: ; cd llm && mkdir -p results/feedback-comparison && OMP_NUM_THREADS=1 MKL_NUM_THREADS=1 ${PYTHONPATH} run_exp.py --save="results/feedback-comparison/rand-numerical-$*.txt" --seed=$* --accuracy=1e-12 --algorithm="random" --episodes=50 --feedback_type=numerical --dense_feedback --lambda_reg=0.01 --scorer_model='aesthetics'
-#${JOBS_LLM_GRD_MULTI}: job-llm-feedback-grd-multi%: ; cd llm && mkdir -p results/feedback-comparison && OMP_NUM_THREADS=1 MKL_NUM_THREADS=1 ${PYTHONPATH} run_exp.py --save="results/feedback-comparison/grd-multinomial-$*.txt" --seed=$* --accuracy=1e-12 --algorithm="greedy" --episodes=250 --feedback_type=multinomial --dense_feedback --lambda_reg=4000.0 --scorer_model='aesthetics'
-#${JOBS_LLM_RAN_MULTI}: job-llm-feedback-ran-multi%: ; cd llm && mkdir -p results/feedback-comparison && OMP_NUM_THREADS=1 MKL_NUM_THREADS=1 ${PYTHONPATH} run_exp.py --save="results/feedback-comparison/rand-multinomial-$*.txt" --seed=$* --accuracy=1e-12 --algorithm="random" --episodes=250 --feedback_type=multinomial --dense_feedback --lambda_reg=4000.0 --scorer_model='aesthetics'
+${JOBS_LLM_GRD_NUM}: job-llm-feedback-grd-num%:
+    cd llm && mkdir -p results/feedback-comparison && \
+    OMP_NUM_THREADS=1 MKL_NUM_THREADS=1 ${PYTHONPATH} \
+    python run_exp.py \
+      --config-name=experiments/feedback_comparison \
+      save="results/feedback-comparison/grd-numerical-$*.txt" \
+      seed=$* \
+      accuracy=1e-12 \
+      algorithm="greedy" \
+      episodes=50 \
+      feedback_type=numerical \
+      dense_feedback=true \
+      lambda_reg=0.01 \
+      scorer_model='aesthetics'
 
-llm-feedback-comparison: ${JOBS_LLM_GRD_NUM} ${JOBS_LLM_GRD_MULTI} ${JOBS_LLM_RAN_MULTI} ${JOBS_LLM_RAN_NUM}
+${JOBS_LLM_RAN_NUM}: job-llm-feedback-ran-num%:
+    cd llm && mkdir -p results/feedback-comparison && \
+    OMP_NUM_THREADS=1 MKL_NUM_THREADS=1 ${PYTHONPATH} \
+    python run_exp.py \
+      --config-name=experiments/feedback_comparison \
+      save="results/feedback-comparison/rand-numerical-$*.txt" \
+      seed=$* \
+      accuracy=1e-12 \
+      algorithm="random" \
+      episodes=50 \
+      feedback_type=numerical \
+      dense_feedback=true \
+      lambda_reg=0.01 \
+      scorer_model='aesthetics'
 
-# Define lambda values to test
-LAMBDA_VALUES :=  0.00001 0.0001 0.001 0.1 
+llm-feedback-comparison: ${JOBS_LLM_GRD_NUM} ${JOBS_LLM_RAN_NUM}
+
+# Lambda-finding
+LAMBDA_VALUES := 0.00001 0.0001 0.001 0.1
 REPEATS_LAMBDA := $(shell seq 1 ${REPEATS_LLM})
-
-# Generate job names for each lambda value and repeat
 JOBS_LLM_LAMBDA := $(foreach lambda,${LAMBDA_VALUES},$(foreach n,${REPEATS_LAMBDA},job-llm-lambda-$(lambda)-$(n)))
 
-# Define the rule pattern for lambda-finding jobs
 define lambda_job_template
-job-llm-lambda-$(1)-$(2): ; cd llm && mkdir -p results/lambda-finding && OMP_NUM_THREADS=1 MKL_NUM_THREADS=1 $${PYTHONPATH} run_exp.py --save="results/lambda-finding/grd-numerical-lambda-$(1)-$(2).txt" --seed=$(2) --accuracy=1e-12 --algorithm="greedy" --episodes=50 --feedback_type=numerical --dense_feedback --lambda_reg=$(1) --scorer_model='aesthetics'
+job-llm-lambda-$(1)-$(2):
+    cd llm && mkdir -p results/lambda-finding && \
+    OMP_NUM_THREADS=1 MKL_NUM_THREADS=1 ${PYTHONPATH} \
+    python run_exp.py \
+      --config-name=experiments/lambda_finding \
+      save="results/lambda-finding/grd-numerical-lambda-$(1)-$(2).txt" \
+      seed=$(2) \
+      accuracy=1e-12 \
+      algorithm="greedy" \
+      episodes=50 \
+      feedback_type=numerical \
+      dense_feedback=true \
+      lambda_reg=$(1) \
+      scorer_model='aesthetics'
 endef
 
-# Generate rules for all combinations
 $(foreach lambda,${LAMBDA_VALUES},$(foreach n,${REPEATS_LAMBDA},$(eval $(call lambda_job_template,$(lambda),$(n)))))
 
-# Target to run all lambda-finding jobs
 llm-find-lambda: ${JOBS_LLM_LAMBDA}
 
 PLOTS: 

@@ -1,0 +1,13 @@
+defaults:
+  - override /feedback: numerical
+  - override /solver: greedy
+  - override /tester: preference
+  - override /saver: file_saver
+
+episodes: 50
+algorithm: greedy
+feedback_type: numerical
+dense_feedback: true
+accuracy: 1e-12
+scorer_model: "aesthetics"
+# We'll override lambda_reg from command line

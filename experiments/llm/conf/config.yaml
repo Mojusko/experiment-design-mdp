@@ -1,0 +1,19 @@
+defaults:
+  - feedback: numerical      # default feedback config
+  - solver: greedy           # default solver config
+  - tester: preference       # default tester config
+  - saver: file_saver        # default saver config
+
+# Global experiment parameters
+episodes: 10
+seed: 12
+save: "results/experiment.csv"
+algorithm: "greedy"
+feedback_type: "numerical"
+num_components: 100
+accuracy: null
+dense_feedback: false
+lambda_reg: 1.0
+scorer_model: "art"
+cache_dir: "${env:HOME}/.cache/huggingface/hub"
+horizon: 3

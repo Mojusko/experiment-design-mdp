@@ -1,0 +1,13 @@
+defaults:
+  - override /feedback: numerical
+  - override /solver: optim
+  - override /tester: preference
+  - override /saver: file_saver
+
+episodes: 100
+feedback_type: numerical
+algorithm: optim
+accuracy: 1e-12
+dense_feedback: false
+scorer_model: "art"
+lambda_reg: 1.0
