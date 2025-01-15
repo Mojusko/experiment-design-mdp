@@ -59,7 +59,7 @@ if os.path.exists(args.save):
 # Fixed test RNG for reproducible evaluation
 test_rng = np.random.RandomState(42)
 
-file_paths = ['claude.txt','o1.txt', 'flavors.txt','diverse.txt','artists.txt','movements.txt','subjects.txt', 'mediums.txt']
+file_paths = ['claude.txt','o1.txt', 'diverse.txt','artists.txt','movements_large.txt','subjects.txt', 'mediums_large.txt']
 
 # Combine all files into one list
 diverse_list = []
@@ -73,9 +73,9 @@ for file_path in file_paths:
 # Remove duplicates while preserving order
 diverse_list = list(dict.fromkeys(diverse_list))
 
-if len(diverse_list) > 4000:
-    print(f"Randomly capping diverse_list from {len(diverse_list)} to 4000 items")
-    diverse_list = list(test_rng.choice(diverse_list, size=4000, replace=False))
+if len(diverse_list) > 2000:
+    print(f"Randomly capping diverse_list from {len(diverse_list)} to 2000 items")
+    diverse_list = list(test_rng.choice(diverse_list, size=2000, replace=False))
 
 # Split diverse_list into training (75%) and testing (25%) sets using fixed seed
 n_train = int(0.75 * len(diverse_list))
@@ -86,7 +86,7 @@ test_indices = indices[n_train:]
 training_words_list = [diverse_list[i] for i in train_indices]
 testing_words_list = [diverse_list[i] for i in test_indices]
 
-horizon = 3
+horizon = 4
 allowed_words_per_timestep = [training_words_list] * horizon
 
 # initialize CLIP
