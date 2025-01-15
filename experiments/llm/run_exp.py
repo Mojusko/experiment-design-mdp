@@ -73,9 +73,9 @@ for file_path in file_paths:
 # Remove duplicates while preserving order
 diverse_list = list(dict.fromkeys(diverse_list))
 
-if len(diverse_list) > 2000:
+if len(diverse_list) > 1000:
     print(f"Randomly capping diverse_list from {len(diverse_list)} to 2000 items")
-    diverse_list = list(test_rng.choice(diverse_list, size=2000, replace=False))
+    diverse_list = list(test_rng.choice(diverse_list, size=1000, replace=False))
 
 # Split diverse_list into training (75%) and testing (25%) sets using fixed seed
 n_train = int(0.75 * len(diverse_list))
@@ -86,7 +86,7 @@ test_indices = indices[n_train:]
 training_words_list = [diverse_list[i] for i in train_indices]
 testing_words_list = [diverse_list[i] for i in test_indices]
 
-horizon = 3
+horizon = 5
 allowed_words_per_timestep = [training_words_list] * horizon
 
 # initialize CLIP
