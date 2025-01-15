@@ -5,6 +5,7 @@ from typing import List, Tuple, Union
 import torch
 from torch import nn
 
+
 class LLMGrid(DiscreteEnv):
     def __init__(
         self,
@@ -16,13 +17,10 @@ class LLMGrid(DiscreteEnv):
     ):
         self.verbose = verbose
         self.constrained = False
-        super().__init__(
-            init_state=0,
-        )
+        super().__init__(init_state=0)
         
-        # Set device and move model
         self.device = next(model.parameters()).device
-        self._model = model
+        self.embedder = CLIPEmbedder(tokenizer, model)
         self._processor = processor
         self._tokenizer = tokenizer
 
@@ -55,56 +53,20 @@ class LLMGrid(DiscreteEnv):
         self.action_space = self.emissions
         self.visitations = torch.zeros(self.states_num, self.actions_num, dtype=torch.float64).to(self.device)
 
-    def embed_text(
-        self,
-        list_of_texts: str
-    ) -> torch.Tensor:
-        emissions = []
-        for text in list_of_texts:
-            text_input = self._tokenizer(
-                text,
-                padding="max_length",
-                max_length=self._tokenizer.model_max_length,
-                truncation=True,
-                return_tensors="pt",
-            )
-            # Move input tensors to model device
-            text_input = {k: v.to(self.device) for k, v in text_input.items()}
-            feat = self._model.get_text_features(**text_input)
-            feat = feat.detach().double()
-            emissions.append(feat)
-        emissions = torch.vstack(emissions)
-        return emissions
-
     def _generate_emissions(self):
-        """
-        Generates the emissions for the environment.
-        """
         if self.verbose:
             print("PREPROCESS: Generating emissions")
         self.emissions = []
         for i in range(self.actions_num):
             text = self.unique_elements[i]
-            text_input = self._tokenizer(
-                text,
-                padding="max_length",
-                max_length=self._tokenizer.model_max_length,
-                truncation=True,
-                return_tensors="pt",
-            )
-            # Move input to correct device
-            text_input = {k: v.to(self.device) for k, v in text_input.items()}
-            
             if self.verbose:
                 print(f"Generating emission for action {i}, text: {text}")
-            feat = self._model.get_text_features(**text_input)
-            feat = feat.detach().double()
+            feat = self.embedder.embed_text(text)
             self.emissions.append(feat)
             
         if self.verbose:
             print("Done generating.")
         self.emissions = torch.vstack(self.emissions)
-
     def next(self, state, action):
         return state + 1
 
@@ -172,7 +134,7 @@ class CLIPEmbedder:
         self.model = model
         self.device = next(model.parameters()).device  # Track model device
 
-    def embed_text(self, text: str, normalize: bool = False) -> torch.Tensor:
+    def embed_text(self, text: str, normalize: bool = True) -> torch.Tensor:
         text_input = self.tokenizer(
             text,
             padding="max_length",
