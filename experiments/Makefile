@@ -285,7 +285,7 @@ STOCH0: STOCH_ada0 STOCH_opt0 STOCH_static0
 STOCH: STOCH1 STOCH2 STOCH3 STOCH0
 
 ########################### LLMS
-REPEATS_LLM=5
+REPEATS_LLM=4
 NUMBERS_LLM := $(shell seq 1 ${REPEATS_LLM})
 
 # Jobs for additivity experiment
@@ -313,7 +313,7 @@ ${JOBS_LLM_RAN_MULTI}: job-llm-feedback-ran-multi%: ; cd llm && mkdir -p results
 llm-feedback-comparison: ${JOBS_LLM_GRD_NUM} ${JOBS_LLM_GRD_MULTI} ${JOBS_LLM_RAN_MULTI} ${JOBS_LLM_RAN_NUM}
 
 # Define lambda values to test
-LAMBDA_VALUES :=  1500 4000 8000 16000
+LAMBDA_VALUES :=  1 10 100 1000 4000 8000 
 REPEATS_LAMBDA := $(shell seq 1 ${REPEATS_LLM})
 
 # Generate job names for each lambda value and repeat

@@ -246,7 +246,7 @@ class MultiPolicyOrigDesignD(ExperimentDesignFunctional):
                         d1_h = torch.sum(d1[h], dim=0)/Sigma**2
                         d2_h = torch.sum(d2[h], dim=0)/Sigma**2
                     
-                    z -= time_weight * torch.einsum('ij,j,k,kl->il', emissions.T, d1_h, d2_h, emissions)
+                    z -= 0.1 * time_weight * torch.einsum('ij,j,k,kl->il', emissions.T, d1_h, d2_h, emissions)
         return z
 
     def eval(self, emissions: torch.Tensor, distributions: List[torch.Tensor], episodes: int = 0) -> float:
