@@ -5,41 +5,68 @@ import os
 import argparse
 
 def parse_filename(filename):
-    # Extract alg type and feedback type from filename like "alg-numerical-1.txt"
     base = os.path.basename(filename)
-    alg_type, feedback_type, _ = base.rsplit('-', 2)
-    return alg_type, feedback_type
+    if "lambda" in base:
+        parts = base.split('-')
+        lambda_val = float(parts[-2])
+        return ("lambda", lambda_val)
+    else:
+        alg_type, feedback_type, _ = base.rsplit('-', 2)
+        return ("feedback", (alg_type, feedback_type))
 
-def plot_results(directory):
-    pattern = os.path.join(directory, "*.txt")
-    files = glob.glob(pattern)
-    
-    # Group results by algorithm and feedback type
-    results = {}
-    for f in files:
-        alg_type, feedback_type = parse_filename(f)
-        key = f"{alg_type}-{feedback_type}"
-        if key not in results:
-            results[key] = []
-        val = np.loadtxt(f)
-        results[key].append(val)
-    
-    # Calculate means and stds
+def plot_lambda_results(results):
+    lambda_vals = sorted(results.keys())
+    means = [np.mean(results[k]) for k in lambda_vals]
+    stds = [np.std(results[k]) for k in lambda_vals]
+
+    plt.figure(figsize=(10, 6))
+    plt.bar([str(x) for x in lambda_vals], means, yerr=stds, capsize=5)
+    plt.xlabel("Lambda Value")
+    plt.ylabel("Preference Misalignment Error")
+    plt.xticks(rotation=45)
+    plt.tight_layout()
+
+def plot_feedback_results(results):
     alg_keys = sorted(results.keys())
     means = [np.mean(results[k]) for k in alg_keys]
     stds = [np.std(results[k]) for k in alg_keys]
 
-    # Plot
     plt.figure(figsize=(10, 6))
     plt.bar(alg_keys, means, yerr=stds, capsize=5)
     plt.xlabel("Algorithm-Feedback Type")
     plt.ylabel("Preference Misalignment Error")
     plt.xticks(rotation=45)
     plt.tight_layout()
+
+def plot_results(directory):
+    pattern = os.path.join(directory, "*.txt")
+    files = glob.glob(pattern)
+    
+    lambda_results = {}
+    feedback_results = {}
+    
+    for f in files:
+        exp_type, key = parse_filename(f)
+        val = np.loadtxt(f)
+        
+        if exp_type == "lambda":
+            if key not in lambda_results:
+                lambda_results[key] = []
+            lambda_results[key].append(val)
+        else:
+            combined_key = f"{key[0]}-{key[1]}"
+            if combined_key not in feedback_results:
+                feedback_results[combined_key] = []
+            feedback_results[combined_key].append(val)
+    
+    if lambda_results:
+        plot_lambda_results(lambda_results)
+    if feedback_results:
+        plot_feedback_results(feedback_results)
     plt.show()
 
 if __name__ == "__main__":
     parser = argparse.ArgumentParser()
-    parser.add_argument('directory', help='Directory containing results with different algs / feedback models.')
+    parser.add_argument('directory', help='Directory containing experiment results.')
     args = parser.parse_args()
     plot_results(args.directory)

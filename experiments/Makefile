@@ -300,18 +300,35 @@ ${JOBS_LLM_GRD_ADD}: job-llm-add-grd%: ; cd llm && mkdir -p results/additivity &
 llm-additivity: ${JOBS_LLM_ALG_ADD} ${JOBS_LLM_RAN_ADD} ${JOBS_LLM_GRD_ADD}
 
 # Jobs for feedback comparison
-JOBS_LLM_GRD_NUM := $(addprefix job-llm-feedback-grd-num,${NUMBERS_LLM})
+#JOBS_LLM_GRD_NUM := $(addprefix job-llm-feedback-grd-num,${NUMBERS_LLM})
 JOBS_LLM_GRD_MULTI := $(addprefix job-llm-feedback-grd-multi,${NUMBERS_LLM})
 JOBS_LLM_RAN_MULTI := $(addprefix job-llm-feedback-ran-multi,${NUMBERS_LLM})
-JOBS_LLM_RAN_NUM := $(addprefix job-llm-feedback-ran-num,${NUMBERS_LLM})
+#JOBS_LLM_RAN_NUM := $(addprefix job-llm-feedback-ran-num,${NUMBERS_LLM})
 
-${JOBS_LLM_GRD_NUM}: job-llm-feedback-grd-num%: ; cd llm && mkdir -p results/feedback-comparison && OMP_NUM_THREADS=1 MKL_NUM_THREADS=1 ${PYTHONPATH} run_exp.py --save="results/feedback-comparison/grd-numerical-$*.txt" --seed=$* --accuracy=1e-12 --algorithm="greedy" --episodes=5 --feedback_type=numerical --dense_feedback --lambda_reg=0.1 --scorer_model='aesthetics'
-${JOBS_LLM_RAN_NUM}: job-llm-feedback-ran-num%: ; cd llm && mkdir -p results/feedback-comparison && OMP_NUM_THREADS=1 MKL_NUM_THREADS=1 ${PYTHONPATH} run_exp.py --save="results/feedback-comparison/rand-numerical-$*.txt" --seed=$* --accuracy=1e-12 --algorithm="random" --episodes=5 --feedback_type=numerical --dense_feedback --lambda_reg=0.1 --scorer_model='aesthetics'
-${JOBS_LLM_GRD_MULTI}: job-llm-feedback-grd-multi%: ; cd llm && mkdir -p results/feedback-comparison && OMP_NUM_THREADS=1 MKL_NUM_THREADS=1 ${PYTHONPATH} run_exp.py --save="results/feedback-comparison/grd-multinomial-$*.txt" --seed=$* --accuracy=1e-12 --algorithm="greedy" --episodes=5 --feedback_type=multinomial --dense_feedback --lambda_reg=4000.0 --scorer_model='aesthetics'
-${JOBS_LLM_RAN_MULTI}: job-llm-feedback-ran-multi%: ; cd llm && mkdir -p results/feedback-comparison && OMP_NUM_THREADS=1 MKL_NUM_THREADS=1 ${PYTHONPATH} run_exp.py --save="results/feedback-comparison/rand-multinomial-$*.txt" --seed=$* --accuracy=1e-12 --algorithm="random" --episodes=5 --feedback_type=multinomial --dense_feedback --lambda_reg=4000.0 --scorer_model='aesthetics'
+#${JOBS_LLM_GRD_NUM}: job-llm-feedback-grd-num%: ; cd llm && mkdir -p results/feedback-comparison && OMP_NUM_THREADS=1 MKL_NUM_THREADS=1 ${PYTHONPATH} run_exp.py --save="results/feedback-comparison/grd-numerical-$*.txt" --seed=$* --accuracy=1e-12 --algorithm="greedy" --episodes=5000 --feedback_type=numerical --dense_feedback --lambda_reg=0.1 --scorer_model='aesthetics'
+#${JOBS_LLM_RAN_NUM}: job-llm-feedback-ran-num%: ; cd llm && mkdir -p results/feedback-comparison && OMP_NUM_THREADS=1 MKL_NUM_THREADS=1 ${PYTHONPATH} run_exp.py --save="results/feedback-comparison/rand-numerical-$*.txt" --seed=$* --accuracy=1e-12 --algorithm="random" --episodes=5000 --feedback_type=numerical --dense_feedback --lambda_reg=0.1 --scorer_model='aesthetics'
+${JOBS_LLM_GRD_MULTI}: job-llm-feedback-grd-multi%: ; cd llm && mkdir -p results/feedback-comparison && OMP_NUM_THREADS=1 MKL_NUM_THREADS=1 ${PYTHONPATH} run_exp.py --save="results/feedback-comparison/grd-multinomial-$*.txt" --seed=$* --accuracy=1e-12 --algorithm="greedy" --episodes=500 --feedback_type=multinomial --dense_feedback --lambda_reg=4000.0 --scorer_model='aesthetics'
+${JOBS_LLM_RAN_MULTI}: job-llm-feedback-ran-multi%: ; cd llm && mkdir -p results/feedback-comparison && OMP_NUM_THREADS=1 MKL_NUM_THREADS=1 ${PYTHONPATH} run_exp.py --save="results/feedback-comparison/rand-multinomial-$*.txt" --seed=$* --accuracy=1e-12 --algorithm="random" --episodes=500 --feedback_type=multinomial --dense_feedback --lambda_reg=4000.0 --scorer_model='aesthetics'
 
 llm-feedback-comparison: ${JOBS_LLM_GRD_NUM} ${JOBS_LLM_GRD_MULTI} ${JOBS_LLM_RAN_MULTI} ${JOBS_LLM_RAN_NUM}
 
+# Define lambda values to test
+LAMBDA_VALUES :=  1500 4000 8000 16000
+REPEATS_LAMBDA := $(shell seq 1 ${REPEATS_LLM})
+
+# Generate job names for each lambda value and repeat
+JOBS_LLM_LAMBDA := $(foreach lambda,${LAMBDA_VALUES},$(foreach n,${REPEATS_LAMBDA},job-llm-lambda-$(lambda)-$(n)))
+
+# Define the rule pattern for lambda-finding jobs
+define lambda_job_template
+job-llm-lambda-$(1)-$(2): ; cd llm && mkdir -p results/lambda-finding && OMP_NUM_THREADS=1 MKL_NUM_THREADS=1 $${PYTHONPATH} run_exp.py --save="results/lambda-finding/grd-multinomial-lambda-$(1)-$(2).txt" --seed=$(2) --accuracy=1e-12 --algorithm="greedy" --episodes=800 --feedback_type=multinomial --dense_feedback --lambda_reg=$(1) --scorer_model='aesthetics'
+endef
+
+# Generate rules for all combinations
+$(foreach lambda,${LAMBDA_VALUES},$(foreach n,${REPEATS_LAMBDA},$(eval $(call lambda_job_template,$(lambda),$(n)))))
+
+# Target to run all lambda-finding jobs
+llm-find-lambda: ${JOBS_LLM_LAMBDA}
 
 PLOTS: 
 	${PYTHONPATH} plot_grids.py && ${PYTHONPATH} plot_pharma.py && ${PYTHONPATH} plot.py

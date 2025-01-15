@@ -73,9 +73,9 @@ for file_path in file_paths:
 # Remove duplicates while preserving order
 diverse_list = list(dict.fromkeys(diverse_list))
 
-if len(diverse_list) > 1000:
-    print(f"Randomly capping diverse_list from {len(diverse_list)} to 1000 items")
-    diverse_list = list(test_rng.choice(diverse_list, size=1000, replace=False))
+if len(diverse_list) > 4000:
+    print(f"Randomly capping diverse_list from {len(diverse_list)} to 4000 items")
+    diverse_list = list(test_rng.choice(diverse_list, size=4000, replace=False))
 
 # Split diverse_list into training (75%) and testing (25%) sets using fixed seed
 n_train = int(0.75 * len(diverse_list))
