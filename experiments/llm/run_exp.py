@@ -86,7 +86,7 @@ test_indices = indices[n_train:]
 training_words_list = [diverse_list[i] for i in train_indices]
 testing_words_list = [diverse_list[i] for i in test_indices]
 
-horizon = 5
+horizon = 3
 allowed_words_per_timestep = [training_words_list] * horizon
 
 # initialize CLIP
@@ -138,7 +138,7 @@ else:
     initial_policy = True
     args.num_components = 1
 
-num_policies = 1 if args.feedback_type == 'numerical' else 3
+num_policies = 1 if args.feedback_type == 'numerical' else 2
 
 # Setup solver
 convex_solver = FrankWolfe(
