@@ -33,8 +33,9 @@ your_project/
 ### High-Level Flow
 
 1. **`run_exp.py`** (entry point):
-   - Loads `conf/config.yaml` as the base config, plus any config files under `conf/**`, and integrates any command-line overrides.
-   - If you specify `--config-name=debug`, it merges `conf/debug.yaml` **on top** of `config.yaml`.
+   - Loads `conf/config.yaml` as the **base** config.
+   - Also loads any experiment config under `conf/experiment/` **if** you override `experiment=some_experiment` on the command line or in a Makefile.
+   - If you specify `--config-name=debug`, it merges `conf/debug.yaml` **on top** of `config.yaml` for special debug-mode overrides.
 
 2. **`experiment.py`** (`LLMExperiment`):
    - Loads data and sets up the environment (`env.py`).
@@ -61,15 +62,15 @@ make llm-additivity
 This target might internally run something like:
 
 ```bash
-python run_exp.py --config-name=experiment/additivity \
-  experiment=additivity \
-  saver.params.path="results/additivity/alg-numerical.txt" \
+python run_exp.py experiment=additivity \
+  saver.params.path="results/additivity/some_result.txt" \
   ...
 ```
 
 Which means:
-- Hydra loads `conf/experiment/additivity.yaml` (plus `config.yaml`).
-- Additional overrides are applied (like `saver.params.path`).
+- Hydra loads `conf/config.yaml`.
+- Merges in `conf/experiment/additivity.yaml` **because** we passed `experiment=additivity`.
+- Overrides other fields as specified (e.g., `saver.params.path`).
 - The final composed config is used to run the experiment, and results are placed in `results/`.
 
 ### 2. Running Directly via Python
@@ -78,14 +79,15 @@ You can also run an experiment directly, for example:
 
 ```bash
 cd llm
-python run_exp.py --config-name=experiment/feedback_comparison \
+python run_exp.py experiment=feedback_comparison \
   seed=123 \
   episodes=20
 ```
 
 This will:
-- Load `conf/config.yaml` + `conf/experiment/feedback_comparison.yaml`.
-- Override `seed` and `episodes` to 123 and 20, respectively.
+- Load `conf/config.yaml` as the base.
+- Override `experiment=feedback_comparison`, so Hydra merges in `conf/experiment/feedback_comparison.yaml`.
+- Then override `seed=123` and `episodes=20`.
 
 ### 3. Debug Mode
 
@@ -107,7 +109,7 @@ You can also combine it with experiment overrides:
 python run_exp.py --config-name=debug experiment=feedback_comparison
 ```
 
-This merges `debug.yaml` on top of `config.yaml`, and also sets `experiment=feedback_comparison`.
+This merges `debug.yaml` on top of `config.yaml`, **then** merges `feedback_comparison.yaml`.  
 
 ---
 
@@ -117,22 +119,20 @@ This merges `debug.yaml` on top of `config.yaml`, and also sets `experiment=feed
 
    ```yaml
    # conf/experiment/new_experiment.yaml
-   defaults:
-     - override feedback: multinomial
-
-   # Additional experiment-specific overrides
+   name: "new_experiment"
    episodes: 50
    horizon: 5
+   # Any other fields you want to override
    ```
 
-2. **Run** it by specifying `--config-name=experiment/new_experiment`, for example:
+2. **Run** it by specifying `experiment=new_experiment`, for example:
 
    ```bash
    cd llm
-   python run_exp.py --config-name=experiment/new_experiment
+   python run_exp.py experiment=new_experiment
    ```
 
-3. **Adjust** the Makefile (optional) to add a new target (e.g., `make llm-new_experiment`) if you want quick shortcuts.  
+3. **Adjust** the Makefile (optional) to add a new target (e.g., `make llm-new_experiment`) if you want quick shortcuts.
 
 ---
 
@@ -160,12 +160,12 @@ This merges `debug.yaml` on top of `config.yaml`, and also sets `experiment=feed
 
 - **Hydra Merging**: 
   - `config.yaml` is your base config. 
-  - Additional files in `conf/**` are included if referenced in the `defaults:` list or via `--config-name=some_dir/some_file`.
+  - Additional files in `conf/**` are included if referenced in the `defaults:` of `config.yaml` or if you override `experiment=some_experiment` on the CLI.
   - You can override any config field on the command line:  
     `python run_exp.py key=value nested.key=value ...`
 
 - **Debugging**:
-  - `conf/debug.yaml` can further reduce problem sizes or change certain parameters for quick testing.
+  - `conf/debug.yaml` can further reduce problem sizes or tweak certain parameters for quick testing.
   - Activate with `--config-name=debug`.
 
 - **Makefile Integration**:
@@ -178,4 +178,4 @@ This merges `debug.yaml` on top of `config.yaml`, and also sets `experiment=feed
 
 ---
 
-**Happy experimenting!** If you have any issues or want to add functionality, feel free to contribute new config files, components, or Makefile targets. Leverage Hydra to keep your code modular, reproducible, and easy to maintain.
+**Happy experimenting!** 
