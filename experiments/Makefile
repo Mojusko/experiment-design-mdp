@@ -332,7 +332,8 @@ llm-feedback-comparison: \
 # Lambda-finding
 # We'll run each lambda_reg value for REPEATS_LLM seeds
 # Example set of lambda_reg values
-LAMBDA_VALUES :=  100 200 400 800 1000
+#LAMBDA_VALUES :=  100 200 400 800 1000
+LAMBDA_VALUES :=  0.0001 0.001 0.01 0.1 1
 
 # Generate a job name for each (lambda, seed) pair
 JOBS_LLM_LAMBDA := \
@@ -343,7 +344,7 @@ JOBS_LLM_LAMBDA := \
 # Macro to define each job
 define lambda_job_template
 job-llm-lambda-$(1)-$(2):
-	cd llm && mkdir -p results/lambda-finding && OMP_NUM_THREADS=1 MKL_NUM_THREADS=1 $(PYTHONPATH) run_exp.py experiment=lambda_finding feedback=multinomial algorithm=greedy feedback.lambda_reg=$(1) seed=$(2) saver.params.path="results/lambda-finding/grd-multinomial-lambda-$(1)-$(2).txt"
+	cd llm && mkdir -p results/lambda-finding && OMP_NUM_THREADS=1 MKL_NUM_THREADS=1 $(PYTHONPATH) run_exp.py experiment=lambda_finding feedback=numerical algorithm=greedy feedback.lambda_reg=$(1) seed=$(2) saver.params.path="results/lambda-finding/grd-numerical-lambda-$(1)-$(2).txt"
 endef
 
 # Instantiate all jobs from the macro
