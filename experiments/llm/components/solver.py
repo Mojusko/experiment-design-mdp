@@ -1,40 +1,32 @@
 from doexpy.convex_solvers.frank_wolfe import FrankWolfe
 from doexpy.mdpexplore import MdpExplore, MdpExploreMultiPolicy
 from doexpy.solvers.dp import DP
+from doexpy.feedback.feedback_base import EmptyFeedback
 from doexpy.policies.summary_policies.density_policy import DensityPolicy
 
 class SolverFactory:
     @staticmethod
     def create(cfg, env, design, feedback):
         """
-        Based on cfg.algorithm, create a FrankWolfe solver and 
-        MdpExplore / MdpExploreMultiPolicy explorer.
+        Create a FrankWolfe solver and an appropriate explorer based on the configuration.
+    
+        Parameters:
+            cfg (DictConfig): The Hydra configuration object.
+            env: The environment object.
+            design: The design object.
+            feedback: The feedback object.
+    
+        Returns:
+            explorer: An instance of MdpExplore or MdpExploreMultiPolicy.
         """
-        # default
-        if cfg.algorithm == 'random':
-            initial_policy = True
-            num_components = 1
-        elif cfg.algorithm == 'optim':
-            # numerical => ~750, multinomial => ~75, etc.
-            if cfg.feedback_type == 'numerical':
-                num_components = 750
-            else:
-                num_components = 75
-            initial_policy = False
-        else:
-            # 'greedy' or anything else
-            if cfg.feedback_type == 'numerical':
-                num_components = 750
-            else:
-                num_components = 75
-            initial_policy = False
-
-        # If user explicitly overrides num_components in CLI:
-        if cfg.get("num_components") is not None:
-            num_components = cfg.num_components
-
-        num_policies = 1 if cfg.feedback_type == 'numerical' else 2
-
+        # Determine if the algorithm initializes with a policy
+        initial_policy = cfg.algorithm == 'random'
+    
+        num_components = cfg.feedback.num_components if cfg.algorithm != 'random' else 1
+    
+        num_policies = cfg.feedback.num_policies
+    
+        # Initialize the FrankWolfe solver
         solver = FrankWolfe(
             env=env,
             objective=design,
@@ -46,25 +38,25 @@ class SolverFactory:
             accuracy=cfg.accuracy,
             step='line-search',
         )
-
-        if cfg.feedback_type == 'numerical':
-            explorer = MdpExplore(
-                env=env,
-                objective=design,
-                convex_solver=solver,
-                verbosity=3,
-                feedback=feedback.feedback,  # or just feedback if you prefer
-                general_policy='markovian'
-            )
-        else:
-            explorer = MdpExploreMultiPolicy(
-                num_policies=num_policies,
-                env=env,
-                objective=design,
-                convex_solver=solver,
-                verbosity=3,
-                feedback=feedback.feedback,
-                general_policy='markovian'
-            )
-
+    
+        # Select the appropriate explorer based on the number of policies
+        explorer_cls = MdpExplore if num_policies == 1 else MdpExploreMultiPolicy
+    
+        # Prepare common arguments for both explorers
+        explorer_kwargs = {
+            'env': env,
+            'objective': design,
+            'convex_solver': solver,
+            'verbosity': 3,
+            'feedback': EmptyFeedback(env,design),
+            'general_policy': 'markovian'
+        }
+    
+        # Add specific arguments for MdpExploreMultiPolicy
+        if explorer_cls is MdpExploreMultiPolicy:
+            explorer_kwargs['num_policies'] = num_policies
+    
+        # Instantiate the explorer
+        explorer = explorer_cls(**explorer_kwargs)
+    
         return explorer

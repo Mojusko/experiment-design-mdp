@@ -1,0 +1,10 @@
+defaults:
+  - config
+  - override feedback: numerical
+vocab_size: 10
+feedback:
+  num_components: 1
+tester:
+  params:
+    N_test_prompts: 5
+    N_pairs_eval: 10

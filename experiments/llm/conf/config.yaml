@@ -1,19 +1,24 @@
 defaults:
-  - feedback: numerical      # default feedback config
-  - solver: greedy           # default solver config
-  - tester: preference       # default tester config
-  - saver: file_saver        # default saver config
+  - experiment: feedback_comparison
+  - feedback: numerical
 
-# Global experiment parameters
+vocab_size: 1000
 episodes: 10
 seed: 12
-save: "results/experiment.csv"
 algorithm: "greedy"
-feedback_type: "numerical"
-num_components: 100
-accuracy: null
-dense_feedback: false
 lambda_reg: 1.0
 scorer_model: "art"
-cache_dir: "${env:HOME}/.cache/huggingface/hub"
+cache_dir: "${oc.env:HOME}/.cache/huggingface/hub"
 horizon: 3
+accuracy: 1e-12
+dense_feedback: true
+tester: 
+  _target_: components.tester.PreferenceTester
+  params:
+    N_test_prompts: 1000
+    N_pairs_eval: 5000
+saver:
+  _target_: components.saver.FileSaver
+  params:
+    path: "results/dummy/dummy.txt" # Overwrite from Makefile
+

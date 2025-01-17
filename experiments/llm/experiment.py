@@ -31,9 +31,9 @@ class LLMExperiment:
         self.rng = np.random.RandomState(int(cfg.seed))
 
         # Prepare the output path
-        os.makedirs(os.path.dirname(cfg.save), exist_ok=True)
-        if os.path.exists(cfg.save):
-            os.remove(cfg.save)
+        os.makedirs(os.path.dirname(cfg.saver.params.path), exist_ok=True)
+        if os.path.exists(cfg.saver.params.path):
+            os.remove(cfg.saver.params.path)
 
         # 1. Load data
         self.training_words, self.testing_words = self._load_data()
@@ -48,8 +48,8 @@ class LLMExperiment:
         self.explorer = SolverFactory.create(cfg, self.env, self.design, self.feedback)
 
         # 5. We also create a tester & saver from Hydra if we want
-        self.tester = hydra.utils.instantiate(cfg.tester)
-        self.saver  = hydra.utils.instantiate(cfg.saver, save_path=cfg.save)
+        self.tester = hydra.utils.instantiate(cfg.tester, scorer_model=self._scorer_model)
+        self.saver  = hydra.utils.instantiate(cfg.saver)
 
         self.visits = None  # store final visits
 
@@ -107,7 +107,7 @@ class LLMExperiment:
         # 4) Build scorer
         self._scorer_model = get_scorer_model(
             self.cfg.scorer_model,
-            None,  # or a CLIPEmbedder if needed
+            env.embedder,
             self._clip_model,
             self._clip_processor,
             self.cfg.cache_dir
@@ -125,13 +125,13 @@ class LLMExperiment:
 
     def _load_data(self):
         """
-        Merges lines from text files, caps at 1000, then 75/25 train/test split.
+        Merges lines from text files,  then 75/25 train/test split.
         """
         file_paths = [
             'claude.txt','o1.txt','diverse.txt','artists.txt',
             'movements_large.txt','subjects.txt','mediums_large.txt'
         ]
-        test_rng = np.random.RandomState(42)
+        rng = np.random.RandomState(42)
 
         full_list = []
         for path in file_paths:
@@ -143,12 +143,12 @@ class LLMExperiment:
 
         # deduplicate
         full_list = list(dict.fromkeys(full_list))
-        if len(full_list) > 1000:
-            print("Capping data at 1000 items")
-            full_list = list(test_rng.choice(full_list, 1000, replace=False))
+        if len(full_list) > self.cfg.vocab_size:
+            print(f"Capping data at {self.cfg.vocab_size} items")
+            full_list = list(rng.choice(full_list, self.cfg.vocab_size, replace=False))
 
         n_train = int(0.75 * len(full_list))
-        indices = test_rng.permutation(len(full_list))
+        indices = rng.permutation(len(full_list))
         train_idx = indices[:n_train]
         test_idx  = indices[n_train:]
         training_words = [full_list[i] for i in train_idx]

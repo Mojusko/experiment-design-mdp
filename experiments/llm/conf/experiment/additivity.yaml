@@ -1,0 +1,5 @@
+name: "additivity"
+episodes: 100
+feedback_type: "numerical"
+dense_feedback: false
+scorer_model: "art"

@@ -50,8 +50,7 @@ class MultinomialFeedback(BaseFeedback):
     """Collect data for multinomial feedback, then fit."""
     def collect_data(self, cfg, visits, estimator, theta_star):
         horizon = cfg.horizon
-        # In your code, you often do num_policies = 2 or 3, or store it in cfg
-        num_policies = cfg.get("num_policies", 2)
+        num_policies = cfg.feedback.num_policies
 
         prefix_range = range(1, horizon+1) if cfg.dense_feedback else range(horizon, horizon+1)
         num_samples = cfg.episodes * (horizon if cfg.dense_feedback else 1)
@@ -72,12 +71,9 @@ class MultinomialFeedback(BaseFeedback):
                 labels[sample_idx, label_idx] = 1
                 sample_idx += 1
 
-        # In your code, you did something like: 
-        # estimator.load_data((env.emissions, zero_labels)), then fit(trajectory_indices, labels)
-        env_emissions = self.env.emissions.detach().cpu() if hasattr(self.env, 'emissions') else None
-        if env_emissions is not None:
-            estimator.load_data((env_emissions, torch.zeros(len(env_emissions))))
+        estimator.load_data((self.env.emissions.detach().cpu(), torch.zeros(len(self.env.emissions))))
         estimator.fit(trajectory_indices, labels, sum_dim=1)
+
 
 class FeedbackFactory:
     """
@@ -89,7 +85,7 @@ class FeedbackFactory:
         embedding = CustomEmbedding(m, lambda x: x, m)
 
         # Decide which feedback type
-        if cfg.feedback_type == 'numerical':
+        if cfg.feedback.name == 'numerical':
             design = DesignA(env=env, lambd=cfg.lambda_reg, dim=1)
             estimator = KernelizedFeatures(embedding, m)
             fb = NumericalFeedback(env, design, estimator)

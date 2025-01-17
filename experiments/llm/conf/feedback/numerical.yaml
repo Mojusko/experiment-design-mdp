@@ -1,0 +1,4 @@
+name: "numerical"
+num_policies: 1
+num_components: 750
+lambda: 0.1
