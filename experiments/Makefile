@@ -284,6 +284,7 @@ STOCH0: STOCH_ada0 STOCH_opt0 STOCH_static0
 
 STOCH: STOCH1 STOCH2 STOCH3 STOCH0
 
+
 ########################### LLMS
 REPEATS_LLM=1
 NUMBERS_LLM := $(shell seq 1 ${REPEATS_LLM})
@@ -294,34 +295,13 @@ JOBS_LLM_RAN_ADD := $(addprefix job-llm-add-ran,${NUMBERS_LLM})
 JOBS_LLM_GRD_ADD := $(addprefix job-llm-add-grd,${NUMBERS_LLM})
 
 $(JOBS_LLM_ALG_ADD): job-llm-add-alg%:
-	cd llm && mkdir -p results/additivity && \
-		OMP_NUM_THREADS=1 MKL_NUM_THREADS=1 \
-		$(PYTHONPATH) run_exp.py \
-			experiment=additivity \
-			algorithm="optim" \
-			feedback="numerical" \
-			saver.params.path="results/additivity/alg-numerical-$*.txt" \
-			seed=$*
+	cd llm && mkdir -p results/additivity && OMP_NUM_THREADS=1 MKL_NUM_THREADS=1 $(PYTHONPATH) run_exp.py experiment=additivity algorithm="optim" feedback="numerical" saver.params.path="results/additivity/alg-numerical-$*.txt" seed=$*
 
 $(JOBS_LLM_RAN_ADD): job-llm-add-ran%:
-	cd llm && mkdir -p results/additivity && \
-		OMP_NUM_THREADS=1 MKL_NUM_THREADS=1 \
-		$(PYTHONPATH) run_exp.py \
-			experiment=additivity \
-			algorithm="random" \
-			feedback="numerical" \
-			saver.params.path="results/additivity/rand-numerical-$*.txt" \
-			seed=$*
+	cd llm && mkdir -p results/additivity && OMP_NUM_THREADS=1 MKL_NUM_THREADS=1 $(PYTHONPATH) run_exp.py experiment=additivity algorithm="random" feedback="numerical" saver.params.path="results/additivity/rand-numerical-$*.txt" seed=$*
 
 $(JOBS_LLM_GRD_ADD): job-llm-add-grd%:
-	cd llm && mkdir -p results/additivity && \
-		OMP_NUM_THREADS=1 MKL_NUM_THREADS=1 \
-		$(PYTHONPATH) run_exp.py \
-			experiment=additivity \
-			algorithm="greedy" \
-			feedback="numerical" \
-			saver.params.path="results/additivity/greedy-numerical-$*.txt" \
-			seed=$*
+	cd llm && mkdir -p results/additivity && OMP_NUM_THREADS=1 MKL_NUM_THREADS=1 $(PYTHONPATH) run_exp.py experiment=additivity algorithm="greedy" feedback="numerical" saver.params.path="results/additivity/greedy-numerical-$*.txt" seed=$*
 
 llm-additivity: $(JOBS_LLM_ALG_ADD) $(JOBS_LLM_RAN_ADD) $(JOBS_LLM_GRD_ADD)
 
@@ -332,46 +312,17 @@ JOBS_LLM_GRD_MULT := $(addprefix job-llm-feedback-grd-mult,$(NUMBERS_LLM))
 JOBS_LLM_RAN_MULT := $(addprefix job-llm-feedback-ran-mult,$(NUMBERS_LLM))
 
 $(JOBS_LLM_GRD_NUM): job-llm-feedback-grd-num%:
-	cd llm && mkdir -p results/feedback-comparison && \
-		OMP_NUM_THREADS=1 MKL_NUM_THREADS=1 \
-		$(PYTHONPATH) run_exp.py \
-			experiment=feedback_comparison \
-			algorithm=greedy \
-			feedback=numerical \
-			saver.params.path="results/feedback-comparison/grd-numerical-$*.txt" \
-			seed=$*
+	cd llm && mkdir -p results/feedback-comparison && OMP_NUM_THREADS=1 MKL_NUM_THREADS=1 $(PYTHONPATH) run_exp.py experiment=feedback_comparison algorithm=greedy feedback=numerical saver.params.path="results/feedback-comparison/grd-numerical-$*.txt" seed=$*
 
 $(JOBS_LLM_RAN_NUM): job-llm-feedback-ran-num%:
-	cd llm && mkdir -p results/feedback-comparison && \
-		OMP_NUM_THREADS=1 MKL_NUM_THREADS=1 \
-		$(PYTHONPATH) run_exp.py \
-			experiment=feedback_comparison \
-			algorithm=random \
-			feedback=numerical \
-			saver.params.path="results/feedback-comparison/rand-numerical-$*.txt" \
-			seed=$*
+	cd llm && mkdir -p results/feedback-comparison && OMP_NUM_THREADS=1 MKL_NUM_THREADS=1 $(PYTHONPATH) run_exp.py experiment=feedback_comparison algorithm=random feedback=numerical saver.params.path="results/feedback-comparison/rand-numerical-$*.txt" seed=$*
 
 $(JOBS_LLM_GRD_MULT): job-llm-feedback-grd-mult%:
-	cd llm && mkdir -p results/feedback-comparison && \
-		OMP_NUM_THREADS=1 MKL_NUM_THREADS=1 \
-		$(PYTHONPATH) run_exp.py \
-			experiment=feedback_comparison \
-			algorithm=greedy \
-			feedback=multinomial \
-			saver.params.path="results/feedback-comparison/grd-multinomial-$*.txt" \
-			seed=$*
+	cd llm && mkdir -p results/feedback-comparison && OMP_NUM_THREADS=1 MKL_NUM_THREADS=1 $(PYTHONPATH) run_exp.py experiment=feedback_comparison algorithm=greedy feedback=multinomial saver.params.path="results/feedback-comparison/grd-multinomial-$*.txt" seed=$*
 
 $(JOBS_LLM_RAN_MULT): job-llm-feedback-ran-mult%:
-	cd llm && mkdir -p results/feedback-comparison && \
-		OMP_NUM_THREADS=1 MKL_NUM_THREADS=1 \
-		$(PYTHONPATH) run_exp.py \
-			experiment=feedback_comparison \
-			algorithm=random \
-			feedback=multinomial \
-			saver.params.path="results/feedback-comparison/rand-multinomial-$*.txt" \
-			seed=$*
+	cd llm && mkdir -p results/feedback-comparison && OMP_NUM_THREADS=1 MKL_NUM_THREADS=1 $(PYTHONPATH) run_exp.py experiment=feedback_comparison algorithm=random feedback=multinomial saver.params.path="results/feedback-comparison/rand-multinomial-$*.txt" seed=$*
 
-# Master target that runs all four sets of jobs
 llm-feedback-comparison: \
 	$(JOBS_LLM_GRD_NUM) \
 	$(JOBS_LLM_RAN_NUM) \
@@ -392,13 +343,7 @@ JOBS_LLM_LAMBDA := \
 # Macro to define each job
 define lambda_job_template
 job-llm-lambda-$(1)-$(2):
-	cd llm && mkdir -p results/lambda-finding && \
-		OMP_NUM_THREADS=1 MKL_NUM_THREADS=1 \
-		$(PYTHONPATH) run_exp.py \
-			experiment=lambda_finding \
-			lambda_reg=$(1) \
-			seed=$(2) \
-			saver.params.path="results/lambda-finding/grd-multinomial-lambda-$(1)-$(2).txt"
+	cd llm && mkdir -p results/lambda-finding && OMP_NUM_THREADS=1 MKL_NUM_THREADS=1 $(PYTHONPATH) run_exp.py experiment=lambda_finding lambda_reg=$(1) seed=$(2) saver.params.path="results/lambda-finding/grd-multinomial-lambda-$(1)-$(2).txt"
 endef
 
 # Instantiate all jobs from the macro

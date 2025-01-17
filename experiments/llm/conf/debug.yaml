@@ -1,6 +1,6 @@
 defaults:
   - config
-  - override feedback: numerical
+  - override feedback: multinomial
 vocab_size: 10
 feedback:
   num_components: 1
