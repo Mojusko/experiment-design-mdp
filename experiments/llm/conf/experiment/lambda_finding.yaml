@@ -1,3 +1,3 @@
 name: "lambda_finding"
-episodes: 50
+episodes: 100
 scorer_model: "aesthetics"

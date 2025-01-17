@@ -354,7 +354,7 @@ $(foreach lambda,$(LAMBDA_VALUES), \
 
 # Master target to run all jobs
 llm-find-lambda: $(JOBS_LLM_LAMBDA)
-LAMBDA_VALUES := 0.1 1 10 50 100 200 400 800
+LAMBDA_VALUES :=  1 100 400 1000 4000 10000
 JOBS_LLM_LAMBDA := $(foreach lambda,${LAMBDA_VALUES},$(foreach n,${REPEATS_LLM},job-llm-lambda-$(lambda)-$(n)))
 
 PLOTS: 

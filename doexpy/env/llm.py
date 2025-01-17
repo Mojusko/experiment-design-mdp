@@ -134,7 +134,7 @@ class CLIPEmbedder:
         self.model = model
         self.device = next(model.parameters()).device  # Track model device
 
-    def embed_text(self, text: str, normalize: bool = False) -> torch.Tensor:
+    def embed_text(self, text: str, normalize: bool = True) -> torch.Tensor:
         text_input = self.tokenizer(
             text,
             padding="max_length",
