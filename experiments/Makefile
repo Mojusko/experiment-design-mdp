@@ -286,7 +286,7 @@ STOCH: STOCH1 STOCH2 STOCH3 STOCH0
 
 
 ########################### LLMS
-REPEATS_LLM=5
+REPEATS_LLM=4
 NUMBERS_LLM := $(shell seq 1 ${REPEATS_LLM})
 
 # Jobs for additivity experiment
@@ -332,7 +332,7 @@ llm-feedback-comparison: \
 # Lambda-finding
 # We'll run each lambda_reg value for REPEATS_LLM seeds
 # Example set of lambda_reg values
-LAMBDA_VALUES := 0.1 1 10 50 100 200 400 800
+LAMBDA_VALUES :=  1 100 1000 2000 4000 8000
 
 # Generate a job name for each (lambda, seed) pair
 JOBS_LLM_LAMBDA := \
@@ -343,7 +343,7 @@ JOBS_LLM_LAMBDA := \
 # Macro to define each job
 define lambda_job_template
 job-llm-lambda-$(1)-$(2):
-	cd llm && mkdir -p results/lambda-finding && OMP_NUM_THREADS=1 MKL_NUM_THREADS=1 $(PYTHONPATH) run_exp.py experiment=lambda_finding lambda_reg=$(1) seed=$(2) saver.params.path="results/lambda-finding/grd-multinomial-lambda-$(1)-$(2).txt"
+	cd llm && mkdir -p results/lambda-finding && OMP_NUM_THREADS=1 MKL_NUM_THREADS=1 $(PYTHONPATH) run_exp.py experiment=lambda_finding feedback=multinomial algorithm=greedy lambda_reg=$(1) seed=$(2) saver.params.path="results/lambda-finding/grd-multinomial-lambda-$(1)-$(2).txt"
 endef
 
 # Instantiate all jobs from the macro
