@@ -134,7 +134,7 @@ class CLIPEmbedder:
         self.model = model
         self.device = next(model.parameters()).device  # Track model device
 
-    def embed_text(self, text: str, normalize: bool = True) -> torch.Tensor:
+    def embed_text(self, text: str, normalize: bool = False) -> torch.Tensor:
         text_input = self.tokenizer(
             text,
             padding="max_length",
@@ -160,13 +160,16 @@ class CLIPScorer(nn.Module):
         raise NotImplementedError
 
 class DotProductModel(CLIPScorer):
-    def __init__(self, embedder, weight):
+    def __init__(self, embedder, weight, bias=None):
         super().__init__(embedder)
         self.weight = weight.to(embedder.device)
+        self.bias = bias.to(embedder.device) if bias else None
     
     def score_prompt(self, x):
         x_clip_embedding = self.embedder.embed_text(x)
         score = torch.mm(x_clip_embedding, self.weight.T)
+        if self.bias:
+            score += self.bias
         return score, x_clip_embedding
 
 class ImageScorer(CLIPScorer):
@@ -227,15 +230,12 @@ def load_aesthetics_embedding(weights_path='text_weights.pth'):
     try:
         state = torch.load(weights_path, map_location=device)
         weight = state['net.0.weight'].to(device).double()
-        return weight
+        bias = state['net.0.bias'].to(device).double()
+        return weight, bias
         #return weight / torch.norm(weight, p=2, dim=1, keepdim=True)
         
     except FileNotFoundError:
         raise FileNotFoundError(f"Could not find weights file: {weights_path}")
-    except KeyError as e:
-        raise KeyError(f"Required key not found in state dict. Available keys: {list(state.keys())}")
-    except Exception as e:
-        raise type(e)(f"Error loading weights from {weights_path}: {str(e)}")
 
 def setup_clip_model(cache_dir):
     """Initialize shared CLIP model"""
@@ -270,8 +270,8 @@ def get_scorer_model(model_name: str, embedder, clip_model, clip_processor, cach
         return DotProductModel(embedder, art_embedding).eval()
         
     if model_name == 'aesthetics':
-        aesthetics_embedding = load_aesthetics_embedding()
-        return DotProductModel(embedder, aesthetics_embedding).eval()
+        aes_weight, aes_bias = load_aesthetics_embedding()
+        return DotProductModel(embedder, aes_weight, bias=aes_bias).eval()
         
     if model_name == 'aesthetics-image':
         return  AestheticsImageScorer(embedder, cache_dir, clip_model, clip_processor)
