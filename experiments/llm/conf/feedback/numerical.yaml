@@ -1,4 +1,4 @@
 name: "numerical"
 num_policies: 1
 num_components: 750
-lambda_reg: 1
+lambda_reg: 0.1
