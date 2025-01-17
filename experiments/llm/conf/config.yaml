@@ -2,7 +2,7 @@ defaults:
   - experiment: feedback_comparison
   - feedback: numerical
 
-vocab_size: 3000
+vocab_size: 1000
 seed: 12
 algorithm: "greedy"
 cache_dir: "${oc.env:HOME}/.cache/huggingface/hub"
