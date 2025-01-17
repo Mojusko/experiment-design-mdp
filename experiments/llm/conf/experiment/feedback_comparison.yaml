@@ -1,5 +1,4 @@
 name: "feedback_comparison"
 episodes: 50
 algorithm: greedy
-feedback_type: "numerical"
 scorer_model: "aesthetics"

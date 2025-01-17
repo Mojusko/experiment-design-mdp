@@ -57,7 +57,7 @@ class LLMExperiment:
         """Runs exploration for cfg.episodes, collects visits."""
         # For example: 
         val, opt_val, visits = self.explorer.run(
-            episodes=self.cfg.episodes,
+            episodes=self.cfg.experiment.episodes,
             return_visitations=True
         )
         self.visits = visits

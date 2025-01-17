@@ -9,3 +9,5 @@ tester:
   params:
     N_test_prompts: 5
     N_pairs_eval: 10
+experiment:
+  episodes: 3

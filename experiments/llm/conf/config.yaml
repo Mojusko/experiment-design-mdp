@@ -3,10 +3,8 @@ defaults:
   - feedback: numerical
 
 vocab_size: 1000
-episodes: 10
 seed: 12
 algorithm: "greedy"
-lambda_reg: 1.0
 scorer_model: "art"
 cache_dir: "${oc.env:HOME}/.cache/huggingface/hub"
 horizon: 3
