@@ -1,4 +1,4 @@
 name: "multinomial"
 num_policies: 2
 num_components: 75
-lambda_reg: 800
+lambda_reg: 8000
