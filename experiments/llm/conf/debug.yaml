@@ -1,12 +1,12 @@
 defaults:
   - config
   - override feedback: multinomial
-vocab_size: 10
+vocab_size: 50
 feedback:
-  num_components: 1
+  num_components: 5
 tester:
   params:
-    N_test_prompts: 5
-    N_pairs_eval: 10
+    N_test_prompts: 25
+    N_pairs_eval: 100
 experiment:
   episodes: 3

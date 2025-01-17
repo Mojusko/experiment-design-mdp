@@ -67,7 +67,6 @@ class MultinomialFeedback(BaseFeedback):
                 vals = torch.tensor([theta_star(ta)[0] for ta in trunc_actions])
                 logits = F.softmax(vals.detach(), dim=0)
                 label_idx = torch.multinomial(logits, 1)
-                import ipdb; ipdb.set_trace()
                 trajectory_indices[sample_idx, :, :] = torch.tensor(trunc_actions).T
                 labels[sample_idx, label_idx] = 1
                 sample_idx += 1
