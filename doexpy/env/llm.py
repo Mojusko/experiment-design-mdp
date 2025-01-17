@@ -160,28 +160,14 @@ class CLIPScorer(nn.Module):
         raise NotImplementedError
 
 class DotProductModel(CLIPScorer):
-    def __init__(self, embedder, model_embedding):
+    def __init__(self, embedder, weight):
         super().__init__(embedder)
-        self.model_embedding = model_embedding.to(embedder.device)
+        self.weight = weight.to(embedder.device)
     
     def score_prompt(self, x):
         x_clip_embedding = self.embedder.embed_text(x)
-        return torch.mm(x_clip_embedding, self.model_embedding.T), x_clip_embedding
-
-#class AestheticsModel(CLIPScorer):
-#    def __init__(self, embedder, weights_path='vit_14_weights.pth'):
-#        super().__init__(embedder)
-#        self.linear = nn.Linear(768, 1).double()
-#        state = torch.load(weights_path)
-#        self.linear.load_state_dict(state)
-#        # L2 normalize the model weights
-#        with torch.no_grad():
-#            self.linear.weight.data = self.linear.weight.data / torch.norm(self.linear.weight.data, p=2, dim=1, keepdim=True)
-#        self.eval()
-#    
-#    def score_prompt(self, x):
-#        x_clip_embedding = self.embedder.embed_text(x)
-#        return self.linear(x_clip_embedding), x_clip_embedding
+        score = torch.mm(x_clip_embedding, self.weight.T)
+        return score, x_clip_embedding
 
 class ImageScorer(CLIPScorer):
     def __init__(self, embedder, cache_dir):
@@ -228,19 +214,27 @@ class AestheticsImageScorer(ImageScorer):
         return self.aesthetic_model(clip_embeddings), clip_embeddings
 
 def load_aesthetics_embedding(weights_path='text_weights.pth'):
-    """Load and prepare aesthetics model weights as embedding
+    """Load aesthetics model weights and bias
     
     Args:
         weights_path: Path to aesthetics weights file
         
     Returns:
-        Normalized weight tensor to use as embedding
+        tuple: (weight tensor, bias tensor) both on appropriate device
     """
-    state = torch.load(weights_path)
-    # Extract weight from state dict
-    weight = state['weight'].double()
-    # L2 normalize
-    return weight / torch.norm(weight, p=2, dim=1, keepdim=True)
+    device = 'cuda' if torch.cuda.is_available() else 'cpu'
+    
+    try:
+        state = torch.load(weights_path, map_location=device)
+        weight = state['net.0.weight'].to(device).double()
+        return weight
+        
+    except FileNotFoundError:
+        raise FileNotFoundError(f"Could not find weights file: {weights_path}")
+    except KeyError as e:
+        raise KeyError(f"Required key not found in state dict. Available keys: {list(state.keys())}")
+    except Exception as e:
+        raise type(e)(f"Error loading weights from {weights_path}: {str(e)}")
 
 def setup_clip_model(cache_dir):
     """Initialize shared CLIP model"""

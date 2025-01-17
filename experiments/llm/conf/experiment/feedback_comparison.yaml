@@ -1,3 +1,3 @@
 name: "feedback_comparison"
-episodes: 200
+episodes: 50
 scorer_model: "aesthetics"
