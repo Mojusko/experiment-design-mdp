@@ -213,8 +213,9 @@ class RedImageScorer(ImageScorer):
 class AestheticsImageScorer(ImageScorer):
     def __init__(self, cache_dir, clip_model: CLIPModel, clip_processor: CLIPProcessor):
         super().__init__(cache_dir)
+        # TODO: figure this one out
         #self.aesthetic_model = AestheticsModel('vit_14_weights.pth')
-        self.aesthetic_model = AestheticsModel('text_weights.pth')
+        #self.aesthetic_model = AestheticsModel('text_weights.pth')
         self.clip_processor = clip_processor
         self.clip_model = clip_model
 
@@ -226,7 +227,7 @@ class AestheticsImageScorer(ImageScorer):
         clip_embeddings = self.clip_model.get_image_features(**inputs)
         return self.aesthetic_model(clip_embeddings), clip_embeddings
 
-def load_aesthetics_embedding(weights_path='vit_14_weights.pth'):
+def load_aesthetics_embedding(weights_path='text_weights.pth'):
     """Load and prepare aesthetics model weights as embedding
     
     Args:
