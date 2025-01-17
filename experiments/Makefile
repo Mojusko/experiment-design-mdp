@@ -332,7 +332,7 @@ llm-feedback-comparison: \
 # Lambda-finding
 # We'll run each lambda_reg value for REPEATS_LLM seeds
 # Example set of lambda_reg values
-LAMBDA_VALUES :=  100 200 400 800 4000 8000
+LAMBDA_VALUES :=  4000 10000 20000
 #LAMBDA_VALUES :=  0.0001 0.001 0.01 0.1 1
 
 # Generate a job name for each (lambda, seed) pair
