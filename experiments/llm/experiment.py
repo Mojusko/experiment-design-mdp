@@ -54,7 +54,7 @@ class LLMExperiment:
         self.visits = None  # store final visits
 
     def run(self):
-        """Runs exploration for cfg.episodes, collects visits."""
+        """Runs exploration for cfg.experiment.episodes, collects visits."""
         # For example: 
         val, opt_val, visits = self.explorer.run(
             episodes=self.cfg.experiment.episodes,
@@ -106,7 +106,7 @@ class LLMExperiment:
 
         # 4) Build scorer
         self._scorer_model = get_scorer_model(
-            self.cfg.scorer_model,
+            self.cfg.experiment.scorer_model,
             env.embedder,
             self._clip_model,
             self._clip_processor,

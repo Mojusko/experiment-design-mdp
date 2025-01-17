@@ -1,5 +1,3 @@
 name: "lambda_finding"
 episodes: 50
-feedback_type: "numerical"
 scorer_model: "aesthetics"
-# We'll override lambda_reg from command line

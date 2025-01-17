@@ -5,7 +5,6 @@ defaults:
 vocab_size: 1000
 seed: 12
 algorithm: "greedy"
-scorer_model: "art"
 cache_dir: "${oc.env:HOME}/.cache/huggingface/hub"
 horizon: 3
 accuracy: 1e-12
