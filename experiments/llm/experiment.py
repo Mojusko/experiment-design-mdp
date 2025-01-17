@@ -127,10 +127,11 @@ class LLMExperiment:
         """
         Merges lines from text files,  then 75/25 train/test split.
         """
-        file_paths = [
-            'claude.txt','o1.txt','diverse.txt','artists.txt',
-            'movements_large.txt','subjects.txt','mediums_large.txt'
-        ]
+        #file_paths = [
+        #    'claude.txt','o1.txt','diverse.txt','artists.txt',
+        #    'movements_large.txt','subjects.txt','mediums_large.txt'
+        #]
+        file_paths = ['vocabulary.txt']
         rng = np.random.RandomState(42)
 
         full_list = []
