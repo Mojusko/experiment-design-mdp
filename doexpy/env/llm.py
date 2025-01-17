@@ -213,7 +213,8 @@ class RedImageScorer(ImageScorer):
 class AestheticsImageScorer(ImageScorer):
     def __init__(self, cache_dir, clip_model: CLIPModel, clip_processor: CLIPProcessor):
         super().__init__(cache_dir)
-        self.aesthetic_model = AestheticsModel('vit_14_weights.pth')
+        #self.aesthetic_model = AestheticsModel('vit_14_weights.pth')
+        self.aesthetic_model = AestheticsModel('text_weights.pth')
         self.clip_processor = clip_processor
         self.clip_model = clip_model
 

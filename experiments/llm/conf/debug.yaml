@@ -2,6 +2,7 @@ defaults:
   - config
   - override feedback: multinomial
 vocab_size: 10
+scorer_model: "aesthetics"
 feedback:
   num_components: 1
 tester:
