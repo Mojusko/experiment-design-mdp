@@ -227,7 +227,8 @@ def load_aesthetics_embedding(weights_path='text_weights.pth'):
     try:
         state = torch.load(weights_path, map_location=device)
         weight = state['net.0.weight'].to(device).double()
-        return weight / torch.norm(weight, p=2, dim=1, keepdim=True)
+        return weight
+        #return weight / torch.norm(weight, p=2, dim=1, keepdim=True)
         
     except FileNotFoundError:
         raise FileNotFoundError(f"Could not find weights file: {weights_path}")
