@@ -343,7 +343,7 @@ JOBS_LLM_LAMBDA := \
 # Macro to define each job
 define lambda_job_template
 job-llm-lambda-$(1)-$(2):
-	cd llm && mkdir -p results/lambda-finding && OMP_NUM_THREADS=1 MKL_NUM_THREADS=1 $(PYTHONPATH) run_exp.py experiment=lambda_finding feedback=multinomial algorithm=greedy lambda_reg=$(1) seed=$(2) saver.params.path="results/lambda-finding/grd-multinomial-lambda-$(1)-$(2).txt"
+	cd llm && mkdir -p results/lambda-finding && OMP_NUM_THREADS=1 MKL_NUM_THREADS=1 $(PYTHONPATH) run_exp.py experiment=lambda_finding feedback=multinomial algorithm=greedy feedback.lambda_reg=$(1) seed=$(2) saver.params.path="results/lambda-finding/grd-multinomial-lambda-$(1)-$(2).txt"
 endef
 
 # Instantiate all jobs from the macro
