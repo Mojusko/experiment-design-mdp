@@ -3,7 +3,7 @@ import torch.nn.functional as F
 import numpy as np
 
 from doexpy.functionals.doe_static_functionals import (
-    DesignA, MultiPolicyOrigDesignD
+    DesignA, MultiPolicyOrigDesignD, MultiPolicyAggDesignD
 )
 from doexpy.feedback.feedback_base import EmptyFeedback
 from stpy.embeddings.polynomial_embedding import CustomEmbedding
