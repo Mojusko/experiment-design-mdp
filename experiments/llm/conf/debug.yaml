@@ -1,7 +1,6 @@
 defaults:
   - config
   - override feedback: multinomial
-vocab_size: 750
 feedback:
   num_components: 6
 tester:
@@ -10,5 +9,6 @@ tester:
     N_pairs_eval: 500
 experiment:
   episodes: 50
+  vocab_size: 750
   #scorer_model: "art"
 
