@@ -91,7 +91,8 @@ class FeedbackFactory:
             estimator = KernelizedFeatures(embedding, m)
             fb = NumericalFeedback(env, design, estimator)
         else:
-            design = MultiPolicyOrigDesignD(env=env, lambd=cfg.feedback.lambda_reg, dim=1)
+            #design = MultiPolicyOrigDesignD(env=env, lambd=cfg.feedback.lambda_reg, dim=1)
+            design = MultiPolicyAggDesignD(env=env, lambd=cfg.feedback.lambda_reg, dim=1)
             likelihood = MultinomialLikelihood()
             regularizer = L2Regularizer(lam=cfg.feedback.lambda_reg)
             estimator = RegularizedMultinomialEstimator(embedding, likelihood, regularizer)

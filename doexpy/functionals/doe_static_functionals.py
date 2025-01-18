@@ -153,12 +153,14 @@ class MultiPolicyAggDesignA(ExperimentDesignFunctional):
                  env: Environment,
                  lambd: float = 1e-3,
                  dim = 0,
-                 V = None):
+                 V = None,
+                 time_weigh = True):
         super().__init__(dim=dim)
         self.lambd = lambd 
         self.type = "static"
         self.env = env
         self.V = V
+        self.time_weigh = time_weigh
 
     def _calculate_z(self,
                     emissions: torch.Tensor,
@@ -167,21 +169,23 @@ class MultiPolicyAggDesignA(ExperimentDesignFunctional):
                     Sigma: Union[None, float] = None) -> torch.Tensor:
         if Sigma is None:
             Sigma = 1.
-    
-        z = torch.zeros((emissions.shape[1], emissions.shape[1]))
+            
+        distributions = [d.to(emissions.device) for d in distributions]
+        z = torch.zeros((emissions.shape[1], emissions.shape[1]), dtype=distributions[0].dtype, device=emissions.device)
         emissions = emissions.type(distributions[0].dtype)
-        
-        # For each horizon step
-        for h in range(distributions[0].shape[0]):
+        H = distributions[0].shape[0]
+
+        for h in range(H):
+            time_weight = (H - h)/H if self.time_weigh else 1.0
             if self.dim == 0:
-                d_h_sum = sum(torch.sum(d[h], dim=1) for d in distributions)/Sigma**2  # Sum over states
+                d_h_sum = sum(torch.sum(d[h], dim=1) for d in distributions)/Sigma**2
             elif self.dim == 1:
-                d_h_sum = sum(torch.sum(d[h], dim=0) for d in distributions)/Sigma**2  # Sum over actions
+                d_h_sum = sum(torch.sum(d[h], dim=0) for d in distributions)/Sigma**2
             
             z_diag = torch.einsum('ij,j,jk->ik', emissions.T, d_h_sum, emissions)
             z_outer = 0.5 * torch.einsum('ij,j,k,kl->il', emissions.T, d_h_sum, d_h_sum, emissions)
-            z += z_diag - z_outer
-    
+            z += time_weight * (z_diag - z_outer)
+
         return z
 
     def eval(self,
@@ -189,10 +193,11 @@ class MultiPolicyAggDesignA(ExperimentDesignFunctional):
          distributions: List[torch.Tensor],
          episodes: int = 0) -> float:
         z = self._calculate_z(emissions, distributions, episodes)
+        eye = torch.eye(z.shape[0], device=z.device, dtype=z.dtype)
         if self.V is None:
-            return -torch.trace(la.inv(z + self.lambd/episodes * torch.eye(z.shape[0])))
+            return -torch.trace(la.inv(z + self.lambd/episodes * eye))
         else:
-            return -torch.trace(self.V@la.inv(z + self.lambd/episodes * torch.eye(z.shape[0])))
+            return -torch.trace(self.V @ la.inv(z + self.lambd/episodes * eye))
 
     def eval_full(self,
               emissions: torch.Tensor,
