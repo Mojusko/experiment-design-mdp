@@ -4,6 +4,9 @@ from transformers import CLIPModel, CLIPProcessor, CLIPTokenizer
 from typing import List, Tuple, Union
 import torch
 from torch import nn
+import os
+import hashlib
+import pickle
 
 
 class LLMGrid(DiscreteEnv):
@@ -13,6 +16,7 @@ class LLMGrid(DiscreteEnv):
         model: CLIPModel,
         processor: CLIPProcessor, 
         tokenizer: CLIPTokenizer,
+        cache_dir: str,
         verbose: bool = False,
     ):
         self.verbose = verbose
@@ -23,6 +27,8 @@ class LLMGrid(DiscreteEnv):
         self.embedder = CLIPEmbedder(tokenizer, model)
         self._processor = processor
         self._tokenizer = tokenizer
+
+        self.cache_dir = cache_dir
 
         self.list_of_text_tokens = list_of_text_tokens
         self.max_episode_length = len(list_of_text_tokens)
@@ -54,8 +60,29 @@ class LLMGrid(DiscreteEnv):
         self.visitations = torch.zeros(self.states_num, self.actions_num, dtype=torch.float64).to(self.device)
 
     def _generate_emissions(self):
+        
+        # Create cache dir if needed
+        os.makedirs(self.cache_dir, exist_ok=True)
+        
+        # Generate deterministic hash from actions and elements
+        hasher = hashlib.sha256()
+        hasher.update(str(self.actions_num).encode())
+        for elem in self.unique_elements:
+            hasher.update(elem.encode())
+        cache_id = hasher.hexdigest()
+        cache_path = os.path.join(self.cache_dir, f"emissions_{cache_id}.pkl")
+    
+        # Try loading from cache
+        if os.path.exists(cache_path):
+            if self.verbose:
+                print("Loading emissions from cache")
+            with open(cache_path, 'rb') as f:
+                self.emissions = pickle.load(f)
+            return
+    
+        # Generate if not cached
         if self.verbose:
-            print("PREPROCESS: Generating emissions")
+            print("PREPROCESS: Generating emissions") 
         self.emissions = []
         for i in range(self.actions_num):
             text = self.unique_elements[i]
@@ -63,10 +90,30 @@ class LLMGrid(DiscreteEnv):
                 print(f"Generating emission for action {i}, text: {text}")
             feat = self.embedder.embed_text(text)
             self.emissions.append(feat)
-            
+        
         if self.verbose:
             print("Done generating.")
         self.emissions = torch.vstack(self.emissions)
+        
+        # Cache the emissions
+        with open(cache_path, 'wb') as f:
+            pickle.dump(self.emissions, f)
+
+    #def _generate_emissions_legacy(self):
+    #    # TODO: delete this
+    #    if self.verbose:
+    #        print("PREPROCESS: Generating emissions")
+    #    self.emissions = []
+    #    for i in range(self.actions_num):
+    #        text = self.unique_elements[i]
+    #        if self.verbose:
+    #            print(f"Generating emission for action {i}, text: {text}")
+    #        feat = self.embedder.embed_text(text)
+    #        self.emissions.append(feat)
+    #        
+    #    if self.verbose:
+    #        print("Done generating.")
+    #    self.emissions = torch.vstack(self.emissions)
     def next(self, state, action):
         return state + 1
 
@@ -231,8 +278,8 @@ def load_aesthetics_embedding(weights_path='text_weights.pth'):
         state = torch.load(weights_path, map_location=device)
         weight = state['net.0.weight'].to(device).double()
         bias = state['net.0.bias'].to(device).double()
-        #return weight, bias
-        return weight / torch.norm(weight, p=2, dim=1, keepdim=True), None
+        norm = torch.norm(weight, p=2, dim=1, keepdim=True)
+        return weight / norm , bias / norm
         
     except FileNotFoundError:
         raise FileNotFoundError(f"Could not find weights file: {weights_path}")

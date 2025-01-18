@@ -101,7 +101,8 @@ class LLMExperiment:
             token_lists,
             self._clip_model,
             self._clip_processor,
-            self._clip_tokenizer
+            self._clip_tokenizer,
+            self.cfg.cache_dir
         )
 
         # 4) Build scorer
@@ -144,9 +145,9 @@ class LLMExperiment:
 
         # deduplicate
         full_list = list(dict.fromkeys(full_list))
-        if len(full_list) > self.cfg.vocab_size:
-            print(f"Capping data at {self.cfg.vocab_size} items")
-            full_list = list(rng.choice(full_list, self.cfg.vocab_size, replace=False))
+        if len(full_list) > self.cfg.experiment.vocab_size:
+            print(f"Capping data at {self.cfg.experiment.vocab_size} items")
+            full_list = list(rng.choice(full_list, self.cfg.experiment.vocab_size, replace=False))
 
         n_train = int(0.75 * len(full_list))
         indices = rng.permutation(len(full_list))
