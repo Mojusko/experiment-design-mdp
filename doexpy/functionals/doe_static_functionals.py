@@ -211,7 +211,8 @@ class MultiPolicyAggDesignD(MultiPolicyAggDesignA):
              distributions: List[torch.Tensor],
              episodes: int = 0) -> float:
         z = self._calculate_z(emissions, distributions, episodes)
-        return torch.linalg.slogdet(z + self.lambd/episodes * torch.eye(z.shape[0]))[1]
+        eye = torch.eye(z.shape[0], device=z.device, dtype=z.dtype)
+        return torch.linalg.slogdet(z + self.lambd/episodes * eye)[1]
 
 class MultiPolicyOrigDesignD(ExperimentDesignFunctional):
     def __init__(self, env: Environment, lambd: float = 1e-3, dim=0, V=None, time_weigh=True):
