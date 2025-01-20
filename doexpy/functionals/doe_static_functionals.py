@@ -240,7 +240,6 @@ class MultiPolicyOrigDesignD(ExperimentDesignFunctional):
         denominators = exp_logits_i + exp_logits_j
         
         self.prob_matrix = exp_logits_i / denominators
-        print(self.prob_matrix)
 
     def _get_prob_matrix(self, emissions):
         """Return pairwise probability matrix or default to 0.5 on the specified device and dtype."""

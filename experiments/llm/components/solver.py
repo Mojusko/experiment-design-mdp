@@ -47,7 +47,8 @@ class SolverFactory:
             'env': env,
             'objective': design,
             'convex_solver': solver,
-            'verbosity': 3,
+            #'verbosity': 3,
+            'verbosity': 0,
             'feedback': EmptyFeedback(env,design),
             'general_policy': 'markovian'
         }

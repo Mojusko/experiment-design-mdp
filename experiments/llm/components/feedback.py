@@ -12,16 +12,22 @@ from stpy.regression.regularized_dictionary.regularized_multinomial_estimator im
 from stpy.probability.multinomial_likelihood import MultinomialLikelihood
 from stpy.regularization.regularizer import L2Regularizer
 
+
+
 class BaseFeedback:
-    """
-    Base class that handles data collection from visits
-    and calls estimator.fit().
-    """
+    """Base class for feedback mechanisms."""
+    
     def __init__(self, env, design, estimator):
         self.env = env
         self.design = design
         self.estimator = estimator
-        self.feedback = EmptyFeedback(env, design)  # If you need custom feedback logic
+        self.feedback = EmptyFeedback(env, design)
+        self._metrics = {}  # Internal metrics storage
+    
+    @property
+    def metrics(self):
+        """Dict of computed metrics about the feedback process."""
+        return self._metrics
 
     def collect_data(self, cfg, visits, estimator, theta_star):
         raise NotImplementedError
@@ -54,6 +60,9 @@ class MultinomialFeedback(BaseFeedback):
         num_policies = cfg.feedback.num_policies
         num_episodes = len(visits[0])
 
+        # Track probability products
+        prob_products = []
+
         prefix_range = range(1, horizon+1) if cfg.dense_feedback else range(horizon, horizon+1)
         num_samples = num_episodes * (horizon if cfg.dense_feedback else 1)
 
@@ -68,15 +77,26 @@ class MultinomialFeedback(BaseFeedback):
                 ]
                 vals = torch.tensor([theta_star(ta)[0] for ta in trunc_actions])
                 probs = F.softmax(vals.detach(), dim=0)
-                print(probs)
                 label_idx = torch.multinomial(probs, 1)
 
                 trajectory_indices[sample_idx, :, :] = torch.tensor(trunc_actions).T
                 labels[sample_idx, label_idx] = 1
                 sample_idx += 1
 
+                # metrics
+
+                # For 2 policies, compute p1*p2
+                if num_policies == 2:
+                    prob_products.append((probs[0] * probs[1]).item())
+      
+
         estimator.load_data((self.env.emissions.detach().cpu(), torch.zeros(len(self.env.emissions))))
         estimator.fit(trajectory_indices, labels, sum_dim=1)
+
+        self._metrics = {
+            'mean_prob_product': np.mean(prob_products),
+            'std_prob_product': np.std(prob_products)
+        }
 
 
 class FeedbackFactory:
