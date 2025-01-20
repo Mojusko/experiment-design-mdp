@@ -1,4 +1,4 @@
 name: "lambda_finding"
-episodes: 500
-vocab_size: 2000
+episodes: 75
+vocab_size: 1000
 scorer_model: "aesthetics"
