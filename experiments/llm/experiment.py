@@ -219,8 +219,6 @@ class LLMExperiment:
             
             # Perform estimation if not final phase
             if remaining_episodes > 0:
-                if remaining_episodes <= 2:
-                    import ipdb; ipdb.set_trace()
                 self._perform_estimation(self.visits, update_design=True)  # Using cumulative visits
 
     def _init_env(self):
