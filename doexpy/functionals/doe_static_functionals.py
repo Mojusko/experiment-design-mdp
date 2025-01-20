@@ -60,43 +60,23 @@ class DesignA(ExperimentDesignFunctional):
         else:
             return -torch.trace(self.V @ la.inv(z + self.lambd/episodes * eye))
 
-class DesignD(ExperimentDesignFunctional):
-    def __init__(self,
-                 env: Environment,
-                 lambd: float = 1e-3,
-                 scale_reg=True,
-                 sigma: float = 1.):
-        super().__init__()
-        self.env = env
-        self.dim = self.env.get_dim()
-        self.lambd = lambd
-        self.scale_reg = scale_reg
-        self.type = "static"
-        self.lambd = lambd * torch.eye(self.dim)
-
-        if isinstance(lambd, float):
-            self.Sigma = sigma * torch.ones(self.env.get_states_num(), dtype=torch.float64)
-            self.Sigma_true = self.Sigma
-        else:
-            self.Sigma = sigma
-            self.Sigma_true = self.Sigma
+class DesignD(DesignA):
+    def __init__(self, env: Environment, lambd: float = 1e-3, dim=0, V=None):
+        super().__init__(env=env, lambd=lambd, dim=dim, V=V)
 
     def eval(self,
              emissions: torch.Tensor,
              distribution: torch.Tensor,
-             episodes: int
-             ) -> float:
-        z = self._prepare(emissions, distribution, Sigma = self.Sigma)
-        return torch.linalg.slogdet(z + self.lambd / episodes)[1]
+             episodes: int) -> float:
+        z = self._prepare(emissions, distribution, episodes)
+        eye = torch.eye(z.shape[0], device=z.device, dtype=z.dtype)
+        return torch.linalg.slogdet(z + self.lambd/episodes * eye)[1]
 
     def eval_full(self,
-                  emissions: torch.Tensor,
-                  distribution: torch.Tensor,
-                  episodes: int,
-                  ) -> float:
-        z = self._prepare(emissions, distribution, Sigma = self.Sigma_true)
-        return torch.linalg.slogdet(z + self.lambd / episodes)[1]
-
+             emissions: torch.Tensor,
+             distribution: torch.Tensor,
+             episodes: int) -> float:
+        return self.eval(emissions, distribution, episodes)
 
 class DesignE(DesignD):
     def eval(self,

@@ -3,7 +3,7 @@ import torch.nn.functional as F
 import numpy as np
 
 from doexpy.functionals.doe_static_functionals import (
-    DesignA, MultiPolicyOrigDesignD, MultiPolicyAggDesignD
+    DesignA, DesignD, MultiPolicyOrigDesignD, MultiPolicyAggDesignD
 )
 from doexpy.feedback.feedback_base import EmptyFeedback
 from stpy.embeddings.polynomial_embedding import CustomEmbedding
@@ -110,7 +110,8 @@ class FeedbackFactory:
 
         # Decide which feedback type
         if cfg.feedback.name == 'numerical':
-            design = DesignA(env=env, lambd=cfg.feedback.lambda_reg, dim=1)
+            #design = DesignA(env=env, lambd=cfg.feedback.lambda_reg, dim=1)
+            design = DesignD(env=env, lambd=cfg.feedback.lambda_reg, dim=1)
             estimator = KernelizedFeatures(embedding, m)
             fb = NumericalFeedback(env, design, estimator)
         else:

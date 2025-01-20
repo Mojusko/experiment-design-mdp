@@ -59,6 +59,12 @@ class LLMGrid(DiscreteEnv):
         self.action_space = self.emissions
         self.visitations = torch.zeros(self.states_num, self.actions_num, dtype=torch.float64).to(self.device)
 
+    def get_dim(self):
+        return 768
+
+    def get_states_num(self):
+        return self.states_num
+
     def _generate_emissions(self):
         
         # Create cache dir if needed
