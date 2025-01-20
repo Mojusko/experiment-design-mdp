@@ -233,6 +233,7 @@ class MultiPolicyOrigDesignD(ExperimentDesignFunctional):
     def _update_probability_matrix(self, emissions):
         """Update pairwise probability matrix based on emissions."""
         logits = self.estimator.mean(emissions)
+        logits = logits.to(emissions.device)
         exp_logits = torch.exp(logits)
         exp_logits_i = exp_logits.view(-1, 1)
         exp_logits_j = exp_logits.view(1, -1)
