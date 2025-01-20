@@ -186,6 +186,12 @@ class LLMExperiment:
         total_episodes = self.cfg.experiment.episodes
         freq = self.cfg.feedback.adaptive_estimation_frequency
     
+        if freq > 0 and (self.cfg.feedback.name != 'multinomial' or self.cfg.algorithm != 'greedy'):
+            raise NotImplementedError("Adaptive estimation currently only implemented for multinomial feedback")
+        if freq == 0:
+            _, _, phase_visits = self.explorer.run(episodes=total_episodes, return_visitations=True)
+            self.visits = phase_visits
+            return
         for phase_episodes in range(freq, total_episodes + 1, freq):
             self.explorer = SolverFactory.create(self.cfg, self.env, self.design, self.feedback)
             _, _, phase_visits = self.explorer.run(episodes=phase_episodes, return_visitations=True)
