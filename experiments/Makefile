@@ -327,8 +327,7 @@ $(JOBS_LLM_RAN_MULT): job-llm-feedback-ran-mult%:
 
 # Combined targets
 llm-feedback-comparison-num: $(JOBS_LLM_GRD_NUM) $(JOBS_LLM_RAN_NUM)
-#llm-feedback-comparison-mul: $(JOBS_LLM_GRD_MULT) $(JOBS_LLM_RAN_MULT)
-llm-feedback-comparison-mul: $(JOBS_LLM_RAN_MULT)
+llm-feedback-comparison-mul: $(JOBS_LLM_GRD_MULT) $(JOBS_LLM_RAN_MULT)
 llm-feedback-comparison: llm-feedback-comparison-num llm-feedback-comparison-mul
 
 # Lambda-finding
