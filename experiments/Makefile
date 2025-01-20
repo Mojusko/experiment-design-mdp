@@ -333,7 +333,7 @@ llm-feedback-comparison: llm-feedback-comparison-num llm-feedback-comparison-mul
 # Lambda-finding
 # We'll run each lambda_reg value for REPEATS_LLM seeds
 # Example set of lambda_reg values
-LAMBDA_VALUES :=  1 10 100 200 400 1000 2000
+LAMBDA_VALUES :=  1 10 100 500 1000 
 #LAMBDA_VALUES :=  0.0001 0.001 0.01 0.1 1
 
 # Generate a job name for each (lambda, seed) pair
@@ -355,7 +355,6 @@ $(foreach lambda,$(LAMBDA_VALUES), \
 
 # Master target to run all jobs
 llm-find-lambda: $(JOBS_LLM_LAMBDA)
-LAMBDA_VALUES :=  1 100 400 1000 4000 10000
 JOBS_LLM_LAMBDA := $(foreach lambda,${LAMBDA_VALUES},$(foreach n,${REPEATS_LLM},job-llm-lambda-$(lambda)-$(n)))
 
 PLOTS: 
