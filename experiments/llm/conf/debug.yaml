@@ -2,7 +2,7 @@ defaults:
   - config
   - override feedback: multinomial
 feedback:
-  num_components: 4
+  num_components: 10
   adaptive_estimation_frequency: 10
 tester:
   params:
