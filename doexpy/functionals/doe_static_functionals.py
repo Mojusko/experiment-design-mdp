@@ -264,6 +264,7 @@ class MultiPolicyOrigDesignD(ExperimentDesignFunctional):
         return term1 + term2
 
     def _calculate_z(self, emissions, distributions, episodes):
+        distributions = [d.to(emissions.device) for d in distributions]
         emissions = emissions.type(distributions[0].dtype)
         z = torch.zeros((emissions.shape[1], emissions.shape[1]), 
                        dtype=distributions[0].dtype, device=emissions.device)
