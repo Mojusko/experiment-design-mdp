@@ -184,43 +184,14 @@ class LLMExperiment:
     def run(self):
         """Runs exploration with periodic estimation"""
         total_episodes = self.cfg.experiment.episodes
-
-        # adaptiveness
-        estimation_frequency = self.cfg.feedback.adaptive_estimation_frequency
-        if estimation_frequency > 0 and (self.cfg.feedback.name != 'multinomial' or self.cfg.algorithm != 'greedy'):
-            raise NotImplementedError("Adaptive estimation currently only implemented for multinomial + greedy")
-        if not estimation_frequency:
-            # Standard single-pass exploration
-            val, opt_val, visits = self.explorer.run(
-                episodes=total_episodes,
-                return_visitations=True
-            )
-            self.visits = visits
-            return
-
-        # Multi-phase adaptive exploration
-        remaining_episodes = total_episodes
-        while remaining_episodes > 0:
-            # Calculate episodes for this phase
-            phase_episodes = min(estimation_frequency, remaining_episodes)
-            
-            # Run exploration phase
-            val, opt_val, phase_visits = self.explorer.run(
-                episodes=phase_episodes,
-                return_visitations=True
-            )
-            self.visits.extend(phase_visits)
-            if not self.visits:
-                self.visits = [[] for _ in range(self.cfg.feedback.num_policies)]
-            for p in range(self.cfg.feedback.num_policies):
-                self.visits[p].extend(phase_visits[p])
-            
-            remaining_episodes -= phase_episodes
-            
-            # Perform estimation if not final phase
-            if remaining_episodes > 0:
-                self._perform_estimation(self.visits, update_design=True)  # Using cumulative visits
-
+        freq = self.cfg.feedback.adaptive_estimation_frequency
+    
+        for phase_episodes in range(freq, total_episodes + 1, freq):
+            self.explorer = SolverFactory.create(self.cfg, self.env, self.design, self.feedback)
+            _, _, phase_visits = self.explorer.run(episodes=phase_episodes, return_visitations=True)
+            self._perform_estimation(phase_visits, update_design=True)
+        self.visits = phase_visits
+        
     def _init_env(self):
         """
         Builds token lists (if 'optim' do cartesian, else repeated),
