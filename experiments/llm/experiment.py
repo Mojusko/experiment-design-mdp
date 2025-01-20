@@ -123,7 +123,8 @@ class LLMExperimentLegacy:
         #    'claude.txt','o1.txt','diverse.txt','artists.txt',
         #    'movements_large.txt','subjects.txt','mediums_large.txt'
         #]
-        file_paths = ['vocabulary.txt']
+        #file_paths = ['vocabulary.txt']
+        file_paths = ['vocabulary_jan.txt']
         rng = np.random.RandomState(42)
 
         full_list = []
