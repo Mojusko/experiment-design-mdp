@@ -179,7 +179,7 @@ class LLMExperiment:
         """Performs estimation and updates design with new estimator"""
         self.feedback.collect_data(self.cfg, visits, self.estimator, self._theta_star)
         if update_design:
-            self.design.update_estimator(self.estimator)
+            self.design.update_estimator(self.estimator, self.env.emissions)
         
     def run(self):
         """Runs exploration with periodic estimation"""
@@ -219,6 +219,8 @@ class LLMExperiment:
             
             # Perform estimation if not final phase
             if remaining_episodes > 0:
+                if remaining_episodes <= 2:
+                    import ipdb; ipdb.set_trace()
                 self._perform_estimation(self.visits, update_design=True)  # Using cumulative visits
 
     def _init_env(self):

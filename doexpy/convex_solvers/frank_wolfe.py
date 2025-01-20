@@ -237,7 +237,7 @@ class FrankWolfe(ConvexSolverBase):
                 counter = 1 if self.initial_policy else 0
                 empirical_gap = torch.Tensor([1e10]).double()
                 
-                while counter < self.num_components and empirical_gap > gap:
+                while counter < self.num_components and torch.abs(empirical_gap) > gap:
                     # Get current density for all policies
                     densities = []
                     for i in range(self.num_summarized_policies):
@@ -303,90 +303,6 @@ class FrankWolfe(ConvexSolverBase):
                     counter += 1
         
         self.summarize()
-        return self.summarized_policies, self.policies, self.weights, self.densities
-
-    def optimize_legacy(self, emissions, visitations, episodes):
-
-        if self.num_summarized_policies == 1:
-            return self._optimize_single(emissions, visitations, episodes)
-        
-        hess_min = 0
-        hess_max = 0
-
-        # Multi-policy setup
-        self.policies = [[] for _ in range(self.num_summarized_policies)]
-        self.weights = [[] for _ in range(self.num_summarized_policies)]
-        self.densities = [[] for _ in range(self.num_summarized_policies)]
-        
-        counters = [1 if self.initial_policy else 0] * self.num_summarized_policies
-        gap = -10e10 if self.accuracy is None else self.accuracy
-        empirical_gap = torch.Tensor([1e10]).double()
-    
-        while (all(c < self.num_components for c in counters) and empirical_gap > gap):
-            # Get current densities
-            densities = []
-            for i in range(self.num_summarized_policies):
-                density = self.density_estimator.density_oracle(self.policies[i], self.weights[i], self.densities[i], self.stationary)
-                if self.env.type == 'discrete':
-                    density.requires_grad_(True)
-                densities.append(density)
-    
-            rewards = self._reward_fn_gradient(densities, emissions, visitations, episodes)
-            policy_gaps = []
-            
-            for i in range(self.num_summarized_policies):
-                new_policy = self._planning_oracle(rewards[i])
-                self.policies[i].append(new_policy)
-                new_density = self.density_estimator.density_oracle_single(new_policy)
-    
-                if self.step == "line-search" and self.num_components > 1:
-                    def fn(h):
-                        if self.objective.get_type() == "adaptive":
-                            return -self.objective.eval(
-                                emissions,
-                                densities[i] * (1 - h) + h * new_density,
-                                visitations,
-                                episodes
-                            ).detach().cpu().numpy()
-                        return -self.objective.eval(
-                            emissions,
-                            densities[i] * (1 - h) + h * new_density,
-                            episodes
-                        ).detach().cpu().numpy()
-    
-                    res = minimize_scalar(
-                        fn,
-                        bounds=(1e-5, 1. - 1e-5),
-                        method='bounded')
-                    step_size = res.x
-                elif self.step is not None and isinstance(self.step, float):
-                    step_size = self.step
-                else:
-                    step_size = 1.0 / (1 + counters[i])
-    
-                self.weights[i] = [(1 - step_size) * w for w in self.weights[i]] + [step_size]
-                
-                if self.env.type == 'discrete':
-                    policy_gaps.append((rewards[i] * (new_density - densities[i])).sum())
-                
-                counters[i] += 1
-    
-            empirical_gap = torch.max(torch.stack(policy_gaps)) if policy_gaps else empirical_gap
-    
-            if self.objective.get_type() == "adaptive":
-                objective = self.objective.eval(emissions, densities, visitations, episodes)
-            else:
-                objective = self.objective.eval(emissions, densities, episodes)
-    
-            if self.env.type == 'discrete':
-                if self.verbosity > 0:
-                    total_grad_norm = sum(la.norm(r) for r in rewards)
-                    print(f'component: {counters}, gap: {empirical_gap}, objective: {objective}, stepsize: {step_size}, gradient:{total_grad_norm}, hess_max:{hess_max}, hess_min:{hess_min}')
-            elif self.env.type == 'continuous' and self.verbosity > 0:
-                print(f'objective: {objective}')
-    
-        self.summarize()
-    
         return self.summarized_policies, self.policies, self.weights, self.densities
 
     def summarize(self) -> None:

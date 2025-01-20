@@ -2,4 +2,4 @@ name: "multinomial"
 num_policies: 2
 num_components: 20
 lambda_reg: 4000
-adaptive_estimation_frequency: 10
+adaptive_estimation_frequency: 15

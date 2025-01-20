@@ -223,43 +223,43 @@ class MultiPolicyOrigDesignD(ExperimentDesignFunctional):
         self.V = V
         self.time_weigh = time_weigh
         self.estimator = None
+        self.prob_matrix = None
 
-    def update_estimator(self, estimator):
+    def update_estimator(self, estimator, emissions):
+        """Update the estimator and recompute probability matrix."""
         self.estimator = estimator
+        self._update_probability_matrix(emissions)
 
-    def _compute_prob_matrices(self, emissions):
-        """Compute pairwise probability matrices."""
-        if self.estimator is None:
-            n = emissions.shape[0]
-            return (
-                0.5*torch.ones((n, n), device=emissions.device),
-                0.5*torch.ones((n, n), device=emissions.device)
-            )
-
+    def _update_probability_matrix(self, emissions):
+        """Update pairwise probability matrix based on emissions."""
         logits = self.estimator.mean(emissions)
         exp_logits = torch.exp(logits)
         exp_logits_i = exp_logits.view(-1, 1)
         exp_logits_j = exp_logits.view(1, -1)
         denominators = exp_logits_i + exp_logits_j
         
-        prob_matrix_1 = exp_logits_i / denominators
-        prob_matrix_2 = exp_logits_j / denominators
-        
-        return prob_matrix_1, prob_matrix_2
+        self.prob_matrix = exp_logits_i / denominators
 
-    def _compute_diagonal_terms(self, emissions, prob_matrix_1, prob_matrix_2, d1_h, d2_h):
+    def _get_prob_matrix(self, emissions):
+        """Return pairwise probability matrix or default to 0.5 on the specified device and dtype."""
+        n = emissions.shape[0]
+        if self.prob_matrix is None:
+            return 0.5 * torch.ones((n, n), device=emissions.device, dtype=emissions.dtype)
+        return self.prob_matrix
+
+    def _compute_diagonal_terms(self, emissions, prob_matrix, d1_h, d2_h):
         """Compute diagonal terms of the Fisher."""
-        p_q1 = torch.mm(prob_matrix_1, d2_h.view(-1,1))
-        p_q2 = torch.mm(prob_matrix_2.T, d1_h.view(-1,1))
+        p_q1 = torch.mm(prob_matrix, d2_h.view(-1,1))
+        p_q2 = torch.mm(prob_matrix.T, d1_h.view(-1,1))
         
         term1 = torch.einsum('i,i,ik,im->km', p_q1.squeeze(), d1_h, emissions, emissions)
         term2 = torch.einsum('i,i,ik,im->km', p_q2.squeeze(), d2_h, emissions, emissions)
         
         return term1 + term2
 
-    def _compute_cross_terms(self, emissions, prob_matrix_1, prob_matrix_2, d1_h, d2_h):
-        term1 = torch.einsum('ij,i,ik,jm->km', prob_matrix_1, d1_h, emissions, emissions)
-        term2 = torch.einsum('ij,i,ik,jm->km', prob_matrix_2, d2_h, emissions, emissions)
+    def _compute_cross_terms(self, emissions, prob_matrix, d1_h, d2_h):
+        term1 = torch.einsum('ij,i,ik,jm->km', prob_matrix, d1_h, emissions, emissions)
+        term2 = torch.einsum('ij,i,ik,jm->km', prob_matrix.T, d2_h, emissions, emissions)
         return term1 + term2
 
     def _calculate_z(self, emissions, distributions, episodes):
@@ -277,12 +277,11 @@ class MultiPolicyOrigDesignD(ExperimentDesignFunctional):
                 d1_h = torch.sum(distributions[0][h], dim=0)  
                 d2_h = torch.sum(distributions[1][h], dim=0)
                 
-            prob_matrix_1, prob_matrix_2 = self._compute_prob_matrices(emissions)
-            prob_matrix_1 = prob_matrix_1.type(d1_h.dtype)
-            prob_matrix_2 = prob_matrix_2.type(d1_h.dtype)
+            prob_matrix = self._get_prob_matrix(emissions)
+            prob_matrix = prob_matrix.type(d1_h.dtype)
             
-            diag_terms = self._compute_diagonal_terms(emissions, prob_matrix_1, prob_matrix_2, d1_h, d2_h)
-            cross_terms = self._compute_cross_terms(emissions, prob_matrix_1, prob_matrix_2, d1_h, d2_h)
+            diag_terms = self._compute_diagonal_terms(emissions, prob_matrix, d1_h, d2_h)
+            cross_terms = self._compute_cross_terms(emissions, prob_matrix, d1_h, d2_h)
             z += time_weight * (diag_terms - cross_terms)
             
         return z
