@@ -215,50 +215,82 @@ class MultiPolicyAggDesignD(MultiPolicyAggDesignA):
         return torch.linalg.slogdet(z + self.lambd/episodes * eye)[1]
 
 class MultiPolicyOrigDesignD(ExperimentDesignFunctional):
-    def __init__(self, env: Environment, lambd: float = 1e-3, dim=0, V=None, time_weigh=True):
+    def __init__(self, env, lambd=1e-3, dim=0, V=None, time_weigh=True):
         super().__init__(dim=dim)
         self.lambd = lambd
         self.type = "static"
         self.env = env
         self.V = V
         self.time_weigh = time_weigh
+        self.estimator = None
 
-    def _calculate_z(self, emissions: torch.Tensor, distributions: List[torch.Tensor], episodes: int = 0, Sigma: Union[None, float] = None) -> torch.Tensor:
-        if Sigma is None:
-            Sigma = 1.
-        distributions = [d.to(emissions.device) for d in distributions]
-        z = torch.zeros((emissions.shape[1], emissions.shape[1]), dtype=distributions[0].dtype, device=emissions.device)
+    def update_estimator(self, estimator):
+        self.estimator = estimator
+
+    def _compute_prob_matrices(self, emissions):
+        """Compute pairwise probability matrices."""
+        if self.estimator is None:
+            n = emissions.shape[0]
+            return (
+                0.5*torch.ones((n, n), device=emissions.device),
+                0.5*torch.ones((n, n), device=emissions.device)
+            )
+
+        logits = self.estimator.mean(emissions)
+        exp_logits = torch.exp(logits)
+        exp_logits_i = exp_logits.view(-1, 1)
+        exp_logits_j = exp_logits.view(1, -1)
+        denominators = exp_logits_i + exp_logits_j
+        
+        prob_matrix_1 = exp_logits_i / denominators
+        prob_matrix_2 = exp_logits_j / denominators
+        
+        return prob_matrix_1, prob_matrix_2
+
+    def _compute_diagonal_terms(self, emissions, prob_matrix_1, prob_matrix_2, d1_h, d2_h):
+        """Compute diagonal terms of the Fisher."""
+        p_q1 = torch.mm(prob_matrix_1, d2_h.view(-1,1))
+        p_q2 = torch.mm(prob_matrix_2.T, d1_h.view(-1,1))
+        
+        term1 = torch.einsum('i,i,ik,im->km', p_q1.squeeze(), d1_h, emissions, emissions)
+        term2 = torch.einsum('i,i,ik,im->km', p_q2.squeeze(), d2_h, emissions, emissions)
+        
+        return term1 + term2
+
+    def _compute_cross_terms(self, emissions, prob_matrix_1, prob_matrix_2, d1_h, d2_h):
+        term1 = torch.einsum('ij,i,ik,jm->km', prob_matrix_1, d1_h, emissions, emissions)
+        term2 = torch.einsum('ij,i,ik,jm->km', prob_matrix_2, d2_h, emissions, emissions)
+        return term1 + term2
+
+    def _calculate_z(self, emissions, distributions, episodes):
         emissions = emissions.type(distributions[0].dtype)
+        z = torch.zeros((emissions.shape[1], emissions.shape[1]), 
+                       dtype=distributions[0].dtype, device=emissions.device)
         H = distributions[0].shape[0]
         
         for h in range(H):
             time_weight = (H - h)/H if self.time_weigh else 1.0
             if self.dim == 0:
-                d_h_sum = sum(torch.sum(d[h], dim=1) for d in distributions)/Sigma**2
+                d1_h = torch.sum(distributions[0][h], dim=1)
+                d2_h = torch.sum(distributions[1][h], dim=1)
             elif self.dim == 1:
-                d_h_sum = sum(torch.sum(d[h], dim=0) for d in distributions)/Sigma**2
+                d1_h = torch.sum(distributions[0][h], dim=0)  
+                d2_h = torch.sum(distributions[1][h], dim=0)
+                
+            prob_matrix_1, prob_matrix_2 = self._compute_prob_matrices(emissions)
+            prob_matrix_1 = prob_matrix_1.type(d1_h.dtype)
+            prob_matrix_2 = prob_matrix_2.type(d1_h.dtype)
             
-            z_diag = torch.einsum('ij,j,jk->ik', emissions.T, d_h_sum, emissions)
-            z += time_weight * z_diag
+            diag_terms = self._compute_diagonal_terms(emissions, prob_matrix_1, prob_matrix_2, d1_h, d2_h)
+            cross_terms = self._compute_cross_terms(emissions, prob_matrix_1, prob_matrix_2, d1_h, d2_h)
+            z += time_weight * (diag_terms - cross_terms)
             
-            for i, d1 in enumerate(distributions):
-                for j, d2 in enumerate(distributions):
-                    if i == j:
-                        continue
-                    if self.dim == 0:
-                        d1_h = torch.sum(d1[h], dim=1)/Sigma**2
-                        d2_h = torch.sum(d2[h], dim=1)/Sigma**2
-                    elif self.dim == 1:
-                        d1_h = torch.sum(d1[h], dim=0)/Sigma**2
-                        d2_h = torch.sum(d2[h], dim=0)/Sigma**2
-                    
-                    z -=  time_weight * torch.einsum('ij,j,k,kl->il', emissions.T, d1_h, d2_h, emissions)
         return z
 
-    def eval(self, emissions: torch.Tensor, distributions: List[torch.Tensor], episodes: int = 0) -> float:
+    def eval(self, emissions, distributions, episodes):
         z = self._calculate_z(emissions, distributions, episodes)
         eye = torch.eye(z.shape[0], device=z.device, dtype=z.dtype)
         return torch.linalg.slogdet(z + self.lambd/episodes * eye)[1]
 
-    def eval_full(self, emissions: torch.Tensor, distributions: List[torch.Tensor], episodes: int) -> float:
+    def eval_full(self, emissions, distributions, episodes):
         return self.eval(emissions, distributions, episodes)

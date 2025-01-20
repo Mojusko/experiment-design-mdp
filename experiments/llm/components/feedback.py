@@ -31,9 +31,10 @@ class NumericalFeedback(BaseFeedback):
     def collect_data(self, cfg, visits, estimator, theta_star):
         horizon = cfg.horizon
         prefix_range = range(1, horizon+1) if cfg.dense_feedback else range(horizon, horizon+1)
+        num_episodes = len(visits)
 
         x_list, y_list = [], []
-        for ep in range(cfg.experiment.episodes):
+        for ep in range(num_episodes):
             actions = visits[ep][1]  # (states, actions)
             for prefix_len in prefix_range:
                 truncated = actions[:prefix_len]
@@ -51,14 +52,15 @@ class MultinomialFeedback(BaseFeedback):
     def collect_data(self, cfg, visits, estimator, theta_star):
         horizon = cfg.horizon
         num_policies = cfg.feedback.num_policies
+        num_episodes = len(visits[0])
 
         prefix_range = range(1, horizon+1) if cfg.dense_feedback else range(horizon, horizon+1)
-        num_samples = cfg.experiment.episodes * (horizon if cfg.dense_feedback else 1)
+        num_samples = num_episodes * (horizon if cfg.dense_feedback else 1)
 
         trajectory_indices = torch.zeros((num_samples, horizon, num_policies), dtype=torch.long)
         labels = torch.zeros((num_samples, num_policies))
         sample_idx = 0
-        for ep in range(cfg.experiment.episodes):
+        for ep in range(num_episodes):
             policy_actions = [visits[p][ep][1] for p in range(num_policies)]
             for prefix_len in prefix_range:
                 trunc_actions = [
@@ -91,6 +93,7 @@ class FeedbackFactory:
             estimator = KernelizedFeatures(embedding, m)
             fb = NumericalFeedback(env, design, estimator)
         else:
+
             design = MultiPolicyOrigDesignD(env=env, lambd=cfg.feedback.lambda_reg, dim=1)
             likelihood = MultinomialLikelihood()
             regularizer = L2Regularizer(lam=cfg.feedback.lambda_reg)

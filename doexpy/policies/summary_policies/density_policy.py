@@ -12,7 +12,7 @@ class DensityPolicy(SummarizedPolicy):
 
         # check density shape to determine if policy is stationary or not: density_sa has shape (S,A) or (H, S, A)
         if len(self.density_sa.size()) == 2:
-            policy = torch.zeros(size = self.density_sa.size())
+            policy = torch.zeros(size = self.density_sa.size(), dtype=torch.float64)
             # temp = np.tile(self.density.reshape(-1,1), (1,self.density_sa.shape[1]))
             temp = self.density_sa.sum(dim = -1, keepdims = True).repeat_interleave(self.env.actions_num, -1)
             mask = temp > 0
@@ -21,7 +21,7 @@ class DensityPolicy(SummarizedPolicy):
 
         # if non-stationary reshapings are different and we return a non-stationary policy
         elif len(self.density_sa.size()) == 3:
-            policy = torch.zeros(size = self.density_sa.size())
+            policy = torch.zeros(size = self.density_sa.size(), dtype=torch.float64)
             # temp = np.tile(np.expand_dims(self.density, -1), (1, 1, self.density_sa.shape[2]))
             # mask = temp > 0
             # policy[mask] = self.density_sa[mask] / temp[mask]

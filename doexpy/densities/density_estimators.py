@@ -39,7 +39,6 @@ class TabularDensity(DensityEstimator):
             Returns:
                 np.ndarray: S x A (stationary) or H x S x A (non-stationary) array with density for each state
             """
-
             if type(policy) is StationaryPolicy:
 
                 v0 = torch.zeros(size = (self.env.states_num, self.env.actions_num), dtype = torch.float64)
@@ -47,8 +46,8 @@ class TabularDensity(DensityEstimator):
                 for act in self.env.available_actions(self.env.init_state):
                     v0[self.env.init_state, act] = policy.p[self.env.init_state, act]
 
-                v = torch.Tensor(v0)
-                temp = torch.Tensor(v0).sum(dim = -1)
+                v = torch.tensor(v0, dtype=torch.float64)
+                temp = torch.tensor(v0, dtype=torch.float64).sum(dim = -1)
                 
                 p_pi = (self.env.get_transition_matrix() * torch.unsqueeze(policy.p, dim=2)).sum(dim = 1)
 
@@ -68,9 +67,9 @@ class TabularDensity(DensityEstimator):
                 for act in self.env.available_actions(self.env.state):
                     v0[0, self.env.state, act] = policy.ps[0, self.env.state, act]
 
-                v = torch.Tensor(v0)
+                v = torch.tensor(v0, dtype=torch.float64)
                 # get marginal state distribution for initial temp
-                temp = torch.Tensor(v0)[0].sum(dim = -1)
+                temp = torch.tensor(v0, dtype=torch.float64)[0].sum(dim = -1)
                 
                 for i in range(self.env.max_episode_length - self.env.h - 1):
                     p_pi = (self.env.get_transition_matrix() * torch.unsqueeze(policy.ps[i], dim=2)).sum(dim = 1)
@@ -92,12 +91,11 @@ class TabularDensity(DensityEstimator):
         Raises:
             TypeError: if the saved policies are non-stationary
         """
-
         # if the first policy is non-stationary, we define a total density with time index
         if stationary:
-            total_density = torch.zeros(size = (self.env.states_num, self.env.actions_num))
+            total_density = torch.zeros(size = (self.env.states_num, self.env.actions_num), dtype=torch.float64)
         else:
-            total_density = torch.zeros(size = (self.env.max_episode_length - self.env.h, self.env.states_num, self.env.actions_num))
+            total_density = torch.zeros(size = (self.env.max_episode_length - self.env.h, self.env.states_num, self.env.actions_num), dtype=torch.float64)
 
         # TODO: this can be sped up 
         for i, policy in enumerate(policies):
