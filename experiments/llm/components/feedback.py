@@ -68,6 +68,7 @@ class MultinomialFeedback(BaseFeedback):
                 ]
                 vals = torch.tensor([theta_star(ta)[0] for ta in trunc_actions])
                 probs = F.softmax(vals.detach(), dim=0)
+                print(probs)
                 label_idx = torch.multinomial(probs, 1)
 
                 trajectory_indices[sample_idx, :, :] = torch.tensor(trunc_actions).T
