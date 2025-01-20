@@ -286,7 +286,7 @@ STOCH: STOCH1 STOCH2 STOCH3 STOCH0
 
 
 ########################### LLMS
-REPEATS_LLM=6
+REPEATS_LLM=4
 NUMBERS_LLM := $(shell seq 1 ${REPEATS_LLM})
 
 # Jobs for additivity experiment
@@ -332,30 +332,44 @@ llm-feedback-comparison: llm-feedback-comparison-num llm-feedback-comparison-mul
 
 # Lambda-finding
 # We'll run each lambda_reg value for REPEATS_LLM seeds
-# Example set of lambda_reg values
-LAMBDA_VALUES :=  250 1000 
-#LAMBDA_VALUES :=  0.0001 0.001 0.01 0.1 1
+LAMBDA_VALUES_MUL := 250 1000
+LAMBDA_VALUES_NUM := 0.0001 0.001 0.01 0.1 1 10
 
-# Generate a job name for each (lambda, seed) pair
-JOBS_LLM_LAMBDA := \
-  $(foreach lambda,$(LAMBDA_VALUES), \
+# Generate job names for each (lambda, seed) pair for both types
+JOBS_LLM_LAMBDA_MUL := \
+  $(foreach lambda,$(LAMBDA_VALUES_MUL), \
     $(foreach n,$(NUMBERS_LLM), \
-      job-llm-lambda-$(lambda)-$(n)))
+      job-llm-lambda-mul-$(lambda)-$(n)))
 
-# Macro to define each job
-define lambda_job_template
-job-llm-lambda-$(1)-$(2):
+JOBS_LLM_LAMBDA_NUM := \
+  $(foreach lambda,$(LAMBDA_VALUES_NUM), \
+    $(foreach n,$(NUMBERS_LLM), \
+      job-llm-lambda-num-$(lambda)-$(n)))
+
+# Macros to define each job type
+define lambda_job_template_mul
+job-llm-lambda-mul-$(1)-$(2):
 	cd llm && mkdir -p results/lambda-finding && OMP_NUM_THREADS=1 MKL_NUM_THREADS=1 $(PYTHONPATH) run_exp.py experiment=lambda_finding feedback=multinomial algorithm=greedy feedback.lambda_reg=$(1) seed=$(2) saver.params.path="results/lambda-finding/grd-multinomial-lambda-$(1)-$(2).txt"
 endef
 
-# Instantiate all jobs from the macro
-$(foreach lambda,$(LAMBDA_VALUES), \
-  $(foreach n,$(NUMBERS_LLM), \
-    $(eval $(call lambda_job_template,$(lambda),$(n)))))
+define lambda_job_template_num
+job-llm-lambda-num-$(1)-$(2):
+	cd llm && mkdir -p results/lambda-finding && OMP_NUM_THREADS=1 MKL_NUM_THREADS=1 $(PYTHONPATH) run_exp.py experiment=lambda_finding feedback=numerical algorithm=greedy feedback.lambda_reg=$(1) seed=$(2) saver.params.path="results/lambda-finding/grd-numerical-lambda-$(1)-$(2).txt"
+endef
 
-# Master target to run all jobs
-llm-find-lambda: $(JOBS_LLM_LAMBDA)
-JOBS_LLM_LAMBDA := $(foreach lambda,${LAMBDA_VALUES},$(foreach n,${REPEATS_LLM},job-llm-lambda-$(lambda)-$(n)))
+# Instantiate all jobs from the macros
+$(foreach lambda,$(LAMBDA_VALUES_MUL), \
+  $(foreach n,$(NUMBERS_LLM), \
+    $(eval $(call lambda_job_template_mul,$(lambda),$(n)))))
+
+$(foreach lambda,$(LAMBDA_VALUES_NUM), \
+  $(foreach n,$(NUMBERS_LLM), \
+    $(eval $(call lambda_job_template_num,$(lambda),$(n)))))
+
+# Split targets to run multinomial and numerical separately
+llm-find-lambda-mul: $(JOBS_LLM_LAMBDA_MUL)
+llm-find-lambda-num: $(JOBS_LLM_LAMBDA_NUM)
+llm-find-lambda: llm-find-lambda-mul llm-find-lambda-num
 
 PLOTS: 
 	${PYTHONPATH} plot_grids.py && ${PYTHONPATH} plot_pharma.py && ${PYTHONPATH} plot.py
