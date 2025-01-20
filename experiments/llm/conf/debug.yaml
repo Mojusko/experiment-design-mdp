@@ -9,7 +9,7 @@ tester:
     N_test_prompts: 100
     N_pairs_eval: 250
 experiment:
-  episodes: 10
-  vocab_size: 300
+  episodes: 30
+  vocab_size: 500
   #scorer_model: "art"
 

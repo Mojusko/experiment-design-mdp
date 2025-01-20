@@ -21,7 +21,6 @@ class SolverFactory:
         """
         # Determine if the algorithm initializes with a policy
         initial_policy = cfg.algorithm == 'random'
-        initial_policy = True
     
         num_components = cfg.feedback.num_components if cfg.algorithm != 'random' else 1
     

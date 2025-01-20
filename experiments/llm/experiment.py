@@ -187,8 +187,8 @@ class LLMExperiment:
 
         # adaptiveness
         estimation_frequency = self.cfg.feedback.adaptive_estimation_frequency
-        if estimation_frequency > 0 and self.cfg.feedback.name != 'multinomial':
-            raise NotImplementedError("Adaptive estimation currently only implemented for multinomial feedback")
+        if estimation_frequency > 0 and (self.cfg.feedback.name != 'multinomial' or self.cfg.algorithm != 'greedy'):
+            raise NotImplementedError("Adaptive estimation currently only implemented for multinomial + greedy")
         if not estimation_frequency:
             # Standard single-pass exploration
             val, opt_val, visits = self.explorer.run(

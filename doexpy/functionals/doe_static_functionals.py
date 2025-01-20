@@ -268,7 +268,6 @@ class MultiPolicyOrigDesignD(ExperimentDesignFunctional):
         emissions = emissions.type(distributions[0].dtype)
         z = torch.zeros((emissions.shape[1], emissions.shape[1]), 
                        dtype=distributions[0].dtype, device=emissions.device)
-        import ipdb; ipdb.set_trace()
         H = distributions[0].shape[0]
         
         for h in range(H):
