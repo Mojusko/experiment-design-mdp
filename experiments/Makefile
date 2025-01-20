@@ -286,7 +286,7 @@ STOCH: STOCH1 STOCH2 STOCH3 STOCH0
 
 
 ########################### LLMS
-REPEATS_LLM=5
+REPEATS_LLM=6
 NUMBERS_LLM := $(shell seq 1 ${REPEATS_LLM})
 
 # Jobs for additivity experiment
@@ -333,7 +333,7 @@ llm-feedback-comparison: llm-feedback-comparison-num llm-feedback-comparison-mul
 # Lambda-finding
 # We'll run each lambda_reg value for REPEATS_LLM seeds
 # Example set of lambda_reg values
-LAMBDA_VALUES :=  100 1000 2000
+LAMBDA_VALUES :=  500 1000 2000
 #LAMBDA_VALUES :=  0.0001 0.001 0.01 0.1 1
 
 # Generate a job name for each (lambda, seed) pair
