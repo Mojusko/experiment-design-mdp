@@ -75,6 +75,7 @@ class MultinomialFeedback(BaseFeedback):
                 sample_idx += 1
 
         estimator.load_data((self.env.emissions.detach().cpu(), torch.zeros(len(self.env.emissions))))
+        import ipdb; ipdb.set_trace()
         estimator.fit(trajectory_indices, labels, sum_dim=1)
 
 
