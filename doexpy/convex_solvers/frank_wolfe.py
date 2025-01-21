@@ -365,7 +365,16 @@ class FrankWolfe(ConvexSolverBase):
                     objective = self.objective.eval(emissions, densities, visitations, episodes)
                 else:
                     objective = self.objective.eval(emissions, densities, episodes)
-                print(f'First component - Policy {policy_idx}: objective: {objective}')
+    
+                if self.env.type == 'discrete':
+                    grad_norms = [la.norm(r) for r in rewards]
+                    step_size_fmt = f"{float(step_size):.3f}"
+                    gaps_fmt = [f"{float(g):.3f}" for g in empirical_gaps]
+                    grads_fmt = [f"{float(g):.3f}" for g in grad_norms]
+                    print(f'components: {counters}, gaps: {gaps_fmt}, objective: {float(objective):.3f}, stepsize: {step_size_fmt}, gradients: {grads_fmt}')
+                else:
+                    step_size_fmt = f"{float(step_size):.3f}"
+                    print(f'components: {counters}, objective: {float(objective):.3f}, stepsize: {step_size_fmt}')
     
         # Continue with parallel optimization for remaining components
         while any(c < self.num_components for c in counters) and torch.any(torch.abs(empirical_gaps) > gap):
@@ -382,9 +391,11 @@ class FrankWolfe(ConvexSolverBase):
                 densities.append(density)
     
             rewards = self._reward_fn_gradient(densities, emissions, visitations, episodes)
+            step_sizes = []
             
             for policy_idx in range(self.num_summarized_policies):
                 if counters[policy_idx] >= self.num_components:
+                    step_sizes.append("N/A")
                     continue
     
                 new_policy = self._planning_oracle(rewards[policy_idx])
@@ -405,6 +416,7 @@ class FrankWolfe(ConvexSolverBase):
                 else:
                     step_size = 1.0 / (1 + counters[policy_idx])
     
+                step_sizes.append(step_size)
                 self.policies[policy_idx].append(new_policy)
                 self.weights[policy_idx] = [(1 - step_size) * w for w in self.weights[policy_idx]] + [step_size]
     
@@ -424,10 +436,13 @@ class FrankWolfe(ConvexSolverBase):
     
                 if self.env.type == 'discrete':
                     grad_norms = [la.norm(r) for r in rewards]
-                    print(f'components: {counters}, gaps: {empirical_gaps}, '
-                          f'objective: {objective}, gradients: {grad_norms}')
+                    steps_fmt = [f"{float(s):.3f}" if isinstance(s, (float, np.floating, torch.Tensor)) else s for s in step_sizes]
+                    gaps_fmt = [f"{float(g):.3f}" for g in empirical_gaps]
+                    grads_fmt = [f"{float(g):.3f}" for g in grad_norms]
+                    print(f'components: {counters}, gaps: {gaps_fmt}, objective: {float(objective):.3f}, stepsizes: {steps_fmt}, gradients: {grads_fmt}')
                 else:
-                    print(f'components: {counters}, objective: {objective}')
+                    steps_fmt = [f"{float(s):.3f}" if isinstance(s, (float, np.floating, torch.Tensor)) else s for s in step_sizes]
+                    print(f'components: {counters}, objective: {float(objective):.3f}, stepsizes: {steps_fmt}')
     
         self.summarize()
         return self.summarized_policies, self.policies, self.weights, self.densities
