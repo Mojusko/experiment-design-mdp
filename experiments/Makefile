@@ -286,7 +286,7 @@ STOCH: STOCH1 STOCH2 STOCH3 STOCH0
 
 
 ########################### LLMS
-REPEATS_LLM=6
+REPEATS_LLM=10
 NUMBERS_LLM := $(shell seq 1 ${REPEATS_LLM})
 
 # Jobs for additivity experiment
@@ -295,13 +295,19 @@ JOBS_LLM_RAN_ADD := $(addprefix job-llm-add-ran,${NUMBERS_LLM})
 JOBS_LLM_GRD_ADD := $(addprefix job-llm-add-grd,${NUMBERS_LLM})
 
 $(JOBS_LLM_ALG_ADD): job-llm-add-alg%:
-	cd llm && mkdir -p results/additivity && OMP_NUM_THREADS=1 MKL_NUM_THREADS=1 $(PYTHONPATH) run_exp.py experiment=additivity algorithm="optim" feedback="numerical" saver.params.path="results/additivity/alg-numerical-$*.txt" seed=$*
+	cd llm && mkdir -p results/additivity && mkdir -p logs/additivity && OMP_NUM_THREADS=1 MKL_NUM_THREADS=1 $(PYTHONPATH) run_exp.py experiment=additivity algorithm="optim" feedback="numerical" saver.params.path="results/additivity/alg-numerical-$*.txt" seed=$* saver.params.log="logs/additivity/alg-numerical-$*.txt"
 
 $(JOBS_LLM_RAN_ADD): job-llm-add-ran%:
-	cd llm && mkdir -p results/additivity && OMP_NUM_THREADS=1 MKL_NUM_THREADS=1 $(PYTHONPATH) run_exp.py experiment=additivity algorithm="random" feedback="numerical" saver.params.path="results/additivity/rand-numerical-$*.txt" seed=$*
+	cd llm && mkdir -p results/additivity && mkdir -p logs/additivity  && OMP_NUM_THREADS=1 MKL_NUM_THREADS=1 $(PYTHONPATH) run_exp.py experiment=additivity algorithm="random" feedback="numerical" saver.params.path="results/additivity/rand-numerical-$*.txt" seed=$* saver.params.log="logs/additivity/rand-numerical-$*.txt"
 
 $(JOBS_LLM_GRD_ADD): job-llm-add-grd%:
-	cd llm && mkdir -p results/additivity && OMP_NUM_THREADS=1 MKL_NUM_THREADS=1 $(PYTHONPATH) run_exp.py experiment=additivity algorithm="greedy" feedback="numerical" saver.params.path="results/additivity/greedy-numerical-$*.txt" seed=$*
+	cd llm && mkdir -p results/additivity && mkdir -p logs/additivity && OMP_NUM_THREADS=1 MKL_NUM_THREADS=1 $(PYTHONPATH) run_exp.py experiment=additivity algorithm="greedy" feedback="numerical" saver.params.path="results/additivity/greedy-numerical-$*.txt" seed=$* saver.params.log="logs/additivity/greedy-numerical-$*.txt"
+
+llm-additivity-rand: $(JOBS_LLM_RAN_ADD)
+
+llm-additivity-opt: $(JOBS_LLM_ALG_ADD)
+
+llm-additivity-grd: $(JOBS_LLM_GRD_ADD)
 
 llm-additivity: $(JOBS_LLM_ALG_ADD) $(JOBS_LLM_RAN_ADD) $(JOBS_LLM_GRD_ADD)
 

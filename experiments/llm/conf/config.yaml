@@ -1,6 +1,7 @@
 defaults:
   - experiment: feedback_comparison
   - feedback: numerical
+  - tester: default
 
 seed: 12
 algorithm: "greedy"
@@ -8,14 +9,9 @@ cache_dir: "${oc.env:HOME}/.cache/huggingface/hub"
 horizon: 3
 accuracy: 1e-12
 dense_feedback: true
-tester: 
-  _target_: components.tester.PreferenceTester
-  params:
-    N_test_prompts: 1000
-    N_pairs_eval: 5000
-    base_prompt: "A plate with fruits"
+
 saver:
   _target_: components.saver.FileSaver
   params:
     path: "results/dummy/dummy.txt" # Overwrite from Makefile
-
+    log: "log/dummy/dummy.txt" # Overwrite from Makefile

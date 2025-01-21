@@ -1,0 +1,33 @@
+experiment:
+  name: additivity
+  episodes: 100
+  scorer_model: aesthetics
+  vocab_size: 1000
+  vocabulary:
+  - vocabulary_jan.txt
+  domain: whole
+  accuracy: 1.0e-12
+  feedback:
+    num_components: 500
+feedback:
+  name: numerical
+  num_policies: 1
+  num_components: 500
+  lambda_reg: 0.001
+  adaptive_estimation_frequency: 0
+seed: 1
+algorithm: greedy
+cache_dir: ${oc.env:HOME}/.cache/huggingface/hub
+horizon: 3
+accuracy: 1.0e-12
+dense_feedback: true
+tester:
+  _target_: components.tester.PreferenceTester
+  params:
+    N_test_prompts: 1000
+    N_pairs_eval: 5000
+    base_prompt: A plate with fruits
+saver:
+  _target_: components.saver.FileSaver
+  params:
+    path: results/additivity/greedy-numerical-1.txt

@@ -1,0 +1,5 @@
+- experiment=additivity
+- algorithm=optim
+- feedback=numerical
+- saver.params.path=results/additivity/alg-numerical-1.txt
+- seed=1

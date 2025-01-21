@@ -24,13 +24,6 @@ class PreferenceTester(BaseTester):
         N_test_prompts = self.params['N_test_prompts']
         N_pairs_eval = self.params['N_pairs_eval']
 
-        #if cfg.scorer_model in ['art','aesthetics']:
-        #    N_test_prompts = 1000
-        #    N_pairs_eval   = 5000
-        #else:
-        #    N_test_prompts = 50
-        #    N_pairs_eval   = 100
-
         horizon = cfg.horizon
         test_sequences = [generate_test_sequence(test_rng, testing_words_list, horizon) 
                 for _ in range(N_test_prompts)]
@@ -41,7 +34,7 @@ class PreferenceTester(BaseTester):
 
         for sequence in test_sequences:
            tokens = [t for t in sequence if t != " "]
-           base_prompt =  self.params['base_promp']
+           base_prompt =  self.params['base_prompt']
            prompt = base_prompt + ", ".join(tokens)
            yy, feat = self.scorer_model.score_prompt(prompt)
            xtest.append(feat.detach().cpu())

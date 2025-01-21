@@ -1,0 +1,6 @@
+name: "additivity"
+episodes: 100
+scorer_model: "aesthetics"
+vocab_size: 1000
+vocabulary: ['vocabulary_jan.txt']
+domain: "whole"

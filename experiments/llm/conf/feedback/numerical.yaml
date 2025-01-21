@@ -1,5 +1,5 @@
 name: "numerical"
-num_policies: 1
-num_components: 750
-lambda_reg: 0.001
+num_policies: 1.
+num_components: 500
+lambda_reg: 1.
 adaptive_estimation_frequency: 0

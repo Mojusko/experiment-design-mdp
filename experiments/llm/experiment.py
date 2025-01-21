@@ -125,6 +125,7 @@ class LLMExperimentLegacy:
         #]
         #file_paths = ['vocabulary.txt']
         file_paths = ['vocabulary_jan.txt']
+
         rng = np.random.RandomState(42)
 
         full_list = []
@@ -212,14 +213,23 @@ class LLMExperiment:
         # 2) Create token_lists
         horizon = self.cfg.horizon
         if self.cfg.algorithm == "optim":
-            combos = cartesian([self.training_words]*horizon)
+
+            if self.cfg.experiment.domain == "whole":
+                combos = cartesian([self.training_words + self.testing_words]*horizon)
+            elif self.cfg.experiment.domain == "train":
+                combos = cartesian([self.training_words] * horizon)
+
             words_list = []
             for row in combos:
                 tokens = [t for t in row if t != " "]
                 words_list.append(", ".join(tokens))
             token_lists = [words_list]
         else:
-            token_lists = [self.training_words]*horizon
+
+            if self.cfg.experiment.domain == "whole":
+                token_lists = [self.training_words + self.testing_words]*horizon
+            else:
+                token_lists = [self.training_words] * horizon
 
         # 3) Build environment
         env = LLMGrid(
@@ -243,7 +253,10 @@ class LLMExperiment:
 
     def test_and_save(self):
         """Final estimation, testing and saving of results"""
+        # fits the estimator
         self._perform_estimation(self.visits)  # Final estimation using all data
+
+        # evaluate the estimator
         result_dict = self.tester.run_test(
             cfg=self.cfg,
             env=self.env,
@@ -253,6 +266,18 @@ class LLMExperiment:
             testing_words_list=self.testing_words
         )
         self.saver.save_result(result_dict)
+
+        # get visited tokens
+        token_visits = []
+        for traj in self.visits:
+            traj_token = []
+            for state in traj[1]:
+                traj_token.append(self.env.unique_elements[state])
+            token_visits.append(traj_token)
+
+        print (token_visits)
+        # saves the visits to log file
+        self.saver.save_visits(token_visits)
 
     def _fit_estimator(self):
         """Collect data from 'visits' and fit the estimator (numerical or multinomial)."""

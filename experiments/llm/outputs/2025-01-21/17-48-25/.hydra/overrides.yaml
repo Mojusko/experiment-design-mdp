@@ -1,0 +1,6 @@
+- experiment=additivity
+- algorithm=random
+- feedback=numerical
+- saver.params.path=results/additivity/rand-numerical-4.txt
+- seed=4
+- saver.params.log=logs/additivity/rand-numerical-4.txt
