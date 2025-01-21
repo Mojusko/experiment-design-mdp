@@ -306,17 +306,18 @@ class FrankWolfe(ConvexSolverBase):
         return self.summarized_policies, self.policies, self.weights, self.densities
 
     def optimize(self, emissions, visitations, episodes):
-        """Optimizes multiple policies simultaneously using Frank-Wolfe algorithm."""
+        """Optimizes multiple policies using Frank-Wolfe with sequential first components."""
         if self.num_summarized_policies == 1:
             return self._optimize_single(emissions, visitations, episodes)
     
-        # Initialize counters for each policy
+        # Initialize
         counters = [1 if self.initial_policy else 0] * self.num_summarized_policies
         gap = -10e10 if self.accuracy is None else self.accuracy
         empirical_gaps = torch.tensor([1e10] * self.num_summarized_policies).double()
     
-        while any(c < self.num_components for c in counters) and torch.any(torch.abs(empirical_gaps) > gap):
-            # Get current densities for all policies
+        # Sequential symmetry breaking first component
+        for policy_idx in range(self.num_summarized_policies):
+            # Get current densities reflecting all previous policy updates
             densities = []
             for i in range(self.num_summarized_policies):
                 density = self.density_estimator.density_oracle(
@@ -329,33 +330,70 @@ class FrankWolfe(ConvexSolverBase):
                     density.requires_grad_(True)
                 densities.append(density)
     
-            # Get gradients for all policies at once
+            # Get fresh gradients incorporating previous policies' updates
             rewards = self._reward_fn_gradient(densities, emissions, visitations, episodes)
-            new_policies = []
-            new_densities = []
     
-            # Generate new policies for each gradient
-            for policy_idx in range(self.num_summarized_policies):
-                if counters[policy_idx] < self.num_components:
-                    new_policy = self._planning_oracle(rewards[policy_idx])
-                    new_policies.append(new_policy)
-                    new_density = self.density_estimator.density_oracle_single(new_policy)
-                    new_densities.append(new_density)
+            # Update only the current policy
+            new_policy = self._planning_oracle(rewards[policy_idx])
+            new_density = self.density_estimator.density_oracle_single(new_policy)
+    
+            if self.step == "line-search":
+                def fn(h):
+                    temp_densities = densities.copy()
+                    temp_densities[policy_idx] = densities[policy_idx] * (1 - h) + h * new_density
+                    if self.objective.get_type() == "adaptive":
+                        return -self.objective.eval(emissions, temp_densities, visitations, episodes).detach().cpu().numpy()
+                    return -self.objective.eval(emissions, temp_densities, episodes).detach().cpu().numpy()
+    
+                res = minimize_scalar(fn, bounds=(1e-5, 1. - 1e-5), method='bounded')
+                step_size = res.x
+            elif self.step is not None and isinstance(self.step, float):
+                step_size = self.step
+            else:
+                step_size = 1.0  # Full step for first component
+    
+            self.policies[policy_idx].append(new_policy)
+            self.weights[policy_idx] = [(1 - step_size) * w for w in self.weights[policy_idx]] + [step_size]
+    
+            if self.env.type == 'discrete':
+                empirical_gaps[policy_idx] = (rewards[policy_idx] * (new_density - densities[policy_idx])).sum()
+    
+            counters[policy_idx] += 1
+    
+            if self.verbosity > 0:
+                if self.objective.get_type() == "adaptive":
+                    objective = self.objective.eval(emissions, densities, visitations, episodes)
                 else:
-                    new_policies.append(None)
-                    new_densities.append(None)
+                    objective = self.objective.eval(emissions, densities, episodes)
+                print(f'First component - Policy {policy_idx}: objective: {objective}')
     
-            # Compute step sizes and update all policies
-            step_sizes = []
+        # Continue with parallel optimization for remaining components
+        while any(c < self.num_components for c in counters) and torch.any(torch.abs(empirical_gaps) > gap):
+            densities = []
+            for i in range(self.num_summarized_policies):
+                density = self.density_estimator.density_oracle(
+                    self.policies[i],
+                    self.weights[i],
+                    self.densities[i],
+                    self.stationary
+                ).double()
+                if self.env.type == 'discrete':
+                    density.requires_grad_(True)
+                densities.append(density)
+    
+            rewards = self._reward_fn_gradient(densities, emissions, visitations, episodes)
+            
             for policy_idx in range(self.num_summarized_policies):
                 if counters[policy_idx] >= self.num_components:
-                    step_sizes.append(None)
                     continue
+    
+                new_policy = self._planning_oracle(rewards[policy_idx])
+                new_density = self.density_estimator.density_oracle_single(new_policy)
     
                 if self.step == "line-search" and self.num_components > 1:
                     def fn(h):
                         temp_densities = densities.copy()
-                        temp_densities[policy_idx] = densities[policy_idx] * (1 - h) + h * new_densities[policy_idx]
+                        temp_densities[policy_idx] = densities[policy_idx] * (1 - h) + h * new_density
                         if self.objective.get_type() == "adaptive":
                             return -self.objective.eval(emissions, temp_densities, visitations, episodes).detach().cpu().numpy()
                         return -self.objective.eval(emissions, temp_densities, episodes).detach().cpu().numpy()
@@ -367,37 +405,29 @@ class FrankWolfe(ConvexSolverBase):
                 else:
                     step_size = 1.0 / (1 + counters[policy_idx])
     
-                # Update policy
-                self.policies[policy_idx].append(new_policies[policy_idx])
+                self.policies[policy_idx].append(new_policy)
                 self.weights[policy_idx] = [(1 - step_size) * w for w in self.weights[policy_idx]] + [step_size]
-                step_sizes.append(step_size)
     
-                # Update empirical gap
                 if self.env.type == 'discrete':
                     empirical_gaps[policy_idx] = torch.minimum(
-                        (rewards[policy_idx] * (new_densities[policy_idx] - densities[policy_idx])).sum(),
+                        (rewards[policy_idx] * (new_density - densities[policy_idx])).sum(),
                         empirical_gaps[policy_idx]
                     )
     
                 counters[policy_idx] += 1
     
-            # Compute objective for logging
-            if self.objective.get_type() == "adaptive":
-                objective = self.objective.eval(emissions, densities, visitations, episodes)
-            else:
-                objective = self.objective.eval(emissions, densities, episodes)
-    
             if self.verbosity > 0:
+                if self.objective.get_type() == "adaptive":
+                    objective = self.objective.eval(emissions, densities, visitations, episodes)
+                else:
+                    objective = self.objective.eval(emissions, densities, episodes)
+    
                 if self.env.type == 'discrete':
                     grad_norms = [la.norm(r) for r in rewards]
-                    hess_min, hess_max = 0, 0  # TODO: implement Hessian computation
-                    step_sizes_str = [f"{step:.3f}" if step is not None else "N/A" for step in step_sizes]
                     print(f'components: {counters}, gaps: {empirical_gaps}, '
-                          f'objective: {objective}, stepsizes: {step_sizes_str}, '
-                          f'gradients: {grad_norms}, hess_max: {hess_max}, hess_min: {hess_min}')
-                elif self.env.type == 'continuous':
-                    print(f'components: {counters}, objective: {objective}, '
-                          f'stepsize: {step_size}, hess_max: {hess_max}, hess_min: {hess_min}')
+                          f'objective: {objective}, gradients: {grad_norms}')
+                else:
+                    print(f'components: {counters}, objective: {objective}')
     
         self.summarize()
         return self.summarized_policies, self.policies, self.weights, self.densities
