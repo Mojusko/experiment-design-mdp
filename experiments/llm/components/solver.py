@@ -20,8 +20,8 @@ class SolverFactory:
             explorer: An instance of MdpExplore or MdpExploreMultiPolicy.
         """
         # Determine if the algorithm initializes with a policy
-        initial_policy = cfg.algorithm == 'random'
-        initial_policy = True
+        #initial_policy = cfg.algorithm == 'random'
+        initial_policy = cfg.algorithm == 'random' or cfg.feedback.name == 'multinomial'
     
         num_components = cfg.feedback.num_components if cfg.algorithm != 'random' else 1
     
