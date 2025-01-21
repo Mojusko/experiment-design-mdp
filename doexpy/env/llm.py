@@ -347,7 +347,7 @@ def get_scorer_model(model_name: str, embedder, clip_model, clip_processor, cach
         
         # Create random combination vector and normalize it
         random_combination_vec = torch.mm(random_coeffs.view(1, -1), emissions_env)
-        random_combination_vec = random_combination_vec / torch.norm(random_combination_vec, p=2)
+        #random_combination_vec = random_combination_vec / torch.norm(random_combination_vec, p=2)
         
         return DotProductModel(embedder, random_combination_vec).eval()
         
