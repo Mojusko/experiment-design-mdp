@@ -1,4 +1,5 @@
 name: "feedback_comparison"
-episodes: 125
-scorer_model: "aesthetics"
-vocab_size: 2600
+episodes: 50
+#scorer_model: "aesthetics"
+scorer_model: "random_combination"
+vocab_size: 600

@@ -7,6 +7,7 @@ from torch import nn
 import os
 import hashlib
 import pickle
+import numpy as np
 
 
 class LLMGrid(DiscreteEnv):
@@ -305,15 +306,16 @@ def create_prompt(actions: List[int], env, prefix: str = 'A plate with ') -> str
     valid_tokens = [t for t in tokens if t != " "]
     return prefix + ", ".join(valid_tokens) if valid_tokens else prefix.rstrip()
 
-def get_scorer_model(model_name: str, embedder, clip_model, clip_processor, cache_dir):
+def get_scorer_model(model_name: str, embedder, clip_model, clip_processor, cache_dir, emissions_env=None):
     """Initialize embedder and scoring model
     
     Args:
         embedder: CLIPEmbedder
-        model_name: Scorer type ('art', 'aesthetics', 'aesthetics-image', 'red')
+        model_name: Scorer type ('art', 'aesthetics', 'aesthetics-image', 'red', 'random_combination')
         clip_model: CLIP model, required for aesthetics-image
         clip_processor: CLIP processor, required for aesthetics-image 
         cache_dir: Cache directory for image scorers
+    emissions_env: Environment containing emissions matrix, required for 'random_combination'
     
     Returns:
         Tuple of (text_model, image_scorer), one will be None
@@ -332,6 +334,23 @@ def get_scorer_model(model_name: str, embedder, clip_model, clip_processor, cach
     if model_name == 'red':
         return RedImageScorer(embedder, cache_dir)
         
+    if model_name == 'random_combination':
+        if emissions_env is None:
+            raise ValueError("emissions_env must be provided for random_combination model")
+            
+        # Use numpy RNG with fixed seed for reproducibility
+        rng = np.random.RandomState(42)
+        
+        # Generate random coefficients using numpy
+        random_coeffs = 2 * rng.rand(emissions_env.shape[0]) - 1  # Uniform in [-1, 1]
+        random_coeffs = torch.from_numpy(random_coeffs).to(emissions_env.device)
+        
+        # Create random combination vector
+        random_combination_vec = torch.mm(random_coeffs.view(1, -1), emissions_env)
+        
+        return DotProductModel(embedder, random_combination_vec).eval()
+        
+    raise ValueError(f"Unknown model_name: {model_name}")
     raise ValueError(f"Unknown model_name: {model_name}")
 
 def make_theta_star(env, scorer_model):

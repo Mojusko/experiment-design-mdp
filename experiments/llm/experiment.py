@@ -236,7 +236,8 @@ class LLMExperiment:
             env.embedder,
             self._clip_model,
             self._clip_processor,
-            self.cfg.cache_dir
+            self.cfg.cache_dir,
+            env.emissions
         )
         self._theta_star = make_theta_star(env, self._scorer_model)
         return env

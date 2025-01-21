@@ -38,7 +38,8 @@ class FrankWolfe(ConvexSolverBase):
                  step: Union[float, str] = None,
                  solver: Union[DiscreteSolver, ContinuousSolver] = DP,
                  SummarizedPolicyType: Policy = DensityPolicy,
-                 num_summarized_policies: int = 1
+                 num_summarized_policies: int = 1,
+                 num_rounds: int = 75
                  ) -> None:
         super().__init__(env, objective, verbosity=verbosity, accuracy=accuracy, initial_policy=initial_policy, solver=solver)
     
@@ -49,6 +50,7 @@ class FrankWolfe(ConvexSolverBase):
             self.SummarizedPolicyType = SummarizedPolicyType
     
         self.num_components = num_components
+        self.num_rounds = num_rounds
         self.step = step
         self.type = 'frank-wolfe'
         self.num_summarized_policies = num_summarized_policies
@@ -228,10 +230,9 @@ class FrankWolfe(ConvexSolverBase):
         if self.num_summarized_policies == 1:
             return self._optimize_single(emissions, visitations, episodes)
         
-        num_rounds = 75  # Number of complete cycles through all policies
         gap = -10e10 if self.accuracy is None else self.accuracy
         
-        for round_idx in range(num_rounds):
+        for round_idx in range(self.num_rounds):
             # For each round, optimize each policy in turn
             for policy_idx in range(self.num_summarized_policies):
                 counter = 1 if self.initial_policy else 0
