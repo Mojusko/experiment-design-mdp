@@ -230,9 +230,32 @@ class MultiPolicyOrigDesignD(ExperimentDesignFunctional):
 
     def _compute_diagonal_terms(self, emissions, prob_matrix, d1_h, d2_h):
         """Compute diagonal terms of the Fisher."""
-        p_q1 = torch.mm(prob_matrix, d2_h.view(-1,1))
-        p_q2 = torch.mm(prob_matrix.T, d1_h.view(-1,1))
+        # Normalize distributions for p_q calculations only, maintaining H sum
+        d1_h_norm = d1_h.clone()
+        d2_h_norm = d2_h.clone()
         
+        # Get the number of elements per timestep
+        n_elements = d1_h_norm.shape[0]
+        
+        # Handle zero-sum case with uniform distribution and normalize
+        
+        d1_sum = d1_h_norm.sum()
+        d2_sum = d2_h_norm.sum()
+        
+        if d1_sum == 0:
+            d1_h_norm = torch.ones_like(d1_h_norm) / n_elements
+        else:
+            d1_h_norm = d1_h_norm / d1_sum
+            
+        if d2_sum == 0:
+            d2_h_norm = torch.ones_like(d2_h_norm) / n_elements
+        else:
+            d2_h_norm = d2_h_norm / d2_sum
+        
+        p_q1 = torch.mm(prob_matrix, d2_h_norm.view(-1,1))
+        p_q2 = torch.mm(prob_matrix.T, d1_h_norm.view(-1,1))
+        
+        # Use original distributions for the final computation
         term1 = torch.einsum('i,i,ik,im->km', p_q1.squeeze(), d1_h, emissions, emissions)
         term2 = torch.einsum('i,i,ik,im->km', p_q2.squeeze(), d2_h, emissions, emissions)
         
