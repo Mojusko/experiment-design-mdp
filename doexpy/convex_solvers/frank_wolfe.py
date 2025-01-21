@@ -228,7 +228,7 @@ class FrankWolfe(ConvexSolverBase):
         if self.num_summarized_policies == 1:
             return self._optimize_single(emissions, visitations, episodes)
         
-        num_rounds = 50  # Number of complete cycles through all policies
+        num_rounds = 75  # Number of complete cycles through all policies
         gap = -10e10 if self.accuracy is None else self.accuracy
         
         for round_idx in range(num_rounds):
