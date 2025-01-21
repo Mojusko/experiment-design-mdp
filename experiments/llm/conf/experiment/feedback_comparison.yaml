@@ -1,4 +1,4 @@
 name: "feedback_comparison"
-episodes: 75
+episodes: 125
 scorer_model: "aesthetics"
 vocab_size: 1000
