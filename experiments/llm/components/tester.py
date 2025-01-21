@@ -23,6 +23,7 @@ class PreferenceTester(BaseTester):
         
         N_test_prompts = self.params['N_test_prompts']
         N_pairs_eval = self.params['N_pairs_eval']
+
         #if cfg.scorer_model in ['art','aesthetics']:
         #    N_test_prompts = 1000
         #    N_pairs_eval   = 5000
@@ -37,9 +38,11 @@ class PreferenceTester(BaseTester):
         # Compute embeddings and predictions
         xtest = []
         ytest = []
+
         for sequence in test_sequences:
            tokens = [t for t in sequence if t != " "]
-           prompt = 'A plate with ' + ", ".join(tokens)
+           base_prompt =  self.params['base_promp']
+           prompt = base_prompt + ", ".join(tokens)
            yy, feat = self.scorer_model.score_prompt(prompt)
            xtest.append(feat.detach().cpu())
            ytest.append(yy.detach().cpu())
