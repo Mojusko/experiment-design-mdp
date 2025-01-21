@@ -179,7 +179,7 @@ class LLMExperiment:
     def _perform_estimation(self, visits, update_design=False):
         """Performs estimation and updates design with new estimator"""
         self.feedback.collect_data(self.cfg, visits, self.estimator, self._theta_star)
-        #print(f'T: {len(visits[0])}', self.feedback.metrics)
+        print(f'T: {len(visits[0])}', self.feedback.metrics)
         if update_design:
             self.design.update_estimator(self.estimator, self.env.emissions)
         
