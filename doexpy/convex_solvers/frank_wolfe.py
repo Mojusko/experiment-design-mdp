@@ -303,7 +303,6 @@ class FrankWolfe(ConvexSolverBase):
                     counter += 1
         
         self.summarize()
-        import ipdb; ipdb.set_trace()
         return self.summarized_policies, self.policies, self.weights, self.densities
 
     def summarize(self) -> None:
