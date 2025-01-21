@@ -3,4 +3,5 @@ num_policies: 2
 num_components: 2
 num_rounds: 150
 lambda_reg: 1000
-adaptive_estimation_frequency: 10
+#adaptive_estimation_frequency: 10
+adaptive_estimation_frequency: 0

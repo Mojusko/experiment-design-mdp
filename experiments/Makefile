@@ -286,7 +286,7 @@ STOCH: STOCH1 STOCH2 STOCH3 STOCH0
 
 
 ########################### LLMS
-REPEATS_LLM=6
+REPEATS_LLM=10
 NUMBERS_LLM := $(shell seq 1 ${REPEATS_LLM})
 
 # Jobs for additivity experiment
@@ -339,7 +339,7 @@ LAMBDA_VALUES_NUM := 0.0001 0.001 0.01 0.1 1 10
 JOBS_LLM_LAMBDA_MUL := \
   $(foreach lambda,$(LAMBDA_VALUES_MUL), \
     $(foreach n,$(NUMBERS_LLM), \
-      job-llm-lambda-mul-$(lambda)-$(n)))
+      job-0-lambda-mul-$(lambda)-$(n)))
 
 JOBS_LLM_LAMBDA_NUM := \
   $(foreach lambda,$(LAMBDA_VALUES_NUM), \
