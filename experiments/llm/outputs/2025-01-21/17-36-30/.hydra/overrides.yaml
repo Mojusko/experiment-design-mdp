@@ -1,5 +1,0 @@
-- experiment=additivity
-- algorithm=random
-- feedback=numerical
-- saver.params.path=results/additivity/rand-numerical-1.txt
-- seed=1

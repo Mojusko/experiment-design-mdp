@@ -1,6 +1,0 @@
-- experiment=additivity
-- algorithm=random
-- feedback=numerical
-- saver.params.path=results/additivity/rand-numerical-3.txt
-- seed=3
-- saver.params.log=logs/additivity/rand-numerical-3.txt

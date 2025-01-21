@@ -1,5 +1,0 @@
-- experiment=additivity
-- algorithm=greedy
-- feedback=numerical
-- saver.params.path=results/additivity/greedy-numerical-1.txt
-- seed=1
