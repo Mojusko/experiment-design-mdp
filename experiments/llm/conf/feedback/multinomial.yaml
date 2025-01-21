@@ -1,5 +1,5 @@
 name: "multinomial"
 num_policies: 2
-num_components: 25
-lambda_reg: 1600
+num_components: 100
+lambda_reg: 1000
 adaptive_estimation_frequency: 0
