@@ -345,12 +345,12 @@ def get_scorer_model(model_name: str, embedder, clip_model, clip_processor, cach
         random_coeffs = 2 * rng.rand(emissions_env.shape[0]) - 1  # Uniform in [-1, 1]
         random_coeffs = torch.from_numpy(random_coeffs).to(emissions_env.device)
         
-        # Create random combination vector
+        # Create random combination vector and normalize it
         random_combination_vec = torch.mm(random_coeffs.view(1, -1), emissions_env)
+        random_combination_vec = random_combination_vec / torch.norm(random_combination_vec, p=2)
         
         return DotProductModel(embedder, random_combination_vec).eval()
         
-    raise ValueError(f"Unknown model_name: {model_name}")
     raise ValueError(f"Unknown model_name: {model_name}")
 
 def make_theta_star(env, scorer_model):
