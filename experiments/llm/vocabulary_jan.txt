@@ -75,185 +75,6 @@ roughly hewn
 finely finished
 boldly contrasting
 subtly blending
-carefully balanced
-spontaneously placed
-mathematically precise
-artistically fluid
-technically perfect
-naturally imperfect
-historically grounded
-contemporarily styled
-traditionally crafted
-innovatively designed
-culturally influenced
-universally appealing
-locally specific
-globally relevant
-personally meaningful
-collectively significant
-spiritually resonant
-materially present
-abstractly pure
-concretely formed
-symbolically rich
-literally plain
-metaphorically deep
-directly stated
-indirectly suggested
-visually striking
-aurally pleasing
-tactilely engaging
-kinetically dynamic
-spatially expansive
-temporally compressed
-dimensionally layered
-surface level
-deeply embedded
-externally visible
-internally hidden
-structurally sound
-aesthetically pleasing
-functionally efficient
-decoratively enhanced
-practically designed
-theoretically grounded
-experimentally proven
-intuitively right
-logically sound
-emotionally true
-physically real
-mentally constructed
-digitally rendered
-analogously crafted
-virtually present
-actually existing
-potentially possible
-definitely certain
-ambiguously unclear
-precisely defined
-loosely interpreted
-strictly followed
-freely adapted
-carefully considered
-spontaneously created
-mindfully present
-absent minded
-fully engaged
-partially detached
-completely immersed
-superficially involved
-deeply connected
-loosely associated
-tightly integrated
-casually related
-formally linked
-informally grouped
-systematically organized
-randomly scattered
-precisely placed
-approximately positioned
-exactly measured
-roughly estimated
-carefully calculated
-intuitively gauged
-scientifically proven
-artistically interpreted
-technically accurate
-creatively expressed
-mechanically perfect
-organically flawed
-structurally stable
-dynamically balanced
-statically positioned
-kinetically active
-potentially energetic
-actually realized
-virtually simulated
-physically manifested
-mentally conceived
-emotionally felt
-rationally understood
-intuitively sensed
-logically deduced
-experimentally verified
-theoretically proposed
-practically implemented
-abstractly conceived
-concretely executed
-symbolically represented
-literally presented
-metaphorically suggested
-directly stated
-indirectly implied
-clearly communicated
-ambiguously expressed
-precisely defined
-loosely described
-strictly interpreted
-freely understood
-carefully analyzed
-spontaneously perceived
-with intention
-without restraint
-under pressure
-over time
-through space
-across boundaries
-beyond limits
-within constraints
-among elements
-between concepts
-beside others
-behind scenes
-before time
-after thoughts
-during process
-through changes
-until completion
-since beginning
-toward future
-away from past
-against convention
-with tradition
-without precedent
-under consideration
-over analysis
-through interpretation
-across mediums
-beyond understanding
-within context
-among influences
-between styles
-beside contemporaries
-behind innovations
-before trends
-after movements
-during transitions
-through experiments
-until breakthrough
-since discovery
-toward mastery
-away from convention
-against norm
-with purpose
-without hesitation
-under development
-over planning
-through iteration
-across platforms
-beyond expectations
-within parameters
-among variables
-between extremes
-beside standards
-behind schedule
-before deadline
-after completion
-during execution
-through testing
-until perfection
-since inception
-toward goals
 away from mediocrity
 against odds
 impressionistically rendered
@@ -376,120 +197,6 @@ exactly cutting
 roughly carving
 carefully molding
 intuitively forming
-scientifically designing
-artistically flowing
-technically assembling
-creatively building
-mechanically constructing
-organically developing
-structurally reinforcing
-dynamically moving
-statically resting
-kinetically flowing
-potentially growing
-actually existing
-virtually appearing
-physically manifesting
-mentally conceptualizing
-emotionally resonating
-rationally organizing
-intuitively knowing
-logically arranging
-experimentally discovering
-theoretically explaining
-practically solving
-abstractly imagining
-concretely realizing
-symbolically expressing
-literally describing
-metaphorically suggesting
-directly showing
-indirectly hinting
-clearly revealing
-ambiguously concealing
-precisely detailing
-loosely sketching
-strictly defining
-freely exploring
-carefully planning
-spontaneously acting
-mindfully creating
-absently dreaming
-fully engaging
-partially participating
-completely absorbing
-superficially touching
-deeply penetrating
-loosely connecting
-tightly binding
-casually relating
-formally presenting
-informally sharing
-systematically building
-randomly assembling
-precisely measuring
-approximately estimating
-exactly calculating
-roughly guessing
-carefully considering
-intuitively feeling
-scientifically analyzing
-artistically expressing
-technically perfecting
-creatively innovating
-mechanically repeating
-organically evolving
-structurally supporting
-dynamically changing
-statically persisting
-kinetically energizing
-potentially transforming
-actually materializing
-virtually existing
-physically manifesting
-mentally visualizing
-emotionally experiencing
-rationally understanding
-intuitively sensing
-logically deducing
-experimentally proving
-theoretically proposing
-practically implementing
-abstractly conceptualizing
-concretely executing
-symbolically representing
-literally presenting
-metaphorically suggesting
-directly communicating
-indirectly implying
-clearly expressing
-ambiguously indicating
-precisely defining
-loosely interpreting
-strictly following
-freely adapting
-carefully analyzing
-spontaneously creating
-mindfully observing
-absently wandering
-fully engaging
-partially participating
-completely immersing
-superficially touching
-deeply penetrating
-loosely connecting
-tightly binding
-casually relating
-formally structuring
-informally arranging
-systematically organizing
-randomly scattering
-precisely placing
-approximately positioning
-exactly measuring
-roughly estimating
-carefully calculating
-intuitively gauging
 abyss
 an aberration
 altar
@@ -655,479 +362,6 @@ finely detailed
 loosely woven
 tightly bound
 brightly illuminated
-dimly lit
-abstractly conceived
-precisely rendered
-chaotically arranged
-harmoniously balanced
-asymmetrically aligned  
-symmetrically placed
-organically grown
-artificially constructed
-naturally formed
-deliberately shaped
-subtly nuanced
-dramatically emphasized
-quietly contemplative
-loudly expressive
-smoothly transitioning
-abruptly changing
-gradually evolving
-rapidly transforming
-mysteriously veiled
-clearly revealed
-intricately patterned
-simply designed
-complexly structured
-minimally expressed
-maximally realized
-partially obscured
-fully exposed
-distantly echoing
-closely resonating
-freely flowing
-strictly contained
-randomly distributed
-systematically arranged
-continuously moving
-momentarily frozen
-endlessly repeating
-uniquely singular
-collectively unified
-individually distinct
-spatially arranged
-temporally shifted
-conceptually linked
-physically separated
-emotionally charged
-rationally ordered
-intuitively grasped
-methodically analyzed
-gracefully curved
-sharply angled
-deeply grooved
-lightly etched  
-heavily textured
-smoothly polished
-roughly hewn
-finely finished
-boldly contrasting
-subtly blending
-carefully balanced
-spontaneously placed
-mathematically precise
-artistically fluid
-technically perfect
-naturally imperfect
-historically grounded
-contemporarily styled
-traditionally crafted  
-innovatively designed
-culturally influenced
-universally appealing
-locally specific
-globally relevant
-personally meaningful
-collectively significant
-spiritually resonant
-materially present
-abstractly pure
-concretely formed
-symbolically rich
-literally plain
-metaphorically deep
-directly stated
-indirectly suggested  
-visually striking
-aurally pleasing
-tactilely engaging
-kinetically dynamic
-spatially expansive
-temporally compressed
-dimensionally layered
-surface level
-deeply embedded
-externally visible
-internally hidden  
-structurally sound
-aesthetically pleasing
-functionally efficient
-decoratively enhanced
-practically designed
-theoretically grounded
-experimentally proven
-intuitively right  
-logically sound
-emotionally true
-physically real
-mentally constructed
-digitally rendered
-analogously crafted
-virtually present
-actually existing
-potentially possible
-definitely certain
-ambiguously unclear
-precisely defined
-loosely interpreted  
-strictly followed
-freely adapted
-carefully considered
-spontaneously created
-mindfully present
-absent minded
-fully engaged
-partially detached
-completely immersed
-superficially involved
-deeply connected
-loosely associated
-tightly integrated  
-casually related
-formally linked
-informally grouped
-systematically organized
-randomly scattered
-precisely placed  
-approximately positioned
-exactly measured  
-roughly estimated
-carefully calculated
-intuitively gauged
-scientifically proven  
-artistically interpreted
-technically accurate  
-creatively expressed
-mechanically perfect
-organically flawed
-structurally stable
-dynamically balanced
-statically positioned
-kinetically active  
-potentially energetic
-actually realized
-virtually simulated
-physically manifested
-mentally conceived
-emotionally felt  
-rationally understood
-intuitively sensed
-logically deduced
-experimentally verified
-theoretically proposed
-practically implemented
-abstractly conceived
-concretely executed  
-symbolically represented
-literally presented
-metaphorically suggested
-directly stated
-indirectly implied
-clearly communicated
-ambiguously expressed
-precisely defined  
-loosely described
-strictly interpreted
-freely understood
-carefully analyzed
-spontaneously perceived
-with intention
-without restraint
-under pressure
-over time
-through space
-across boundaries
-beyond limits
-within constraints
-among elements
-between concepts  
-beside others
-behind scenes
-before time
-after thoughts  
-during process
-through changes
-until completion
-since beginning
-toward future
-away from past
-against convention
-with tradition
-without precedent
-under consideration
-over analysis
-through interpretation
-across mediums  
-beyond understanding
-within context
-among influences
-between styles
-beside contemporaries  
-behind innovations
-before trends
-after movements
-during transitions
-through experiments
-until breakthrough  
-since discovery
-toward mastery
-away from convention
-against norm
-with purpose
-without hesitation
-under development  
-over planning
-through iteration
-across platforms
-beyond expectations  
-within parameters
-among variables  
-between extremes
-beside standards
-behind schedule
-before deadline
-after completion
-during execution
-through testing
-until perfection
-since inception
-toward goals
-away from mediocrity
-against odds
-impressionistically rendered
-expressionistically painted
-minimally designed
-maximally detailed  
-surreally depicted
-realistically portrayed
-abstractly conceived  
-figuratively represented
-geometrically structured  
-organically formed
-digitally manipulated
-manually crafted
-industrially produced
-artisanally created
-mass manufactured
-uniquely handmade
-collaboratively developed
-individually executed
-commercially distributed
-privately held
-publicly displayed
-intimately viewed
-distantly observed
-closely examined
-broadly considered
-narrowly focused
-widely interpreted
-specifically defined
-generally understood
-particularly noteworthy
-commonly overlooked
-rarely seen
-frequently encountered  
-consistently maintained
-sporadically appearing
-regularly occurring
-irregularly manifesting
-predictably behaving
-unexpectedly emerging
-gradually developing
-suddenly appearing
-slowly evolving
-rapidly changing
-steadily progressing
-erratically moving  
-smoothly transitioning
-abruptly shifting
-gently flowing
-forcefully pushing
-lightly touching
-heavily impacting
-softly landing
-harshly colliding
-carefully placing
-randomly dropping  
-systematically arranging
-chaotically scattering
-precisely positioning
-approximately locating  
-exactly measuring
-roughly estimating
-carefully calculating
-intuitively gauging  
-scientifically proving
-artistically interpreting
-technically perfecting  
-creatively expressing
-mechanically executing
-organically growing
-structurally supporting
-dynamically balancing
-statically holding  
-kinetically moving
-potentially transforming
-actually manifesting
-virtually existing
-physically presenting
-mentally projecting
-emotionally connecting  
-rationally analyzing
-intuitively sensing
-logically concluding
-experimentally testing
-theoretically proposing
-practically implementing
-abstractly thinking 
-concretely building
-symbolically suggesting
-literally stating
-metaphorically implying
-directly addressing
-indirectly approaching
-clearly showing
-ambiguously presenting
-precisely defining
-loosely describing
-strictly following
-freely exploring
-carefully examining
-spontaneously creating 
-mindfully observing
-absently wandering
-fully immersing
-partially engaging
-completely absorbing
-superficially skimming
-deeply diving
-loosely floating
-tightly gripping
-casually brushing
-formally structuring
-informally arranging  
-systematically ordering
-randomly placing
-precisely crafting
-approximately shaping
-exactly cutting
-roughly carving
-carefully molding
-intuitively forming
-scientifically designing
-artistically flowing
-technically assembling
-creatively building  
-mechanically constructing
-organically developing
-structurally reinforcing
-dynamically moving
-statically resting  
-kinetically flowing
-potentially growing
-actually existing
-virtually appearing
-physically manifesting
-mentally conceptualizing
-emotionally resonating
-rationally organizing
-intuitively knowing  
-logically arranging
-experimentally discovering
-theoretically explaining  
-practically solving
-abstractly imagining
-concretely realizing
-symbolically expressing
-literally describing
-metaphorically suggesting
-directly showing
-indirectly hinting
-clearly revealing
-ambiguously concealing   
-precisely detailing
-loosely sketching
-strictly defining
-freely exploring
-carefully planning
-spontaneously acting
-mindfully creating
-absently dreaming
-fully engaging  
-partially participating
-completely absorbing
-superficially touching
-deeply penetrating
-loosely connecting  
-tightly binding
-casually relating
-formally presenting
-informally sharing
-systematically building
-randomly assembling
-precisely measuring
-approximately estimating
-exactly calculating
-roughly guessing 
-carefully considering
-intuitively feeling
-scientifically analyzing
-artistically expressing
-technically perfecting
-creatively innovating
-mechanically repeating
-organically evolving 
-structurally supporting
-dynamically changing
-statically persisting
-kinetically energizing
-potentially transforming
-actually materializing  
-virtually existing
-physically manifesting
-mentally visualizing
-emotionally experiencing
-rationally understanding
-intuitively sensing  
-logically deducing
-experimentally proving
-theoretically proposing
-practically implementing
-abstractly conceptualizing
-concretely executing  
-symbolically representing
-literally presenting
-metaphorically suggesting
-directly communicating
-indirectly implying
-clearly expressing
-ambiguously indicating
-precisely defining
-loosely interpreting  
-strictly following
-freely adapting
-carefully analyzing  
-spontaneously creating
-mindfully observing
-absently wandering
-fully engaging
-partially participating
-completely immersing
-superficially touching
-deeply penetrating
-loosely connecting
-tightly binding
-casually relating
-formally structuring
-informally arranging
-systematically organizing
-randomly scattering
-precisely placing  
-approximately positioning
-exactly measuring
-roughly estimating
-carefully calculating
-intuitively gauging
 abyss
 an aberration  
 altar
@@ -2092,201 +1326,6 @@ golden age
 pinnacle
 zenith
 a magnum opus
-apotheosis
-an icon 
-legend
-celebrity
-the talk of the town
-cause célèbre
-topic of conversation
-fad
-craze
-mania
-spectacle
-sensation
-a splash  
-making waves
-attention-grabbing
-head-turning
-eye-catching
-showstopping
-scene-stealing
-unforgettable 
-electrifying
-spellbinding
-mesmerizing
-captivating
-riveting  
-arresting
-striking
-stunning
-dazzling
-breathtaking
-astonishing 
-marvelous
-phenomenal
-prodigious
-a dud
-flop
-fiasco
-disaster
-catastrophe
-embarrassment
-a turkey  
-stinker
-lemon
-bomb
-atrocity
-monstrosity 
-eyesore
-travesty
-abomination
-disgrace
-laughingstock
-mockery
-parody 
-burlesque
-caricature
-spoof
-farce
-lampoon
-send-up 
-takedown
-roast
-hatchet job
-smear campaign
-exposé
-witch hunt 
-trial by media
-character assassination
-kangaroo court
-show trial
-miscarriage of justice
-an injustice  
-abuse of power
-corruption
-malfeasance
-impropriety
-unethical behavior
-a violation 
-infraction
-infringement
-trespass
-encroachment
-breach
-an offense  
-misdemeanor
-felony
-transgression
-wrongdoing
-misconduct
-an indiscretion 
-faux pas
-gaffe
-blunder
-misstep
-slip-up
-snafu
-an oversight 
-omission
-exclusion
-snub
-rejection
-slight
-affront
-a disregard 
-neglect
-abandonment
-desertion
-forsaking
-betrayal
-treachery
-an imposition 
-burden
-onus
-encumbrance
-liability
-nuisance
-annoyance
-a bother 
-pest
-irritant
-thorn in one's side
-bane of one's existence
-headache
-an ordeal 
-nightmare
-hell
-purgatory
-tribulation
-trial
-cross to bear
-an affliction 
-scourge
-plague
-blight
-curse
-jinx
-hex
-a stigma 
-blemish
-stain
-taint
-black mark
-skeleton in the closet
-dirty laundry
-an albatross 
-millstone
-shackle
-fetter
-yoke
-ball and chain
-a weight 
-drag
-impediment
-obstacle
-stumbling block
-roadblock
-bottleneck
-gridlock
-a snarl  
-tangle
-mess
-quagmire
-morass
-labyrinth
-maze
-an enigma 
-puzzle
-conundrum
-riddle
-mystery
-paradox
-oxymoron
-a dilemma 
-quandary
-predicament
-pickle
-fix
-bind
-catch-22
-a paradox 
-anomaly
-aberration
-quirk
-oddity
-peculiarity
-incongruity
-a dichotomy 
-polarity
-duality
-juxtaposition
-tension
-conflict
-clash
-disparity
-divide
-schism
 a rupture 
 breach
 rift
@@ -2518,160 +1557,646 @@ disaster
 debacle
 fiasco
 a perfect storm 
-worst-case scenario
-doomsday
-apocalypse
-Armageddon
-end of days
-a day of reckoning 
-judgment day
-last judgment
-final accounting
-moment of truth
-showdown
-a comeuppance 
-just deserts
-payback
-retribution
-vengeance
-an act of God 
-divine intervention
-miracle
-revelation
-epiphany
-enlightenment
-awakening
-a rebirth 
-renaissance
-revival
-resurgence
-comeback
-second wind
-new lease on life
-a turning point 
-crossroads
-fork in the road
-pivotal moment
-critical juncture
-decisive factor
-a game changer 
-paradigm shift
-sea change
-quantum leap
-great leap forward
-tectonic shift
-an upheaval 
-revolution
-transformation
-metamorphosis
-transfiguration
-transmogrification
-a mutation 
-deviation
-aberration
-anomaly
-oddity
-curiosity
-freak
-a monster 
-monstrosity
-grotesque
-gargoyle
-chimera
-hybrid
-mutant
-a changeling 
-shapeshifter
-werewolf
-vampire
-zombie
-ghoul
-a revenant 
-specter
-ghost
-phantom
-apparition
-poltergeist
-a haunting 
-visitation
-manifestation
-materialization
-incarnation
-embodiment
-an avatar 
-icon
-symbol
-emblem
-logo
-trademark
-brand
-an insignia 
-badge
-emblem
-coat of arms
-crest
-seal
-a totem 
-talisman
-amulet
-charm
-fetish
-idol
-a graven image 
-false god
-golden calf
-Baal
-Moloch
-Mammon
-a demon 
-devil
-fiend
-incubus
-succubus
-imp
-a familiar 
-witch's cat
-black dog
-raven
-serpent
-dragon
-an ogre 
-troll
-goblin
-hobgoblin
-gnome
-dwarf
-elf
-a fairy 
-sprite
-pixie
-nymph
-dryad
-naiad
-siren
-a mermaid 
-selkie
-kelpie
-hippocampus
-kraken
-leviathan
-a behemoth 
-colossus
-titan
-Hercules
-Samson
-Goliath
-a giant 
-Cyclops
-Brobdingnagian
-Gargantua
-Pantagruel
-Gulliver
-an Amazon 
-Valkyrie
-shield-maiden
-Joan of Arc
-Boudica
-Zenobia
-a virago 
-ter
+crumbling statue 
+a gleaming skyscraper
+twisted driftwood
+rusted girder
+polished stone
+sheer cliff 
+remote cabin
+winding path
+bustling marketplace
+sun-drenched patio
+heavy door
+leaded window
+vaulted ceiling
+hardwood floor 
+rough-hewn beam
+imposing facade
+secluded courtyard
+sprawling estate
+cozy nook
+wrought iron gate
+cobblestone street
+hanging garden
+arched bridge
+cast iron stove
+stained glass
+brass knocker
+crystal chandelier 
+marble column
+terracotta urn
+hand-woven tapestry
+cracked mirror
+leather-bound book
+stone hearth
+clay pot
+wicker basket 
+oak barrel
+forged blade
+ivory chess piece
+antique clock
+silver locket
+sapphire brooch
+emerald ring
+silk kimono
+linen sheet
+wool sweater
+velvet cushion
+canvas tent
+felt hat 
+crinoline skirt
+satin slipper
+rubber boot
+nylon anorak
+polyester shirt
+steel file cabinet 
+plastic chair
+porcelain vase
+earthenware mug
+glass beaker  
+cardboard box
+wooden spoon
+tin cup
+styrofoam cooler
+copper kettle
+iron skillet 
+bamboo rod
+fiberglass hull
+aluminum siding
+chrome faucet
+titanium bike frame
+plywood shelf
+concrete wall
+ceramic tile
+slate roof
+vinyl record
+cassette tape
+floppy disk
+compact disc
+flash drive
+smartphone 
+flatscreen TV
+laptop computer
+inkjet printer
+typewriter
+telegraph
+steam engine
+internal combustion engine
+arch dam
+suspension bridge
+brick oven
+stone mill
+windmill
+waterwheel
+solar panel
+nuclear reactor
+battery
+electrical wire
+transistor
+silicon chip
+fiber optic cable
+rubber band
+leather shoe
+wooden barrel
+paper bag
+glass jar
+plastic wrap
+metal can
+styrofoam cup
+stainless steel thermos
+cast iron kettle
+copper wire
+gold ingot
+lead pipe
+titanium screw
+graphite pencil
+Teflon pan
+spandex legging
+Velcro fastener
+tweed blazer 
+gabardine jacket
+muslin dress
+gingham shirt
+denim jeans
+flannel pajamas
+cotton shirt
+cashmere sweater
+mohair throw
+angora scarf
+camel hair coat  
+calfskin glove
+doeskin purse
+pigskin wallet
+alligator belt
+python boot
+lizard skin shoe
+ostrich feather hat
+peacock plume  
+raven wing
+bluebird egg
+snakeskin
+lamb's wool
+mink fur
+sable coat
+ermine robe 
+beaver pelt
+rabbit foot
+fox tail
+bear claw
+moose antler
+deer horn
+elephant tusk
+whale bone
+tortoise shell
+oyster shell
+mussel shell
+scallop shell
+nautilus shell
+sand dollar
+sea urchin
+starfish
+jellyfish
+lobster
+crab
+octopus
+squid
+cuttlefish
+coral reef
+kelp forest
+seaweed
+plankton
+algae bloom
+mangrove swamp
+cypress knee
+oak leaf
+maple seed
+pine cone
+willow branch
+bamboo shoot
+palm frond
+fern leaf
+moss patch
+lichen covered rock
+toadstool
+puffball mushroom
+truffle
+orchid
+lotus 
+water lily
+rose petal
+thorny stem
+Venus flytrap  
+cactus spine
+aloe leaf
+eucalyptus bark
+magnolia blossom
+chrysanthemum
+sunflower petal
+daisy chain
+buttercup
+daffodil bulb
+tulip stamen
+lily pistil
+iris rhizome
+fuchsia stamen
+snapdragon sepal
+carnation calyx
+marigold floret
+pansy wing  
+violet leaf
+crocus stigma
+amaryllis anther
+hyacinth filament
+narcissus corona
+honeysuckle vine
+morning glory tendril
+moonflower bud
+passionflower stamen
+butterfly wing
+moth antenna
+hummingbird beak
+dragonfly wing
+mantis leg
+grasshopper femur
+katydid tympanal organ
+cockroach ootheca
+beetle elytron
+firefly lantern
+glowworm light organ
+termite mound
+wasp nest
+beehive
+ant colony
+spider web
+silkworm cocoon
+caterpillar frass
+cicada exuviae
+snail shell
+slug slime trail
+worm castings
+leech sucker
+tick capitulum
+mite chelicera
+centipede forcipule
+millipede ozopore
+scorpion telson 
+tarantula spinnerets
+black widow hourglass
+brown recluse violin
+jumping spider pedipalp
+trapdoor spider burrow
+wolf spider eyes
+orb weaver stabilimentum
+barn spider web
+funnel weaver sheet web
+sheet weaver hammock web
+ogre-faced spider net
+bolas spider lure
+crab spider camouflage
+pirate spider bark disguise  
+bird dropping spider mimicry
+ant mimic spider
+bee fly
+hoverfly
+robber fly
+crane fly leg
+mosquito proboscis 
+midge larva
+gnat
+mayfly nymph
+stonefly exoskeleton
+caddisfly case
+lacewing egg
+antlion pit
+dobsonfly mandible
+alderfly wing
+snakefly larva
+mantidfly raptorial leg
+owlfly
+dustywing  
+webspinner silk
+bark louse
+stilt bug
+ambush bug
+leaf-footed bug
+shield bug scutellum
+lace bug wing
+damsel bug
+pirate bug
+assassin bug
+bed bug
+stink bug repugnatorial gland
+water strider leg
+water boatman oar
+backswimmer
+water scorpion breathing tube
+giant water bug
+toad bug
+shore bug
+plant bug
+mirid bug
+lygus bug
+flower bug
+chinch bug
+seed bug
+dirt-colored seed bug
+burrower bug
+negro bug
+ash-gray leaf bug
+squash bug egg cluster
+leaf-footed bug antenna
+scentless plant bug wing
+red-shouldered plant bug
+four-lined plant bug
+tarnished plant bug
+rapid plant bug
+two-spotted plant bug
+cotton fleahopper
+garden fleahopper
+sycamore lace bug
+hawthorn lace bug
+basswood lace bug
+oak lace bug
+elm lace bug
+hackberry lace bug nymph
+chinch bug egg
+false chinch bug
+cotton stainer
+bordered plant bug
+ragweed plant bug
+honeylocust plant bug
+ash plant bug
+four-lined plant bug nymph
+red-banded leafhopper
+white-banded leafhopper
+rose leafhopper
+potato leafhopper
+aster leafhopper
+gray garden slug
+banded garden slug
+black slug
+leopard slug
+banana slug
+great gray slug
+marsh slug  
+sea slug
+nudibranch
+sea hare
+sea slater
+sponge
+sea anemone
+tubeworm
+shipworm
+clam
+oyster
+scallop
+cockle
+nautilus
+moon snail
+whelk
+limpet
+abalone
+keyhole limpet
+conch
+periwinkle
+murex
+cowrie
+olive shell
+cone shell
+auger shell
+turban shell
+top shell
+star shell
+sun dial
+sundial shell
+tower shell
+ladder shell
+wentletrap
+horn snail
+triton's trumpet
+tun shell
+frog shell
+volute
+olive
+marginella
+miter shell
+nutmeg shell
+fig shell
+limpet
+slipper shell
+carrier shell
+fissurellid limpet
+giant keyhole limpet
+volcano limpet
+fuzzy chiton
+lined chiton
+orange-footed piddock 
+angelwing
+jackknife clam
+razor clam
+geoduck
+Atlantic surf clam 
+ocean quahog
+ponderous ark
+zebra mussel
+Asian clam
+dark falsemussel
+Atlantic ribbed mussel
+hooked mussel
+scorched mussel
+blue mussel
+California mussel
+black purse shell
+duck clam
+Atlantic mud-piddock
+false angelwing
+Atlantic paper mussel
+green mussel
+tulip mussel
+above
+across
+after
+against
+along
+alongside
+amid
+amidst
+among
+around
+as
+astride
+at
+atop
+before
+behind
+below
+beneath
+beside
+besides
+between
+beyond
+but
+by
+concerning
+considering
+despite
+down
+during
+except
+for
+from
+in
+inside
+into
+like
+near
+of
+off
+on
+onto
+out
+outside
+over
+past
+plus
+regarding
+round
+save
+since
+through
+throughout
+till
+to
+toward
+towards
+under
+underneath
+unlike
+until
+up
+upon
+via
+with
+within
+without
+according to
+adjacent to
+ahead of
+apart from
+as for
+as per
+as regards
+as well as
+aside from
+back to
+because of
+by means of
+by way of
+close to
+contrary to
+depending on
+due to
+far from
+in addition to
+in case of
+in front of
+in lieu of
+in place of
+in spite of
+in view of
+in (the) process of
+in (the) wake of
+inclusive of
+instead of
+irrespective of
+next to
+on account of
+on behalf of
+on the part of
+on top of
+opposite to
+other than
+out of
+owing to
+preparatory to
+prior to
+regardless of
+subsequent to
+such as
+thanks to
+up to
+vis-a-vis
+with reference to
+with regard to
+with respect to
+with a view to
+a la
+a propos
+absent
+across from
+after all
+all but
+all over
+along with
+anything but
+apropos of
+as a consequence of
+as a result of
+as far as
+as long as
+as much as
+as soon as
+as to
+as well
+at the expense of
+barring
+before long
+by the time
+by virtue of
+circa
+close upon
+contrary to
+counting
+courtesy of
+directly
+excluding
+failing
+following
+for all
+for fear of
+for sake of
+for the duration of
+from time to time
+given
+granted
+if only
+immediately
+including
+inclusive
+incoming
+inside of
+instantly
+less
+like unto
+mid
+minus
+mod
+modulo
+more than
+near to
+nearer
+nearest
+nearly
+no matter
+no sooner than
+nonetheless
+notwithstanding
+now that
+nowhere
+once
+only
+onto
+opposite
+otherwise
+out from
+over against
+per
+plus or minus
+previous to
+pursuant to
+qua
+regarding
+respecting
+resulting from
+reverting to
+round about
+sans
+saving
+speaking of
+strictly speaking
+subsequent
+than
+the instant
+then
+thence
+thereupon
+this side of
+though
+through and through
+throughout the course of
+till now
+touching
+under the circumstances
+unless and until
+unto
+upon which
+upward of
+verses
+versus
+via the medium of
+whenever
+whereas
+while
+withal
+with that
