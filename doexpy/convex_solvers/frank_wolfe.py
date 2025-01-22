@@ -261,7 +261,8 @@ class FrankWolfe(ConvexSolverBase):
                     new_density = self.density_estimator.density_oracle_single(new_policy)
                     
                     # Compute step size for current policy
-                    if self.step == "line-search" and self.num_components > 1:
+                    #if self.step == "line-search" and self.num_components > 1:
+                    if self.step == "line-search":
                         def fn(h):
                             temp_densities = densities.copy()
                             temp_densities[policy_idx] = densities[policy_idx] * (1 - h) + h * new_density

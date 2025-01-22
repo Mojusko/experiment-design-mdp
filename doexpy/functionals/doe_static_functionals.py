@@ -239,8 +239,10 @@ class MultiPolicyOrigDesignD(ExperimentDesignFunctional):
         return term1 + term2
 
     def _compute_cross_terms(self, emissions, prob_matrix, d1_h, d2_h):
-        term1 = torch.einsum('ij,i,ik,jm->km', prob_matrix, d1_h, emissions, emissions)
-        term2 = torch.einsum('ij,i,ik,jm->km', prob_matrix.T, d2_h, emissions, emissions)
+
+        term1 = (emissions.T @ (d1_h.unsqueeze(1) * prob_matrix)) @ ((d2_h.unsqueeze(1) * prob_matrix.T).T @ emissions)       
+        term2 = (emissions.T @ (d2_h.unsqueeze(1) * prob_matrix)) @ ((d1_h.unsqueeze(1) * prob_matrix.T).T @ emissions)       
+
         return term1 + term2
 
     def _calculate_z(self, emissions, distributions, episodes):
