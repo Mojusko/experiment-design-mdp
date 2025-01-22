@@ -9,6 +9,6 @@ tester:
     N_pairs_eval: 250
 experiment:
   episodes: 50
-  vocab_size: 350
+  vocab_size: 150
   #scorer_model: "art"
 
