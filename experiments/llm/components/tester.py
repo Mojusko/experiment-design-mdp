@@ -39,7 +39,7 @@ class PreferenceTester(BaseTester):
         ytest = []
         for sequence in test_sequences:
            tokens = [t for t in sequence if t != " "]
-           prompt = 'A plate with ' + ", ".join(tokens)
+           prompt = env.base_prompt + ", ".join(tokens)
            yy, feat = self.scorer_model.score_prompt(prompt)
            xtest.append(feat.detach().cpu())
            ytest.append(yy.detach().cpu())

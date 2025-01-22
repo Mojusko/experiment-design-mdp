@@ -93,7 +93,8 @@ class LLMExperimentLegacy:
             self._clip_model,
             self._clip_processor,
             self._clip_tokenizer,
-            self.cfg.cache_dir
+            self.cfg.cache_dir,
+            base_prompt = self.cfg.base_prompt
         )
 
         # 4) Build scorer

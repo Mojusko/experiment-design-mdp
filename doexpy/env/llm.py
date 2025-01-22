@@ -18,6 +18,7 @@ class LLMGrid(DiscreteEnv):
         processor: CLIPProcessor, 
         tokenizer: CLIPTokenizer,
         cache_dir: str,
+        base_prompt:str ='',
         verbose: bool = False,
     ):
         self.verbose = verbose
@@ -32,6 +33,7 @@ class LLMGrid(DiscreteEnv):
         self.cache_dir = cache_dir
 
         self.list_of_text_tokens = list_of_text_tokens
+        self.base_prompt = base_prompt
         self.max_episode_length = len(list_of_text_tokens)
 
         # Setup tokens dictionary
@@ -300,8 +302,11 @@ def setup_clip_model(cache_dir):
     model = CLIPModel.from_pretrained(model_id, cache_dir=cache_dir).to(device)
     return model, processor, tokenizer
 
-def create_prompt(actions: List[int], env, prefix: str = 'A plate with ') -> str:
+def create_prompt(actions: List[int], env) -> str:
     """Create prompt from action sequence"""
+
+    prefix = env.base_prompt
+
     tokens = [env.unique_elements[int(action)] for action in actions]
     valid_tokens = [t for t in tokens if t != " "]
     return prefix + ", ".join(valid_tokens) if valid_tokens else prefix.rstrip()
