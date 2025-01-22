@@ -150,6 +150,28 @@ class LLMExperimentLegacy:
         testing_words  = [full_list[i] for i in test_idx]
         return training_words, testing_words
 
+
+def compute_prob_mae(emissions, estimator, scorer_model):
+    """Compute mean absolute error between predicted and true pairwise probabilities."""
+    # Get logits
+    pred_logits = estimator.mean(emissions).to(emissions.device)
+    true_logits = scorer_model.score_embedding(emissions)
+    
+    # Convert to probabilities
+    pred_exp = torch.exp(pred_logits)
+    true_exp = torch.exp(true_logits)
+    
+    # Compute pairwise probs efficiently
+    pred_probs = pred_exp.view(-1, 1) / (pred_exp.view(-1, 1) + pred_exp.view(1, -1))
+    true_probs = true_exp.view(-1, 1) / (true_exp.view(-1, 1) + true_exp.view(1, -1))
+    
+    # Get MAE from upper triangle
+    mask = torch.triu(torch.ones_like(pred_probs), diagonal=1).bool()
+    mae = torch.mean(torch.abs(pred_probs[mask] - true_probs[mask])).item()
+    
+    import ipdb; ipdb.set_trace()
+    return mae
+
 class LLMExperiment:
     """
     High-level orchestrator. Steps:
@@ -180,10 +202,13 @@ class LLMExperiment:
     def _perform_estimation(self, visits, update_design=False):
         """Performs estimation and updates design with new estimator"""
         self.feedback.collect_data(self.cfg, visits, self.estimator, self._theta_star)
-        print(f'T: {len(visits[0])}', self.feedback.metrics)
+        mae = compute_prob_mae(self.env.emissions, self.estimator, self._scorer_model)
+        #print(f'T: {len(visits[0])}', self.feedback.metrics)
+        print(f'T: {len(visits[0])}, MAE: {mae}', self.feedback.metrics)
         if update_design:
             self.design.update_estimator(self.estimator, self.env.emissions)
         
+
     def run(self):
         """Runs exploration with periodic estimation"""
         total_episodes = self.cfg.experiment.episodes

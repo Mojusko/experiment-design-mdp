@@ -5,10 +5,10 @@ feedback:
   num_rounds: 5
 tester:
   params:
-    N_test_prompts: 100
-    N_pairs_eval: 250
+    N_test_prompts: 50
+    N_pairs_eval: 150
 experiment:
-  episodes: 50
-  vocab_size: 150
+  episodes: 100
+  vocab_size: 500
   #scorer_model: "art"
 

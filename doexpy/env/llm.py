@@ -221,12 +221,19 @@ class DotProductModel(CLIPScorer):
         self.weight = weight.to(embedder.device)
         self.bias = bias.to(embedder.device) if bias else None
     
-    def score_prompt(self, x):
-        x_clip_embedding = self.embedder.embed_text(x)
+    def score_embedding(self, x_clip_embedding):
+        """Score a CLIP embedding directly"""
         score = torch.mm(x_clip_embedding, self.weight.T)
-        if self.bias:
+        if self.bias is not None:
             score += self.bias
+        return score
+
+    def score_prompt(self, x):
+        """Score a text prompt by first embedding then scoring"""
+        x_clip_embedding = self.embedder.embed_text(x)
+        score = self.score_embedding(x_clip_embedding)
         return score, x_clip_embedding
+
 
 class ImageScorer(CLIPScorer):
     def __init__(self, embedder, cache_dir):
@@ -288,7 +295,8 @@ def load_aesthetics_embedding(weights_path='text_weights.pth'):
         weight = state['net.0.weight'].to(device).double()
         bias = state['net.0.bias'].to(device).double()
         norm = torch.norm(weight, p=2, dim=1, keepdim=True)
-        return weight / norm , bias / norm
+        return weight norm , bias / norm
+        #return weight / norm , bias / norm
         
     except FileNotFoundError:
         raise FileNotFoundError(f"Could not find weights file: {weights_path}")
