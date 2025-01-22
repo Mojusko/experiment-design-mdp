@@ -3,7 +3,7 @@ import torch.nn.functional as F
 import numpy as np
 
 from doexpy.functionals.doe_static_functionals import (
-    DesignA, DesignD, MultiPolicyOrigDesignD, MultiPolicyAggDesignD, MultiPolicyOrigDesignA
+    DesignA, DesignD, MultiPolicyOrigDesignD, MultiPolicyAggDesignD
 )
 from doexpy.feedback.feedback_base import EmptyFeedback
 from stpy.embeddings.polynomial_embedding import CustomEmbedding
@@ -116,8 +116,7 @@ class FeedbackFactory:
             fb = NumericalFeedback(env, design, estimator)
         else:
 
-            #design = MultiPolicyOrigDesignD(env=env, lambd=cfg.feedback.lambda_reg, dim=1)
-            design = MultiPolicyOrigDesignA(env=env, lambd=cfg.feedback.lambda_reg, dim=1)
+            design = MultiPolicyOrigDesignD(env=env, lambd=cfg.feedback.lambda_reg, dim=1)
             likelihood = MultinomialLikelihood()
             regularizer = L2Regularizer(lam=cfg.feedback.lambda_reg)
             estimator = RegularizedMultinomialEstimator(embedding, likelihood, regularizer)

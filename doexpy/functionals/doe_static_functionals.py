@@ -293,3 +293,13 @@ class MultiPolicyOrigDesignA(MultiPolicyOrigDesignD):
 
     def eval_full(self, emissions, distributions, episodes):
         return self.eval(emissions, distributions, episodes)
+
+
+class MultiPolicyOrigDesignE(MultiPolicyOrigDesignD):
+    def eval(self, emissions, distributions, episodes):
+        z = self._calculate_z(emissions, distributions, episodes)
+        eye = torch.eye(z.shape[0], device=z.device, dtype=z.dtype)
+        return torch.linalg.eigvalsh(z + self.lambd/episodes * eye)[0]
+
+    def eval_full(self, emissions, distributions, episodes):
+        return self.eval(emissions, distributions, episodes)
