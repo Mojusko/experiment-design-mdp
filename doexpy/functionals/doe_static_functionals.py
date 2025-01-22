@@ -280,3 +280,16 @@ class MultiPolicyOrigDesignD(ExperimentDesignFunctional):
 
     def eval_full(self, emissions, distributions, episodes):
         return self.eval(emissions, distributions, episodes)
+
+
+class MultiPolicyOrigDesignA(MultiPolicyOrigDesignD):
+    def eval(self, emissions, distributions, episodes):
+        z = self._calculate_z(emissions, distributions, episodes)
+        eye = torch.eye(z.shape[0], device=z.device, dtype=z.dtype)
+        if self.V is None:
+            return -torch.trace(la.inv(z + self.lambd/episodes * eye))
+        else:
+            return -torch.trace(self.V @ la.inv(z + self.lambd/episodes * eye))
+
+    def eval_full(self, emissions, distributions, episodes):
+        return self.eval(emissions, distributions, episodes)
