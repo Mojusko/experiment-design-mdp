@@ -231,17 +231,20 @@ class MultiPolicyOrigDesignD(ExperimentDesignFunctional):
     def _compute_diagonal_terms(self, emissions, prob_matrix, d1_h, d2_h):
         """Compute diagonal terms of the Fisher."""
         p_q1 = torch.mm(prob_matrix, d2_h.view(-1,1))
-        p_q2 = torch.mm(prob_matrix.T, d1_h.view(-1,1))
-        
-        term1 = torch.einsum('i,i,ik,im->km', p_q1.squeeze(), d1_h, emissions, emissions)
-        term2 = torch.einsum('i,i,ik,im->km', p_q2.squeeze(), d2_h, emissions, emissions)
+        p_q2 = torch.mm(prob_matrix, d1_h.view(-1,1))
+
+        term1 = emissions.T @ torch.diag(p_q1.squeeze()) @ torch.diag(d1_h) @ emissions       
+        term2 = emissions.T @ torch.diag(p_q2.squeeze()) @ torch.diag(d2_h) @ emissions       
         
         return term1 + term2
 
     def _compute_cross_terms(self, emissions, prob_matrix, d1_h, d2_h):
-
-        term1 = (emissions.T @ (d1_h.unsqueeze(1) * prob_matrix)) @ ((d2_h.unsqueeze(1) * prob_matrix.T).T @ emissions)       
-        term2 = (emissions.T @ (d2_h.unsqueeze(1) * prob_matrix)) @ ((d1_h.unsqueeze(1) * prob_matrix.T).T @ emissions)       
+        probs = prob_matrix * (1 - prob_matrix)
+        d1d2 = d1_h.unsqueeze(1) @ d2_h.unsqueeze(0)  # [n_states, n_states]
+        d2d1 = d2_h.unsqueeze(1) @ d1_h.unsqueeze(0)  # [n_states, n_states]
+        
+        term1 = emissions.T @ (probs * d1d2) @ emissions
+        term2 = emissions.T @ (probs * d2d1) @ emissions
 
         return term1 + term2
 
