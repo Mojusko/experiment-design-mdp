@@ -6,149 +6,14 @@ import numpy as np
 import hydra
 from omegaconf import DictConfig
 
-# from stpy.helpers.helper import cartesian  # We'll use in _make_token_lists
+from stpy.helpers.helper import cartesian  # We'll use in _make_token_lists
 from doexpy.env.llm import (
-    LLMGrid, setup_clip_model, get_scorer_model, make_theta_star
+    LLMGrid, setup_clip_model, get_scorer_model, make_theta_star, CLIPEmbedder, generate_emissions
 )
 from components.feedback import FeedbackFactory
 from components.solver  import SolverFactory
 from components.tester  import BaseTester
 from components.saver   import BaseSaver
-
-class LLMExperimentLegacy:
-
-    def __init__(self, cfg: DictConfig):
-        self.cfg = cfg
-        self.rng = np.random.RandomState(int(cfg.seed))
-
-        # Prepare the output path
-        os.makedirs(os.path.dirname(cfg.saver.params.path), exist_ok=True)
-        if os.path.exists(cfg.saver.params.path):
-            os.remove(cfg.saver.params.path)
-
-        # 1. Load data
-        self.training_words, self.testing_words = self._load_data()
-
-        # 2. Initialize environment
-        self.env = self._init_env()
-
-        # 3. Create feedback+design+estimator
-        self.feedback, self.design, self.estimator = FeedbackFactory.create(cfg, self.env)
-
-        # 4. Create the solver & explorer
-        self.explorer = SolverFactory.create(cfg, self.env, self.design, self.feedback)
-
-        # 5. We also create a tester & saver from Hydra if we want
-        self.tester = hydra.utils.instantiate(cfg.tester, scorer_model=self._scorer_model)
-        self.saver  = hydra.utils.instantiate(cfg.saver)
-
-        self.visits = None  # store final visits
-
-    def run(self):
-        """Runs exploration for cfg.experiment.episodes, collects visits."""
-        # For example: 
-        val, opt_val, visits = self.explorer.run(
-            episodes=self.cfg.experiment.episodes,
-            return_visitations=True
-        )
-        self.visits = visits
-
-    def test_and_save(self):
-        """Fit from visits, run test, and save results."""
-        self._fit_estimator()
-        result_dict = self.tester.run_test(
-            cfg=self.cfg,
-            env=self.env,
-            estimator=self.estimator,
-            theta_star=self._theta_star,
-            training_words_list=self.training_words,
-            testing_words_list=self.testing_words
-        )
-        self.saver.save_result(result_dict)
-
-    def _init_env(self):
-        """
-        Builds token lists (if 'optim' do cartesian, else repeated),
-        sets up LLMGrid, plus a ground-truth scoring model.
-        """
-        from stpy.helpers.helper import cartesian
-        # 1) Setup CLIP
-        self._clip_model, self._clip_processor, self._clip_tokenizer = setup_clip_model(self.cfg.cache_dir)
-
-        # 2) Create token_lists
-        horizon = self.cfg.horizon
-        if self.cfg.algorithm == "optim":
-            combos = cartesian([self.training_words]*horizon)
-            words_list = []
-            for row in combos:
-                tokens = [t for t in row if t != " "]
-                words_list.append(", ".join(tokens))
-            token_lists = [words_list]
-        else:
-            token_lists = [self.training_words]*horizon
-
-        # 3) Build environment
-        env = LLMGrid(
-            token_lists,
-            self._clip_model,
-            self._clip_processor,
-            self._clip_tokenizer,
-            self.cfg.cache_dir,
-            base_prompt = self.cfg.base_prompt
-        )
-
-        # 4) Build scorer
-        self._scorer_model = get_scorer_model(
-            self.cfg.experiment.scorer_model,
-            env.embedder,
-            self._clip_model,
-            self._clip_processor,
-            self.cfg.cache_dir
-        )
-        self._theta_star = make_theta_star(env, self._scorer_model)
-        return env
-
-    def _fit_estimator(self):
-        """Collect data from 'visits' and fit the estimator (numerical or multinomial)."""
-        if self.visits is None:
-            print("No visits found, skipping fit.")
-            return
-        # We rely on the feedback component to collect data & call 'estimator.fit'.
-        self.feedback.collect_data(self.cfg, self.visits, self.estimator, self._theta_star)
-
-    def _load_data(self):
-        """
-        Merges lines from text files,  then 75/25 train/test split.
-        """
-        #file_paths = [
-        #    'claude.txt','o1.txt','diverse.txt','artists.txt',
-        #    'movements_large.txt','subjects.txt','mediums_large.txt'
-        #]
-        #file_paths = ['vocabulary.txt']
-        file_paths = ['vocabulary_jan.txt']
-        rng = np.random.RandomState(42)
-
-        full_list = []
-        for path in file_paths:
-            try:
-                with open(path, 'r') as f:
-                    full_list.extend([line.strip() for line in f])
-            except FileNotFoundError:
-                print(f"Warning: {path} not found")
-
-        # deduplicate
-        full_list = list(dict.fromkeys(full_list))
-        if len(full_list) > self.cfg.experiment.vocab_size:
-            print(f"Capping data at {self.cfg.experiment.vocab_size} items")
-            full_list = list(rng.choice(full_list, self.cfg.experiment.vocab_size, replace=False))
-
-        n_train = int(0.75 * len(full_list))
-        indices = rng.permutation(len(full_list))
-        train_idx = indices[:n_train]
-        test_idx  = indices[n_train:]
-        training_words = [full_list[i] for i in train_idx]
-        testing_words  = [full_list[i] for i in test_idx]
-        return training_words, testing_words
 
 
 def compute_prob_mae(emissions, estimator, scorer_model):
@@ -189,7 +54,7 @@ class LLMExperiment:
         if os.path.exists(cfg.saver.params.path):
             os.remove(cfg.saver.params.path)
 
-        self.training_words, self.testing_words = self._load_data()
+        self.training_words, self.testing_words, self.model_words = self._load_data()
         self.env = self._init_env()
         self.feedback, self.design, self.estimator = FeedbackFactory.create(cfg, self.env)
         self.explorer = SolverFactory.create(cfg, self.env, self.design, self.feedback)
@@ -230,11 +95,14 @@ class LLMExperiment:
         Builds token lists (if 'optim' do cartesian, else repeated),
         sets up LLMGrid, plus a ground-truth scoring model.
         """
-        from stpy.helpers.helper import cartesian
-        # 1) Setup CLIP
+        # Setup CLIP
         self._clip_model, self._clip_processor, self._clip_tokenizer = setup_clip_model(self.cfg.cache_dir)
 
-        # 2) Create token_lists
+        # Generate separate emissions for ground truth model using model_words
+        clip_embedder = CLIPEmbedder(self._clip_tokenizer, self._clip_model)
+        model_emissions = generate_emissions(self.model_words, clip_embedder, self.cfg.cache_dir)
+
+        # Create token_lists for training environment
         horizon = self.cfg.horizon
         if self.cfg.algorithm == "optim":
             combos = cartesian([self.training_words]*horizon)
@@ -246,23 +114,17 @@ class LLMExperiment:
         else:
             token_lists = [self.training_words]*horizon
 
-        # 3) Build environment
-        env = LLMGrid(
-            token_lists,
-            self._clip_model,
-            self._clip_processor,
-            self._clip_tokenizer,
-            self.cfg.cache_dir
-        )
+        # Build environment
+        env = LLMGrid(token_lists, self._clip_model, self._clip_processor, self._clip_tokenizer, self.cfg.cache_dir)
 
-        # 4) Build scorer
+        # Build scorer using model emissions
         self._scorer_model = get_scorer_model(
             self.cfg.experiment.scorer_model,
             env.embedder,
             self._clip_model,
             self._clip_processor,
             self.cfg.cache_dir,
-            env.emissions
+            model_emissions  # Pass model emissions instead of env.emissions
         )
         self._theta_star = make_theta_star(env, self._scorer_model)
         return env
@@ -289,16 +151,11 @@ class LLMExperiment:
         self.feedback.collect_data(self.cfg, self.visits, self.estimator, self._theta_star)
 
     def _load_data(self):
-        """
-        Merges lines from text files,  then 75/25 train/test split.
-        """
-        #file_paths = [
-        #    'claude.txt','o1.txt','diverse.txt','artists.txt',
-        #    'movements_large.txt','subjects.txt','mediums_large.txt'
-        #]
-        file_paths = ['vocabulary.txt']
+        """Returns training_words, test_words, and model_words in 60-20-20 split"""
+        file_paths = ['vocabulary.txt'] 
         rng = np.random.RandomState(42)
-
+    
+        # Load and deduplicate vocabulary
         full_list = []
         for path in file_paths:
             try:
@@ -306,17 +163,25 @@ class LLMExperiment:
                     full_list.extend([line.strip() for line in f])
             except FileNotFoundError:
                 print(f"Warning: {path} not found")
-
-        # deduplicate
         full_list = list(dict.fromkeys(full_list))
+    
+        # Cap vocabulary if needed
         if len(full_list) > self.cfg.experiment.vocab_size:
             print(f"Capping data at {self.cfg.experiment.vocab_size} items")
             full_list = list(rng.choice(full_list, self.cfg.experiment.vocab_size, replace=False))
-
-        n_train = int(0.75 * len(full_list))
-        indices = rng.permutation(len(full_list))
+    
+        # Create 60-20-20 split
+        n_total = len(full_list)
+        n_train = int(0.6 * n_total)
+        n_test = int(0.2 * n_total)
+        
+        indices = rng.permutation(n_total)
         train_idx = indices[:n_train]
-        test_idx  = indices[n_train:]
+        test_idx = indices[n_train:n_train + n_test]
+        model_idx = indices[n_train + n_test:]
+    
         training_words = [full_list[i] for i in train_idx]
-        testing_words  = [full_list[i] for i in test_idx]
-        return training_words, testing_words
+        testing_words = [full_list[i] for i in test_idx]
+        model_words = [full_list[i] for i in model_idx]
+    
+        return training_words, testing_words, model_words

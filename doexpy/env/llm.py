@@ -58,7 +58,7 @@ class LLMGrid(DiscreteEnv):
         self.action_space_pre_embedding = torch.arange(self.actions_num, dtype=torch.float64).to(self.device).reshape(-1, 1)
         self.emiss_num = self.actions_num
         self.transition_matrix = None
-        self._generate_emissions()
+        self.emissions = generate_emissions(self.unique_elements, self.embedder, self.cache_dir, self.verbose)
         self.action_space = self.emissions
         self.visitations = torch.zeros(self.states_num, self.actions_num, dtype=torch.float64).to(self.device)
 
@@ -68,45 +68,6 @@ class LLMGrid(DiscreteEnv):
     def get_states_num(self):
         return self.states_num
 
-    def _generate_emissions(self):
-        
-        # Create cache dir if needed
-        os.makedirs(self.cache_dir, exist_ok=True)
-        
-        # Generate deterministic hash from actions and elements
-        hasher = hashlib.sha256()
-        hasher.update(str(self.actions_num).encode())
-        for elem in self.unique_elements:
-            hasher.update(elem.encode())
-        cache_id = hasher.hexdigest()
-        cache_path = os.path.join(self.cache_dir, f"emissions_{cache_id}.pkl")
-    
-        # Try loading from cache
-        if os.path.exists(cache_path):
-            if self.verbose:
-                print("Loading emissions from cache")
-            with open(cache_path, 'rb') as f:
-                self.emissions = pickle.load(f)
-            return
-    
-        # Generate if not cached
-        if self.verbose:
-            print("PREPROCESS: Generating emissions") 
-        self.emissions = []
-        for i in range(self.actions_num):
-            text = self.unique_elements[i]
-            if self.verbose:
-                print(f"Generating emission for action {i}, text: {text}")
-            feat = self.embedder.embed_text(text)
-            self.emissions.append(feat)
-        
-        if self.verbose:
-            print("Done generating.")
-        self.emissions = torch.vstack(self.emissions)
-        
-        # Cache the emissions
-        with open(cache_path, 'wb') as f:
-            pickle.dump(self.emissions, f)
 
     #def _generate_emissions_legacy(self):
     #    # TODO: delete this
@@ -278,6 +239,56 @@ class AestheticsImageScorer(ImageScorer):
         inputs = self.clip_processor(images=image, return_tensors="pt")
         clip_embeddings = self.clip_model.get_image_features(**inputs)
         return self.aesthetic_model(clip_embeddings), clip_embeddings
+
+def generate_emissions(unique_elements, embedder, cache_dir, verbose=False):
+    """Generate emissions for a list of unique elements
+    
+    Args:
+        unique_elements: List of text tokens to generate emissions for
+        embedder: CLIPEmbedder instance
+        cache_dir: Directory for caching emissions
+        verbose: Whether to print progress messages
+        
+    Returns:
+        torch.Tensor: Matrix of emissions
+    """
+    # Create cache dir if needed
+    os.makedirs(cache_dir, exist_ok=True)
+    
+    # Generate deterministic hash from actions and elements
+    hasher = hashlib.sha256()
+    hasher.update(str(len(unique_elements)).encode())
+    for elem in unique_elements:
+        hasher.update(elem.encode())
+    cache_id = hasher.hexdigest()
+    cache_path = os.path.join(cache_dir, f"emissions_{cache_id}.pkl")
+
+    # Try loading from cache
+    if os.path.exists(cache_path):
+        if verbose:
+            print("Loading emissions from cache")
+        with open(cache_path, 'rb') as f:
+            return pickle.load(f)
+
+    # Generate if not cached
+    if verbose:
+        print("PREPROCESS: Generating emissions") 
+    emissions = []
+    for i, text in enumerate(unique_elements):
+        if verbose:
+            print(f"Generating emission for action {i}, text: {text}")
+        feat = embedder.embed_text(text)
+        emissions.append(feat)
+    
+    if verbose:
+        print("Done generating.")
+    emissions = torch.vstack(emissions)
+    
+    # Cache the emissions
+    with open(cache_path, 'wb') as f:
+        pickle.dump(emissions, f)
+        
+    return emissions
 
 def load_aesthetics_embedding(weights_path='text_weights.pth'):
     """Load aesthetics model weights and bias
