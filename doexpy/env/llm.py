@@ -1,5 +1,5 @@
 from doexpy.env.discrete_env import DiscreteEnv
-from image_generator import StableDiffusionGenerator
+from doexpy.utils.image_generator import StableDiffusionGenerator
 from transformers import CLIPModel, CLIPProcessor, CLIPTokenizer
 from typing import List, Tuple, Union
 import torch
@@ -18,6 +18,7 @@ class LLMGrid(DiscreteEnv):
         tokenizer: CLIPTokenizer,
         cache_dir: str,
         verbose: bool = False,
+        add_hashtag: bool = True,
     ):
         self.verbose = verbose
         self.constrained = False
@@ -40,6 +41,10 @@ class LLMGrid(DiscreteEnv):
         self.unique_elements = [' ']
         for order, list in enumerate(list_of_text_tokens):
             for token in list:
+
+                if add_hashtag:
+                    token = '#' + token
+
                 if token not in self.tokens:
                     self.unique_elements.append(token)
                     self.tokens[token] = [order]
@@ -105,21 +110,6 @@ class LLMGrid(DiscreteEnv):
         with open(cache_path, 'wb') as f:
             pickle.dump(self.emissions, f)
 
-    #def _generate_emissions_legacy(self):
-    #    # TODO: delete this
-    #    if self.verbose:
-    #        print("PREPROCESS: Generating emissions")
-    #    self.emissions = []
-    #    for i in range(self.actions_num):
-    #        text = self.unique_elements[i]
-    #        if self.verbose:
-    #            print(f"Generating emission for action {i}, text: {text}")
-    #        feat = self.embedder.embed_text(text)
-    #        self.emissions.append(feat)
-    #        
-    #    if self.verbose:
-    #        print("Done generating.")
-    #    self.emissions = torch.vstack(self.emissions)
     def next(self, state, action):
         return state + 1
 
@@ -284,8 +274,10 @@ def load_aesthetics_embedding(weights_path='text_weights.pth'):
         state = torch.load(weights_path, map_location=device)
         weight = state['net.0.weight'].to(device).double()
         bias = state['net.0.bias'].to(device).double()
-        norm = torch.norm(weight, p=2, dim=1, keepdim=True)
-        return weight / norm , bias / norm
+        ## Mojmir: No reason to normalize the weights
+        #norm = torch.norm(weight, p=2, dim=1, keepdim=True)
+        #return weight / norm , bias / norm
+        return weight , bias
         
     except FileNotFoundError:
         raise FileNotFoundError(f"Could not find weights file: {weights_path}")

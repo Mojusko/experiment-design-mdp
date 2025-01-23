@@ -26,12 +26,12 @@ class UncertaintySampling(UCB):
 
 		elif self.agg == 'sum':
 			pass
-			#kernel = self.model.embedding =
 			embed = self.model.embedding.embed
 			n = self.model.x.size()[0]
-			#print ("N",n)
+
 			phi =  embed(xtest)
 			V = phi.T@phi
+
 			#K = kernel(self.model.x, self.model.x) + torch.eye(n).double() * self.model.s**2 * self.model.get_lam()
 			V_collection = torch.einsum('ij,ik->ijk',phi,phi)
 			V_initial = embed(self.model.x).T@embed(self.model.x) + torch.eye(self.model.m).double() * self.model.s**2 * self.model.get_lam()
