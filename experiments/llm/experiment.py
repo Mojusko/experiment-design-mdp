@@ -124,7 +124,7 @@ class LLMExperiment:
             self._clip_model,
             self._clip_processor,
             self.cfg.cache_dir,
-            model_emissions  # Pass model emissions instead of env.emissions
+            model_emissions
         )
         self._theta_star = make_theta_star(env, self._scorer_model)
         return env
