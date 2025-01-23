@@ -365,7 +365,7 @@ def get_scorer_model(model_name: str, embedder, clip_model, clip_processor, cach
         device = emissions_env.device
         dtype = emissions_env.dtype
         
-        k = 150
+        k = 25
         selected_indices = rng.choice(emissions_env.shape[0], k, replace=False)
         
         random_coeffs = torch.zeros(emissions_env.shape[0], device=device, dtype=dtype)

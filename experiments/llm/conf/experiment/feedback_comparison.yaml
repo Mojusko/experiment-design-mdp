@@ -1,5 +1,5 @@
 name: "feedback_comparison"
-episodes: 20
+episodes: 10
 #scorer_model: "aesthetics"
 #scorer_model: "random_combination"
 scorer_model: "random_50_combination"
