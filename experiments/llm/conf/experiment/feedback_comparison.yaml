@@ -1,5 +1,5 @@
 name: "feedback_comparison"
-episodes: 500
+episodes: 1000
 scorer_model: "aesthetics"
 #scorer_model: "random_combination"
 vocab_size: 2000
