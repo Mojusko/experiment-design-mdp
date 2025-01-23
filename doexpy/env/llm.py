@@ -345,7 +345,27 @@ def get_scorer_model(model_name: str, embedder, clip_model, clip_processor, cach
         
     if model_name == 'red':
         return RedImageScorer(embedder, cache_dir)
+    
+    if model_name == 'random_50_combination':
+        if emissions_env is None:
+            raise ValueError("emissions_env must be provided for random_combination model")
+            
+        rng = np.random.RandomState(42)
+        device = emissions_env.device
+        dtype = emissions_env.dtype
         
+        k = 50
+        selected_indices = rng.choice(emissions_env.shape[0], k, replace=False)
+        
+        random_coeffs = torch.zeros(emissions_env.shape[0], device=device, dtype=dtype)
+        selected_coeffs = 2 * rng.rand(k) - 1  # Uniform in [-1, 1]
+        random_coeffs[selected_indices] = torch.from_numpy(selected_coeffs).to(dtype)
+        
+        random_combination_vec = torch.mm(random_coeffs.view(1, -1), emissions_env)
+        random_combination_vec = random_combination_vec / torch.norm(random_combination_vec, p=2)
+        
+        return DotProductModel(embedder, random_combination_vec).eval()
+       
     if model_name == 'random_combination':
         if emissions_env is None:
             raise ValueError("emissions_env must be provided for random_combination model")
