@@ -195,13 +195,13 @@ class MultiPolicyAggDesignD(MultiPolicyAggDesignA):
         return torch.linalg.slogdet(z + self.lambd/episodes * eye)[1]
 
 class MultiPolicyOrigDesignD(ExperimentDesignFunctional):
-    def __init__(self, env, lambd=1e-3, dim=0, V=None, time_weigh=True):
+    def __init__(self, env, lambd=1e-3, dim=0, V=None, time_weight=True):
         super().__init__(dim=dim)
         self.lambd = lambd
         self.type = "static"
         self.env = env
         self.V = V
-        self.time_weigh = time_weigh
+        self.time_weight = time_weight
         self.estimator = None
         self.prob_matrix = None
 
@@ -251,7 +251,7 @@ class MultiPolicyOrigDesignD(ExperimentDesignFunctional):
         H = distributions[0].shape[0]
         
         for h in range(H):
-            time_weight = (H - h)/H if self.time_weigh else 1.0
+            time_weight = (H - h)/H if self.time_weight else 1.0
             if self.dim == 0:
                 d1_h = torch.sum(distributions[0][h], dim=1)
                 d2_h = torch.sum(distributions[1][h], dim=1)
@@ -271,7 +271,11 @@ class MultiPolicyOrigDesignD(ExperimentDesignFunctional):
     def eval(self, emissions, distributions, episodes):
         z = self._calculate_z(emissions, distributions, episodes)
         eye = torch.eye(z.shape[0], device=z.device, dtype=z.dtype)
-        return torch.linalg.slogdet(z + self.lambd/episodes * eye)[1]
+
+        if self.V is None:
+            return torch.linalg.slogdet(z + self.lambd/episodes * eye)[1]
+        else:
+            return torch.linalg.slogdet(self.V @ z + self.lambd/episodes * eye)[1]
 
     def eval_full(self, emissions, distributions, episodes):
         return self.eval(emissions, distributions, episodes)
