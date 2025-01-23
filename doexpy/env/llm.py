@@ -295,8 +295,7 @@ def load_aesthetics_embedding(weights_path='text_weights.pth'):
         weight = state['net.0.weight'].to(device).double()
         bias = state['net.0.bias'].to(device).double()
         norm = torch.norm(weight, p=2, dim=1, keepdim=True)
-        return weight norm , bias / norm
-        #return weight / norm , bias / norm
+        return weight / norm , bias / norm
         
     except FileNotFoundError:
         raise FileNotFoundError(f"Could not find weights file: {weights_path}")
