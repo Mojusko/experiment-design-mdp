@@ -263,14 +263,19 @@ def generate_emissions(unique_elements, embedder, cache_dir, verbose=False):
     cache_id = hasher.hexdigest()
     cache_path = os.path.join(cache_dir, f"emissions_{cache_id}.pkl")
 
-    # Try loading from cache
+    # Try loading from cache with error handling
     if os.path.exists(cache_path):
         if verbose:
             print("Loading emissions from cache")
-        with open(cache_path, 'rb') as f:
-            return pickle.load(f)
+        try:
+            with open(cache_path, 'rb') as f:
+                return pickle.load(f)
+        except (pickle.UnpicklingError, EOFError):
+            if verbose:
+                print("Cache file corrupted, regenerating")
+            os.remove(cache_path)
 
-    # Generate if not cached
+    # Generate if not cached or cache was corrupted
     if verbose:
         print("PREPROCESS: Generating emissions") 
     emissions = []
@@ -285,9 +290,13 @@ def generate_emissions(unique_elements, embedder, cache_dir, verbose=False):
     emissions = torch.vstack(emissions)
     
     # Cache the emissions
-    with open(cache_path, 'wb') as f:
-        pickle.dump(emissions, f)
-        
+    try:
+        with open(cache_path, 'wb') as f:
+            pickle.dump(emissions, f)
+    except Exception as e:
+        if verbose:
+            print(f"Failed to cache emissions: {e}")
+            
     return emissions
 
 def load_aesthetics_embedding(weights_path='text_weights.pth'):
