@@ -122,17 +122,16 @@ class FeedbackFactory:
                 n = env.emissions.shape[0]
                 rows = []
                 for i in range(n):
-                    for j in range(i+1, n):
+                    for j in range(n):
                         diff = env.emissions[i] - env.emissions[j]
                         rows.append(diff)
                 A = torch.stack(rows)  # Shape: [n*(n-1)/2 x 768]
                 
                 # Compute V using the difference matrix A
                 V = torch.mm(A.T, A)  # Shape: [768 x 768]
-                V = V / len(rows)  # Normalize by number of differences
             else:
                 V=None
-            design = MultiPolicyOrigDesignD(env=env, lambd=cfg.feedback.lambda_reg, dim=1, V=V)
+            design = MultiPolicyOrigDesignA(env=env, lambd=cfg.feedback.lambda_reg, dim=1, V=V)
             likelihood = MultinomialLikelihood()
             regularizer = L2Regularizer(lam=cfg.feedback.lambda_reg)
             estimator = RegularizedMultinomialEstimator(embedding, likelihood, regularizer)
