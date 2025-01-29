@@ -6,7 +6,10 @@ import argparse
 
 def parse_filename(filename):
     base = os.path.basename(filename)
-    if "lambda" in base:
+    if "withV" in base or "noV" in base:
+        v_type = "With V" if "withV" in base else "No V"
+        return ("v_comparison", v_type)
+    elif "lambda" in base:
         parts = base.split('-')
         lambda_val = float(parts[-2])
         return ("lambda", lambda_val)
@@ -38,12 +41,24 @@ def plot_feedback_results(results):
     plt.xticks(rotation=45)
     plt.tight_layout()
 
+def plot_v_results(results):
+    keys = sorted(results.keys())
+    means = [np.mean(results[k]) for k in keys]
+    stds = [np.std(results[k]) for k in keys]
+
+    plt.figure(figsize=(10, 6))
+    plt.bar(keys, means, yerr=stds, capsize=5)
+    plt.xlabel("Design Matrix Type")
+    plt.ylabel("Preference Misalignment Error")
+    plt.tight_layout()
+
 def plot_results(directory):
     pattern = os.path.join(directory, "*.txt")
     files = glob.glob(pattern)
     
     lambda_results = {}
     feedback_results = {}
+    v_results = {}
     
     for f in files:
         exp_type, key = parse_filename(f)
@@ -53,6 +68,10 @@ def plot_results(directory):
             if key not in lambda_results:
                 lambda_results[key] = []
             lambda_results[key].append(val)
+        elif exp_type == "v_comparison":
+            if key not in v_results:
+                v_results[key] = []
+            v_results[key].append(val)
         else:
             combined_key = f"{key[0]}-{key[1]}"
             if combined_key not in feedback_results:
@@ -63,6 +82,8 @@ def plot_results(directory):
         plot_lambda_results(lambda_results)
     if feedback_results:
         plot_feedback_results(feedback_results)
+    if v_results:
+        plot_v_results(v_results)
     plt.show()
 
 if __name__ == "__main__":
