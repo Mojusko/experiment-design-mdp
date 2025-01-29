@@ -1,4 +1,4 @@
 name: "benchmark_V"
-episodes: 50
+episodes: 250
 scorer_model: "aesthetics"
 vocab_size: 1000
