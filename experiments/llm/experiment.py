@@ -152,17 +152,17 @@ class LLMExperiment:
 
     def _load_data(self):
         """Returns training_words, test_words, and model_words in 60-20-20 split"""
-        file_paths = ['vocabulary.txt'] 
+        # Get vocabulary file(s) from config
+        vocab_files = self.cfg.experiment.vocabulary
+        if isinstance(vocab_files, str):
+            vocab_files = [vocab_files]
         rng = np.random.RandomState(42)
     
         # Load and deduplicate vocabulary
         full_list = []
-        for path in file_paths:
-            try:
-                with open(path, 'r') as f:
-                    full_list.extend([line.strip() for line in f])
-            except FileNotFoundError:
-                print(f"Warning: {path} not found")
+        for path in vocab_files:
+            with open(path, 'r') as f:
+                full_list.extend([line.strip() for line in f])
         full_list = list(dict.fromkeys(full_list))
     
         # Cap vocabulary if needed
