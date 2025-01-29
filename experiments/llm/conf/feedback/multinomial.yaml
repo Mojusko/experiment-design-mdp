@@ -4,3 +4,4 @@ num_components: 2
 num_rounds: 50
 lambda_reg: 4000
 adaptive_estimation_frequency: 0
+pass_V: true

@@ -286,8 +286,20 @@ STOCH: STOCH1 STOCH2 STOCH3 STOCH0
 
 
 ########################### LLMS
-REPEATS_LLM=15
+REPEATS_LLM=8
 NUMBERS_LLM := $(shell seq 1 ${REPEATS_LLM})
+
+
+JOBS_LLM_GRD_MULT_V := $(addprefix job-llm-feedback-grd-mult-v,$(NUMBERS_LLM))
+JOBS_LLM_GRD_MULT_NOV := $(addprefix job-llm-feedback-grd-mult-nov,$(NUMBERS_LLM))
+
+$(JOBS_LLM_GRD_MULT_V): job-llm-feedback-grd-mult-v%:
+	cd llm && mkdir -p results/feedback-V && OMP_NUM_THREADS=1 MKL_NUM_THREADS=1 $(PYTHONPATH) run_exp.py experiment=benchmark_V algorithm=greedy feedback=multinomial feedback.pass_V=true saver.params.path="results/feedback-V/grd-multinomial-withV-$*.txt" seed=$*
+
+$(JOBS_LLM_GRD_MULT_NOV): job-llm-feedback-grd-mult-nov%:
+	cd llm && mkdir -p results/feedback-V && OMP_NUM_THREADS=1 MKL_NUM_THREADS=1 $(PYTHONPATH) run_exp.py experiment=benchmark_V algorithm=greedy feedback=multinomial feedback.pass_V=false saver.params.path="results/feedback-V/grd-multinomial-noV-$*.txt" seed=$*
+
+llm-V-comparison: $(JOBS_LLM_GRD_MULT_V) $(JOBS_LLM_GRD_MULT_NOV)
 
 # Jobs for additivity experiment
 JOBS_LLM_ALG_ADD := $(addprefix job-llm-add-alg,${NUMBERS_LLM})

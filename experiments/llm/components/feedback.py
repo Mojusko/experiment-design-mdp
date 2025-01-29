@@ -3,7 +3,7 @@ import torch.nn.functional as F
 import numpy as np
 
 from doexpy.functionals.doe_static_functionals import (
-    DesignA, DesignD, MultiPolicyOrigDesignD, MultiPolicyAggDesignD
+    DesignA, DesignD, MultiPolicyOrigDesignD, MultiPolicyAggDesignD, MultiPolicyOrigDesignA
 )
 from doexpy.feedback.feedback_base import EmptyFeedback
 from stpy.embeddings.polynomial_embedding import CustomEmbedding
@@ -116,7 +116,13 @@ class FeedbackFactory:
             fb = NumericalFeedback(env, design, estimator)
         else:
 
-            design = MultiPolicyOrigDesignD(env=env, lambd=cfg.feedback.lambda_reg, dim=1)
+            #design = MultiPolicyOrigDesignD(env=env, lambd=cfg.feedback.lambda_reg, dim=1)
+            if cfg.feedback.pass_V:
+                V = torch.mm(env.emissions.T, env.emissions)  # Shape: [768 x 768] for CLIP embeddings
+                V = V / env.emissions.shape[0]  # Normalize by number of samples
+            else:
+                V=None
+            design = MultiPolicyOrigDesignA(env=env, lambd=cfg.feedback.lambda_reg, dim=1, V=V)
             likelihood = MultinomialLikelihood()
             regularizer = L2Regularizer(lam=cfg.feedback.lambda_reg)
             estimator = RegularizedMultinomialEstimator(embedding, likelihood, regularizer)
