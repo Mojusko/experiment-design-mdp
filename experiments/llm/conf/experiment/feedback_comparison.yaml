@@ -4,4 +4,4 @@ scorer_model: "aesthetics"
 #scorer_model: "random_combination"
 #scorer_model: "random_50_combination"
 vocab_size: 1000
-vocabulary: 'vocabulary.txt'
+vocabulary: 'diffusiondb.txt'
