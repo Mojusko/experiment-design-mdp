@@ -279,7 +279,7 @@ class MultiPolicyOrigDesignD(ExperimentDesignFunctional):
         if self.V is None:
             return torch.linalg.slogdet(z + self.lambd/episodes * eye)[1]
         else:
-            return torch.linalg.slogdet(self.V @ (z + self.lambd/episodes * eye))[1]
+            return torch.linalg.slogdet((self.V @ z) + self.lambd/episodes * eye)[1]
 
     def eval_full(self, emissions, distributions, episodes):
         return self.eval(emissions, distributions, episodes)
