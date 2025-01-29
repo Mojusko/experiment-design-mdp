@@ -1,5 +1,5 @@
 name: "lambda_finding"
-episodes: 100
+episodes: 50
 vocab_size: 1000
 scorer_model: "aesthetics"
 #scorer_model: "random_combination"
