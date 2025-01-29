@@ -118,8 +118,18 @@ class FeedbackFactory:
 
             #design = MultiPolicyOrigDesignD(env=env, lambd=cfg.feedback.lambda_reg, dim=1)
             if cfg.feedback.pass_V:
-                V = torch.mm(env.emissions.T, env.emissions)  # Shape: [768 x 768] for CLIP embeddings
-                V = V / env.emissions.shape[0]  # Normalize by number of samples
+                # Create matrix A of all pairwise differences
+                n = env.emissions.shape[0]
+                rows = []
+                for i in range(n):
+                    for j in range(i+1, n):
+                        diff = env.emissions[i] - env.emissions[j]
+                        rows.append(diff)
+                A = torch.stack(rows)  # Shape: [n*(n-1)/2 x 768]
+                
+                # Compute V using the difference matrix A
+                V = torch.mm(A.T, A)  # Shape: [768 x 768]
+                V = V / len(rows)  # Normalize by number of differences
             else:
                 V=None
             design = MultiPolicyOrigDesignA(env=env, lambd=cfg.feedback.lambda_reg, dim=1, V=V)
