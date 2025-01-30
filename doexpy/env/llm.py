@@ -337,7 +337,11 @@ def create_prompt(actions: List[int], env) -> str:
 
     tokens = [env.unique_elements[int(action)] for action in actions]
     valid_tokens = [t for t in tokens if t != " "]
-    return prefix + ", ".join(valid_tokens) if valid_tokens else prefix.rstrip()
+
+    if env.base_prompt:
+        return f"{env.base_prompt}, {', '.join(valid_tokens)}"
+    else:
+        return ', '.join(valid_tokens)
 
 def get_scorer_model(model_name: str, embedder, clip_model, clip_processor, cache_dir, emissions_env=None):
     """Initialize embedder and scoring model
@@ -406,9 +410,9 @@ def get_scorer_model(model_name: str, embedder, clip_model, clip_processor, cach
         
     raise ValueError(f"Unknown model_name: {model_name}")
 
-def make_theta_star(env, scorer_model):
+def make_theta_star(env, scorer_model, verbose = False):
 
-    def theta_star(actions: List[int], verbose: bool = False) -> Union[torch.Tensor, Tuple[torch.Tensor, torch.Tensor]]:
+    def theta_star(actions: List[int]) -> Union[torch.Tensor, Tuple[torch.Tensor, torch.Tensor]]:
         assert len(actions) > 0
         prompt = create_prompt(actions, env)
         

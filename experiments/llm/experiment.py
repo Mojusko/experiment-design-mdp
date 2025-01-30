@@ -115,7 +115,7 @@ class LLMExperiment:
             token_lists = [self.training_words]*horizon
 
         # Build environment
-        env = LLMGrid(token_lists, self._clip_model, self._clip_processor, self._clip_tokenizer, self.cfg.cache_dir)
+        env = LLMGrid(token_lists, self._clip_model, self._clip_processor, self._clip_tokenizer, self.cfg.cache_dir, base_prompt=self.cfg.base_prompt)
 
         # Build scorer using model emissions
         self._scorer_model = get_scorer_model(
