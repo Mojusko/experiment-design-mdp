@@ -1,8 +1,8 @@
 name: "multinomial"
 num_policies: 2
-num_components: 4
-num_rounds: 100
+num_components: 2
+num_rounds: 75
 #lambda_reg: 4000
 lambda_reg: 100
-adaptive_estimation_frequency: 0
+adaptive_estimation_frequency: 50
 pass_V: false
