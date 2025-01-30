@@ -3,7 +3,7 @@ defaults:
   - feedback: numerical
 
 seed: 12
-base_prompt: ''
+base_prompt: 'A man walking in paris'
 algorithm: "greedy"
 cache_dir: "${oc.env:HOME}/.cache/huggingface/hub"
 horizon: 3
