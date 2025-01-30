@@ -36,6 +36,14 @@ class LLMGrid(DiscreteEnv):
         self.base_prompt = base_prompt
         self.max_episode_length = len(list_of_text_tokens)
 
+        # Add base prompt to first token list if needed
+        if base_prompt:
+            first_tokens = [f"{base_prompt}, {t}" if t != ' ' else t for t in list_of_text_tokens[0]]
+            self.list_of_text_tokens = [first_tokens] + list_of_text_tokens[1:]
+        else:
+            self.list_of_text_tokens = list_of_text_tokens
+            
+        self.max_episode_length = len(self.list_of_text_tokens)
         # Setup tokens dictionary
         self.tokens = {}
         index = 1
@@ -68,22 +76,6 @@ class LLMGrid(DiscreteEnv):
     def get_states_num(self):
         return self.states_num
 
-
-    #def _generate_emissions_legacy(self):
-    #    # TODO: delete this
-    #    if self.verbose:
-    #        print("PREPROCESS: Generating emissions")
-    #    self.emissions = []
-    #    for i in range(self.actions_num):
-    #        text = self.unique_elements[i]
-    #        if self.verbose:
-    #            print(f"Generating emission for action {i}, text: {text}")
-    #        feat = self.embedder.embed_text(text)
-    #        self.emissions.append(feat)
-    #        
-    #    if self.verbose:
-    #        print("Done generating.")
-    #    self.emissions = torch.vstack(self.emissions)
     def next(self, state, action):
         return state + 1
 
