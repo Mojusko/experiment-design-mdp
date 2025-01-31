@@ -194,9 +194,9 @@ class MultiPolicyAggDesignD(MultiPolicyAggDesignA):
         eye = torch.eye(z.shape[0], device=z.device, dtype=z.dtype)
         return torch.linalg.slogdet(z + self.lambd/episodes * eye)[1]
 
-class MultiPolicyOrigDesignD(ExperimentDesignFunctional):
+class MultiPolicyOrigDesignD(RewardFunctional):
     def __init__(self, env, lambd=1e-3, dim=0, V=None, time_weigh=True):
-        super().__init__(dim=dim)
+        super().__init__()
         self.lambd = lambd
         self.type = "static"
         self.env = env
@@ -204,6 +204,7 @@ class MultiPolicyOrigDesignD(ExperimentDesignFunctional):
         self.time_weigh = time_weigh
         self.estimator = None
         self.prob_matrix = None
+        self.dim = dim
 
     def update_estimator(self, estimator, emissions):
         """Update the estimator and recompute probability matrix."""

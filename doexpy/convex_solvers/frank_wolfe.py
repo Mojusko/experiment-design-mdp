@@ -267,6 +267,7 @@ class FrankWolfe(ConvexSolverBase):
                             temp_densities = densities.copy()
                             temp_densities[policy_idx] = densities[policy_idx] * (1 - h) + h * new_density
                             if self.objective.get_type() == "adaptive":
+                                # TODO: make sure visitation is per policy
                                 return -self.objective.eval(emissions, temp_densities, visitations, episodes).detach().cpu().numpy()
                             return -self.objective.eval(emissions, temp_densities, episodes).detach().cpu().numpy()
                         

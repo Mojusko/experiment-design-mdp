@@ -1,4 +1,3 @@
-
 import os
 import torch
 import numpy as np
@@ -61,34 +60,82 @@ class LLMExperiment:
         self.tester = hydra.utils.instantiate(cfg.tester, scorer_model=self._scorer_model)
         self.saver = hydra.utils.instantiate(cfg.saver)
         
-        self.visits = []
+        self.visits = [] if self.cfg.feedback.num_policies == 1 else [[] for _ in range(self.cfg.feedback.num_policies )]
         
     def _perform_estimation(self, visits, update_design=False):
-        """Performs estimation and updates design with new estimator"""
-        self.feedback.collect_data(self.cfg, visits, self.estimator, self._theta_star)
+        """Only performs estimation using already collected data"""
+        self.feedback.fit_estimator()
         mae = compute_prob_mae(self.env.emissions, self.estimator, self._scorer_model)
-        #print(f'T: {len(visits[0])}', self.feedback.metrics)
         print(f'T: {len(visits[0])}, MAE: {mae}', self.feedback.metrics)
         if update_design:
             self.design.update_estimator(self.estimator, self.env.emissions)
-        
 
     def run(self):
-        """Runs exploration with periodic estimation"""
+        """
+        Runs exploration with a single call to explorer.run, but uses a callback
+        to buffer newly collected episodes. Once we've accumulated `freq` episodes
+        (or hit the final episode), we refit to exactly that set of new visits.
+    
+        This ensures that the design always knows the total # of episodes,
+        yet we only re-fit every `freq` episodes, similar to the old phased approach.
+        """
         total_episodes = self.cfg.experiment.episodes
         freq = self.cfg.feedback.adaptive_estimation_frequency
+        num_policies = self.cfg.feedback.num_policies
     
-        if freq > 0 and (self.cfg.feedback.name != 'multinomial' or self.cfg.algorithm != 'greedy'):
-            raise NotImplementedError("Adaptive estimation currently only implemented for multinomial feedback")
+        # We'll keep a buffer of newly discovered episodes. For multi-policy, this is
+        # a list of length num_policies, each an array of visits since the last re-fit.
+        recent_visits_buffer = [[] for _ in range(num_policies)]
+    
+        def update_callback(ep_idx, new_visits_for_this_episode):
+            # new_visits_for_this_episode is a list of length num_policies, each the
+            # single newly collected episode for that policy.
+    
+            # Accumulate them in our buffer
+            for policy_idx, single_visit in enumerate(new_visits_for_this_episode):
+                recent_visits_buffer[policy_idx].append(single_visit)
+    
+            # Check if it's time to do a partial re-fit (freq episodes or end)
+            if freq > 0 and ((ep_idx + 1) % freq == 0 or (ep_idx + 1) == total_episodes):
+
+                # Label just these newly collected episodes, then fit
+                self.feedback.collect_labels(self.cfg, recent_visits_buffer, self._theta_star)
+                self.feedback.fit_estimator()
+                self.design.update_estimator(self.estimator, self.env.emissions)
+    
+                # Optionally measure partial MAE
+                mae = compute_prob_mae(self.env.emissions, self.estimator, self._scorer_model)
+                print(f"Episode {ep_idx+1} partial re-fit, MAE: {mae}", self.feedback.metrics)
+    
+                # Clear our buffer so next batch is fresh
+                for p_i in range(num_policies):
+                    recent_visits_buffer[p_i].clear()
+    
+        # Now call explorer.run exactly once, passing our callback
+        # We request visitations so we can store them if desired
+        results = self.explorer.run(
+            episodes=total_episodes,
+            return_visitations=True,
+            update_callback=update_callback
+        )
+        # results is typically (objective_values, opt, visits)
+        # store them if needed
+        *_, self.visits = results
+    
+        # If freq=0, that means we never refit until the very end. So do it now:
         if freq == 0:
-            _, _, phase_visits = self.explorer.run(episodes=total_episodes, return_visitations=True)
-            self.visits = phase_visits
-            return
-        for phase_episodes in range(freq, total_episodes + 1, freq):
-            self.explorer = SolverFactory.create(self.cfg, self.env, self.design, self.feedback)
-            _, _, phase_visits = self.explorer.run(episodes=phase_episodes, return_visitations=True)
-            self._perform_estimation(phase_visits, update_design=True)
-        self.visits = phase_visits
+            # Flatten all visits from all policies
+            final_visits_all = []
+            for policy_visits_list in self.visits:
+                final_visits_all.extend(policy_visits_list)
+    
+            self.feedback.collect_labels(self.cfg, final_visits_all, self._theta_star)
+            self.feedback.fit_estimator()
+            self.design.update_estimator(self.estimator, self.env.emissions)
+    
+        # Finally, measure the MAE after the full run
+        mae = compute_prob_mae(self.env.emissions, self.estimator, self._scorer_model)
+        print(f"Final MAE after all episodes: {mae}")
         
     def _init_env(self):
         """
@@ -131,7 +178,6 @@ class LLMExperiment:
 
     def test_and_save(self):
         """Final estimation, testing and saving of results"""
-        self._perform_estimation(self.visits)  # Final estimation using all data
         result_dict = self.tester.run_test(
             cfg=self.cfg,
             env=self.env,
@@ -141,14 +187,6 @@ class LLMExperiment:
             testing_words_list=self.testing_words
         )
         self.saver.save_result(result_dict)
-
-    def _fit_estimator(self):
-        """Collect data from 'visits' and fit the estimator (numerical or multinomial)."""
-        if self.visits is None:
-            print("No visits found, skipping fit.")
-            return
-        # We rely on the feedback component to collect data & call 'estimator.fit'.
-        self.feedback.collect_data(self.cfg, self.visits, self.estimator, self._theta_star)
 
     def _load_data(self):
         """Returns training_words, test_words, and model_words in 60-20-20 split"""

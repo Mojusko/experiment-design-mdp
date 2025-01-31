@@ -247,7 +247,6 @@ class MdpExplore():
 
         return objective_values, opt
 
-
 class DummyOptimizer:
     def optimize(self, *args, **kwargs):
         raise ValueError(f'Policies belonging to MdpExploreMultiPolicy should only be jointly optimized')
@@ -402,62 +401,88 @@ class MdpExploreMultiPolicy:
                      self.action_visitations_per_policy[policy_idx])
                 )
                 
-    def run(self, episodes: int = 100, save_trajectory: Union[str, None] = None, return_visitations: bool = False):
-        if self.objective.type == "adaptive":
-            self.episodes = episodes
-            self._reset()
-            run_objective_values = []
-
-            for i in range(episodes):
-                if self.verbosity > 2:
-                    print("Episode:", i)
-
-                self.evaluate(1)
-                
-                # Build distributions for all policies
-                aggregate_distributions = []
-                for policy_idx in range(self.num_policies):
-                    agg_dist = self.objective.build_density_from_trajectories(
-                        self.visitations_per_policy[policy_idx])
-                    aggregate_distributions.append(agg_dist)
-
-                    if save_trajectory is not None:
-                        np.savetxt(f"{save_trajectory}_policy{policy_idx}_{i}.txt",
-                                 np.array([self.env.convert(state) for state in self.trajectory_per_policy[policy_idx]]))
-
-                objective = self.objective.eval_full(
-                    self.emissions, aggregate_distributions, episodes
-                )
-                if isinstance(objective, torch.Tensor):
-                    objective = objective.detach()  # Ensure we detach before CPU conversion
-                print(f'Episode {i}, Value: {objective}')
-                run_objective_values.append(objective)
-
-        else:
+    def run(
+        self,
+        episodes: int = 100,
+        save_trajectory: Union[str, None] = None,
+        return_visitations: bool = False,
+        update_callback=None
+    ):
+        """
+        Runs the maximum-entropy exploration procedure in a single pass over `episodes`.
+        If an `update_callback` is provided, it will be called after each episode, allowing
+        partial estimator updates, design updates, etc.
+    
+        Args:
+            episodes (int): total number of episodes to run.
+            save_trajectory (str or None): path prefix for saving trajectories (if needed).
+            return_visitations (bool): if True, return the final visitations array.
+            update_callback (callable or None): a function `fn(ep_idx, new_visits)` called
+                after each episode, where `new_visits` is the newly collected trajectories
+                for each policy. Defaults to None.
+    
+        Returns:
+            (objective_values, opt) or (objective_values, opt, visitations_per_policy)
+            if `return_visitations` is True.
+        """
+        # Reset and set total episodes
+        self._reset()
+        self.episodes = episodes
+    
+        # We'll track a per-episode objective
+        run_objective_values = []
+    
+        # If objective is NOT adaptive, we typically do a one-time policy optimization before running
+        if self.objective.get_type() != "adaptive":
             if self.verbosity > 0:
                 print("Optimizing starting with budget:", episodes)
-            self._reset()
-            self.episodes = episodes
             self.optimize_policies()
+            # Reset visits for the actual rollouts
             self.visitations_per_policy = [[] for _ in range(self.num_policies)]
-            self.evaluate(episodes, keep=True)
-
-            run_objective_values = []
-            aggregate_distributions = [0] * self.num_policies
-            
-            # Process visitations for each episode
-            for i, visitations in enumerate(zip(*self.visitations_per_policy)):
+    
+        # Main loop: run exactly one new episode each iteration
+        for ep_i in range(episodes):
+            if self.verbosity > 2:
+                print("Episode:", ep_i)
+    
+            # Evaluate exactly 1 episode for each policy
+            # 'keep=False' means we can re-optimize inside the callback if needed
+            self.evaluate(episodes=1, keep=False)
+    
+            # The newly added visits for each policy are the last entries
+            new_visits = [vp[-1] for vp in self.visitations_per_policy]
+    
+            # If user provided a callback, call it to do partial re-fitting, etc.
+            if update_callback is not None:
+                update_callback(ep_i, new_visits)
+    
+            # Optionally save trajectory
+            if save_trajectory is not None:
                 for policy_idx in range(self.num_policies):
-                    agg_dist = (i * aggregate_distributions[policy_idx] + 
-                              self.objective.build_density_from_trajectories([visitations[policy_idx]])) / (i + 1)
-                    aggregate_distributions[policy_idx] = agg_dist
-
-                val = self.objective.eval_full(self.emissions, aggregate_distributions, self.episodes)
-                if isinstance(val, torch.Tensor):
-                    val = val.detach()
-                run_objective_values.append(val)
-
-        # Convert objective values to numpy consistently
+                    np.savetxt(
+                        f"{save_trajectory}_policy{policy_idx}_{ep_i}.txt",
+                        np.array([
+                            self.env.convert(s)
+                            for s in self.trajectory_per_policy[policy_idx]
+                        ])
+                    )
+    
+            # For logging, compute the objective so far
+            aggregate_distributions = []
+            for policy_idx in range(self.num_policies):
+                agg_dist = self.objective.build_density_from_trajectories(
+                    self.visitations_per_policy[policy_idx]
+                )
+                aggregate_distributions.append(agg_dist)
+    
+            val = self.objective.eval_full(self.emissions, aggregate_distributions, episodes)
+            if isinstance(val, torch.Tensor):
+                val = val.detach()
+            if self.verbosity > 2:
+                print(f"Episode {ep_i}, Objective Value: {val}")
+            run_objective_values.append(val)
+    
+        # Convert objective values to NumPy
         objective_values = []
         for val in run_objective_values:
             if isinstance(val, torch.Tensor):
@@ -465,8 +490,8 @@ class MdpExploreMultiPolicy:
             else:
                 objective_values.append(val)
         objective_values = np.array(objective_values)
-
-        # Handle optimal value computation
+    
+        # Handle optional "optimal" value computation if not adaptive
         if self.objective.get_type() != "adaptive":
             densities = [policy.return_density() for policy in self.general_policies]
             opt = self.objective.eval_full(self.emissions, densities, self.episodes)
@@ -474,8 +499,8 @@ class MdpExploreMultiPolicy:
                 opt = opt.detach().cpu().numpy()
         else:
             opt = None
-
+    
         if return_visitations:
             return objective_values, opt, self.visitations_per_policy
-
+    
         return objective_values, opt
