@@ -43,7 +43,7 @@ fi
 PREFIX="--wrap="
 # Suffix for job specs
 #SUFFIX="--time=2:00:00 --mem-per-cpu=4G --ntasks=8 --gpus=1 --gres=gpumem:8g"
-SUFFIX="--time=4:00:00 --mem-per-cpu=4G --ntasks=8 --gpus=1 --gres=gpumem:8g"
+SUFFIX="--time=8:00:00 --mem-per-cpu=4G --ntasks=8 --gpus=1 --gres=gpumem:8g"
 
 # Check if input is from pipe or file
 if [ -p /dev/stdin ]; then

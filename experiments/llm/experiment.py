@@ -124,12 +124,8 @@ class LLMExperiment:
     
         # If freq=0, that means we never refit until the very end. So do it now:
         if freq == 0:
-            # Flatten all visits from all policies
-            final_visits_all = []
-            for policy_visits_list in self.visits:
-                final_visits_all.extend(policy_visits_list)
     
-            self.feedback.collect_labels(self.cfg, final_visits_all, self._theta_star)
+            self.feedback.collect_labels(self.cfg, self.visits, self._theta_star)
             self.feedback.fit_estimator()
             self.design.update_estimator(self.estimator, self.env.emissions)
     
