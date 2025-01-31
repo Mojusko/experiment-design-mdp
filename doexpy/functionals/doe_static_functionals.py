@@ -207,6 +207,7 @@ class MultiPolicyOrigDesignD(RewardFunctional):
         self.dim = dim
 
     def update_estimator(self, estimator, emissions):
+        import ipdb; ipdb.set_trace()
         """Update the estimator and recompute probability matrix."""
         self.estimator = estimator
         self._update_probability_matrix(emissions)
