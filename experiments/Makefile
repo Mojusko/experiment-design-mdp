@@ -344,7 +344,7 @@ llm-feedback-comparison: llm-feedback-comparison-num llm-feedback-comparison-mul
 
 # Lambda-finding
 # We'll run each lambda_reg value for REPEATS_LLM seeds
-LAMBDA_VALUES_MUL := 100 200 400 1000 
+LAMBDA_VALUES_MUL := 10 100 200 400 1000 
 LAMBDA_VALUES_NUM := 0.0001 0.001 0.01 0.1 1 10
 
 # Generate job names for each (lambda, seed) pair for both types
@@ -382,6 +382,30 @@ $(foreach lambda,$(LAMBDA_VALUES_NUM), \
 llm-find-lambda-mul: $(JOBS_LLM_LAMBDA_MUL)
 llm-find-lambda-num: $(JOBS_LLM_LAMBDA_NUM)
 llm-find-lambda: llm-find-lambda-mul llm-find-lambda-num
+
+# Frequency-finding for adaptive estimation
+# We'll run each frequency value for REPEATS_LLM seeds
+FREQUENCY_VALUES := 5 10 20 50
+
+# Generate job names for each (frequency, seed) pair
+JOBS_LLM_FREQUENCY := \
+  $(foreach freq,$(FREQUENCY_VALUES), \
+    $(foreach n,$(NUMBERS_LLM), \
+      job-llm-freq-$(freq)-$(n)))
+
+# Macro to define each frequency job
+define frequency_job_template
+job-llm-freq-$(1)-$(2):
+	cd llm && mkdir -p results/frequency-finding && OMP_NUM_THREADS=1 MKL_NUM_THREADS=1 $(PYTHONPATH) run_exp.py experiment=frequency_finding feedback=multinomial algorithm=greedy feedback.adaptive_estimation_frequency=$(1) seed=$(2) saver.params.path="results/frequency-finding/grd-multinomial-freq-$(1)-$(2).txt"
+endef
+
+# Instantiate all frequency jobs from the macro
+$(foreach freq,$(FREQUENCY_VALUES), \
+  $(foreach n,$(NUMBERS_LLM), \
+    $(eval $(call frequency_job_template,$(freq),$(n)))))
+
+# Target to run all frequency finding jobs
+llm-find-frequency: $(JOBS_LLM_FREQUENCY)
 
 PLOTS: 
 	${PYTHONPATH} plot_grids.py && ${PYTHONPATH} plot_pharma.py && ${PYTHONPATH} plot.py
