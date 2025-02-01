@@ -286,7 +286,7 @@ STOCH: STOCH1 STOCH2 STOCH3 STOCH0
 
 
 ########################### LLMS
-REPEATS_LLM=6
+REPEATS_LLM=10
 NUMBERS_LLM := $(shell seq 1 ${REPEATS_LLM})
 
 
