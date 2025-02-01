@@ -1,0 +1,5 @@
+name: "frequency_finding"
+episodes: 125
+vocab_size: 1000
+scorer_model: "aesthetics"
+vocabulary: 'diffusiondb.txt'
