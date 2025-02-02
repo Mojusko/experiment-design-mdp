@@ -342,6 +342,25 @@ llm-feedback-comparison-num: $(JOBS_LLM_GRD_NUM) $(JOBS_LLM_RAN_NUM)
 llm-feedback-comparison-mul: $(JOBS_LLM_GRD_MULT) $(JOBS_LLM_RAN_MULT)
 llm-feedback-comparison: llm-feedback-comparison-num llm-feedback-comparison-mul
 
+# Test different numbers of rounds for feedback optimization
+ROUNDS_VALUES := 5 10 15 20
+
+JOBS_LLM_ROUNDS := \
+  $(foreach rounds,$(ROUNDS_VALUES), \
+    $(foreach n,$(NUMBERS_LLM), \
+      job-llm-rounds-$(rounds)-$(n)))
+
+define rounds_job_template
+job-llm-rounds-$(1)-$(2):
+	cd llm && mkdir -p results/rounds-finding && OMP_NUM_THREADS=1 MKL_NUM_THREADS=1 $(PYTHONPATH) run_exp.py experiment=rounds_finding feedback=multinomial algorithm=greedy feedback.num_rounds=$(1) seed=$(2) saver.params.path="results/rounds-finding/grd-multinomial-rounds-$(1)-$(2).txt"
+endef
+
+$(foreach rounds,$(ROUNDS_VALUES), \
+  $(foreach n,$(NUMBERS_LLM), \
+    $(eval $(call rounds_job_template,$(rounds),$(n)))))
+
+llm-find-rounds: $(JOBS_LLM_ROUNDS)
+
 # Lambda-finding
 # We'll run each lambda_reg value for REPEATS_LLM seeds
 LAMBDA_VALUES_MUL := 10 100 200 400 1000 
