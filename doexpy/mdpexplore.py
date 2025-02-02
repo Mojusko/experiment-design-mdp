@@ -448,7 +448,7 @@ class MdpExploreMultiPolicy:
                 print("Episode:", ep_i)
     
             if self.objective.get_type() == "adaptive":
-                if ((ep_i + 1) % self.adaptive_design_frequency == 0) or ((ep_i) == 0):
+                if ep_i % self.adaptive_design_frequency == 0:
                     if self.verbosity > 1:
                         print(f"Re-optimizing policies at episode {ep_i+1}")
 

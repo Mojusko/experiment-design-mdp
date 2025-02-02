@@ -96,7 +96,7 @@ class LLMExperiment:
                 recent_visits_buffer[policy_idx].append(single_visit)
     
             # Check if it's time to do a partial re-fit (freq episodes or end)
-            if freq > 0 and ((ep_idx + 1) % freq == 0 or (ep_idx + 1) == total_episodes):
+            if self.cfg.algorithm != 'random' and freq > 0 and (ep_idx + 1) % freq == 0:
 
                 # Label just these newly collected episodes, then fit
                 self.feedback.collect_labels(self.cfg, recent_visits_buffer, self._theta_star)
@@ -123,12 +123,11 @@ class LLMExperiment:
         # store them if needed
         *_, self.visits = results
     
-        # If freq=0, that means we never refit until the very end. So do it now:
-        if freq == 0:
     
-            self.feedback.collect_labels(self.cfg, self.visits, self._theta_star)
-            self.feedback.fit_estimator()
-            self.design.update_estimator(self.estimator, self.env.emissions)
+        # Very end fit
+        self.feedback.collect_labels(self.cfg, self.visits, self._theta_star)
+        self.feedback.fit_estimator()
+        self.design.update_estimator(self.estimator, self.env.emissions)
     
         # Finally, measure the MAE after the full run
         mae = compute_prob_mae(self.env.emissions, self.estimator, self._scorer_model)

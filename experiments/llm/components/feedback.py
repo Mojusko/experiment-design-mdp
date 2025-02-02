@@ -6,7 +6,7 @@ from doexpy.functionals.doe_static_functionals import (
     DesignA, DesignD, MultiPolicyOrigDesignD, MultiPolicyAggDesignD, MultiPolicyOrigDesignA
 )
 from doexpy.functionals.doe_adaptive_functionals import (
-    AdaptiveOrigDesignD
+    AdaptiveOrigDesignD, AdaptiveOrigDesignA
 )
 from doexpy.feedback.feedback_base import EmptyFeedback
 from stpy.embeddings.polynomial_embedding import CustomEmbedding
@@ -147,7 +147,9 @@ class FeedbackFactory:
             else:
                 V=None
             #design = MultiPolicyOrigDesignD(env=env, lambd=cfg.feedback.lambda_reg, dim=1, V=V)
-            design = AdaptiveOrigDesignD(env=env, lambd=cfg.feedback.lambda_reg, dim=1)
+            #design = AdaptiveOrigDesignD(env=env, lambd=cfg.feedback.lambda_reg, dim=1)
+            design = AdaptiveOrigDesignA(env=env, lambd=cfg.feedback.lambda_reg, dim=1)
+
             likelihood = MultinomialLikelihood()
             regularizer = L2Regularizer(lam=cfg.feedback.lambda_reg)
             estimator = RegularizedMultinomialEstimator(embedding, likelihood, regularizer)
