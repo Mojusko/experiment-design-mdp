@@ -262,6 +262,7 @@ class MdpExploreMultiPolicy:
             optimize_repetitions: bool = False,
             feedback: Feedback = EmptyFeedback(),
             general_policy: str = 'markovian',
+            adaptive_design_frequency: int = 1,
     ) -> None:
         """Class containing components required to run the maximum entropy exploration algorithm with multiple policies
         
@@ -288,6 +289,7 @@ class MdpExploreMultiPolicy:
         self.densities_per_policy = [[] for _ in range(num_policies)]
         self.objective_values_baseline_per_policy = [[] for _ in range(num_policies)]
         self.visitations_per_policy = [[] for _ in range(num_policies)]
+        self.adaptive_design_frequency = adaptive_design_frequency
         
         # Initialize policies
         policy_class = MarkovianPolicy if general_policy == 'markovian' else NonMarkovianPolicy
@@ -445,9 +447,17 @@ class MdpExploreMultiPolicy:
             if self.verbosity > 2:
                 print("Episode:", ep_i)
     
+            if self.objective.get_type() == "adaptive":
+                if ((ep_i + 1) % self.adaptive_design_frequency == 0) or ((ep_i) == 0):
+                    if self.verbosity > 1:
+                        print(f"Re-optimizing policies at episode {ep_i+1}")
+
+                    self.env.reset()
+                    self.optimize_policies()
+
             # Evaluate exactly 1 episode for each policy
             # 'keep=False' means we can re-optimize inside the callback if needed
-            self.evaluate(episodes=1, keep=False)
+            self.evaluate(episodes=1, keep=True)
     
             # The newly added visits for each policy are the last entries
             new_visits = [vp[-1] for vp in self.visitations_per_policy]
@@ -466,7 +476,7 @@ class MdpExploreMultiPolicy:
                             for s in self.trajectory_per_policy[policy_idx]
                         ])
                     )
-    
+
             # For logging, compute the objective so far
             aggregate_distributions = []
             for policy_idx in range(self.num_policies):

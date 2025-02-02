@@ -58,6 +58,7 @@ class SolverFactory:
         # Add specific arguments for MdpExploreMultiPolicy
         if explorer_cls is MdpExploreMultiPolicy:
             explorer_kwargs['num_policies'] = num_policies
+            explorer_kwargs['adaptive_design_frequency'] = cfg.feedback.adaptive_design_frequency
     
         # Instantiate the explorer
         explorer = explorer_cls(**explorer_kwargs)
