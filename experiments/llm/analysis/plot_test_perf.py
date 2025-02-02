@@ -17,6 +17,10 @@ def parse_filename(filename):
         parts = base.split('-')
         freq_val = int(parts[-2])
         return ("frequency", freq_val)
+    elif "rounds" in base:
+        parts = base.split('-')
+        rounds_val = int(parts[-2])
+        return ("rounds", rounds_val)
     else:
         alg_type, feedback_type, _ = base.rsplit('-', 2)
         return ("feedback", (alg_type, feedback_type))
@@ -30,6 +34,18 @@ def plot_frequency_results(results):
     plt.bar([str(x) for x in freq_vals], means, yerr=stds, capsize=5)
     plt.xlabel("Estimation Frequency")
     plt.ylabel("Preference Misalignment Error")
+    plt.xticks(rotation=45)
+    plt.tight_layout()
+
+def plot_rounds_results(results):
+    rounds_vals = sorted(results.keys())
+    means = [np.mean(results[k]) for k in rounds_vals]
+    stds = [np.std(results[k]) for k in rounds_vals]
+
+    plt.figure(figsize=(10, 6))
+    plt.bar([str(x) for x in rounds_vals], means, yerr=stds, capsize=5)
+    plt.xlabel("Number of Rounds")
+    plt.ylabel("Preference Misalignment Error") 
     plt.xticks(rotation=45)
     plt.tight_layout()
 
@@ -76,6 +92,7 @@ def plot_results(directory):
     feedback_results = {}
     v_results = {}
     frequency_results = {}
+    rounds_results = {}
     
     for f in files:
         exp_type, key = parse_filename(f)
@@ -93,6 +110,10 @@ def plot_results(directory):
             if key not in frequency_results:
                 frequency_results[key] = []
             frequency_results[key].append(val)
+        elif exp_type == "rounds":
+            if key not in rounds_results:
+                rounds_results[key] = []
+            rounds_results[key].append(val)
         else:
             combined_key = f"{key[0]}-{key[1]}"
             if combined_key not in feedback_results:
@@ -107,6 +128,8 @@ def plot_results(directory):
         plot_v_results(v_results)
     if frequency_results:
         plot_frequency_results(frequency_results)
+    if rounds_results:
+        plot_rounds_results(rounds_results)
     plt.show()
 
 if __name__ == "__main__":
