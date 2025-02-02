@@ -113,6 +113,7 @@ class LLMExperiment:
     
         # Now call explorer.run exactly once, passing our callback
         # We request visitations so we can store them if desired
+        # TODO: add support for numerical designs
         results = self.explorer.run(
             episodes=total_episodes,
             return_visitations=True,

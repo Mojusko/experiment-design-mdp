@@ -5,7 +5,7 @@ from typing import List, Union, Callable
 from abc import ABC, abstractmethod
 from doexpy.env.discrete_env import Environment
 from doexpy.functionals.reward_functional import RewardFunctional
-from doexpy.functionals.doe_static_functionals import MultiPolicyOrigDesignD
+from doexpy.functionals.doe_static_functionals import MultiPolicyOrigDesignD, MultiPolicyOrigDesignA
 
 class AdaptiveDesignD(RewardFunctional):
 
@@ -261,3 +261,40 @@ class AdaptiveOrigDesignD(MultiPolicyOrigDesignD):
         z = super()._calculate_z(emissions, distributions, episodes)
         eye = torch.eye(z.shape[0], device=z.device, dtype=z.dtype)
         return torch.linalg.slogdet(z + self.lambd/episodes * eye)[1]
+
+class AdaptiveOrigDesignA(MultiPolicyOrigDesignA):
+    def __init__(self, env, lambd=1e-3, dim=0, uniform_alpha=False):
+        super().__init__(env, lambd, dim)
+        self.type = "adaptive"
+        self.uniform_alpha = uniform_alpha
+
+    def eval(self, emissions, distributions, visitations_per_policy, episodes):
+        # Handle adaptive weighting based on history
+        agg_densities = [
+            self.build_density_from_trajectories(visitations) 
+            for visitations in visitations_per_policy
+        ]
+        
+        alpha = len(visitations_per_policy[0]) / episodes
+        
+        # Calculate information matrices
+        new_z = super()._calculate_z(emissions, distributions, episodes)
+        agg_z = super()._calculate_z(emissions, agg_densities, episodes)
+        
+        # Weight combination based on alpha
+        z = (1.0 / episodes) * new_z + alpha * agg_z if self.uniform_alpha else (1 - alpha) * new_z + alpha * agg_z
+        
+        eye = torch.eye(z.shape[0], device=z.device, dtype=z.dtype)
+        if self.V is None:
+            return -torch.trace(torch.linalg.inv(z + self.lambd/episodes * eye))
+        else:
+            return -torch.trace(self.V @ torch.linalg.inv(z + self.lambd/episodes * eye))
+
+    def eval_full(self, emissions, distributions, episodes):
+        # For final evaluation - just use distributions directly
+        z = super()._calculate_z(emissions, distributions, episodes)
+        eye = torch.eye(z.shape[0], device=z.device, dtype=z.dtype)
+        if self.V is None:
+            return -torch.trace(torch.linalg.inv(z + self.lambd/episodes * eye))
+        else:
+            return -torch.trace(self.V @ torch.linalg.inv(z + self.lambd/episodes * eye))

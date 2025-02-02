@@ -404,7 +404,7 @@ llm-find-lambda: llm-find-lambda-mul llm-find-lambda-num
 
 # Frequency-finding for adaptive estimation
 # We'll run each frequency value for REPEATS_LLM seeds
-FREQUENCY_VALUES := 5 10 15 25 50
+FREQUENCY_VALUES := 10 20 50
 
 # Generate job names for each (frequency, seed) pair
 JOBS_LLM_FREQUENCY := \
