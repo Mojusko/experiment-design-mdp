@@ -80,7 +80,8 @@ class LLMExperiment:
         yet we only re-fit every `freq` episodes, similar to the old phased approach.
         """
         total_episodes = self.cfg.experiment.episodes
-        freq = self.cfg.feedback.adaptive_estimation_frequency
+        est_freq = self.cfg.feedback.adaptive_estimation_frequency
+        est_start = self.cfg.feedback.adaptive_estimation_start
         num_policies = self.cfg.feedback.num_policies
     
         # We'll keep a buffer of newly discovered episodes. For multi-policy, this is
@@ -95,8 +96,8 @@ class LLMExperiment:
             for policy_idx, single_visit in enumerate(new_visits_for_this_episode):
                 recent_visits_buffer[policy_idx].append(single_visit)
     
-            # Check if it's time to do a partial re-fit (freq episodes or end)
-            if self.cfg.algorithm != 'random' and freq > 0 and (ep_idx + 1) % freq == 0:
+            # Check if it's time to do a partial re-fit 
+            if self.cfg.algorithm != 'random' and est_freq > 0 and ep_idx < total_episodes-1 and ep_idx > 0 and ep_idx  % est_freq == 0 and ep_idx >= est_start:
 
                 # Label just these newly collected episodes, then fit
                 self.feedback.collect_labels(self.cfg, recent_visits_buffer, self._theta_star)
@@ -105,7 +106,7 @@ class LLMExperiment:
     
                 # Optionally measure partial MAE
                 mae = compute_prob_mae(self.env.emissions, self.estimator, self._scorer_model)
-                print(f"Episode {ep_idx+1} partial re-fit, MAE: {mae}", self.feedback.metrics)
+                print(f"Episode {ep_idx} partial re-fit, MAE: {mae}", self.feedback.metrics)
     
                 # Clear our buffer so next batch is fresh
                 for p_i in range(num_policies):

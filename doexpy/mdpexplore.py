@@ -447,10 +447,18 @@ class MdpExploreMultiPolicy:
             if self.verbosity > 2:
                 print("Episode:", ep_i)
     
+            # The newly added visits for each policy are the last entries
+            new_visits = [vp[-1] for vp in self.visitations_per_policy] if ep_i > 0 else []
+    
+            # If user provided a callback, call it to do partial re-fitting, etc.
+            if update_callback is not None:
+                update_callback(ep_i, new_visits)
+ 
+
             if self.objective.get_type() == "adaptive":
                 if ep_i % self.adaptive_design_frequency == 0:
                     if self.verbosity > 1:
-                        print(f"Re-optimizing policies at episode {ep_i+1}")
+                        print(f"Re-optimizing policies at episode {ep_i}")
 
                     self.env.reset()
                     self.optimize_policies()
@@ -459,13 +467,7 @@ class MdpExploreMultiPolicy:
             # 'keep=False' means we can re-optimize inside the callback if needed
             self.evaluate(episodes=1, keep=True)
     
-            # The newly added visits for each policy are the last entries
-            new_visits = [vp[-1] for vp in self.visitations_per_policy]
-    
-            # If user provided a callback, call it to do partial re-fitting, etc.
-            if update_callback is not None:
-                update_callback(ep_i, new_visits)
-    
+   
             # Optionally save trajectory
             if save_trajectory is not None:
                 for policy_idx in range(self.num_policies):

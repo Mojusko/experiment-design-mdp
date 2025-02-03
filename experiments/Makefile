@@ -322,20 +322,20 @@ JOBS_LLM_GRD_NUM := $(addprefix job-llm-feedback-grd-num,$(NUMBERS_LLM))
 JOBS_LLM_RAN_NUM := $(addprefix job-llm-feedback-ran-num,$(NUMBERS_LLM))
 
 $(JOBS_LLM_GRD_NUM): job-llm-feedback-grd-num%:
-	cd llm && mkdir -p results/feedback-comparison && OMP_NUM_THREADS=1 MKL_NUM_THREADS=1 $(PYTHONPATH) run_exp.py experiment=feedback_comparison algorithm=greedy feedback=numerical saver.params.path="results/feedback-comparison_voc_1000_rounds_150/grd-numerical-$*.txt" seed=$*
+	cd llm && mkdir -p results/feedback-comparison && OMP_NUM_THREADS=1 MKL_NUM_THREADS=1 $(PYTHONPATH) run_exp.py experiment=feedback_comparison algorithm=greedy feedback=numerical saver.params.path="results/feedback-comparison/grd-numerical-$*.txt" seed=$*
 
 $(JOBS_LLM_RAN_NUM): job-llm-feedback-ran-num%:
-	cd llm && mkdir -p results/feedback-comparison && OMP_NUM_THREADS=1 MKL_NUM_THREADS=1 $(PYTHONPATH) run_exp.py experiment=feedback_comparison algorithm=random feedback=numerical saver.params.path="results/feedback-comparison_voc_1000_rounds_150/rand-numerical-$*.txt" seed=$*
+	cd llm && mkdir -p results/feedback-comparison && OMP_NUM_THREADS=1 MKL_NUM_THREADS=1 $(PYTHONPATH) run_exp.py experiment=feedback_comparison algorithm=random feedback=numerical saver.params.path="results/feedback-comparison/rand-numerical-$*.txt" seed=$*
 
 # Split multinomial feedback jobs  
 JOBS_LLM_GRD_MULT := $(addprefix job-llm-feedback-grd-mult,$(NUMBERS_LLM))
 JOBS_LLM_RAN_MULT := $(addprefix job-llm-feedback-ran-mult,$(NUMBERS_LLM))
 
 $(JOBS_LLM_GRD_MULT): job-llm-feedback-grd-mult%:
-	cd llm && mkdir -p results/feedback-comparison && OMP_NUM_THREADS=1 MKL_NUM_THREADS=1 $(PYTHONPATH) run_exp.py experiment=feedback_comparison algorithm=greedy feedback=multinomial saver.params.path="results/feedback-comparison/grd-multinomial-$*.txt" seed=$* 
+	cd llm && mkdir -p results/feedback-comparison && OMP_NUM_THREADS=1 MKL_NUM_THREADS=1 $(PYTHONPATH) run_exp.py experiment=feedback_comparison algorithm=greedy feedback=multinomial saver.params.path="results/feedback-comparison-1000-200/grd-multinomial-$*.txt" seed=$* 
 
 $(JOBS_LLM_RAN_MULT): job-llm-feedback-ran-mult%:
-	cd llm && mkdir -p results/feedback-comparison && OMP_NUM_THREADS=1 MKL_NUM_THREADS=1 $(PYTHONPATH) run_exp.py experiment=feedback_comparison algorithm=random feedback=multinomial saver.params.path="results/feedback-comparison/rand-multinomial-$*.txt" seed=$*  feedback.adaptive_estimation_frequency=0
+	cd llm && mkdir -p results/feedback-comparison && OMP_NUM_THREADS=1 MKL_NUM_THREADS=1 $(PYTHONPATH) run_exp.py experiment=feedback_comparison algorithm=random feedback=multinomial saver.params.path="results/feedback-comparison-1000-200/rand-multinomial-$*.txt" seed=$*  feedback.adaptive_estimation_frequency=0
 
 # Combined targets
 llm-feedback-comparison-num: $(JOBS_LLM_GRD_NUM) $(JOBS_LLM_RAN_NUM)
