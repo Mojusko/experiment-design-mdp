@@ -25,111 +25,77 @@ def parse_filename(filename):
         alg_type, feedback_type, _ = base.rsplit('-', 2)
         return ("feedback", (alg_type, feedback_type))
 
-def plot_frequency_results(results):
-    freq_vals = sorted(results.keys())
-    means = [np.mean(results[k]) for k in freq_vals]
-    stds = [np.std(results[k]) for k in freq_vals]
+def safe_load_data(filename):
+    try:
+        data = np.loadtxt(filename)
+        return data if data.size > 0 else None
+    except:
+        return None
 
-    plt.figure(figsize=(10, 6))
-    plt.bar([str(x) for x in freq_vals], means, yerr=stds, capsize=5)
-    plt.xlabel("Estimation Frequency")
-    plt.ylabel("Preference Misalignment Error")
-    plt.xticks(rotation=45)
-    plt.tight_layout()
-
-def plot_rounds_results(results):
-    rounds_vals = sorted(results.keys())
-    means = [np.mean(results[k]) for k in rounds_vals]
-    stds = [np.std(results[k]) for k in rounds_vals]
-
-    plt.figure(figsize=(10, 6))
-    plt.bar([str(x) for x in rounds_vals], means, yerr=stds, capsize=5)
-    plt.xlabel("Number of Rounds")
-    plt.ylabel("Preference Misalignment Error") 
-    plt.xticks(rotation=45)
-    plt.tight_layout()
-
-def plot_lambda_results(results):
-    lambda_vals = sorted(results.keys())
-    means = [np.mean(results[k]) for k in lambda_vals]
-    stds = [np.std(results[k]) for k in lambda_vals]
-
-    plt.figure(figsize=(10, 6))
-    plt.bar([str(x) for x in lambda_vals], means, yerr=stds, capsize=5)
-    plt.xlabel("Lambda Value")
-    plt.ylabel("Preference Misalignment Error")
-    plt.xticks(rotation=45)
-    plt.tight_layout()
-
-def plot_feedback_results(results):
-    alg_keys = sorted(results.keys())
-    means = [np.mean(results[k]) for k in alg_keys]
-    stds = [np.std(results[k]) for k in alg_keys]
-
-    plt.figure(figsize=(10, 6))
-    plt.bar(alg_keys, means, yerr=stds, capsize=5)
-    plt.xlabel("Algorithm-Feedback Type")
-    plt.ylabel("Preference Misalignment Error")
-    plt.xticks(rotation=45)
-    plt.tight_layout()
-
-def plot_v_results(results):
+def plot_results_with_type(results, plot_type):
+    if not results:
+        return
+        
     keys = sorted(results.keys())
-    means = [np.mean(results[k]) for k in keys]
-    stds = [np.std(results[k]) for k in keys]
+    valid_data = {k: [v for v in results[k] if v is not None] for k in keys}
+    valid_keys = [k for k in keys if valid_data[k]]
+    
+    if not valid_keys:
+        return
+        
+    means = [np.mean(valid_data[k]) for k in valid_keys]
+    stds = [np.std(valid_data[k]) if len(valid_data[k]) > 1 else 0 for k in valid_keys]
 
     plt.figure(figsize=(10, 6))
-    plt.bar(keys, means, yerr=stds, capsize=5)
-    plt.xlabel("Design Matrix Type")
+    plt.bar([str(x) for x in valid_keys], means, yerr=stds, capsize=5)
+    
+    if plot_type == "lambda":
+        plt.xlabel("Lambda Value")
+    elif plot_type == "frequency":
+        plt.xlabel("Estimation Frequency")
+    elif plot_type == "rounds":
+        plt.xlabel("Number of Rounds")
+    elif plot_type == "feedback":
+        plt.xlabel("Algorithm-Feedback Type")
+    elif plot_type == "v_comparison":
+        plt.xlabel("Design Matrix Type")
+        
     plt.ylabel("Preference Misalignment Error")
+    plt.xticks(rotation=45)
     plt.tight_layout()
 
 def plot_results(directory):
     pattern = os.path.join(directory, "*.txt")
     files = glob.glob(pattern)
     
-    lambda_results = {}
-    feedback_results = {}
-    v_results = {}
-    frequency_results = {}
-    rounds_results = {}
+    results_by_type = {
+        "lambda": {},
+        "feedback": {},
+        "v_comparison": {},
+        "frequency": {},
+        "rounds": {}
+    }
     
     for f in files:
         exp_type, key = parse_filename(f)
-        val = np.loadtxt(f)
+        val = safe_load_data(f)
         
-        if exp_type == "lambda":
-            if key not in lambda_results:
-                lambda_results[key] = []
-            lambda_results[key].append(val)
-        elif exp_type == "v_comparison":
-            if key not in v_results:
-                v_results[key] = []
-            v_results[key].append(val)
-        elif exp_type == "frequency":
-            if key not in frequency_results:
-                frequency_results[key] = []
-            frequency_results[key].append(val)
-        elif exp_type == "rounds":
-            if key not in rounds_results:
-                rounds_results[key] = []
-            rounds_results[key].append(val)
-        else:
+        if exp_type == "feedback":
             combined_key = f"{key[0]}-{key[1]}"
-            if combined_key not in feedback_results:
-                feedback_results[combined_key] = []
-            feedback_results[combined_key].append(val)
+            if combined_key not in results_by_type[exp_type]:
+                results_by_type[exp_type][combined_key] = []
+            if val is not None:
+                results_by_type[exp_type][combined_key].append(val)
+        else:
+            if key not in results_by_type[exp_type]:
+                results_by_type[exp_type][key] = []
+            if val is not None:
+                results_by_type[exp_type][key].append(val)
     
-    if lambda_results:
-        plot_lambda_results(lambda_results)
-    if feedback_results:
-        plot_feedback_results(feedback_results)
-    if v_results:
-        plot_v_results(v_results)
-    if frequency_results:
-        plot_frequency_results(frequency_results)
-    if rounds_results:
-        plot_rounds_results(rounds_results)
+    for exp_type in results_by_type:
+        if results_by_type[exp_type]:
+            plot_results_with_type(results_by_type[exp_type], exp_type)
+    
     plt.show()
 
 if __name__ == "__main__":
