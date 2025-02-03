@@ -32,7 +32,6 @@ def compute_prob_mae(emissions, estimator, scorer_model):
     # Get MAE from upper triangle
     mask = torch.triu(torch.ones_like(pred_probs), diagonal=1).bool()
     mae = torch.mean(torch.abs(pred_probs[mask] - true_probs[mask])).item()
-    import ipdb; ipdb.set_trace()
     
     return mae
 
