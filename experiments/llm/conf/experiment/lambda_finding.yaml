@@ -1,5 +1,5 @@
 name: "lambda_finding"
-episodes: 200
+episodes: 100
 vocab_size: 1000
 scorer_model: "aesthetics"
 vocabulary: 'diffusiondb.txt'
