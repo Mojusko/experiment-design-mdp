@@ -363,7 +363,7 @@ llm-find-rounds: $(JOBS_LLM_ROUNDS)
 
 # Lambda-finding
 # We'll run each lambda_reg value for REPEATS_LLM seeds
-LAMBDA_VALUES_MUL := 1 10 100 1000
+LAMBDA_VALUES_MUL := 500 2000 4000
 LAMBDA_VALUES_NUM := 0.0001 0.001 0.01 0.1 1 10
 
 # Generate job names for each (lambda, seed) pair for both types
@@ -404,7 +404,7 @@ llm-find-lambda: llm-find-lambda-mul llm-find-lambda-num
 
 # Frequency-finding for adaptive estimation
 # We'll run each frequency value for REPEATS_LLM seeds
-FREQUENCY_VALUES := 10 20 50
+FREQUENCY_VALUES := 0 10 25 50
 
 # Generate job names for each (frequency, seed) pair
 JOBS_LLM_FREQUENCY := \
