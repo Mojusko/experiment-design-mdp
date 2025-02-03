@@ -62,14 +62,6 @@ class LLMExperiment:
         
         self.visits = [] if self.cfg.feedback.num_policies == 1 else [[] for _ in range(self.cfg.feedback.num_policies )]
         
-    def _perform_estimation(self, visits, update_design=False):
-        """Only performs estimation using already collected data"""
-        self.feedback.fit_estimator()
-        mae = compute_prob_mae(self.env.emissions, self.estimator, self._scorer_model)
-        print(f'T: {len(visits[0])}, MAE: {mae}', self.feedback.metrics)
-        if update_design:
-            self.design.update_estimator(self.estimator, self.env.emissions)
-
     def run(self):
         """
         Runs exploration with a single call to explorer.run, but uses a callback
@@ -104,7 +96,7 @@ class LLMExperiment:
                 self.feedback.fit_estimator()
                 self.design.update_estimator(self.estimator, self.env.emissions)
     
-                # Optionally measure partial MAE
+                # measure partial MAE
                 mae = compute_prob_mae(self.env.emissions, self.estimator, self._scorer_model)
                 print(f"Episode {ep_idx} partial re-fit, MAE: {mae}", self.feedback.metrics)
     
@@ -159,7 +151,7 @@ class LLMExperiment:
             token_lists = [self.training_words]*horizon
 
         # Build environment
-        env = LLMGrid(token_lists, self._clip_model, self._clip_processor, self._clip_tokenizer, self.cfg.cache_dir, base_prompt=self.cfg.base_prompt)
+        env = LLMGrid(token_lists, self._clip_model, self._clip_processor, self._clip_tokenizer, self.cfg.cache_dir, self.cfg.normalize_CLIP, base_prompt=self.cfg.base_prompt)
 
         # Build scorer using model emissions
         self._scorer_model = get_scorer_model(

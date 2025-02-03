@@ -18,6 +18,7 @@ class LLMGrid(DiscreteEnv):
         processor: CLIPProcessor, 
         tokenizer: CLIPTokenizer,
         cache_dir: str,
+        normalize_embedder: bool,
         base_prompt:str ='',
         verbose: bool = False,
     ):
@@ -26,7 +27,7 @@ class LLMGrid(DiscreteEnv):
         super().__init__(init_state=0)
         
         self.device = next(model.parameters()).device
-        self.embedder = CLIPEmbedder(tokenizer, model)
+        self.embedder = CLIPEmbedder(tokenizer, model, normalize=normalize_embedder)
         self._processor = processor
         self._tokenizer = tokenizer
 
@@ -138,12 +139,13 @@ class CLIPEmbedder:
     Returns:
         Text embedding
     """
-    def __init__(self, tokenizer, model):
+    def __init__(self, tokenizer, model, normalize: bool=True):
         self.tokenizer = tokenizer
         self.model = model
         self.device = next(model.parameters()).device  # Track model device
+        self.normalize = normalize
 
-    def embed_text(self, text: str, normalize: bool = True) -> torch.Tensor:
+    def embed_text(self, text: str) -> torch.Tensor:
         text_input = self.tokenizer(
             text,
             padding="max_length",
@@ -154,7 +156,7 @@ class CLIPEmbedder:
         text_input = {k: v.to(self.device) for k, v in text_input.items()}
         embedding = self.model.get_text_features(**text_input).detach().double()
 
-        if normalize:
+        if self.normalize:
             embedding = embedding / torch.norm(embedding, p=2)
 
         return embedding.view(1, -1)
@@ -233,29 +235,29 @@ class AestheticsImageScorer(ImageScorer):
         return self.aesthetic_model(clip_embeddings), clip_embeddings
 
 def generate_emissions(unique_elements, embedder, cache_dir, verbose=False):
+
     """Generate emissions for a list of unique elements
     
     Args:
         unique_elements: List of text tokens to generate emissions for
-        embedder: CLIPEmbedder instance
+        embedder: CLIPEmbedder instance with normalize attribute
         cache_dir: Directory for caching emissions
         verbose: Whether to print progress messages
         
     Returns:
         torch.Tensor: Matrix of emissions
     """
-    # Create cache dir if needed
     os.makedirs(cache_dir, exist_ok=True)
     
-    # Generate deterministic hash from actions and elements
+    # Include normalization in cache key
     hasher = hashlib.sha256()
     hasher.update(str(len(unique_elements)).encode())
+    hasher.update(str(getattr(embedder, 'normalize', False)).encode())
     for elem in unique_elements:
         hasher.update(elem.encode())
     cache_id = hasher.hexdigest()
     cache_path = os.path.join(cache_dir, f"emissions_{cache_id}.pkl")
 
-    # Try loading from cache with error handling
     if os.path.exists(cache_path):
         if verbose:
             print("Loading emissions from cache")
@@ -267,7 +269,6 @@ def generate_emissions(unique_elements, embedder, cache_dir, verbose=False):
                 print("Cache file corrupted, regenerating")
             os.remove(cache_path)
 
-    # Generate if not cached or cache was corrupted
     if verbose:
         print("PREPROCESS: Generating emissions") 
     emissions = []
@@ -281,7 +282,6 @@ def generate_emissions(unique_elements, embedder, cache_dir, verbose=False):
         print("Done generating.")
     emissions = torch.vstack(emissions)
     
-    # Cache the emissions
     try:
         with open(cache_path, 'wb') as f:
             pickle.dump(emissions, f)
@@ -290,7 +290,6 @@ def generate_emissions(unique_elements, embedder, cache_dir, verbose=False):
             print(f"Failed to cache emissions: {e}")
             
     return emissions
-
 def load_aesthetics_embedding(weights_path='text_weights.pth'):
     """Load aesthetics model weights and bias
     

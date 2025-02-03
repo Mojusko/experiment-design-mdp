@@ -5,6 +5,7 @@ defaults:
 seed: 12
 #base_prompt: 'A man walking in paris'
 base_prompt: ''
+normalize_CLIP: true
 algorithm: "greedy"
 cache_dir: "${oc.env:HOME}/.cache/huggingface/hub"
 horizon: 3
