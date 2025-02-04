@@ -263,10 +263,11 @@ class AdaptiveOrigDesignD(MultiPolicyOrigDesignD):
         return torch.linalg.slogdet(z + self.lambd/episodes * eye)[1]
 
 class AdaptiveOrigDesignA(MultiPolicyOrigDesignA):
-    def __init__(self, env, lambd=1e-3, dim=0, uniform_alpha=False):
+    def __init__(self, env, lambd=1e-3, dim=0, uniform_alpha=False,V=None):
         super().__init__(env, lambd, dim)
         self.type = "adaptive"
         self.uniform_alpha = uniform_alpha
+        self.V=V
 
     def eval(self, emissions, distributions, visitations_per_policy, episodes):
         # Handle adaptive weighting based on history

@@ -120,7 +120,6 @@ class LLMExperiment:
         # Very end fit
         self.feedback.collect_labels(self.cfg, self.visits, self._theta_star)
         self.feedback.fit_estimator()
-        self.design.update_estimator(self.estimator, self.env.emissions)
     
         # Finally, measure the MAE after the full run
         mae = compute_prob_mae(self.env.emissions, self.estimator, self._scorer_model)
