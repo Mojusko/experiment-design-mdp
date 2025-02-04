@@ -3,8 +3,8 @@ num_policies: 2
 num_components: 2
 num_rounds: 60
 #lambda_reg: 4000 best for static design [need to revalidate]
-lambda_reg: 0.1 #best for adaptive design with CLIP normalization
-adaptive_estimation_frequency: 50
-adaptive_estimation_start: 200
-adaptive_design_frequency: 50
+lambda_reg: 10 #best for adaptive design with CLIP normalization
+adaptive_estimation_frequency: 5
+adaptive_estimation_start: 25
+adaptive_design_frequency: 5
 pass_V: false
