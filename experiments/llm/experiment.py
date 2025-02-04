@@ -21,6 +21,7 @@ def compute_prob_mae(emissions, estimator, scorer_model):
     pred_logits = estimator.mean(emissions).to(emissions.device)
     true_logits = scorer_model.score_embedding(emissions)
     
+    import ipdb; ipdb.set_trace()
     # Convert to probabilities
     pred_exp = torch.exp(pred_logits)
     true_exp = torch.exp(true_logits)

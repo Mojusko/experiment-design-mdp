@@ -3,9 +3,9 @@ defaults:
   - override feedback: multinomial
 feedback:
   num_rounds: 4
-  adaptive_estimation_frequency: 0
-  adaptive_estimation_start: 0
-  adaptive_design_frequency: 1
+  adaptive_estimation_frequency: 5
+  adaptive_estimation_start: 5
+  adaptive_design_frequency: 5
 tester:
   params:
     N_test_prompts: 150
