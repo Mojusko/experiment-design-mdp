@@ -249,7 +249,6 @@ def generate_emissions(unique_elements, embedder, cache_dir, verbose=False):
     """
     os.makedirs(cache_dir, exist_ok=True)
     
-    import ipdb; ipdb.set_trace()
     # Include normalization in cache key
     hasher = hashlib.sha256()
     hasher.update(str(len(unique_elements)).encode())
