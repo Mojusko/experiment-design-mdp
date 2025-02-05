@@ -332,10 +332,10 @@ JOBS_LLM_GRD_MULT := $(addprefix job-llm-feedback-grd-mult,$(NUMBERS_LLM))
 JOBS_LLM_RAN_MULT := $(addprefix job-llm-feedback-ran-mult,$(NUMBERS_LLM))
 
 $(JOBS_LLM_GRD_MULT): job-llm-feedback-grd-mult%:
-	cd llm && mkdir -p results/feedback-comparison && OMP_NUM_THREADS=1 MKL_NUM_THREADS=1 $(PYTHONPATH) run_exp.py experiment=feedback_comparison algorithm=greedy feedback=multinomial saver.params.path="results/feedback-comparison/grd-multinomial-$*.txt" seed=$* 
+	cd llm && mkdir -p results/feedback-comparison && OMP_NUM_THREADS=1 MKL_NUM_THREADS=1 $(PYTHONPATH) run_exp.py experiment=feedback_comparison algorithm=greedy feedback=multinomial saver.params.path="results/feedback-comparison/grd-multinomial-$*.txt" seed=$* feedback.lambda_reg=2
 
 $(JOBS_LLM_RAN_MULT): job-llm-feedback-ran-mult%:
-	cd llm && mkdir -p results/feedback-comparison && OMP_NUM_THREADS=1 MKL_NUM_THREADS=1 $(PYTHONPATH) run_exp.py experiment=feedback_comparison algorithm=random feedback=multinomial saver.params.path="results/feedback-comparison/rand-multinomial-$*.txt" seed=$*  feedback.adaptive_estimation_frequency=0
+	cd llm && mkdir -p results/feedback-comparison && OMP_NUM_THREADS=1 MKL_NUM_THREADS=1 $(PYTHONPATH) run_exp.py experiment=feedback_comparison algorithm=random feedback=multinomial saver.params.path="results/feedback-comparison/rand-multinomial-$*.txt" seed=$*  feedback.adaptive_estimation_frequency=0 feedback.lambda_reg=2
 
 # Combined targets
 llm-feedback-comparison-num: $(JOBS_LLM_GRD_NUM) $(JOBS_LLM_RAN_NUM)
@@ -363,7 +363,7 @@ llm-find-rounds: $(JOBS_LLM_ROUNDS)
 
 # Lambda-finding
 # We'll run each lambda_reg value for REPEATS_LLM seeds
-LAMBDA_VALUES_MUL := 0.25 1 5 10 25
+LAMBDA_VALUES_MUL := 1 5 10 25 50 100
 LAMBDA_VALUES_NUM := 0.0001 0.001 0.01 0.1 1 10
 
 # Generate job names for each (lambda, seed) pair for both types
