@@ -231,21 +231,23 @@ class FrankWolfe(ConvexSolverBase):
             return self._optimize_single(emissions, visitations, episodes)
         
         gap = -10e10 if self.accuracy is None else self.accuracy
-        
-        # Initialize a persistent counter per policy.
-        # (Starting at 1 if self.initial_policy is True; otherwise, 0)
-        policy_counters = [1 if self.initial_policy else 0 for _ in range(self.num_summarized_policies)]
+    
+        # If initial_policy is True, set the persistent counter high so that no updates occur.
+        policy_counters = [
+            self.num_rounds * self.num_components if self.initial_policy else 0
+            for _ in range(self.num_summarized_policies)
+        ]
         
         for round_idx in range(self.num_rounds):
-            # For each round, optimize each policy in turn
+            # For each round, optimize each policy in turn.
             for policy_idx in range(self.num_summarized_policies):
                 empirical_gap = torch.Tensor([1e10]).double()
                 
-                # Note the change below: each round allows an additional self.num_components updates.
+                # Each round allows up to (round_idx+1)*self.num_components updates.
                 while (policy_counters[policy_idx] < (round_idx + 1) * self.num_components and 
                        torch.abs(empirical_gap) > gap):
                     
-                    # Get current density for all policies
+                    # Get current density for all policies.
                     densities = []
                     for i in range(self.num_summarized_policies):
                         density = self.density_estimator.density_oracle(
@@ -258,15 +260,15 @@ class FrankWolfe(ConvexSolverBase):
                             density.requires_grad_(True)
                         densities.append(density)
                     
-                    # Get gradients for all policies
+                    # Get gradients for all policies.
                     rewards = self._reward_fn_gradient(densities, emissions, visitations, episodes)
                     
-                    # Only update the current policy
+                    # Only update the current policy.
                     new_policy = self._planning_oracle(rewards[policy_idx])
                     self.policies[policy_idx].append(new_policy)
                     new_density = self.density_estimator.density_oracle_single(new_policy)
                     
-                    # Compute step size for current policy
+                    # Compute step size for current policy.
                     if self.step == "line-search":
                         def fn(h):
                             temp_densities = densities.copy()
@@ -281,7 +283,7 @@ class FrankWolfe(ConvexSolverBase):
                     elif self.step is not None and isinstance(self.step, float):
                         step_size = self.step
                     else:
-                        # Use the persistent counter to compute a step size that decreases over time
+                        # Compute a step size that decreases over time using the persistent counter.
                         step_size = 1.0 / (1 + policy_counters[policy_idx])
                     
                     if self.env.type == 'discrete':
@@ -290,7 +292,7 @@ class FrankWolfe(ConvexSolverBase):
                             empirical_gap
                         )
                     
-                    # Update weights for current policy
+                    # Update weights for the current policy.
                     self.weights[policy_idx] = [(1 - step_size) * w for w in self.weights[policy_idx]] + [step_size]
                     
                     if self.objective.get_type() == "adaptive":
@@ -308,7 +310,7 @@ class FrankWolfe(ConvexSolverBase):
                             print(f'Round: {round_idx}, Policy: {policy_idx}, '
                                   f'Objective: {objective}')
                     
-                    # Increment the persistent counter for this policy after each update
+                    # Increment the persistent counter for this policy.
                     policy_counters[policy_idx] += 1
         
         self.summarize()
