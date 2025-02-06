@@ -16,6 +16,7 @@ from components.saver   import BaseSaver
 
 
 def compute_prob_mae(emissions, estimator, scorer_model):
+    import ipdb; ipdb.set_trace()
     """Compute mean absolute error between predicted and true pairwise probabilities."""
     # Get logits
     pred_logits = estimator.mean(emissions).to(emissions.device)
@@ -212,7 +213,7 @@ class LLMExperiment:
     
         return training_words, testing_words, model_words
 
-    def load_data(self):
+    def _load_data(self):
         """Returns training_words and test_words in 75-25 split"""
         vocab_files = self.cfg.experiment.vocabulary
         if isinstance(vocab_files, str):
