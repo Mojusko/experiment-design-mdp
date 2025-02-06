@@ -1,5 +1,5 @@
 name: "feedback_comparison"
-episodes: 1000
+episodes: 10000
 scorer_model: "aesthetics"
 vocab_size: 2000
 vocabulary: 'diffusiondb.txt'
