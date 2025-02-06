@@ -37,7 +37,7 @@ class SolverFactory:
             initial_policy=initial_policy,
             SummarizedPolicyType=DensityPolicy,
             accuracy=cfg.accuracy,
-            step='line-search',
+            #step='line-search',
             num_rounds=cfg.feedback.get('num_rounds',-1)
         )
     

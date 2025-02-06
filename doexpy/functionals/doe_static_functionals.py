@@ -231,8 +231,10 @@ class MultiPolicyOrigDesignD(RewardFunctional):
 
     def _compute_diagonal_terms(self, emissions, prob_matrix, d1_h, d2_h):
         """Compute diagonal terms of the Fisher."""
-        p_q1 = torch.mm(prob_matrix, d2_h.view(-1,1))
-        p_q2 = torch.mm(prob_matrix, d1_h.view(-1,1))
+        d2_h_or_unif = torch.ones_like(d2_h) / d2_h.shape[0] if d2_h.sum() == 0 else d2_h
+        d1_h_or_unif = torch.ones_like(d1_h) / d1_h.shape[0] if d1_h.sum() == 0 else d1_h
+        p_q1 = torch.mm(prob_matrix, d2_h_or_unif.view(-1,1))
+        p_q2 = torch.mm(prob_matrix, d1_h_or_unif.view(-1,1))
 
         term1 = emissions.T @ torch.diag(p_q1.squeeze()) @ torch.diag(d1_h) @ emissions       
         term2 = emissions.T @ torch.diag(p_q2.squeeze()) @ torch.diag(d2_h) @ emissions       

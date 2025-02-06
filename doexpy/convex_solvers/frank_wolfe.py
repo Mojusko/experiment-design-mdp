@@ -231,14 +231,15 @@ class FrankWolfe(ConvexSolverBase):
             return self._optimize_single(emissions, visitations, episodes)
         
         gap = -10e10 if self.accuracy is None else self.accuracy
+        # Initialize persistent counters for each policy
+        counters = [1 if self.initial_policy else 0] * self.num_summarized_policies
         
         for round_idx in range(self.num_rounds):
             # For each round, optimize each policy in turn
             for policy_idx in range(self.num_summarized_policies):
-                counter = 1 if self.initial_policy else 0
                 empirical_gap = torch.Tensor([1e10]).double()
                 
-                while counter < self.num_components and torch.abs(empirical_gap) > gap:
+                while counters[policy_idx] < self.num_components and torch.abs(empirical_gap) > gap:
                     # Get current density for all policies
                     densities = []
                     for i in range(self.num_summarized_policies):
@@ -260,14 +261,12 @@ class FrankWolfe(ConvexSolverBase):
                     self.policies[policy_idx].append(new_policy)
                     new_density = self.density_estimator.density_oracle_single(new_policy)
                     
-                    # Compute step size for current policy
-                    #if self.step == "line-search" and self.num_components > 1:
+                    # Compute step size using persistent counter
                     if self.step == "line-search":
                         def fn(h):
                             temp_densities = densities.copy()
                             temp_densities[policy_idx] = densities[policy_idx] * (1 - h) + h * new_density
                             if self.objective.get_type() == "adaptive":
-                                # TODO: make sure visitation is per policy
                                 return -self.objective.eval(emissions, temp_densities, visitations, episodes).detach().cpu().numpy()
                             return -self.objective.eval(emissions, temp_densities, episodes).detach().cpu().numpy()
                         
@@ -276,8 +275,7 @@ class FrankWolfe(ConvexSolverBase):
                     elif self.step is not None and isinstance(self.step, float):
                         step_size = self.step
                     else:
-                        # Reset counter for each policy in each round
-                        step_size = 1.0 / (1 + counter)
+                        step_size = 1.0 / (1 + counters[policy_idx])
                     
                     if self.env.type == 'discrete':
                         empirical_gap = torch.minimum(
@@ -296,14 +294,14 @@ class FrankWolfe(ConvexSolverBase):
                     if self.verbosity > 0:
                         if self.env.type == 'discrete':
                             total_grad_norm = sum(la.norm(r) for r in rewards)
-                            print(f'Round: {round_idx}, Policy: {policy_idx}, Component: {counter}, '
+                            print(f'Round: {round_idx}, Policy: {policy_idx}, Component: {counters[policy_idx]}, '
                                   f'Gap: {empirical_gap}, Objective: {objective}, '
                                   f'Stepsize: {step_size} ({self.step}), Gradient: {total_grad_norm}')
                         elif self.env.type == 'continuous':
-                            print(f'Round: {round_idx}, Policy: {policy_idx}, '
+                            print(f'Round: {round_idx}, Policy: {policy_idx}, Component: {counters[policy_idx]}, '
                                   f'Objective: {objective}')
                     
-                    counter += 1
+                    counters[policy_idx] += 1
         
         self.summarize()
         return self.summarized_policies, self.policies, self.weights, self.densities
