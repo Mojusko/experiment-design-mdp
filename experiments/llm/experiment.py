@@ -176,7 +176,7 @@ class LLMExperiment:
         )
         self.saver.save_result(result_dict)
 
-    def _load_data(self):
+    def _load_data_legacy(self):
         """Returns training_words, test_words, and model_words in 60-20-20 split"""
         # Get vocabulary file(s) from config
         vocab_files = self.cfg.experiment.vocabulary
@@ -211,3 +211,32 @@ class LLMExperiment:
         model_words = [full_list[i] for i in model_idx]
     
         return training_words, testing_words, model_words
+
+    def load_data(self):
+        """Returns training_words and test_words in 75-25 split"""
+        vocab_files = self.cfg.experiment.vocabulary
+        if isinstance(vocab_files, str):
+            vocab_files = [vocab_files]
+        rng = np.random.RandomState(42)
+    
+        full_list = []
+        for path in vocab_files:
+            with open(path, 'r') as f:
+                full_list.extend([line.strip() for line in f])
+        full_list = list(dict.fromkeys(full_list))
+    
+        if len(full_list) > self.cfg.experiment.vocab_size:
+            print(f"Capping data at {self.cfg.experiment.vocab_size} items")
+            full_list = list(rng.choice(full_list, self.cfg.experiment.vocab_size, replace=False))
+    
+        n_total = len(full_list)
+        n_train = int(0.75 * n_total)
+        
+        indices = rng.permutation(n_total)
+        train_idx = indices[:n_train]
+        test_idx = indices[n_train:]
+    
+        training_words = [full_list[i] for i in train_idx]
+        testing_words = [full_list[i] for i in test_idx]
+    
+        return training_words, testing_words, []
