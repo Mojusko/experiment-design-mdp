@@ -16,7 +16,6 @@ from components.saver   import BaseSaver
 
 
 def compute_prob_mae(emissions, estimator, scorer_model):
-    import ipdb; ipdb.set_trace()
     """Compute mean absolute error between predicted and true pairwise probabilities."""
     # Get logits
     pred_logits = estimator.mean(emissions).to(emissions.device)
