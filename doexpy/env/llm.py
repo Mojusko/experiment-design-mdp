@@ -290,6 +290,7 @@ def generate_emissions(unique_elements, embedder, cache_dir, verbose=False):
             print(f"Failed to cache emissions: {e}")
             
     return emissions
+
 def load_aesthetics_embedding(weights_path='text_weights.pth'):
     """Load aesthetics model weights and bias
     
