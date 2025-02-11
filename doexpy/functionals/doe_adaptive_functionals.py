@@ -276,6 +276,9 @@ class AdaptiveOrigDesignA(MultiPolicyOrigDesignA):
             for visitations in visitations_per_policy
         ]
         
+        for i in range(len(distributions)):
+            if len(distributions[i].shape) < len(agg_densities[i].shape):
+                agg_densities[i] = agg_densities[i].diagonal(dim1=0, dim2=1).T
         alpha = len(visitations_per_policy[0]) / episodes
         
         # Calculate information matrices
@@ -292,6 +295,7 @@ class AdaptiveOrigDesignA(MultiPolicyOrigDesignA):
             return -torch.trace(self.V @ torch.linalg.inv(z + self.lambd/episodes * eye))
 
     def eval_full(self, emissions, distributions, episodes):
+        print('evalfull')
         # For final evaluation - just use distributions directly
         z = super()._calculate_z(emissions, distributions, episodes)
         eye = torch.eye(z.shape[0], device=z.device, dtype=z.dtype)

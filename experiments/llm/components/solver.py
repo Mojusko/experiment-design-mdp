@@ -38,7 +38,8 @@ class SolverFactory:
             SummarizedPolicyType=DensityPolicy,
             accuracy=cfg.accuracy,
             #step='line-search',
-            num_rounds=cfg.feedback.get('num_rounds',-1)
+            num_rounds=cfg.feedback.get('num_rounds',-1),
+            stationary=True # DEBUG
         )
     
         # Select the appropriate explorer based on the number of policies

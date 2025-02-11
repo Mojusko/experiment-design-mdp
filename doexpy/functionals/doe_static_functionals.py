@@ -256,6 +256,8 @@ class MultiPolicyOrigDesignD(RewardFunctional):
         emissions = emissions.type(distributions[0].dtype)
         z = torch.zeros((emissions.shape[1], emissions.shape[1]), 
                        dtype=distributions[0].dtype, device=emissions.device)
+        if len(distributions[0].shape) == 2:
+            distributions = [dist[None,:] for dist in distributions]
         H = distributions[0].shape[0]
         
         for h in range(H):

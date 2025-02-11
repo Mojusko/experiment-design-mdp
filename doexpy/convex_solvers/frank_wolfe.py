@@ -39,9 +39,11 @@ class FrankWolfe(ConvexSolverBase):
                  solver: Union[DiscreteSolver, ContinuousSolver] = DP,
                  SummarizedPolicyType: Policy = DensityPolicy,
                  num_summarized_policies: int = 1,
-                 num_rounds: int = 75
+                 num_rounds: int = 75,
+                 stationary: bool = False
                  ) -> None:
         super().__init__(env, objective, verbosity=verbosity, accuracy=accuracy, initial_policy=initial_policy, solver=solver)
+        self.stationary = stationary
     
         if (SummarizedPolicyType != MixturePolicy) & (self.env.type == 'continuous'):
             warnings.warn("SummarizedPolicyType is not MixturePolicy, but env is continuous. SummarizedPolicyType was automatically changed to MixturePolicy.")
@@ -259,6 +261,7 @@ class FrankWolfe(ConvexSolverBase):
                         if self.env.type == 'discrete':
                             density.requires_grad_(True)
                         densities.append(density)
+
                     
                     # Get gradients for all policies.
                     rewards = self._reward_fn_gradient(densities, emissions, visitations, episodes)
