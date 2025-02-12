@@ -263,7 +263,7 @@ class AdaptiveOrigDesignD(MultiPolicyOrigDesignD):
         return torch.linalg.slogdet(z + self.lambd/episodes * eye)[1]
 
 class StochasticAdaptiveOrigDesignA(StochasticMultiPolicyRewardFunctionalMixin, MultiPolicyOrigDesignA):
-    def __init__(self, env, lambd=1e-3, dim=0, uniform_alpha=False, V=None, batch_size=1500):
+    def __init__(self, env, lambd=1e-3, dim=0, uniform_alpha=False, V=None, batch_size=1000):
         super().__init__(env, lambd, dim, batch_size=batch_size)
         self.type = "adaptive"
         self.uniform_alpha = uniform_alpha
