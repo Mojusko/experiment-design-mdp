@@ -4,15 +4,15 @@ defaults:
 feedback:
   num_rounds: 10
   num_components: 15
-  adaptive_estimation_frequency: 2
+  adaptive_estimation_frequency: 4
   adaptive_estimation_start: 5
-  adaptive_design_frequency: 2
+  adaptive_design_frequency: 4
 tester:
   params:
     N_test_prompts: 150
     N_pairs_eval: 350
 experiment:
   episodes: 10
-  vocab_size: 1000
+  vocab_size: 500
   #scorer_model: "art"
 
