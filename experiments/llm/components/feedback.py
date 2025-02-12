@@ -2,11 +2,11 @@ import torch
 import torch.nn.functional as F
 import numpy as np
 
-from doexpy.functionals.doe_static_functionals import (
-    DesignA, DesignD, MultiPolicyOrigDesignD, MultiPolicyAggDesignD, MultiPolicyOrigDesignA
-)
+#from doexpy.functionals.doe_static_functionals import (
+#    DesignA, DesignD, MultiPolicyOrigDesignD, MultiPolicyAggDesignD, StochasticMultiPolicyOrigDesignA
+#)
 from doexpy.functionals.doe_adaptive_functionals import (
-    AdaptiveOrigDesignD, AdaptiveOrigDesignA
+    AdaptiveOrigDesignD, StochasticAdaptiveOrigDesignA
 )
 from doexpy.feedback.feedback_base import EmptyFeedback
 from stpy.embeddings.polynomial_embedding import CustomEmbedding
@@ -148,7 +148,7 @@ class FeedbackFactory:
                 V=None
             #design = MultiPolicyOrigDesignD(env=env, lambd=cfg.feedback.lambda_reg, dim=1, V=V)
             #design = AdaptiveOrigDesignD(env=env, lambd=cfg.feedback.lambda_reg, dim=1)
-            design = AdaptiveOrigDesignA(env=env, lambd=cfg.feedback.lambda_reg, dim=1, V=V)
+            design = StochasticAdaptiveOrigDesignA(env=env, lambd=cfg.feedback.lambda_reg, dim=1, V=V)
 
             likelihood = MultinomialLikelihood()
             regularizer = L2Regularizer(lam=cfg.feedback.lambda_reg)

@@ -298,12 +298,12 @@ class FrankWolfe(ConvexSolverBase):
                     # Update weights for the current policy.
                     self.weights[policy_idx] = [(1 - step_size) * w for w in self.weights[policy_idx]] + [step_size]
                     
-                    if self.objective.get_type() == "adaptive":
-                        objective = self.objective.eval(emissions, densities, visitations, episodes)
-                    else:
-                        objective = self.objective.eval(emissions, densities, episodes)
+                    if self.verbosity > 0 and policy_counters[policy_idx] % 5 == 0:
+                        if self.objective.get_type() == "adaptive":
+                            objective = self.objective.eval(emissions, densities, visitations, episodes, should_mask=False)
+                        else:
+                            objective = self.objective.eval(emissions, densities, episodes)
                     
-                    if self.verbosity > 0:
                         if self.env.type == 'discrete':
                             total_grad_norm = sum(la.norm(r) for r in rewards)
                             print(f'Round: {round_idx}, Policy: {policy_idx}, Component: {policy_counters[policy_idx]}, '
