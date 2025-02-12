@@ -480,19 +480,19 @@ class MdpExploreMultiPolicy:
                     )
 
             # For logging, compute the objective so far
-            aggregate_distributions = []
-            for policy_idx in range(self.num_policies):
-                agg_dist = self.objective.build_density_from_trajectories(
-                    self.visitations_per_policy[policy_idx]
-                )
-                aggregate_distributions.append(agg_dist)
+            if self.verbosity > 2 and ep_i % 25 == 0:
+                aggregate_distributions = []
+                for policy_idx in range(self.num_policies):
+                    agg_dist = self.objective.build_density_from_trajectories(
+                        self.visitations_per_policy[policy_idx]
+                    )
+                    aggregate_distributions.append(agg_dist)
     
-            val = self.objective.eval_full(self.emissions, aggregate_distributions, episodes)
-            if isinstance(val, torch.Tensor):
-                val = val.detach()
-            if self.verbosity > 2:
+                val = self.objective.eval_full(self.emissions, aggregate_distributions, episodes)
+                if isinstance(val, torch.Tensor):
+                    val = val.detach()
                 print(f"Episode {ep_i}, Objective Value: {val}")
-            run_objective_values.append(val)
+                run_objective_values.append(val)
     
         # Convert objective values to NumPy
         objective_values = []
