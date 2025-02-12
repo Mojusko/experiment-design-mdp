@@ -280,6 +280,8 @@ class StochasticAdaptiveOrigDesignA(StochasticMultiPolicyRewardFunctionalMixin, 
         for i in range(len(distributions)):
             if len(distributions[i].shape) < len(agg_densities[i].shape):
                 agg_densities[i] = agg_densities[i].diagonal(dim1=0, dim2=1).T
+
+        union_mask = None
         
         if should_mask:
             # Combine all visitation histories. For instance, if each agg_density is (S x A),
@@ -304,8 +306,8 @@ class StochasticAdaptiveOrigDesignA(StochasticMultiPolicyRewardFunctionalMixin, 
             agg_densities = [agg[:, union_mask] for agg in agg_densities]
         
         # Now both current and historical inputs have the same action dimension.
-        new_z = super()._calculate_z(emissions, distributions, episodes)
-        agg_z = super()._calculate_z(emissions, agg_densities, episodes)
+        new_z = super()._calculate_z(emissions, distributions, episodes, mask=union_mask)
+        agg_z = super()._calculate_z(emissions, agg_densities, episodes, mask=union_mask)
         
         alpha = len(visitations_per_policy[0]) / episodes
         z = ((1.0 / episodes) * new_z + alpha * agg_z) if self.uniform_alpha else ((1 - alpha) * new_z + alpha * agg_z)

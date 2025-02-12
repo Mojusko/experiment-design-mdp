@@ -2,17 +2,17 @@ defaults:
   - config
   - override feedback: multinomial
 feedback:
-  num_rounds: 3
-  num_components: 15
-  adaptive_estimation_frequency: 4
-  adaptive_estimation_start: 5
-  adaptive_design_frequency: 4
+  num_rounds: 10
+  num_components: 5
+  adaptive_estimation_frequency: 5
+  adaptive_estimation_start: 20
+  adaptive_design_frequency: 5
 tester:
   params:
     N_test_prompts: 150
     N_pairs_eval: 350
 experiment:
-  episodes: 10
-  vocab_size: 500
+  episodes: 50
+  vocab_size: 1000
   #scorer_model: "art"
 

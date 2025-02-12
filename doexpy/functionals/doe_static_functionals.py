@@ -251,13 +251,14 @@ class MultiPolicyOrigDesignD(RewardFunctional):
 
         return term1 + term2
 
-    def _calculate_z(self, emissions, distributions, episodes):
+    def _calculate_z(self, emissions, distributions, episodes, mask=None):
         distributions = [d.to(emissions.device) for d in distributions]
         emissions = emissions.type(distributions[0].dtype)
+        # Assume emissions has shape (n_actions, d_features)
         z = torch.zeros((emissions.shape[1], emissions.shape[1]), 
-                       dtype=distributions[0].dtype, device=emissions.device)
+                        dtype=distributions[0].dtype, device=emissions.device)
         if len(distributions[0].shape) == 2:
-            distributions = [dist[None,:] for dist in distributions]
+            distributions = [dist[None, :] for dist in distributions]
         H = distributions[0].shape[0]
         
         for h in range(H):
@@ -270,6 +271,8 @@ class MultiPolicyOrigDesignD(RewardFunctional):
                 d2_h = torch.sum(distributions[1][h], dim=0)
                 
             prob_matrix = self._get_prob_matrix(emissions)
+            if mask is not None and len(prob_matrix) > len(mask):
+                prob_matrix = prob_matrix[mask][:, mask]
             prob_matrix = prob_matrix.type(d1_h.dtype)
             
             diag_terms = self._compute_diagonal_terms(emissions, prob_matrix, d1_h, d2_h)
