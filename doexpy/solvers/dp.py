@@ -96,7 +96,7 @@ class DP(DiscreteSolver):
             state_idx = torch.arange(num_states, device=device).unsqueeze(0).expand(terminal_idx, num_states)
             policy_tensor[time_idx, state_idx, actions_tensor[:terminal_idx]] = 1.0
 
-            return NonStationaryPolicy(self.env, policy_tensor)
+            return NonStationaryPolicy(self.env, policy_tensor.cpu())
 
         # ------------------- STATIONARY CASE -------------------
         elif reward.dim() == 2:
@@ -135,7 +135,7 @@ class DP(DiscreteSolver):
             best_actions = torch.multinomial(ties.to(torch.float64), num_samples=1).squeeze(-1)
             policy_tensor[torch.arange(num_states, device=device), best_actions] = 1.0
 
-            return StationaryPolicy(self.env, policy_tensor)
+            return StationaryPolicy(self.env, policy_tensor.cpu())
 
         else:
             raise ValueError("Reward must be either a 2d tensor (states x actions) or a 3d tensor (time x states x actions)")
