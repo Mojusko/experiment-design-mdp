@@ -57,7 +57,7 @@ class LLMExperiment:
         self.env = self._init_env()
         self.feedback, self.design, self.estimator = FeedbackFactory.create(cfg, self.env)
         self.explorer = SolverFactory.create(cfg, self.env, self.design, self.feedback)
-        self.tester = hydra.utils.instantiate(cfg.tester, scorer_model=self._scorer_model)
+        self.testers = [hydra.utils.instantiate(t, scorer_model=self._scorer_model) for t in self.cfg.tester]
         self.saver = hydra.utils.instantiate(cfg.saver)
         
         self.visits = [] if self.cfg.feedback.num_policies == 1 else [[] for _ in range(self.cfg.feedback.num_policies )]
@@ -172,15 +172,19 @@ class LLMExperiment:
 
     def test_and_save(self):
         """Final estimation, testing and saving of results"""
-        result_dict = self.tester.run_test(
-            cfg=self.cfg,
-            env=self.env,
-            estimator=self.estimator,
-            theta_star=self._theta_star,
-            training_words_list=self.training_words,
-            testing_words_list=self.testing_words
-        )
-        self.saver.save_result(result_dict)
+        combined_results = {}
+        for tester in self.testers:
+            tester_results = tester.run_test(
+                cfg=self.cfg,
+                env=self.env,
+                estimator=self.estimator,
+                theta_star=self._theta_star,
+                training_words_list=self.training_words,
+                testing_words_list=self.testing_words
+            )
+            # Optionally, you can namespace the results by tester type if needed.
+            combined_results.update(tester_results)
+        self.saver.save_result(combined_results)
 
     def _load_data_legacy(self):
         """Returns training_words, test_words, and model_words in 60-20-20 split"""

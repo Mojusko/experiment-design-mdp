@@ -1,8 +1,10 @@
+
 import numpy as np
 import matplotlib.pyplot as plt
 import glob
 import os
 import argparse
+import json  # Import JSON for parsing JSON dumps
 
 def parse_filename(filename):
     base = os.path.basename(filename)
@@ -26,29 +28,48 @@ def parse_filename(filename):
         return ("feedback", (alg_type, feedback_type))
 
 def safe_load_data(filename):
+    # Try loading as plain text numeric data.
     try:
         data = np.loadtxt(filename)
-        return data if data.size > 0 else None
-    except:
-        return None
+        if data.size > 0:
+            return data
+    except Exception:
+        pass
+
+    # If plain text fails, try to load as a JSON dump.
+    try:
+        with open(filename, 'r') as f:
+            data_dict = json.load(f)
+        # Look for the "cosine_error" key as in the provided JSON example.
+        if "cosine_error" in data_dict:
+            return data_dict["cosine_error"]
+        else:
+            # If "cosine_error" is not present, return the first numeric value encountered.
+            for value in data_dict.values():
+                if isinstance(value, (int, float)):
+                    return value
+    except Exception:
+        pass
+
+    return None
 
 def plot_results_with_type(results, plot_type):
     if not results:
         return
-        
+
     keys = sorted(results.keys())
     valid_data = {k: [v for v in results[k] if v is not None] for k in keys}
     valid_keys = [k for k in keys if valid_data[k]]
-    
+
     if not valid_keys:
         return
-        
+
     means = [np.mean(valid_data[k]) for k in valid_keys]
     stds = [np.std(valid_data[k]) if len(valid_data[k]) > 1 else 0 for k in valid_keys]
 
     plt.figure(figsize=(10, 6))
     plt.bar([str(x) for x in valid_keys], means, yerr=stds, capsize=5)
-    
+
     if plot_type == "lambda":
         plt.xlabel("Lambda Value")
     elif plot_type == "frequency":
@@ -59,7 +80,7 @@ def plot_results_with_type(results, plot_type):
         plt.xlabel("Algorithm-Feedback Type")
     elif plot_type == "v_comparison":
         plt.xlabel("Design Matrix Type")
-        
+
     plt.ylabel("Preference Misalignment Error")
     plt.xticks(rotation=45)
     plt.tight_layout()
@@ -67,7 +88,7 @@ def plot_results_with_type(results, plot_type):
 def plot_results(directory):
     pattern = os.path.join(directory, "*.txt")
     files = glob.glob(pattern)
-    
+
     results_by_type = {
         "lambda": {},
         "feedback": {},
@@ -75,11 +96,11 @@ def plot_results(directory):
         "frequency": {},
         "rounds": {}
     }
-    
+
     for f in files:
         exp_type, key = parse_filename(f)
         val = safe_load_data(f)
-        
+
         if exp_type == "feedback":
             combined_key = f"{key[0]}-{key[1]}"
             if combined_key not in results_by_type[exp_type]:
@@ -91,11 +112,11 @@ def plot_results(directory):
                 results_by_type[exp_type][key] = []
             if val is not None:
                 results_by_type[exp_type][key].append(val)
-    
+
     for exp_type in results_by_type:
         if results_by_type[exp_type]:
             plot_results_with_type(results_by_type[exp_type], exp_type)
-    
+
     plt.show()
 
 if __name__ == "__main__":
