@@ -71,6 +71,8 @@ class CosineTester(BaseTester):
     
     @staticmethod
     def cosine_error(vec1, vec2): 
+        vec1 = vec1.cpu()
+        vec2 = vec2.cpu()
         # Compute cosine similarity and convert it to an error metric. 
         cos_sim = torch.nn.functional.cosine_similarity(vec1.flatten(), vec2.flatten(), dim=0)
         return 1 - cos_sim.item()
