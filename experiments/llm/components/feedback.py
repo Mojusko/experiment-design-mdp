@@ -6,7 +6,7 @@ import numpy as np
 #    DesignA, DesignD, MultiPolicyOrigDesignD, MultiPolicyAggDesignD, StochasticMultiPolicyOrigDesignA
 #)
 from doexpy.functionals.doe_adaptive_functionals import (
-    AdaptiveOrigDesignD, StochasticAdaptiveOrigDesignA
+    AdaptiveOrigDesignD, StochasticAdaptiveOrigDesignA, StochasticAdaptiveOrigDesignD
 )
 from doexpy.feedback.feedback_base import EmptyFeedback
 from stpy.embeddings.polynomial_embedding import CustomEmbedding

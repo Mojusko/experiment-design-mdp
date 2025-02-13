@@ -20,6 +20,7 @@ class PreferenceTester(BaseTester):
         super().__init__()  # Call to parent if needed
     def run_test(self, cfg, env, estimator, theta_star, training_words_list, testing_words_list):
         test_rng = np.random.RandomState(42)
+        import ipdb; ipdb.set_trace()
         
         N_test_prompts = self.params['N_test_prompts']
         N_pairs_eval = self.params['N_pairs_eval']
@@ -62,3 +63,23 @@ class PreferenceTester(BaseTester):
 
 
         return {"preference_error": error}
+
+class CosineTester(BaseTester):
+    def __init__(self, scorer_model, params=None):
+        self.params = params or {}
+        self.scorer_model = scorer_model
+        super().__init__()
+    
+    @staticmethod
+    def cosine_error(vec1, vec2): 
+        # Compute cosine similarity and convert it to an error metric. 
+        cos_sim = torch.nn.functional.cosine_similarity(vec1.flatten(), vec2.flatten(), dim=0)
+        return 1 - cos_sim.item()
+    
+    def run_test(self, cfg, env, estimator, theta_star, training_words_list, testing_words_list):
+        # Get the ground-truth model weights and the estimated weights
+        gt_weight = self.scorer_model.weight  # ground truth weight from aesthetics model
+        est_weight = estimator.theta_fit      # estimated weight
+        error = self.cosine_error(est_weight, gt_weight)
+        return {"cosine_error": error}
+

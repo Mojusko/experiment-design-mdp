@@ -4,15 +4,16 @@ defaults:
 feedback:
   num_rounds: 10
   num_components: 5
-  adaptive_estimation_frequency: 5
-  adaptive_estimation_start: 20
-  adaptive_design_frequency: 5
-tester:
-  params:
-    N_test_prompts: 150
-    N_pairs_eval: 350
+  adaptive_estimation_frequency: 10
+  adaptive_estimation_start: 50
+  adaptive_design_frequency: 10
 experiment:
   episodes: 50
   vocab_size: 1000
   #scorer_model: "art"
+tester: 
+  _target_: components.tester.CosineTester
+  params: null
+    
+
 

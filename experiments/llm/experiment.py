@@ -118,9 +118,15 @@ class LLMExperiment:
     
     
         # Very end fit
-        self.feedback.collect_labels(self.cfg, self.visits, self._theta_star)
-        self.feedback.fit_estimator()
+        # Adaptive estimation - collect only labels for the unprocessed visits
+        if self.cfg.feedback.adaptive_estimation_frequency > 0: 
+            if any(len(buf) > 0 for buf in recent_visits_buffer): 
+                self.feedback.collect_labels(self.cfg, recent_visits_buffer, self._theta_star) 
+        else:
+            # No adaptive estimation - collect labels for everything
+            self.feedback.collect_labels(self.cfg, self.visits, self._theta_star) 
     
+        self.feedback.fit_estimator()
         # Finally, measure the MAE after the full run
         mae = compute_prob_mae(self.env.emissions, self.estimator, self._scorer_model)
         print(f"Final MAE after all episodes: {mae}")
