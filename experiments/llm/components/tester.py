@@ -20,7 +20,6 @@ class PreferenceTester(BaseTester):
         super().__init__()  # Call to parent if needed
     def run_test(self, cfg, env, estimator, theta_star, training_words_list, testing_words_list):
         test_rng = np.random.RandomState(42)
-        import ipdb; ipdb.set_trace()
         
         N_test_prompts = self.params['N_test_prompts']
         N_pairs_eval = self.params['N_pairs_eval']

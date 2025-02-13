@@ -12,10 +12,8 @@ horizon: 3
 accuracy: 1e-12
 dense_feedback: true
 tester: 
-  _target_: components.tester.PreferenceTester
-  params:
-    N_test_prompts: 1000
-    N_pairs_eval: 5000
+  _target_: components.tester.CosineTester
+  params: null
 saver:
   _target_: components.saver.FileSaver
   params:
