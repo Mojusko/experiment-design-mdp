@@ -1,4 +1,5 @@
 import numpy as np
+import torch.optim as optim
 from typing import Callable, Type, Union, Tuple, List
 import torch 
 import warnings
@@ -273,16 +274,13 @@ class FrankWolfe(ConvexSolverBase):
                     
                     # Compute step size for current policy.
                     if self.step == "line-search":
-                        def fn(h):
+                        def compute_loss(h):
                             temp_densities = densities.copy()
                             temp_densities[policy_idx] = densities[policy_idx] * (1 - h) + h * new_density
                             if self.objective.get_type() == "adaptive":
-                                # TODO: make sure visitation is per policy
-                                return -self.objective.eval(emissions, temp_densities, visitations, episodes).detach().cpu().numpy()
-                            return -self.objective.eval(emissions, temp_densities, episodes).detach().cpu().numpy()
-                        
-                        res = minimize_scalar(fn, bounds=(1e-5, 1. - 1e-5), method='bounded')
-                        step_size = res.x
+                                return -self.objective.eval(emissions, temp_densities, visitations, episodes)
+                            return -self.objective.eval(emissions, temp_densities, episodes)
+                        step_size = self._gradient_line_search(compute_loss, emissions.device)                       
                     elif self.step is not None and isinstance(self.step, float):
                         step_size = self.step
                     else:
@@ -319,6 +317,19 @@ class FrankWolfe(ConvexSolverBase):
         self.summarize()
         return self.summarized_policies, self.policies, self.weights, self.densities
 
+    def _gradient_line_search(self, compute_loss, device, init=0.5, lr=0.05, n_iter=30):
+        # Create a scalar tensor h with gradient tracking.
+        h = torch.tensor(init, dtype=torch.float64, device=device, requires_grad=True)
+        optimizer_h = optim.Adam([h], lr=lr)
+        for _ in range(n_iter):
+            optimizer_h.zero_grad()
+            loss = compute_loss(h)
+            loss.backward()
+            optimizer_h.step()
+            # Clamp h to be within (1e-5, 1-1e-5)
+            with torch.no_grad():
+                h.clamp_(1e-5, 1. - 1e-5)
+        return h.item()
     def summarize(self) -> None:
         def create_policy(policies, weights, densities, empirical=None):
             if self.SummarizedPolicyType == DensityPolicy:
