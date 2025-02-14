@@ -1,13 +1,13 @@
-
 import numpy as np
 import matplotlib.pyplot as plt
 import glob
 import os
 import argparse
-import json  # Import JSON for parsing JSON dumps
+import json
 
 def parse_filename(filename):
     base = os.path.basename(filename)
+    # Check for other experiment types first.
     if "withV" in base or "noV" in base:
         v_type = "With V" if "withV" in base else "No V"
         return ("v_comparison", v_type)
@@ -24,6 +24,7 @@ def parse_filename(filename):
         rounds_val = int(parts[-2])
         return ("rounds", rounds_val)
     else:
+        # For feedback experiments, assume file names like "grd-multinomial-1.txt" or "rnd-sample-1.txt"
         alg_type, feedback_type, _ = base.rsplit('-', 2)
         return ("feedback", (alg_type, feedback_type))
 
@@ -36,15 +37,17 @@ def safe_load_data(filename):
     except Exception:
         pass
 
-    # If plain text fails, try to load as a JSON dump.
+    # Try to load as a JSON dump.
     try:
         with open(filename, 'r') as f:
             data_dict = json.load(f)
-        # Look for the "cosine_error" key as in the provided JSON example.
-        if "cosine_error" in data_dict:
-            return data_dict["cosine_error"]
+        # If both keys are present, return the entire dictionary.
+        if "preference_error" in data_dict and "cosine_error" in data_dict:
+            return data_dict
+        elif "cosine_error" in data_dict:
+            return {"cosine_error": data_dict["cosine_error"]}
         else:
-            # If "cosine_error" is not present, return the first numeric value encountered.
+            # Return the first numeric value encountered.
             for value in data_dict.values():
                 if isinstance(value, (int, float)):
                     return value
@@ -54,6 +57,7 @@ def safe_load_data(filename):
     return None
 
 def plot_results_with_type(results, plot_type):
+    # This function handles non-feedback experiments.
     if not results:
         return
 
@@ -76,51 +80,88 @@ def plot_results_with_type(results, plot_type):
         plt.xlabel("Estimation Frequency")
     elif plot_type == "rounds":
         plt.xlabel("Number of Rounds")
-    elif plot_type == "feedback":
-        plt.xlabel("Algorithm-Feedback Type")
     elif plot_type == "v_comparison":
         plt.xlabel("Design Matrix Type")
+    else:
+        plt.xlabel(plot_type)
 
-    plt.ylabel("Preference Misalignment Error")
+    plt.ylabel("Error")
     plt.xticks(rotation=45)
+    plt.tight_layout()
+
+def plot_feedback_results(feedback_results):
+    # Create a grouped bar chart comparing both metrics for each algorithm.
+    labels = list(feedback_results.keys())
+    preference_means = [np.mean(feedback_results[alg]["preference_error"]) for alg in labels]
+    preference_stds = [np.std(feedback_results[alg]["preference_error"]) for alg in labels]
+    cosine_means = [np.mean(feedback_results[alg]["cosine_error"]) for alg in labels]
+    cosine_stds = [np.std(feedback_results[alg]["cosine_error"]) for alg in labels]
+
+    x = np.arange(len(labels))
+    width = 0.35
+
+    plt.figure(figsize=(10, 6))
+    plt.bar(x - width/2, preference_means, width, yerr=preference_stds, capsize=5, label="Preference Error")
+    plt.bar(x + width/2, cosine_means, width, yerr=cosine_stds, capsize=5, label="Cosine Error")
+
+    plt.xlabel("Algorithm")
+    plt.ylabel("Error")
+    plt.xticks(x, labels)
+    plt.title("Algorithm Comparison on Error Metrics")
+    plt.legend()
     plt.tight_layout()
 
 def plot_results(directory):
     pattern = os.path.join(directory, "*.txt")
     files = glob.glob(pattern)
 
+    # Dictionaries for non-feedback experiments.
     results_by_type = {
         "lambda": {},
-        "feedback": {},
         "v_comparison": {},
         "frequency": {},
         "rounds": {}
     }
+    # For feedback experiments (algorithm comparison), group by algorithm.
+    feedback_results = {}
 
     for f in files:
         exp_type, key = parse_filename(f)
         val = safe_load_data(f)
 
         if exp_type == "feedback":
-            combined_key = f"{key[0]}-{key[1]}"
-            if combined_key not in results_by_type[exp_type]:
-                results_by_type[exp_type][combined_key] = []
-            if val is not None:
-                results_by_type[exp_type][combined_key].append(val)
+            # key is a tuple: (alg_type, feedback_type). We group by algorithm only.
+            alg = key[0]
+            # Map shorthand names to full algorithm names.
+            alg_map = {"grd": "Greedy", "rnd": "Random"}
+            alg_name = alg_map.get(alg, alg)
+            if alg_name not in feedback_results:
+                feedback_results[alg_name] = {"preference_error": [], "cosine_error": []}
+            if val is not None and isinstance(val, dict):
+                if "preference_error" in val:
+                    feedback_results[alg_name]["preference_error"].append(val["preference_error"])
+                if "cosine_error" in val:
+                    feedback_results[alg_name]["cosine_error"].append(val["cosine_error"])
         else:
+            # For other experiments, use the existing grouping.
             if key not in results_by_type[exp_type]:
                 results_by_type[exp_type][key] = []
             if val is not None:
                 results_by_type[exp_type][key].append(val)
 
+    # Plot non-feedback experiments.
     for exp_type in results_by_type:
         if results_by_type[exp_type]:
             plot_results_with_type(results_by_type[exp_type], exp_type)
 
+    # Plot the feedback (algorithm comparison) results.
+    if feedback_results:
+        plot_feedback_results(feedback_results)
+
     plt.show()
 
 if __name__ == "__main__":
-    parser = argparse.ArgumentParser()
-    parser.add_argument('directory', help='Directory containing experiment results.')
+    parser = argparse.ArgumentParser(description="Plot experiment results.")
+    parser.add_argument('directory', help='Directory containing experiment result .txt files.')
     args = parser.parse_args()
     plot_results(args.directory)

@@ -1,7 +1,7 @@
 name: "feedback_comparison"
 episodes: 2000
 scorer_model: "aesthetics"
-vocab_size: 5000
+vocab_size: 8000
 #vocabulary: 'vocabulary_jan.txt'
 #vocabulary: 'diverse.txt'
 vocabulary: 'diffusiondb.txt'
