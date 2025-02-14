@@ -2,9 +2,9 @@ import torch
 import torch.nn.functional as F
 import numpy as np
 
-#from doexpy.functionals.doe_static_functionals import (
-#    DesignA, DesignD, MultiPolicyOrigDesignD, MultiPolicyAggDesignD, StochasticMultiPolicyOrigDesignA
-#)
+from doexpy.functionals.doe_static_functionals import (
+    DesignA, DesignD, MultiPolicyOrigDesignA,
+)
 from doexpy.functionals.doe_adaptive_functionals import (
     AdaptiveOrigDesignD, StochasticAdaptiveOrigDesignA, StochasticAdaptiveOrigDesignD
 )
@@ -146,9 +146,11 @@ class FeedbackFactory:
                 V = torch.mm(A.T, A)  # Shape: [768 x 768]
             else:
                 V=None
-            #design = MultiPolicyOrigDesignD(env=env, lambd=cfg.feedback.lambda_reg, dim=1, V=V)
+            if cfg.feedback.adaptive_design_frequency > 0:
             #design = AdaptiveOrigDesignD(env=env, lambd=cfg.feedback.lambda_reg, dim=1)
-            design = StochasticAdaptiveOrigDesignA(env=env, lambd=cfg.feedback.lambda_reg, dim=1, V=V)
+                design = StochasticAdaptiveOrigDesignA(env=env, lambd=cfg.feedback.lambda_reg, dim=1, V=V) 
+            else:
+                design = MultiPolicyOrigDesignA(env=env, lambd=cfg.feedback.lambda_reg, dim=1, V=V)
 
             likelihood = MultinomialLikelihood()
             regularizer = L2Regularizer(lam=cfg.feedback.lambda_reg)

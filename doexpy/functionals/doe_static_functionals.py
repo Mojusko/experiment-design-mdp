@@ -295,6 +295,7 @@ class MultiPolicyOrigDesignD(RewardFunctional):
 
 class MultiPolicyOrigDesignA(MultiPolicyOrigDesignD):
     def eval(self, emissions, distributions, episodes):
+
         z = self._calculate_z(emissions, distributions, episodes)
         eye = torch.eye(z.shape[0], device=z.device, dtype=z.dtype)
         if self.V is None:
