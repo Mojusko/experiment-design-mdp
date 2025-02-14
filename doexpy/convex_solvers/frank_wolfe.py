@@ -259,6 +259,7 @@ class FrankWolfe(ConvexSolverBase):
                             self.densities[i], 
                             self.stationary
                         ).double()
+                        density = density.to(emissions.device)
                         if self.env.type == 'discrete':
                             density.requires_grad_(True)
                         densities.append(density)
