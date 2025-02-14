@@ -271,7 +271,7 @@ class FrankWolfe(ConvexSolverBase):
                     new_policy = self._planning_oracle(rewards[policy_idx])
                     self.policies[policy_idx].append(new_policy)
                     new_density = self.density_estimator.density_oracle_single(new_policy)
-                    new_density = new_density.to(densities[policy_idx].device) 
+                    new_density = new_density.to(emissions.device) 
                     
                     # Compute step size for current policy.
                     if self.step == "line-search":
