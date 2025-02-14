@@ -278,7 +278,8 @@ class FrankWolfe(ConvexSolverBase):
                     if self.step == "line-search":
                         def compute_loss(h):
                             temp_densities = densities.copy()
-                            temp_densities[policy_idx] = densities[policy_idx] * (1 - h) + h * new_density
+                            one = torch.tensor(1.0, device=h.device, dtype=h.dtype)
+                            temp_densities[policy_idx] = densities[policy_idx] * (one - h) + h * new_density
                             if self.objective.get_type() == "adaptive":
                                 return -self.objective.eval(emissions, temp_densities, visitations, episodes)
                             return -self.objective.eval(emissions, temp_densities, episodes)
