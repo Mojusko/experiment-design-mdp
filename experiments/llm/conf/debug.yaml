@@ -2,20 +2,16 @@ defaults:
   - config
   - override feedback: multinomial
 feedback:
-  num_rounds: 10
+  num_rounds: 15
   num_components: 5
-  adaptive_estimation_frequency: 0
-  adaptive_estimation_start: 0
-  adaptive_design_frequency: 0
+  adaptive_estimation_frequency: 25
+  adaptive_estimation_start: 25
+  adaptive_design_frequency: 25
 experiment:
-  episodes: 10
+  episodes: 100
   vocab_size: 1000
   #scorer_model: "art"
 tester:
-  - _target_: components.tester.PreferenceTester
-    params:
-      N_test_prompts: 200
-      N_pairs_eval: 500
   - _target_: components.tester.CosineTester
     params: null
 saver:

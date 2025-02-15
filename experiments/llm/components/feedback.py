@@ -6,7 +6,7 @@ from doexpy.functionals.doe_static_functionals import (
     DesignA, DesignD, MultiPolicyOrigDesignA,
 )
 from doexpy.functionals.doe_adaptive_functionals import (
-    AdaptiveOrigDesignD, StochasticAdaptiveOrigDesignA, StochasticAdaptiveOrigDesignD
+    AdaptiveOrigDesignD, StochasticAdaptiveOrigDesignA, StochasticAdaptiveOrigDesignD, AdaptiveOrigDesignC
 )
 from doexpy.feedback.feedback_base import EmptyFeedback
 from stpy.embeddings.polynomial_embedding import CustomEmbedding
@@ -148,7 +148,8 @@ class FeedbackFactory:
                 V=None
             if cfg.feedback.adaptive_design_frequency > 0:
             #design = AdaptiveOrigDesignD(env=env, lambd=cfg.feedback.lambda_reg, dim=1)
-                design = StochasticAdaptiveOrigDesignA(env=env, lambd=cfg.feedback.lambda_reg, dim=1, V=V) 
+                #design = StochasticAdaptiveOrigDesignA(env=env, lambd=cfg.feedback.lambda_reg, dim=1, V=V) 
+                design = AdaptiveOrigDesignC(env=env, lambd=cfg.feedback.lambda_reg, dim=1) 
             else:
                 design = MultiPolicyOrigDesignA(env=env, lambd=cfg.feedback.lambda_reg, dim=1, V=V)
 

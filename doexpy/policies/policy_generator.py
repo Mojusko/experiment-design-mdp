@@ -12,24 +12,25 @@ class PolicyGenerator():
     def __init__(self, env: DiscreteEnv) -> None:
         self.env = env
 
-    def uniform_policy(self, stationary = False):
+    def uniform_policy(self, stationary=False):
         '''
         Returns a uniform policy within the environment
         '''
         if stationary:
-            p = torch.ones(size = (self.env.states_num, self.env.actions_num), dtype = torch.float64)
+            p = torch.ones((self.env.states_num, self.env.actions_num), dtype=torch.float64)
             for s in range(self.env.states_num):
                 for a in range(self.env.actions_num):
                     if not self.env.is_valid_action(a, s):
-                        p_h[s, a] = 0
+                        p[s, a] = 0
 
+            # Normalize each state's actions (similar to non-stationary normalization)
+            p /= torch.sum(p, dim=1, keepdims=True)
             return StationaryPolicy(self.env, p)
-        
-        else:
-            p = torch.ones((self.env.max_episode_length, self.env.states_num, self.env.actions_num),dtype=torch.float64)
-            for h in range(self.env.max_episode_length):
 
-                p_h = torch.ones((self.env.states_num, self.env.actions_num),dtype=torch.float64)
+        else:
+            p = torch.ones((self.env.max_episode_length, self.env.states_num, self.env.actions_num), dtype=torch.float64)
+            for h in range(self.env.max_episode_length):
+                p_h = torch.ones((self.env.states_num, self.env.actions_num), dtype=torch.float64)
                 for s in range(self.env.states_num):
                     for a in range(self.env.actions_num):
                         if not self.env.is_valid_action(a, s):
@@ -39,7 +40,6 @@ class PolicyGenerator():
                 p[h] = p_h
 
             return NonStationaryPolicy(self.env, p)
-
 class ContinuousPolicyGenerator():
 
     def __init__(self, env: ContinuousEnv) -> None:

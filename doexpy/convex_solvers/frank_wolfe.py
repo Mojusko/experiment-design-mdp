@@ -283,7 +283,7 @@ class FrankWolfe(ConvexSolverBase):
                             if self.objective.get_type() == "adaptive":
                                 return -self.objective.eval(emissions, temp_densities, visitations, episodes)
                             return -self.objective.eval(emissions, temp_densities, episodes)
-                        step_size = self._gradient_line_search(compute_loss, emissions.device)                       
+                        step_size = self._gradient_line_search_lbfgs(compute_loss, emissions.device)                       
                     elif self.step is not None and isinstance(self.step, float):
                         step_size = self.step
                     else:
@@ -320,19 +320,26 @@ class FrankWolfe(ConvexSolverBase):
         self.summarize()
         return self.summarized_policies, self.policies, self.weights, self.densities
 
-    def _gradient_line_search(self, compute_loss, device, init=0.5, lr=0.05, n_iter=30):
-        # Create a scalar tensor h with gradient tracking.
-        h = torch.tensor(init, dtype=torch.float64, device=device, requires_grad=True)
-        optimizer_h = optim.Adam([h], lr=lr)
-        for _ in range(n_iter):
-            optimizer_h.zero_grad()
+
+    def _gradient_line_search_lbfgs(self, compute_loss, device, init=0.5, lr=0.2, max_iter=20):
+        # Initialize h as a one-element tensor with gradient tracking.
+        h = torch.tensor([init], dtype=torch.float64, device=device, requires_grad=True)
+        # LBFGS requires a closure to recompute the loss and gradients.
+        optimizer = torch.optim.LBFGS([h], lr=lr, max_iter=max_iter, line_search_fn='strong_wolfe')
+        
+        def closure():
+            optimizer.zero_grad()
             loss = compute_loss(h)
             loss.backward()
-            optimizer_h.step()
-            # Clamp h to be within (1e-5, 1-1e-5)
-            with torch.no_grad():
-                h.clamp_(1e-5, 1. - 1e-5)
+            return loss
+    
+        optimizer.step(closure)
+        
+        # Ensure h remains within the bounds.
+        with torch.no_grad():
+            h.clamp_(1e-5, 1. - 1e-5)
         return h.item()
+
     def summarize(self) -> None:
         def create_policy(policies, weights, densities, empirical=None):
             if self.SummarizedPolicyType == DensityPolicy:

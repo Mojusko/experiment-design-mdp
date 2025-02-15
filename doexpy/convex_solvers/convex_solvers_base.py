@@ -40,7 +40,7 @@ class ConvexSolverBase(ABC):
         
         if self.initial_policy:
             self.initial_policy_generator = PolicyGenerator(self.env)
-            self.policies = [self.initial_policy_generator.uniform_policy()]
+            self.policies = [self.initial_policy_generator.uniform_policy(stationary=True)]
             self.weights = [1.0]
         else:
             self.policies = []
@@ -76,7 +76,7 @@ class ConvexSolverBase(ABC):
     def reset(self):
 
         if self.initial_policy:
-            self.policies = [self.initial_policy_generator.uniform_policy()]
+            self.policies = [self.initial_policy_generator.uniform_policy(stationary=True)]
             self.weights = [1.0]
         else:
             self.policies = []

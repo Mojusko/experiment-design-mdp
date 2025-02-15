@@ -89,7 +89,8 @@ class LLMExperiment:
                 recent_visits_buffer[policy_idx].append(single_visit)
     
             # Check if it's time to do a partial re-fit 
-            if self.cfg.algorithm != 'random' and est_freq > 0 and ep_idx < total_episodes-1 and ep_idx > 0 and ep_idx  % est_freq == 0 and ep_idx >= est_start:
+            #if self.cfg.algorithm != 'random' and est_freq > 0 and ep_idx < total_episodes-1 and ep_idx > 0 and ep_idx  % est_freq == 0 and ep_idx >= est_start:
+            if est_freq > 0 and ep_idx < total_episodes-1 and ep_idx > 0 and ep_idx  % est_freq == 0 and ep_idx >= est_start:
 
                 # Label just these newly collected episodes, then fit
                 self.feedback.collect_labels(self.cfg, recent_visits_buffer, self._theta_star)

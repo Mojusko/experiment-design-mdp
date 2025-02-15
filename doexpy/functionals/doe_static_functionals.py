@@ -201,6 +201,7 @@ class MultiPolicyOrigDesignD(RewardFunctional):
         self.type = "static"
         self.env = env
         self.V = V
+        self.horizon = env.max_episode_length
         self.time_weigh = time_weigh
         self.estimator = None
         self.prob_matrix = None
@@ -285,9 +286,9 @@ class MultiPolicyOrigDesignD(RewardFunctional):
         z = self._calculate_z(emissions, distributions, episodes)
         eye = torch.eye(z.shape[0], device=z.device, dtype=z.dtype)
         if self.V is None:
-            return torch.linalg.slogdet(z + self.lambd/episodes * eye)[1]
+            return torch.linalg.slogdet(z + self.lambd/(self.horizon*episodes) * eye)[1]
         else:
-            return torch.linalg.slogdet((self.V @ z) + self.lambd/episodes * eye)[1]
+            return torch.linalg.slogdet((self.V @ z) + self.lambd/(self.horizon*episodes) * eye)[1]
 
     def eval_full(self, emissions, distributions, episodes):
         return self.eval(emissions, distributions, episodes)
@@ -299,9 +300,9 @@ class MultiPolicyOrigDesignA(MultiPolicyOrigDesignD):
         z = self._calculate_z(emissions, distributions, episodes)
         eye = torch.eye(z.shape[0], device=z.device, dtype=z.dtype)
         if self.V is None:
-            return -torch.trace(la.inv(z + self.lambd/episodes * eye))
+            return -torch.trace(la.inv(z + self.lambd/(self.horizon*episodes) * eye))
         else:
-            return -torch.trace(self.V @ la.inv(z + self.lambd/episodes * eye))
+            return -torch.trace(self.V @ la.inv(z + self.lambd/(self.horizon*episodes) * eye))
 
     def eval_full(self, emissions, distributions, episodes):
         return self.eval(emissions, distributions, episodes)
