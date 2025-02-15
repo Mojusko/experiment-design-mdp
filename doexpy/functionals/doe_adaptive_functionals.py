@@ -492,6 +492,7 @@ class AdaptiveOrigDesignC(AdaptiveOrigDesignD):
 
         # Variance along the estimated direction c.
         c = self.contrast.view(-1, 1)
+        c = c.to(I_inv.device)
         variance_along = torch.matmul(c.t(), torch.matmul(I_inv, c)).squeeze()
         # Variance orthogonal to c.
         variance_orth = variance_total - variance_along
@@ -515,6 +516,7 @@ class AdaptiveOrigDesignC(AdaptiveOrigDesignD):
             return -variance_total
         
         c = self.contrast.view(-1, 1)
+        c = c.to(I_inv.device)
         variance_along = torch.matmul(c.t(), torch.matmul(I_inv, c)).squeeze()
         variance_orth = variance_total - variance_along
         return -variance_orth
