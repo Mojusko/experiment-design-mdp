@@ -237,7 +237,7 @@ class FrankWolfe(ConvexSolverBase):
     
         # If initial_policy is True, set the persistent counter high so that no updates occur.
         policy_counters = [
-            self.num_rounds * self.num_components if self.initial_policy else 0
+            self.num_rounds * self.num_components if self.num_components == 1 else 0
             for _ in range(self.num_summarized_policies)
         ]
         
@@ -299,7 +299,7 @@ class FrankWolfe(ConvexSolverBase):
                     # Update weights for the current policy.
                     self.weights[policy_idx] = [(1 - step_size) * w for w in self.weights[policy_idx]] + [step_size]
                     
-                    if self.verbosity > 0 and policy_counters[policy_idx] % 100 == 0:
+                    if self.verbosity > 0 and policy_counters[policy_idx] % 50 == 0:
                         if self.objective.get_type() == "adaptive":
                             objective = self.objective.eval(emissions, densities, visitations, episodes, should_mask=False)
                         else:
