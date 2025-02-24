@@ -294,6 +294,7 @@ class StochasticAdaptiveOrigDesignA(StochasticMultiPolicyRewardFunctionalMixin, 
             
             # Compute the union mask.
             union_mask = combined_mask(current_aggregated, history_aggregated, self.batch_size)
+            union_mask = union_mask.to(agg_densities[0].device)  # Fix here
             
             # Apply the union mask to all inputs.
             # Assuming emissions is defined over actions (shape: (A, d)):
