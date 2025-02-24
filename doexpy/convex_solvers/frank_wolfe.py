@@ -337,7 +337,7 @@ class FrankWolfe(ConvexSolverBase):
         
         # Ensure h remains within the bounds.
         with torch.no_grad():
-            h.clamp_(1e-3, 1. - 1e-3)
+            h.clamp_(1e-5, 1. - 1e-5)
         return h.item()
 
     def summarize(self) -> None:
