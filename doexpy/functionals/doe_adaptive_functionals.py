@@ -344,6 +344,7 @@ def combined_mask(current_aggregated: torch.Tensor,
     
     # Compute the history mask: all indices with nonzero visitation.
     history_mask = (history_aggregated != 0).nonzero(as_tuple=True)[0]
+    history_mask = history_mask.to(current_mask.device)
     
     # Union the two masks.
     combined = torch.cat([current_mask, history_mask])
