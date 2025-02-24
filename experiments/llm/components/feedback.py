@@ -134,26 +134,27 @@ class FeedbackFactory:
             #design = MultiPolicyOrigDesignD(env=env, lambd=cfg.feedback.lambda_reg, dim=1)
             if cfg.feedback.pass_V:
                 # Create matrix A of all pairwise differences
+                # Assuming env.emissions is a tensor of shape [n x 768]
                 n = env.emissions.shape[0]
-                rows = []
-                for i in range(n):
-                    for j in range(n):
-                        diff = env.emissions[i] - env.emissions[j]
-                        rows.append(diff)
-                A = torch.stack(rows)  # Shape: [n*(n-1)/2 x 768]
+                # Create difference matrix A using broadcasting
+                # First expand emissions to [n x 1 x 768] and [1 x n x 768]
+                diff = env.emissions.unsqueeze(1) - env.emissions.unsqueeze(0)  # Shape: [n x n x 768]
+                
+                # Reshape to stack all differences
+                A = diff.view(n * n, -1)  # Shape: [n*n x 768]
                 
                 # Compute V using the difference matrix A
                 V = torch.mm(A.T, A)  # Shape: [768 x 768]
             else:
                 V=None
             if cfg.feedback.adaptive_design_frequency > 0:
-                design = StochasticAdaptiveOrigDesignA(env=env, lambd=cfg.feedback.lambda_reg, dim=1)
+                design = StochasticAdaptiveOrigDesignA(env=env, lambd=cfg.feedback.lambda_reg, dim=1, V=V)
                 #design = StochasticAdaptiveOrigDesignD(env=env, lambd=cfg.feedback.lambda_reg, dim=1)
                 #design = AdaptiveOrigDesignD(env=env, lambd=cfg.feedback.lambda_reg, dim=1) 
 
                 #design = AdaptiveOrigDesignC(env=env, lambd=cfg.feedback.lambda_reg, dim=1) 
             else:
-                design = MultiPolicyOrigDesignD(env=env, lambd=cfg.feedback.lambda_reg, dim=1,V=V)
+                design = MultiPolicyOrigDesignA(env=env, lambd=cfg.feedback.lambda_reg, dim=1,V=V)
 
             likelihood = MultinomialLikelihood()
             regularizer = L2Regularizer(lam=cfg.feedback.lambda_reg)
