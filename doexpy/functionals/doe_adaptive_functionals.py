@@ -342,12 +342,12 @@ def combined_mask(current_aggregated: torch.Tensor,
     # Compute the stochastic mask from the current distribution.
     current_mask = compute_mask(current_aggregated, additional)
     
-    # Compute the history mask: all indices with nonzero visitation.
-    history_mask = (history_aggregated != 0).nonzero(as_tuple=True)[0]
+    # Compute the history mask and move it to match current_aggregated's device.
+    history_mask = (history_aggregated != 0).nonzero(as_tuple=True)[0].to(current_aggregated.device)
     
-    # Union the two masks.
-    combined = torch.cat([current_mask, history_mask]).to(current_aggregated.device)
-    combined = torch.unique(combined)  # remove duplicates
+    # Union the two masks (now on the same device).
+    combined = torch.cat([current_mask, history_mask])
+    combined = torch.unique(combined)
     combined, _ = torch.sort(combined)
     return combined
 
