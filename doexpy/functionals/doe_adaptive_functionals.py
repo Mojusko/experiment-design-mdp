@@ -315,18 +315,18 @@ class StochasticAdaptiveOrigDesignA(StochasticMultiPolicyRewardFunctionalMixin, 
         
         eye = torch.eye(z.shape[0], device=z.device, dtype=z.dtype)
         if self.V is None:
-            return torch.trace(torch.linalg.inv(z + self.lambd/(self.horizon*episodes) * eye))
+            return -torch.trace(torch.linalg.inv(z + self.lambd/(self.horizon*episodes) * eye))
         else:
-            return torch.trace(self.V @ torch.linalg.inv(z + self.lambd/(self.horizon*episodes) * eye))
+            return -torch.trace(self.V @ torch.linalg.inv(z + self.lambd/(self.horizon*episodes) * eye))
     
     def eval_full(self, emissions, distributions, episodes):
         # Final evaluation uses the full (unmasked) distributions.
         z = super()._calculate_z(emissions, distributions, episodes)
         eye = torch.eye(z.shape[0], device=z.device, dtype=z.dtype)
         if self.V is None:
-            return torch.trace(torch.linalg.inv(z + self.lambd/(self.horizon*episodes) * eye))
+            return -torch.trace(torch.linalg.inv(z + self.lambd/(self.horizon*episodes) * eye))
         else:
-            return torch.trace(self.V @ torch.linalg.inv(z + self.lambd/(self.horizon*episodes) * eye))
+            return -torch.trace(self.V @ torch.linalg.inv(z + self.lambd/(self.horizon*episodes) * eye))
 
 def combined_mask(current_aggregated: torch.Tensor,
                   history_aggregated: torch.Tensor,
