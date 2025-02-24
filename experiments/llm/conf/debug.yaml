@@ -2,11 +2,11 @@ defaults:
   - config
   - override feedback: multinomial
 feedback:
-  num_rounds: 12
+  num_rounds: 50
   num_components: 3
-  adaptive_estimation_frequency: 10
-  adaptive_estimation_start: 30
-  adaptive_design_frequency: 10
+  adaptive_estimation_frequency: 0
+  adaptive_estimation_start: 0
+  adaptive_design_frequency: 0
 experiment:
   episodes: 100
   vocab_size: 1000

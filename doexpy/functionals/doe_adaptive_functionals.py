@@ -352,21 +352,21 @@ def combined_mask(current_aggregated: torch.Tensor,
     combined, _ = torch.sort(combined)
     return combined
 
-class StochasticAdaptiveOrigDesignD(StochasticMultiPolicyRewardFunctionalMixin, MultiPolicyOrigDesignD):
-    def __init__(self, env, lambd=1e-3, dim=0, uniform_alpha=False, batch_size=500):
+class StochasticAdaptiveOrigDesignD(StochasticMultiPolicyRewardFunctionalMixin, MultiPolicyOrigDesignA):
+    def __init__(self, env, lambd=1e-3, dim=0, uniform_alpha=False, V=None, batch_size=500):
         super().__init__(env, lambd, dim, batch_size=batch_size)
         self.type = "adaptive"
         self.uniform_alpha = uniform_alpha
+        self.V = V
 
     def eval(self, emissions, distributions, visitations_per_policy, episodes, should_mask=True):
-        # Compute aggregated densities from each policy's visitation history.
+        # Compute agg_densities for each policy's visitation history.
         agg_densities = [
             self.build_density_from_trajectories(visitations)
             for visitations in visitations_per_policy
         ]
-        
-        # For stationary distributions: if the aggregated density has more dimensions,
-        # convert it to (S x A) format (e.g., via diagonal extraction).
+
+        # For Stationary distributions, convert history density to stationary (S x A) format (TODO: refactor this, only applies to LLM)
         for i in range(len(distributions)):
             if len(distributions[i].shape) < len(agg_densities[i].shape):
                 agg_densities[i] = agg_densities[i].diagonal(dim1=0, dim2=1).T
@@ -374,44 +374,49 @@ class StochasticAdaptiveOrigDesignD(StochasticMultiPolicyRewardFunctionalMixin, 
         union_mask = None
         
         if should_mask:
-            # Combine all visitation histories. For example, if each agg_density is (S x A),
-            # sum over states (S) to get an action-level statistic.
-            history_aggregated = torch.sum(
-                torch.stack([torch.sum(agg, dim=0) for agg in agg_densities]), dim=0
-            )
+            # Combine all visitation histories. For instance, if each agg_density is (S x A),
+            # you can sum over S for each policy and then combine them.
+            history_aggregated = torch.sum(torch.stack([torch.sum(agg, dim=0) for agg in agg_densities]), dim=0)
             
-            # Aggregate current distribution from the first policy (assuming (S x A)).
+            # Aggregate current distribution from, say, the first policy.
+            # For a 2D distribution with shape (S x A), sum over S to get a 1D vector of length A.
             current_aggregated = torch.sum(distributions[0], dim=0)
             
-            # Compute the union mask (requires a helper function `combined_mask`).
+            # Compute the union mask.
             union_mask = combined_mask(current_aggregated, history_aggregated, self.batch_size)
+            union_mask = union_mask.to(agg_densities[0].device)  # Fix here
             
-            # Apply the union mask to emissions, current distributions, and aggregated densities.
+            # Apply the union mask to all inputs.
+            # Assuming emissions is defined over actions (shape: (A, d)):
             emissions = emissions[union_mask]
+            
+            # Mask each current distribution (for a 2D case, assume shape (S, A)):
             distributions = [d[:, union_mask] for d in distributions]
+            
+            # Also mask each agg_density accordingly.
             agg_densities = [agg[:, union_mask] for agg in agg_densities]
-
-        # Calculate the two information matrices:
+        
+        # Now both current and historical inputs have the same action dimension.
         new_z = super()._calculate_z(emissions, distributions, episodes, mask=union_mask)
         agg_z = super()._calculate_z(emissions, agg_densities, episodes, mask=union_mask)
-
-        # Determine the weighting factor alpha.
+        
         alpha = len(visitations_per_policy[0]) / episodes
-        if self.uniform_alpha:
-            z = (1.0 / episodes) * new_z + alpha * agg_z
-        else:
-            z = (1 - alpha) * new_z + alpha * agg_z
-
-        # Add ridge regularization.
+        z = ((1.0 / episodes) * new_z + alpha * agg_z) if self.uniform_alpha else ((1 - alpha) * new_z + alpha * agg_z)
+        
         eye = torch.eye(z.shape[0], device=z.device, dtype=z.dtype)
-        regularized_z = z + self.lambd / (self.horizon*episodes) * eye
-
-        # Return the log-determinant (second element of slogdet output).
-        return torch.linalg.slogdet(regularized_z)[1]
-
+        matrix = z + self.lambd/(self.horizon*episodes) * eye
+        if self.V is None:
+            return torch.linalg.slogdet(matrix)[1]  # Return the log determinant (second element of slogdet tuple)
+        else:
+            return torch.linalg.slogdet(self.V @ matrix)[1]  # Apply V and return log determinant
+    
     def eval_full(self, emissions, distributions, episodes):
-        # For final evaluation, use the full (unmasked) current distributions.
+        # Final evaluation uses the full (unmasked) distributions.
         z = super()._calculate_z(emissions, distributions, episodes)
         eye = torch.eye(z.shape[0], device=z.device, dtype=z.dtype)
-        regularized_z = z + self.lambd / (self.horizon*episodes) * eye
-        return torch.linalg.slogdet(regularized_z)[1]
+        matrix = z + self.lambd/(self.horizon*episodes) * eye
+        if self.V is None:
+            return torch.linalg.slogdet(matrix)[1]  # Return the log determinant
+        else:
+            return torch.linalg.slogdet(self.V @ matrix)[1]  # Apply V and return log determinant
+
