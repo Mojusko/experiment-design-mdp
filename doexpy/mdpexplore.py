@@ -286,7 +286,6 @@ class MdpExploreMultiPolicy:
         
         # Initialize lists to store per-policy information
         self.general_policies = []
-        self.densities_per_policy = [[] for _ in range(num_policies)]
         self.objective_values_baseline_per_policy = [[] for _ in range(num_policies)]
         self.visitations_per_policy = [[] for _ in range(num_policies)]
         self.adaptive_design_frequency = adaptive_design_frequency
@@ -402,13 +401,14 @@ class MdpExploreMultiPolicy:
                     (self.state_visitations_per_policy[policy_idx],
                      self.action_visitations_per_policy[policy_idx])
                 )
-                
+
     def run(
         self,
         episodes: int = 100,
         save_trajectory: Union[str, None] = None,
         return_visitations: bool = False,
-        update_callback=None
+        update_callback=None,
+        start_ep_idx: int = 0,
     ):
         """
         Runs the maximum-entropy exploration procedure in a single pass over `episodes`.
@@ -422,13 +422,14 @@ class MdpExploreMultiPolicy:
             update_callback (callable or None): a function `fn(ep_idx, new_visits)` called
                 after each episode, where `new_visits` is the newly collected trajectories
                 for each policy. Defaults to None.
+            start_ep_idx (int): starting episode index for global tracking.
     
         Returns:
             (objective_values, opt) or (objective_values, opt, visitations_per_policy)
             if `return_visitations` is True.
         """
         # Reset and set total episodes
-        self._reset()
+        self._reset(reset_visitations=False)
         self.episodes = episodes
     
         # We'll track a per-episode objective
@@ -439,36 +440,35 @@ class MdpExploreMultiPolicy:
             if self.verbosity > 0:
                 print("Optimizing starting with budget:", episodes)
             self.optimize_policies()
-            # Reset visits for the actual rollouts
-            self.visitations_per_policy = [[] for _ in range(self.num_policies)]
     
         # Main loop: run exactly one new episode each iteration
-        for ep_i in range(episodes):
+        for ep_i in range(start_ep_idx, episodes):
             if self.verbosity > 2:
                 print("Episode:", ep_i)
-    
-            # The newly added visits for each policy are the last entries
-            new_visits = [vp[-1] for vp in self.visitations_per_policy] if ep_i > 0 else []
-    
-            # If user provided a callback, call it to do partial re-fitting, etc.
-            if update_callback is not None:
-                update_callback(ep_i, new_visits)
- 
 
+            # If user provided a callback, call it to do partial re-fitting, etc.
+            if update_callback is not None and ep_i > 0:
+                # Now, after evaluating, the new visit is available
+                new_visits = [
+                    self.visitations_per_policy[p_i][-1]
+                    for p_i in range(self.num_policies)
+                ]
+                update_callback(ep_i, new_visits)
+    
+
+            # Handle adaptive policy optimization
             if self.objective.get_type() == "adaptive":
-                if ep_i % self.adaptive_design_frequency == 0:
+                if ep_i % self.adaptive_design_frequency == 0 or ep_i == start_ep_idx:
                     if self.verbosity > 1:
                         print(f"Re-optimizing policies at episode {ep_i}")
-
                     self.env.reset()
                     self.optimize_policies()
-
+    
             # Evaluate exactly 1 episode for each policy
-            # 'keep=False' means we can re-optimize inside the callback if needed
+            # 'keep=True' means we keep the trajectories for callback processing
             self.evaluate(episodes=1, keep=True)
     
-   
-            # Optionally save trajectory
+                        # Optionally save trajectory
             if save_trajectory is not None:
                 for policy_idx in range(self.num_policies):
                     np.savetxt(
@@ -478,7 +478,7 @@ class MdpExploreMultiPolicy:
                             for s in self.trajectory_per_policy[policy_idx]
                         ])
                     )
-
+    
             # For logging, compute the objective so far
             if self.verbosity > 2 and ep_i % 25 == 0:
                 aggregate_distributions = []
@@ -516,3 +516,4 @@ class MdpExploreMultiPolicy:
             return objective_values, opt, self.visitations_per_policy
     
         return objective_values, opt
+                    

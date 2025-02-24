@@ -53,7 +53,8 @@ class LLMExperiment:
         if os.path.exists(cfg.saver.params.path):
             os.remove(cfg.saver.params.path)
 
-        self.training_words, self.testing_words, self.model_words = self._load_data_legacy()
+        #self.training_words, self.testing_words, self.model_words = self._load_data_legacy()
+        self.training_words, self.testing_words, self.model_words = self._load_data()
         self.env = self._init_env()
         self.feedback, self.design, self.estimator = FeedbackFactory.create(cfg, self.env)
         self.explorer = SolverFactory.create(cfg, self.env, self.design, self.feedback)
@@ -61,76 +62,46 @@ class LLMExperiment:
         self.saver = hydra.utils.instantiate(cfg.saver)
         
         self.visits = [] if self.cfg.feedback.num_policies == 1 else [[] for _ in range(self.cfg.feedback.num_policies )]
-        
+
     def run(self):
-        """
-        Runs exploration with a single call to explorer.run, but uses a callback
-        to buffer newly collected episodes. Once we've accumulated `freq` episodes
-        (or hit the final episode), we refit to exactly that set of new visits.
-    
-        This ensures that the design always knows the total # of episodes,
-        yet we only re-fit every `freq` episodes, similar to the old phased approach.
-        """
         total_episodes = self.cfg.experiment.episodes
         est_freq = self.cfg.feedback.adaptive_estimation_frequency
         est_start = self.cfg.feedback.adaptive_estimation_start
         num_policies = self.cfg.feedback.num_policies
-    
-        # We'll keep a buffer of newly discovered episodes. For multi-policy, this is
-        # a list of length num_policies, each an array of visits since the last re-fit.
-        recent_visits_buffer = [[] for _ in range(num_policies)]
-    
-        def update_callback(ep_idx, new_visits_for_this_episode):
-            # new_visits_for_this_episode is a list of length num_policies, each the
-            # single newly collected episode for that policy.
-    
-            # Accumulate them in our buffer
-            for policy_idx, single_visit in enumerate(new_visits_for_this_episode):
-                recent_visits_buffer[policy_idx].append(single_visit)
-    
-            # Check if it's time to do a partial re-fit 
-            #if self.cfg.algorithm != 'random' and est_freq > 0 and ep_idx < total_episodes-1 and ep_idx > 0 and ep_idx  % est_freq == 0 and ep_idx >= est_start:
-            if est_freq > 0 and ep_idx < total_episodes-1 and ep_idx > 0 and ep_idx  % est_freq == 0 and ep_idx >= est_start:
 
-                # Label just these newly collected episodes, then fit
+        all_visits = [[] for _ in range(num_policies)]
+        recent_visits_buffer = [[] for _ in range(num_policies)]
+
+        def update_callback(ep_idx, new_visits_for_this_episode):
+            for policy_idx, single_visit in enumerate(new_visits_for_this_episode):
+                all_visits[policy_idx].append(single_visit)
+                recent_visits_buffer[policy_idx].append(single_visit)
+
+            if est_freq > 0 and ep_idx < total_episodes - 1 and ep_idx >= est_start and ep_idx % est_freq == 0:
                 self.feedback.collect_labels(self.cfg, recent_visits_buffer, self._theta_star)
                 self.feedback.fit_estimator()
                 self.design.update_estimator(self.estimator, self.env.emissions)
-    
-                # measure partial MAE
                 mae = compute_prob_mae(self.env.emissions, self.estimator, self._scorer_model)
                 print(f"Episode {ep_idx} partial re-fit, MAE: {mae}", self.feedback.metrics)
-    
-                # Clear our buffer so next batch is fresh
                 for p_i in range(num_policies):
                     recent_visits_buffer[p_i].clear()
-    
-        # Now call explorer.run exactly once, passing our callback
-        # We request visitations so we can store them if desired
-        # TODO: add support for numerical designs
+
         results = self.explorer.run(
             episodes=total_episodes,
             return_visitations=True,
             update_callback=update_callback
         )
-        # results is typically (objective_values, opt, visits)
-        # store them if needed
-        *_, self.visits = results
-    
-    
-        # Very end fit
-        # Adaptive estimation - collect only labels for the unprocessed visits
-        if self.cfg.feedback.adaptive_estimation_frequency > 0: 
-            if any(len(buf) > 0 for buf in recent_visits_buffer): 
-                self.feedback.collect_labels(self.cfg, recent_visits_buffer, self._theta_star) 
-        else:
-            # No adaptive estimation - collect labels for everything
-            self.feedback.collect_labels(self.cfg, self.visits, self._theta_star) 
-    
+        self.visits = results
+
+        if any(len(buf) > 0 for buf in recent_visits_buffer):
+            self.feedback.collect_labels(self.cfg, recent_visits_buffer, self._theta_star)
+        elif est_start == 0:
+            self.feedback.collect_labels(self.cfg, all_visits, self._theta_star)
+
         self.feedback.fit_estimator()
-        # Finally, measure the MAE after the full run
-        mae = compute_prob_mae(self.env.emissions, self.estimator, self._scorer_model)
-        print(f"Final MAE after all episodes: {mae}")
+        self.design.update_estimator(self.estimator, self.env.emissions)
+        final_mae = compute_prob_mae(self.env.emissions, self.estimator, self._scorer_model)
+        print(f"Final MAE after all {total_episodes} episodes: {final_mae}")
         
     def _init_env(self):
         """

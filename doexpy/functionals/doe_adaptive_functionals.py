@@ -262,7 +262,6 @@ class AdaptiveOrigDesignD(MultiPolicyOrigDesignD):
         eye = torch.eye(z.shape[0], device=z.device, dtype=z.dtype)
         return torch.linalg.slogdet(z + self.lambd/episodes * eye)[1]
 
-
 class StochasticAdaptiveOrigDesignA(StochasticMultiPolicyRewardFunctionalMixin, MultiPolicyOrigDesignA):
     def __init__(self, env, lambd=1e-3, dim=0, uniform_alpha=False, V=None, batch_size=500):
         super().__init__(env, lambd, dim, batch_size=batch_size)
@@ -315,18 +314,18 @@ class StochasticAdaptiveOrigDesignA(StochasticMultiPolicyRewardFunctionalMixin, 
         
         eye = torch.eye(z.shape[0], device=z.device, dtype=z.dtype)
         if self.V is None:
-            return -torch.trace(torch.linalg.inv(z + self.lambd/(self.horizon*episodes) * eye))
+            return torch.trace(torch.linalg.inv(z + self.lambd/(self.horizon*episodes) * eye))
         else:
-            return -torch.trace(self.V @ torch.linalg.inv(z + self.lambd/(self.horizon*episodes) * eye))
+            return torch.trace(self.V @ torch.linalg.inv(z + self.lambd/(self.horizon*episodes) * eye))
     
     def eval_full(self, emissions, distributions, episodes):
         # Final evaluation uses the full (unmasked) distributions.
         z = super()._calculate_z(emissions, distributions, episodes)
         eye = torch.eye(z.shape[0], device=z.device, dtype=z.dtype)
         if self.V is None:
-            return -torch.trace(torch.linalg.inv(z + self.lambd/(self.horizon*episodes) * eye))
+            return torch.trace(torch.linalg.inv(z + self.lambd/(self.horizon*episodes) * eye))
         else:
-            return -torch.trace(self.V @ torch.linalg.inv(z + self.lambd/(self.horizon*episodes) * eye))
+            return torch.trace(self.V @ torch.linalg.inv(z + self.lambd/(self.horizon*episodes) * eye))
 
 def combined_mask(current_aggregated: torch.Tensor,
                   history_aggregated: torch.Tensor,
@@ -351,7 +350,6 @@ def combined_mask(current_aggregated: torch.Tensor,
     combined = torch.unique(combined)  # remove duplicates
     combined, _ = torch.sort(combined)
     return combined
-
 
 class StochasticAdaptiveOrigDesignD(StochasticMultiPolicyRewardFunctionalMixin, MultiPolicyOrigDesignD):
     def __init__(self, env, lambd=1e-3, dim=0, uniform_alpha=False, batch_size=500):
@@ -416,107 +414,3 @@ class StochasticAdaptiveOrigDesignD(StochasticMultiPolicyRewardFunctionalMixin, 
         eye = torch.eye(z.shape[0], device=z.device, dtype=z.dtype)
         regularized_z = z + self.lambd / (self.horizon*episodes) * eye
         return torch.linalg.slogdet(regularized_z)[1]
-
-class AdaptiveOrigDesignC(AdaptiveOrigDesignD):
-    """
-    Adaptive C-optimal design functional for multi-policy experiments.
-    
-    Before any estimator is provided (i.e. no contrast is set), this design
-    falls back on a D-optimal objective (i.e. the log-det of the regularized
-    Fisher information matrix). Once update_estimator is called with an estimator,
-    we set the contrast vector c = θ/∥θ∥ (using the estimator’s mean over emissions)
-    and use the objective:
-    
-         precision = 1 / (cᵀ I⁻¹ c)
-    
-    where I is the regularized, weighted Fisher information matrix computed adaptively.
-    """
-    def __init__(self, env, lambd=1e-3, dim=0, uniform_alpha=False):
-        super().__init__(env, lambd, dim, uniform_alpha=uniform_alpha)
-        self.contrast = None  # Will hold the normalized theta estimate
-
-    def update_estimator(self, estimator, emissions):
-        """
-        Update the internal estimator and set the contrast vector.
-        
-        The contrast vector is computed as the normalized estimator mean
-        (i.e. c = theta/∥theta∥). This is used in subsequent design evaluations.
-        """
-        with torch.no_grad():
-            theta = estimator.theta_fit
-            norm = torch.norm(theta)
-            if norm > 0:
-                self.contrast = theta / norm
-            else:
-                self.contrast = theta
-
-    def eval(self, emissions, distributions, visitations_per_policy, episodes, **kwargs):
-        """
-        Evaluate the adaptive design objective.
-        
-        This method computes the weighted Fisher information matrix I as in
-        AdaptiveOrigDesignD using both current distributions and aggregated visitation
-        densities. It then regularizes I. If no contrast is set (i.e. before update_estimator),
-        it returns the D-optimal objective (log-det of I). Otherwise, it computes the
-        directional variance along the contrast vector (cᵀ I⁻¹ c) and returns its inverse
-        (precision), so that higher precision means lower variance in the theta direction.
-        """
-        # Build aggregated visitation densities from the visitation history for each policy.
-        agg_densities = [self.build_density_from_trajectories(visitations) 
-                         for visitations in visitations_per_policy]
-        
-        # Compute adaptive weighting factor alpha.
-        alpha = len(visitations_per_policy[0]) / episodes
-        
-        # Compute current information matrix and aggregated information matrix.
-        new_z = super()._calculate_z(emissions, distributions, episodes)
-        agg_z = super()._calculate_z(emissions, agg_densities, episodes)
-        
-        # Combine matrices based on adaptive weighting.
-        if self.uniform_alpha:
-            z = (1.0 / episodes) * new_z + alpha * agg_z
-        else:
-            z = (1 - alpha) * new_z + alpha * agg_z
-        
-        # Regularize the information matrix.
-        eye = torch.eye(z.shape[0], device=z.device, dtype=z.dtype)
-        reg_z = z + self.lambd / (self.horizon*episodes) * eye
-        
-        I_inv = torch.linalg.inv(reg_z)
-
-        variance_total = torch.trace(I_inv)
-        
-        # If no estimator (and thus no contrast) is available, use A-optimality based on total variance.
-        if self.contrast is None:
-            return -variance_total
-
-        # Variance along the estimated direction c.
-        c = self.contrast.view(-1, 1)
-        c = c.to(I_inv.device)
-        variance_along = torch.matmul(c.t(), torch.matmul(I_inv, c)).squeeze()
-        # Variance orthogonal to c.
-        variance_orth = variance_total - variance_along
-        return -variance_orth
-
-
-    def eval_full(self, emissions, distributions, episodes):
-        """
-        Full evaluation of the design objective using current distributions.
-        
-        Similar to eval but assumes that no visitation histories are used.
-        """
-        z = super()._calculate_z(emissions, distributions, episodes)
-        eye = torch.eye(z.shape[0], device=z.device, dtype=z.dtype)
-        reg_z = z + self.lambd / (self.horizon*episodes) * eye
-        
-        I_inv = torch.linalg.inv(reg_z)
-        variance_total = torch.trace(I_inv)
-        
-        if self.contrast is None:
-            return -variance_total
-        
-        c = self.contrast.view(-1, 1)
-        c = c.to(I_inv.device)
-        variance_along = torch.matmul(c.t(), torch.matmul(I_inv, c)).squeeze()
-        variance_orth = variance_total - variance_along
-        return -variance_orth

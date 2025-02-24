@@ -142,32 +142,41 @@ class MultiPolicyAggDesignA(ExperimentDesignFunctional):
         self.V = V
         self.time_weigh = time_weigh
 
+
     def _calculate_z(self,
-                    emissions: torch.Tensor,
-                    distributions: List[torch.Tensor],
-                    episodes: int = 0,
-                    Sigma: Union[None, float] = None) -> torch.Tensor:
+                     emissions: torch.Tensor,
+                     distributions: List[torch.Tensor],
+                     episodes: int = 0,
+                     Sigma: Union[None, float] = None) -> torch.Tensor:
         if Sigma is None:
             Sigma = 1.
             
+        # Ensure distributions are on the same device as emissions.
         distributions = [d.to(emissions.device) for d in distributions]
-        z = torch.zeros((emissions.shape[1], emissions.shape[1]), dtype=distributions[0].dtype, device=emissions.device)
+        # <-- New: If distributions are 2D, add a horizon dimension (like in OrigDesign)
+        if distributions[0].ndim == 2:
+            distributions = [d.unsqueeze(0) for d in distributions]
+    
+        # Initialize z using the feature dimension from emissions.
+        z = torch.zeros((emissions.shape[1], emissions.shape[1]),
+                        dtype=distributions[0].dtype, device=emissions.device)
         emissions = emissions.type(distributions[0].dtype)
         H = distributions[0].shape[0]
-
+    
         for h in range(H):
-            time_weight = (H - h)/H if self.time_weigh else 1.0
+            time_weight = (H - h) / H if self.time_weigh else 1.0
             if self.dim == 0:
-                d_h_sum = sum(torch.sum(d[h], dim=1) for d in distributions)/Sigma**2
+                # Sum over the first non-horizon dimension.
+                d_h_sum = sum(torch.sum(d[h], dim=1) for d in distributions) / Sigma**2
             elif self.dim == 1:
-                d_h_sum = sum(torch.sum(d[h], dim=0) for d in distributions)/Sigma**2
-            
+                d_h_sum = sum(torch.sum(d[h], dim=0) for d in distributions) / Sigma**2
+    
+            # Compute the two terms via Einstein summation.
             z_diag = torch.einsum('ij,j,jk->ik', emissions.T, d_h_sum, emissions)
             z_outer = 0.5 * torch.einsum('ij,j,k,kl->il', emissions.T, d_h_sum, d_h_sum, emissions)
             z += time_weight * (z_diag - z_outer)
-
+    
         return z
-
     def eval(self,
          emissions: torch.Tensor,
          distributions: List[torch.Tensor],
