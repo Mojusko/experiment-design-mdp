@@ -236,7 +236,8 @@ class MultiPolicyOrigDesignD(RewardFunctional):
         """Return pairwise probability matrix or default to 0.5 on the specified device and dtype."""
         n = emissions.shape[0]
         if self.prob_matrix is None:
-            return 0.5 * torch.ones((n, n), device=emissions.device, dtype=emissions.dtype)
+            #return 0.5 * torch.ones((n, n), device=emissions.device, dtype=emissions.dtype)
+            return 1 * torch.ones((n, n), device=emissions.device, dtype=emissions.dtype)
         return self.prob_matrix
 
     def _compute_diagonal_terms(self, emissions, prob_matrix, d1_h, d2_h):
