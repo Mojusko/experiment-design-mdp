@@ -321,33 +321,24 @@ class FrankWolfe(ConvexSolverBase):
         self.summarize()
         return self.summarized_policies, self.policies, self.weights, self.densities
 
-    def _gradient_line_search_lbfgs(self, compute_loss, device, init_h=0.5, lr=0.2, max_iter=20):
+    def _gradient_line_search_lbfgs(self, compute_loss, device, init=0.5, lr=0.2, max_iter=20):
         # Initialize h as a one-element tensor with gradient tracking.
-        # Convert initial h to initial param using inverse sigmoid (logit)
-        init_param = torch.logit(torch.tensor([init_h], dtype=torch.float64))
-        param = init_param.to(device).requires_grad_(True)
-        
-        # Initialize LBFGS optimizer with strong Wolfe line search
-        optimizer = torch.optim.LBFGS([param], lr=lr, max_iter=max_iter, line_search_fn='strong_wolfe')
+        h = torch.tensor([init], dtype=torch.float64, device=device, requires_grad=True)
+        # LBFGS requires a closure to recompute the loss and gradients.
+        optimizer = torch.optim.LBFGS([h], lr=lr, max_iter=max_iter, line_search_fn='strong_wolfe')
         
         def closure():
             optimizer.zero_grad()
-            # Compute h as sigmoid of param, ensuring h is in (0, 1)
-            h = torch.sigmoid(param)
             loss = compute_loss(h)
             loss.backward()
             return loss
-        
-        # Run optimization
+    
         optimizer.step(closure)
         
-        # Compute final h
+        # Ensure h remains within the bounds.
         with torch.no_grad():
-            h_opt = torch.sigmoid(param)
-            # Optional clamping for numerical stability (slightly inside [0, 1])
-            h_opt.clamp_(1e-5, 1 - 1e-5)
-        
-        return h_opt.item()
+            h.clamp_(1e-5, 1. - 1e-5)
+        return h.item()
 
     def summarize(self) -> None:
         def create_policy(policies, weights, densities, empirical=None):
