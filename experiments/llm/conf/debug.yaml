@@ -5,11 +5,11 @@ feedback:
   num_rounds: 12
   num_components: 3
   adaptive_estimation_frequency: 10
-  adaptive_estimation_start: 50
+  adaptive_estimation_start: 30
   adaptive_design_frequency: 10
 experiment:
-  episodes: 200
-  vocab_size: 2000
+  episodes: 100
+  vocab_size: 1000
   #scorer_model: "art"
 tester:
   - _target_: components.tester.PreferenceTester

@@ -5,6 +5,6 @@ num_rounds: 40
 #lambda_reg: 4000 best for static design [need to revalidate]
 lambda_reg: 10
 adaptive_estimation_frequency: 10
-adaptive_estimation_start: 100
+adaptive_estimation_start: 50
 adaptive_design_frequency: 10
 pass_V: false
