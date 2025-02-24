@@ -262,6 +262,51 @@ class AdaptiveOrigDesignD(MultiPolicyOrigDesignD):
         eye = torch.eye(z.shape[0], device=z.device, dtype=z.dtype)
         return torch.linalg.slogdet(z + self.lambd/episodes * eye)[1]
 
+class AdaptiveOrigDesignA(MultiPolicyOrigDesignA):
+    def __init__(self, env, lambd=1e-3, dim=0, uniform_alpha=False, V=None):
+        super().__init__(env, lambd, dim)
+        self.type = "adaptive"
+        self.uniform_alpha = uniform_alpha
+        self.V = V
+
+    def eval(self, emissions, distributions, visitations_per_policy, episodes):
+        # For training - handle adaptive weighting without any masking
+        agg_densities = [
+            self.build_density_from_trajectories(visitations)
+            for visitations in visitations_per_policy
+        ]
+
+        for i in range(len(distributions)):
+            if len(distributions[i].shape) < len(agg_densities[i].shape):
+                agg_densities[i] = agg_densities[i].diagonal(dim1=0, dim2=1).T
+        
+        alpha = len(visitations_per_policy[0]) / episodes
+        
+        # Calculate the information matrices
+        new_z = super()._calculate_z(emissions, distributions, episodes)
+        agg_z = super()._calculate_z(emissions, agg_densities, episodes)
+        
+        # Combine the matrices based on alpha
+        if self.uniform_alpha:
+            z = (1.0 / episodes) * new_z + alpha * agg_z
+        else:
+            z = (1 - alpha) * new_z + alpha * agg_z
+        
+        eye = torch.eye(z.shape[0], device=z.device, dtype=z.dtype)
+        if self.V is None:
+            return -torch.trace(torch.linalg.inv(z + self.lambd/(self.horizon * episodes) * eye))
+        else:
+            return -torch.trace(self.V @ torch.linalg.inv(z + self.lambd/(self.horizon * episodes) * eye))
+
+    def eval_full(self, emissions, distributions, episodes):
+        # For final evaluation - directly use the provided distributions
+        z = super()._calculate_z(emissions, distributions, episodes)
+        eye = torch.eye(z.shape[0], device=z.device, dtype=z.dtype)
+        if self.V is None:
+            return -torch.trace(torch.linalg.inv(z + self.lambd/(self.horizon * episodes) * eye))
+        else:
+            return -torch.trace(self.V @ torch.linalg.inv(z + self.lambd/(self.horizon * episodes) * eye))
+
 class StochasticAdaptiveOrigDesignA(StochasticMultiPolicyRewardFunctionalMixin, MultiPolicyOrigDesignA):
     def __init__(self, env, lambd=1e-3, dim=0, uniform_alpha=False, V=None, batch_size=500):
         super().__init__(env, lambd, dim, batch_size=batch_size)

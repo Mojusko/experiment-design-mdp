@@ -301,8 +301,8 @@ class FrankWolfe(ConvexSolverBase):
                     
                     if self.verbosity > 0 and policy_counters[policy_idx] % 10 == 0:
                         if self.objective.get_type() == "adaptive":
-                            objective = self.objective.eval(emissions, densities, visitations, episodes, should_mask=False)
-                            #objective = self.objective.eval(emissions, densities, visitations, episodes)
+                            #objective = self.objective.eval(emissions, densities, visitations, episodes, should_mask=False)
+                            objective = self.objective.eval(emissions, densities, visitations, episodes)
                         else:
                             objective = self.objective.eval(emissions, densities, episodes)
                     
@@ -320,7 +320,6 @@ class FrankWolfe(ConvexSolverBase):
         
         self.summarize()
         return self.summarized_policies, self.policies, self.weights, self.densities
-
 
     def _gradient_line_search_lbfgs(self, compute_loss, device, init=0.5, lr=0.2, max_iter=20):
         # Initialize h as a one-element tensor with gradient tracking.
