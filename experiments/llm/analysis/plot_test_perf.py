@@ -57,7 +57,7 @@ def safe_load_data(filename):
     return None
 
 def plot_results_with_type(results, plot_type):
-    # This function handles non-feedback experiments.
+    # This function handles non-feedback experiments with numeric data.
     if not results:
         return
 
@@ -68,25 +68,60 @@ def plot_results_with_type(results, plot_type):
     if not valid_keys:
         return
 
-    means = [np.mean(valid_data[k]) for k in valid_keys]
-    stds = [np.std(valid_data[k]) if len(valid_data[k]) > 1 else 0 for k in valid_keys]
+    # Check if data is numeric or dictionary-based
+    if all(isinstance(v, (int, float)) for k in valid_keys for v in valid_data[k]):
+        means = [np.mean(valid_data[k]) for k in valid_keys]
+        stds = [np.std(valid_data[k]) if len(valid_data[k]) > 1 else 0 for k in valid_keys]
+
+        plt.figure(figsize=(10, 6))
+        plt.bar([str(x) for x in valid_keys], means, yerr=stds, capsize=5)
+
+        if plot_type == "lambda":
+            plt.xlabel("Lambda Value")
+        elif plot_type == "frequency":
+            plt.xlabel("Estimation Frequency")
+        elif plot_type == "rounds":
+            plt.xlabel("Number of Rounds")
+        elif plot_type == "v_comparison":
+            plt.xlabel("Design Matrix Type")
+        else:
+            plt.xlabel(plot_type)
+
+        plt.ylabel("Error")
+        plt.xticks(rotation=45)
+        plt.tight_layout()
+    else:
+        # Handle dictionary data (like v_comparison with multiple metrics)
+        plot_comparison_results(valid_data, plot_type)
+
+def plot_comparison_results(results, plot_type):
+    # For experiments with multiple metrics (e.g., preference_error, cosine_error)
+    labels = list(results.keys())
+    preference_means = [np.mean([d["preference_error"] for d in results[alg] if isinstance(d, dict) and "preference_error" in d]) 
+                        if any(isinstance(d, dict) and "preference_error" in d for d in results[alg]) else 0 
+                        for alg in labels]
+    preference_stds = [np.std([d["preference_error"] for d in results[alg] if isinstance(d, dict) and "preference_error" in d]) 
+                       if any(isinstance(d, dict) and "preference_error" in d for d in results[alg]) else 0 
+                       for alg in labels]
+    cosine_means = [np.mean([d["cosine_error"] for d in results[alg] if isinstance(d, dict) and "cosine_error" in d]) 
+                    if any(isinstance(d, dict) and "cosine_error" in d for d in results[alg]) else 0 
+                    for alg in labels]
+    cosine_stds = [np.std([d["cosine_error"] for d in results[alg] if isinstance(d, dict) and "cosine_error" in d]) 
+                   if any(isinstance(d, dict) and "cosine_error" in d for d in results[alg]) else 0 
+                   for alg in labels]
+
+    x = np.arange(len(labels))
+    width = 0.35
 
     plt.figure(figsize=(10, 6))
-    plt.bar([str(x) for x in valid_keys], means, yerr=stds, capsize=5)
+    plt.bar(x - width/2, preference_means, width, yerr=preference_stds, capsize=5, label="Preference Error")
+    plt.bar(x + width/2, cosine_means, width, yerr=cosine_stds, capsize=5, label="Cosine Error")
 
-    if plot_type == "lambda":
-        plt.xlabel("Lambda Value")
-    elif plot_type == "frequency":
-        plt.xlabel("Estimation Frequency")
-    elif plot_type == "rounds":
-        plt.xlabel("Number of Rounds")
-    elif plot_type == "v_comparison":
-        plt.xlabel("Design Matrix Type")
-    else:
-        plt.xlabel(plot_type)
-
+    plt.xlabel("Design Matrix Type" if plot_type == "v_comparison" else plot_type.capitalize())
     plt.ylabel("Error")
-    plt.xticks(rotation=45)
+    plt.xticks(x, labels)
+    plt.title(f"{plot_type.capitalize()} Comparison on Error Metrics")
+    plt.legend()
     plt.tight_layout()
 
 def plot_feedback_results(feedback_results):

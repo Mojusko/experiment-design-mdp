@@ -153,7 +153,7 @@ class FeedbackFactory:
 
                 #design = AdaptiveOrigDesignC(env=env, lambd=cfg.feedback.lambda_reg, dim=1) 
             else:
-                design = MultiPolicyOrigDesignA(env=env, lambd=cfg.feedback.lambda_reg, dim=1,V=V)
+                design = MultiPolicyOrigDesignD(env=env, lambd=cfg.feedback.lambda_reg, dim=1,V=V)
 
             likelihood = MultinomialLikelihood()
             regularizer = L2Regularizer(lam=cfg.feedback.lambda_reg)
