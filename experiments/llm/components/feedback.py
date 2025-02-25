@@ -133,18 +133,21 @@ class FeedbackFactory:
 
             #design = MultiPolicyOrigDesignD(env=env, lambd=cfg.feedback.lambda_reg, dim=1)
             if cfg.feedback.pass_V:
-                # Create matrix A of all pairwise differences
                 # Assuming env.emissions is a tensor of shape [n x 768]
-                n = env.emissions.shape[0]
-                # Create difference matrix A using broadcasting
-                # First expand emissions to [n x 1 x 768] and [1 x n x 768]
-                diff = env.emissions.unsqueeze(1) - env.emissions.unsqueeze(0)  # Shape: [n x n x 768]
+                X = env.emissions  # Shape: [n x 768]
+                n = X.shape[0]
                 
-                # Reshape to stack all differences
-                A = diff.view(n * n, -1)  # Shape: [n*n x 768]
+                # Compute the sum of all rows
+                S = torch.sum(X, dim=0)  # Shape: [768]
                 
-                # Compute V using the difference matrix A
-                V = torch.mm(A.T, A)  # Shape: [768 x 768]
+                # Compute X.T @ X
+                XTX = torch.mm(X.T, X)  # Shape: [768 x 768]
+                
+                # Compute the outer product S @ S.T
+                S_outer = torch.outer(S, S)  # Shape: [768 x 768]
+                
+                # Compute V
+                V = 2 * n * XTX - 2 * S_outer  # Shape: [768 x 768]
             else:
                 V=None
             if cfg.feedback.adaptive_design_frequency > 0:
