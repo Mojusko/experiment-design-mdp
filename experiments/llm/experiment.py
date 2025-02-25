@@ -56,6 +56,7 @@ class LLMExperiment:
         #self.training_words, self.testing_words, self.model_words = self._load_data_legacy()
         self.training_words, self.testing_words, self.model_words = self._load_data()
         self.env = self._init_env()
+        self.env._scorer_vector = self._scorer_model.weight
         self.feedback, self.design, self.estimator = FeedbackFactory.create(cfg, self.env)
         self.explorer = SolverFactory.create(cfg, self.env, self.design, self.feedback)
         self.testers = [hydra.utils.instantiate(t, scorer_model=self._scorer_model) for t in self.cfg.tester]

@@ -302,7 +302,6 @@ class MultiPolicyOrigDesignD(RewardFunctional):
     def eval_full(self, emissions, distributions, episodes):
         return self.eval(emissions, distributions, episodes)
 
-
 class MultiPolicyOrigDesignA(MultiPolicyOrigDesignD):
     def eval(self, emissions, distributions, episodes):
 
@@ -316,7 +315,6 @@ class MultiPolicyOrigDesignA(MultiPolicyOrigDesignD):
     def eval_full(self, emissions, distributions, episodes):
         return self.eval(emissions, distributions, episodes)
 
-
 class MultiPolicyOrigDesignE(MultiPolicyOrigDesignD):
     def eval(self, emissions, distributions, episodes):
         z = self._calculate_z(emissions, distributions, episodes)
@@ -326,6 +324,69 @@ class MultiPolicyOrigDesignE(MultiPolicyOrigDesignD):
     def eval_full(self, emissions, distributions, episodes):
         return self.eval(emissions, distributions, episodes)
 
+class MultiPolicyOrigDesignC(MultiPolicyOrigDesignD):
+    def __init__(self, env, lambd, dim=0, C=None, **kwargs):
+        """
+        Initialize the MultiPolicyOrigDesignC class.
+
+        Parameters:
+        - env: The environment object.
+        - lambd (float): The regularization parameter lambda.
+        - Sigma (float): The Sigma parameter.
+        - C (torch.Tensor, list, or None): The C parameter, which can be a tensor, list of tensors, or None.
+        - **kwargs: Additional keyword arguments passed to the parent class.
+        """
+        # Call the parent class's __init__ to set up common attributes
+        super().__init__(env, lambd, dim, **kwargs)
+        # Set the C attribute specific to this class
+        self.C = C
+
+    def eval(self, emissions, distributions, episodes):
+        """
+        Evaluate the design using the emissions, distributions, and number of episodes.
+
+        Parameters:
+        - emissions (torch.Tensor): The emissions tensor.
+        - distributions (torch.Tensor): The distributions tensor.
+        - episodes (int): The number of episodes.
+
+        Returns:
+        - float: The evaluation result (trace or max trace).
+        """
+        # Compute z using the inherited _calculate_z method
+        z = self._calculate_z(emissions, distributions, episodes)
+        
+        # Create an identity matrix matching z's shape and device
+        eye = torch.eye(z.shape[0], device=z.device, dtype=z.dtype)
+        
+        # Apply horizon*T regularization: z + (lambda / ( Ascertainment of horizon (self.horizon * episodes)
+        z_reg = z + (self.lambd / (self.horizon * episodes)) * eye
+        
+        # Compute the inverse of the regularized z
+        inv_z_reg = torch.linalg.inv(z_reg)
+        
+        # Handle C being either a list or a single tensor
+        if isinstance(self.C, list):
+            # Compute traces for each C in the list and take the maximum
+            traces = [torch.trace(torch.linalg.inv(C @ inv_z_reg @ C.T)) for C in self.C]
+            return torch.max(torch.stack(traces))
+        else:
+            # Compute trace for single C
+            return torch.trace(torch.linalg.inv(self.C @ inv_z_reg @ self.C.T))
+
+    def eval_full(self, emissions, distributions, episodes):
+        """
+        Full evaluation method, which delegates to eval.
+
+        Parameters:
+        - emissions (torch.Tensor): The emissions tensor.
+        - distributions (torch.Tensor): The distributions tensor.
+        - episodes (int): The number of episodes.
+
+        Returns:
+        - float: The evaluation result.
+        """
+        return self.eval(emissions, distributions, episodes)
 
 def compute_mask(aggregated: torch.Tensor, additional: int) -> torch.Tensor:
     """

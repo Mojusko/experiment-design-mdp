@@ -3,7 +3,7 @@ import torch.nn.functional as F
 import numpy as np
 
 from doexpy.functionals.doe_static_functionals import (
-    DesignA, DesignD, MultiPolicyOrigDesignA, MultiPolicyOrigDesignD
+    DesignA, DesignD, MultiPolicyOrigDesignA, MultiPolicyOrigDesignD, MultiPolicyOrigDesignC
 )
 from doexpy.functionals.doe_adaptive_functionals import (
     AdaptiveOrigDesignD, StochasticAdaptiveOrigDesignA, StochasticAdaptiveOrigDesignD, AdaptiveOrigDesignA
@@ -158,7 +158,8 @@ class FeedbackFactory:
 
                 #design = AdaptiveOrigDesignC(env=env, lambd=cfg.feedback.lambda_reg, dim=1) 
             else:
-                design = MultiPolicyOrigDesignA(env=env, lambd=cfg.feedback.lambda_reg, dim=1,V=V)
+                #design = MultiPolicyOrigDesignA(env=env, lambd=cfg.feedback.lambda_reg, dim=1,V=V)
+                design = MultiPolicyOrigDesignC(env=env, lambd=cfg.feedback.lambda_reg, dim=1, C=env._scorer_vector)
 
             likelihood = MultinomialLikelihood()
             regularizer = L2Regularizer(lam=cfg.feedback.lambda_reg)
