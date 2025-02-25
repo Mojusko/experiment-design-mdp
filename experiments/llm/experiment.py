@@ -53,8 +53,8 @@ class LLMExperiment:
         if os.path.exists(cfg.saver.params.path):
             os.remove(cfg.saver.params.path)
 
-        self.training_words, self.testing_words, self.model_words = self._load_data_legacy()
-        #self.training_words, self.testing_words, self.model_words = self._load_data()
+        #self.training_words, self.testing_words, self.model_words = self._load_data_legacy()
+        self.training_words, self.testing_words, self.model_words = self._load_data()
         self.env = self._init_env()
         self.feedback, self.design, self.estimator = FeedbackFactory.create(cfg, self.env)
         self.explorer = SolverFactory.create(cfg, self.env, self.design, self.feedback)
