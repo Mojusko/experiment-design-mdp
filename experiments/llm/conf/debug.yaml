@@ -8,7 +8,7 @@ feedback:
   adaptive_estimation_start: 0
   adaptive_design_frequency: 0
 experiment:
-  episodes: 100
+  episodes: 50
   vocab_size: 1000
   #scorer_model: "art"
 tester:

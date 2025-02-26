@@ -160,6 +160,7 @@ class FeedbackFactory:
             else:
                 #design = MultiPolicyOrigDesignA(env=env, lambd=cfg.feedback.lambda_reg, dim=1,V=V)
                 design = MultiPolicyOrigDesignC(env=env, lambd=cfg.feedback.lambda_reg, dim=1, C=env._scorer_vector)
+                #design.update_estimator(env._scorer_vector, env.emissions.detach())
 
             likelihood = MultinomialLikelihood()
             regularizer = L2Regularizer(lam=cfg.feedback.lambda_reg)

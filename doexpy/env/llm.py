@@ -39,8 +39,9 @@ class LLMGrid(DiscreteEnv):
 
         # Add base prompt to first token list if needed
         if base_prompt:
-            first_tokens = [f"{base_prompt}, {t}" if t != ' ' else t for t in list_of_text_tokens[0]]
-            self.list_of_text_tokens = [first_tokens] + list_of_text_tokens[1:]
+            first_tokens = [f"{base_prompt} #{t}" if t != ' ' else f'#{t}' for t in list_of_text_tokens[0]]
+            self.list_of_text_tokens = [first_tokens] + [[f"#{t}" for t in token_list] for token_list in list_of_text_tokens[1:]]
+            #self.list_of_text_tokens = [first_tokens] + list_of_text_tokens[1:]
         else:
             self.list_of_text_tokens = list_of_text_tokens
             
@@ -332,9 +333,10 @@ def create_prompt(actions: List[int], env) -> str:
     valid_tokens = [t for t in tokens if t != " "]
 
     if env.base_prompt:
-        return f"{env.base_prompt}, {', '.join(valid_tokens)}"
+        prompt = env.base_prompt + (" " + " ".join(f"#{str(token).strip()}" for token in tokens if str(token).strip()) if any(str(token).strip() for token in tokens) else "")
+        return prompt
     else:
-        return ', '.join(valid_tokens)
+        return '# '.join(valid_tokens)
 
 def get_scorer_model(model_name: str, embedder, clip_model, clip_processor, cache_dir, emissions_env=None):
     """Initialize embedder and scoring model

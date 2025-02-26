@@ -34,12 +34,14 @@ class PreferenceTester(BaseTester):
         test_sequences = [generate_test_sequence(test_rng, testing_words_list, horizon) 
                 for _ in range(N_test_prompts)]
 
+
         # Compute embeddings and predictions
         xtest = []
         ytest = []
         for sequence in test_sequences:
            tokens = [t for t in sequence if t != " "]
-           prompt = ", ".join(tokens) if env.base_prompt == '' else env.base_prompt + ", " + ", ".join(tokens)
+           #prompt = " #".join(tokens) if env.base_prompt == '' else env.base_prompt + " #".join(tokens)
+           prompt = env.base_prompt + (" " + " ".join(f"#{str(token).strip()}" for token in tokens if str(token).strip()) if any(str(token).strip() for token in tokens) else "")
            yy, feat = self.scorer_model.score_prompt(prompt)
            xtest.append(feat.detach().cpu())
            ytest.append(yy.detach().cpu())

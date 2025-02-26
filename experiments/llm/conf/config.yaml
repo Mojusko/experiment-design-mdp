@@ -3,13 +3,13 @@ defaults:
   - feedback: numerical
 
 seed: 12
-#base_prompt: 'A man walking in paris'
-base_prompt: ''
+base_prompt: 'A man walking in paris'
+#base_prompt: ''
 normalize_CLIP: true
 algorithm: "greedy"
 cache_dir: "${oc.env:HOME}/.cache/huggingface/hub"
 horizon: 3
-accuracy: 1e-12
+accuracy: 1e-14
 dense_feedback: true
 tester:
   - _target_: components.tester.PreferenceTester

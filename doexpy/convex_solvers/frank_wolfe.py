@@ -1,4 +1,5 @@
 import numpy as np
+import signal
 import torch.optim as optim
 from typing import Callable, Type, Union, Tuple, List
 import torch 
@@ -230,102 +231,120 @@ class FrankWolfe(ConvexSolverBase):
         return self.summarized_policy, self.policies, self.weights, self.densities
 
     def optimize(self, emissions, visitations, episodes):
-        if self.num_summarized_policies == 1:
-            return self._optimize_single(emissions, visitations, episodes)
-        
-        gap = -10e10 if self.accuracy is None else self.accuracy
+            # Define the signal handler inside the method to access self
+            def handler(signum, frame):
+                self.stop_optimization = True
     
-        # If initial_policy is True, set the persistent counter high so that no updates occur.
-        policy_counters = [
-            self.num_rounds * self.num_components if self.num_components == 1 else 0
-            for _ in range(self.num_summarized_policies)
-        ]
-        
-        for round_idx in range(self.num_rounds):
-            # For each round, optimize each policy in turn.
-            for policy_idx in range(self.num_summarized_policies):
-                empirical_gap = torch.tensor([1e10], dtype=torch.float64, device=emissions.device)
+            # Set up the signal handler and save the original one
+            original_handler = signal.signal(signal.SIGINT, handler)
+            # Initialize the stop flag
+            self.stop_optimization = False
+            
+            try:
+                if self.num_summarized_policies == 1:
+                    return self._optimize_single(emissions, visitations, episodes)
                 
-                # Each round allows up to (round_idx+1)*self.num_components updates.
-                while (policy_counters[policy_idx] < (round_idx + 1) * self.num_components and 
-                       torch.abs(empirical_gap) > gap):
+                gap = -10e10 if self.accuracy is None else self.accuracy
+            
+                # If initial_policy is True, set the persistent counter high so that no updates occur.
+                policy_counters = [
+                    self.num_rounds * self.num_components if self.num_components == 1 else 0
+                    for _ in range(self.num_summarized_policies)
+                ]
+                
+                # Outer loop over rounds
+                for round_idx in range(self.num_rounds):
+                    # For each round, optimize each policy in turn
+                    for policy_idx in range(self.num_summarized_policies):
+                        empirical_gap = torch.tensor([1e10], dtype=torch.float64, device=emissions.device)
+                        
+                        # Each round allows up to (round_idx+1)*self.num_components updates
+                        while (policy_counters[policy_idx] < (round_idx + 1) * self.num_components and 
+                               torch.abs(empirical_gap) > gap):
+                            
+                            # Get current density for all policies
+                            densities = []
+                            for i in range(self.num_summarized_policies):
+                                density = self.density_estimator.density_oracle(
+                                    self.policies[i], 
+                                    self.weights[i], 
+                                    self.densities[i], 
+                                    self.stationary
+                                ).double()
+                                density = density.to(emissions.device)
+                                if self.env.type == 'discrete':
+                                    density.requires_grad_(True)
+                                densities.append(density)
+                                
+                            # Get gradients for all policies
+                            rewards = self._reward_fn_gradient(densities, emissions, visitations, episodes)
+                            
+                            # Only update the current policy
+                            new_policy = self._planning_oracle(rewards[policy_idx])
+                            self.policies[policy_idx].append(new_policy)
+                            new_density = self.density_estimator.density_oracle_single(new_policy)
+                            new_density = new_density.to(emissions.device) 
+                            
+                            # Compute step size for current policy
+                            if self.step == "line-search":
+                                def compute_loss(h):
+                                    temp_densities = densities.copy()
+                                    one = torch.tensor(1.0, device=h.device, dtype=h.dtype)
+                                    temp_densities[policy_idx] = densities[policy_idx] * (one - h) + h * new_density
+                                    if self.objective.get_type() == "adaptive":
+                                        return -self.objective.eval(emissions, temp_densities, visitations, episodes)
+                                    return -self.objective.eval(emissions, temp_densities, episodes)
+                                step_size = self._gradient_line_search_lbfgs(compute_loss, emissions.device)                       
+                            elif self.step is not None and isinstance(self.step, float):
+                                step_size = self.step
+                            else:
+                                # Compute a step size that decreases over time using the persistent counter
+                                step_size = 1.0 / (1 + policy_counters[policy_idx])
+                            
+                            if self.env.type == 'discrete':
+                                empirical_gap = torch.minimum(
+                                    (rewards[policy_idx] * (new_density - densities[policy_idx])).sum(), 
+                                    empirical_gap
+                                )
+                            
+                            # Update weights for the current policy
+                            self.weights[policy_idx] = [(1 - step_size) * w for w in self.weights[policy_idx]] + [step_size]
+                            
+                            if self.verbosity > 0 and policy_counters[policy_idx] % 5 == 0:
+                                if self.objective.get_type() == "adaptive":
+                                    objective = self.objective.eval(emissions, densities, visitations, episodes)
+                                else:
+                                    objective = self.objective.eval(emissions, densities, episodes)
+                                
+                                if self.env.type == 'discrete':
+                                    total_grad_norm = sum(la.norm(r) for r in rewards)
+                                    print(f'Round: {round_idx}, Policy: {policy_idx}, Component: {policy_counters[policy_idx]}, '
+                                          f'Gap: {empirical_gap}, Objective: {objective}, '
+                                          f'Stepsize: {step_size} ({self.step}), Gradient: {total_grad_norm}')
+                                elif self.env.type == 'continuous':
+                                    print(f'Round: {round_idx}, Policy: {policy_idx}, '
+                                          f'Objective: {objective}')
+                            
+                            # Increment the persistent counter for this policy
+                            policy_counters[policy_idx] += 1
                     
-                    # Get current density for all policies.
-                    densities = []
-                    for i in range(self.num_summarized_policies):
-                        density = self.density_estimator.density_oracle(
-                            self.policies[i], 
-                            self.weights[i], 
-                            self.densities[i], 
-                            self.stationary
-                        ).double()
-                        density = density.to(emissions.device)
-                        if self.env.type == 'discrete':
-                            density.requires_grad_(True)
-                        densities.append(density)
+                    # Check if we should stop after completing the current round
+                    if self.stop_optimization:
+                        break
+                
+                # Summarize results after the loop, whether interrupted or completed
+                self.summarize()
+                return self.summarized_policies, self.policies, self.weights, self.densities
+            
+            finally:
+                # Restore the original signal handler
+                signal.signal(signal.SIGINT, original_handler)
 
-                    
-                    # Get gradients for all policies.
-                    rewards = self._reward_fn_gradient(densities, emissions, visitations, episodes)
-                    
-                    # Only update the current policy.
-                    new_policy = self._planning_oracle(rewards[policy_idx])
-                    self.policies[policy_idx].append(new_policy)
-                    new_density = self.density_estimator.density_oracle_single(new_policy)
-                    new_density = new_density.to(emissions.device) 
-                    
-                    # Compute step size for current policy.
-                    if self.step == "line-search":
-                        def compute_loss(h):
-                            temp_densities = densities.copy()
-                            one = torch.tensor(1.0, device=h.device, dtype=h.dtype)
-                            temp_densities[policy_idx] = densities[policy_idx] * (one - h) + h * new_density
-                            if self.objective.get_type() == "adaptive":
-                                return -self.objective.eval(emissions, temp_densities, visitations, episodes)
-                            return -self.objective.eval(emissions, temp_densities, episodes)
-                        step_size = self._gradient_line_search_lbfgs(compute_loss, emissions.device)                       
-                    elif self.step is not None and isinstance(self.step, float):
-                        step_size = self.step
-                    else:
-                        # Compute a step size that decreases over time using the persistent counter.
-                        step_size = 1.0 / (1 + policy_counters[policy_idx])
-                    
-                    if self.env.type == 'discrete':
-                        empirical_gap = torch.minimum(
-                            (rewards[policy_idx] * (new_density - densities[policy_idx])).sum(), 
-                            empirical_gap
-                        )
-                    
-                    # Update weights for the current policy.
-                    self.weights[policy_idx] = [(1 - step_size) * w for w in self.weights[policy_idx]] + [step_size]
-                    
-                    if self.verbosity > 0 and policy_counters[policy_idx] % 5 == 0:
-                        if self.objective.get_type() == "adaptive":
-                            #objective = self.objective.eval(emissions, densities, visitations, episodes, should_mask=False)
-                            objective = self.objective.eval(emissions, densities, visitations, episodes)
-                        else:
-                            objective = self.objective.eval(emissions, densities, episodes)
-                    
-                        if self.env.type == 'discrete':
-                            total_grad_norm = sum(la.norm(r) for r in rewards)
-                            print(f'Round: {round_idx}, Policy: {policy_idx}, Component: {policy_counters[policy_idx]}, '
-                                  f'Gap: {empirical_gap}, Objective: {objective}, '
-                                  f'Stepsize: {step_size} ({self.step}), Gradient: {total_grad_norm}')
-                        elif self.env.type == 'continuous':
-                            print(f'Round: {round_idx}, Policy: {policy_idx}, '
-                                  f'Objective: {objective}')
-                    
-                    # Increment the persistent counter for this policy.
-                    policy_counters[policy_idx] += 1
-        
-        self.summarize()
-        return self.summarized_policies, self.policies, self.weights, self.densities
-
-    def _gradient_line_search_lbfgs(self, compute_loss, device, init=0.5, lr=0.2, max_iter=20):
+    def _gradient_line_search_lbfgs(self, compute_loss, device, init=0.25, lr=0.05, max_iter=30):
         # Initialize h as a one-element tensor with gradient tracking.
         h = torch.tensor([init], dtype=torch.float64, device=device, requires_grad=True)
-        optimizer = torch.optim.Adam([h], lr=0.1)
-        for _ in range(10):  # Iterate manually
+        optimizer = torch.optim.Adam([h], lr=lr)
+        for _ in range(max_iter):  # Iterate manually
             optimizer.zero_grad()
             loss = compute_loss(h)  # Your objective function
             loss.backward()

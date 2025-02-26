@@ -375,6 +375,7 @@ class MdpExploreMultiPolicy:
 
                 # Get actions from all policies
                 for policy_idx, policy in enumerate(self.general_policies):
+
                     action = policy.next_action(self.env.state, self.emissions, 
                                     self.visitations_per_policy[policy_idx], self.episodes, True)
                         

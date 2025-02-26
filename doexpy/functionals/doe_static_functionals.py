@@ -217,8 +217,17 @@ class MultiPolicyOrigDesignD(RewardFunctional):
         self.dim = dim
 
     def update_estimator(self, estimator, emissions):
+        from stpy.regression.regularized_dictionary.regularized_multinomial_estimator import RegularizedMultinomialEstimator
         """Update the estimator and recompute probability matrix."""
         self.estimator = estimator
+        # Define the mean method for the estimator
+        
+        # Attach the mean method to the estimator object
+        if not isinstance(self.estimator, RegularizedMultinomialEstimator):
+            def mean(x):
+                # Assuming estimator is a numpy array/matrix, compute transpose multiplied by x
+                return x @ self.estimator[0]
+            self.estimator.mean = mean
         self._update_probability_matrix(emissions)
 
     def _update_probability_matrix(self, emissions):
@@ -311,15 +320,6 @@ class MultiPolicyOrigDesignA(MultiPolicyOrigDesignD):
             return -torch.trace(la.inv(z + self.lambd/(self.horizon*episodes) * eye))
         else:
             return -torch.trace(self.V @ la.inv(z + self.lambd/(self.horizon*episodes) * eye))
-
-    def eval_full(self, emissions, distributions, episodes):
-        return self.eval(emissions, distributions, episodes)
-
-class MultiPolicyOrigDesignE(MultiPolicyOrigDesignD):
-    def eval(self, emissions, distributions, episodes):
-        z = self._calculate_z(emissions, distributions, episodes)
-        eye = torch.eye(z.shape[0], device=z.device, dtype=z.dtype)
-        return torch.linalg.eigvalsh(z + self.lambd/episodes * eye)[0]
 
     def eval_full(self, emissions, distributions, episodes):
         return self.eval(emissions, distributions, episodes)
