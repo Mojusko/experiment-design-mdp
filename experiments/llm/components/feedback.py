@@ -21,13 +21,8 @@ class BaseFeedback:
         self.env = env
         self.design = design
         self.estimator = estimator
-        self._metrics = {}
         self._collected_data = []
     
-    @property
-    def metrics(self):
-        return self._metrics
-
     @abstractmethod
     def collect_labels(self, cfg, new_visits, theta_star):
         pass
@@ -94,11 +89,6 @@ class MultinomialFeedback(BaseFeedback):
 
                 if num_policies == 2:
                     prob_products.append((probs[0] * probs[1]).item())
-
-        self._metrics = {
-            'mean_prob_product': np.mean(prob_products),
-            'std_prob_product': np.std(prob_products)
-        }
 
         self._collected_data.append((trajectory_indices, labels))
 
