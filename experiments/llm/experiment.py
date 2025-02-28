@@ -83,7 +83,7 @@ class LLMExperiment:
                 self.feedback.fit_estimator()
                 self.design.update_estimator(self.estimator, self.env.emissions)
                 mae = compute_prob_mae(self.env.emissions, self.estimator, self._scorer_model)
-                print(f"Episode {ep_idx} partial re-fit, MAE: {mae}", self.feedback.metrics)
+                print(f"Episode {ep_idx} partial re-fit, MAE: {mae}")
                 for p_i in range(num_policies):
                     recent_visits_buffer[p_i].clear()
 

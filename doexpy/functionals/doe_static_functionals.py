@@ -5,7 +5,8 @@ from typing import List, Union
 from abc import ABC, abstractmethod
 from doexpy.env.discrete_env import Environment
 from doexpy.functionals.reward_functional import RewardFunctional
-import torch.linalg as la 
+import torch.linalg as la
+from stpy.regression.regularized_dictionary.regularized_multinomial_estimator import RegularizedMultinomialEstimator
 
 class ExperimentDesignFunctional(RewardFunctional):
 
@@ -217,29 +218,28 @@ class MultiPolicyOrigDesignD(RewardFunctional):
         self.dim = dim
 
     def update_estimator(self, estimator, emissions):
-        from stpy.regression.regularized_dictionary.regularized_multinomial_estimator import RegularizedMultinomialEstimator
         """Update the estimator and recompute probability matrix."""
         self.estimator = estimator
         # Define the mean method for the estimator
         
         # Attach the mean method to the estimator object
-        if not isinstance(self.estimator, RegularizedMultinomialEstimator):
-            def mean(x):
-                # Assuming estimator is a numpy array/matrix, compute transpose multiplied by x
-                return x @ self.estimator[0]
-            self.estimator.mean = mean
-        self._update_probability_matrix(emissions)
+        #if not isinstance(self.estimator, RegularizedMultinomialEstimator):
+        #    def mean(x):
+        #        # Assuming estimator is a numpy array/matrix, compute transpose multiplied by x
+        #        return x @ self.estimator[0]
+        #    self.estimator.mean = mean
+        #self._update_probability_matrix(emissions)
 
-    def _update_probability_matrix(self, emissions):
-        """Update pairwise probability matrix based on emissions."""
-        logits = self.estimator.mean(emissions)
-        logits = logits.to(emissions.device)
-        exp_logits = torch.exp(logits)
-        exp_logits_i = exp_logits.view(-1, 1)
-        exp_logits_j = exp_logits.view(1, -1)
-        denominators = exp_logits_i + exp_logits_j
-        
-        self.prob_matrix = exp_logits_i / denominators
+        #def _update_probability_matrix(self, emissions):
+        #    """Update pairwise probability matrix based on emissions."""
+        #    logits = self.estimator.mean(emissions)
+        #    logits = logits.to(emissions.device)
+        #    exp_logits = torch.exp(logits)
+        #    exp_logits_i = exp_logits.view(-1, 1)
+        #    exp_logits_j = exp_logits.view(1, -1)
+        #    denominators = exp_logits_i + exp_logits_j
+        #    
+        #    self.prob_matrix = exp_logits_i / denominators
 
     def _get_prob_matrix(self, emissions):
         """Return pairwise probability matrix or default to 0.5 on the specified device and dtype."""
@@ -340,6 +340,21 @@ class MultiPolicyOrigDesignC(MultiPolicyOrigDesignD):
         super().__init__(env, lambd, dim, **kwargs)
         # Set the C attribute specific to this class
         self.C = C
+        
+    def update_estimator(self, estimator, emissions):
+        """
+        Update the estimator and set C to be the estimator.
+        
+        Parameters:
+        - estimator: Can be either a vector or RegularizedMultinomialEstimator
+        - emissions: The emissions tensor
+        """
+        # Call parent's update_estimator method
+        super().update_estimator(estimator, emissions)
+        
+        # Set C to be the estimator directly, no need to extract theta_ml
+        # The RegularizedMultinomialEstimator now supports tensor operations
+        self.C = estimator
 
     def eval(self, emissions, distributions, episodes):
         """
@@ -365,8 +380,11 @@ class MultiPolicyOrigDesignC(MultiPolicyOrigDesignD):
         # Compute the inverse of the regularized z
         inv_z_reg = torch.linalg.inv(z_reg)
         
+        # If C is None, use identity matrix
+        if self.C is None:
+            return torch.trace(inv_z_reg)
         # Handle C being either a list or a single tensor
-        if isinstance(self.C, list):
+        elif isinstance(self.C, list):
             # Compute traces for each C in the list and take the maximum
             traces = [torch.trace(torch.linalg.inv(C @ inv_z_reg @ C.T)) for C in self.C]
             return torch.max(torch.stack(traces))

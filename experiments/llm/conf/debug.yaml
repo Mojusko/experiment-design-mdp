@@ -6,10 +6,10 @@ feedback:
   num_components: 3
   adaptive_estimation_frequency: 0
   adaptive_estimation_start: 0
-  adaptive_design_frequency: 0
-#experiment:
-  #  episodes: 50
-  #  vocab_size: 1000
+  adaptive_design_frequency: 25
+experiment:
+   episodes: 100
+   vocab_size: 1000
   #scorer_model: "art"
 tester:
   - _target_: components.tester.PreferenceTester

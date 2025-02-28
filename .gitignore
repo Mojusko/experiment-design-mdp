@@ -163,3 +163,4 @@ settings.json
 *.pyc
 
 
+.aider*

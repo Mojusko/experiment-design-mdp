@@ -5,17 +5,22 @@ from typing import List, Union, Callable
 from abc import ABC, abstractmethod
 from doexpy.env.discrete_env import Environment
 from doexpy.functionals.reward_functional import RewardFunctional
-from doexpy.functionals.doe_static_functionals import MultiPolicyOrigDesignD, MultiPolicyOrigDesignA, StochasticMultiPolicyRewardFunctionalMixin, compute_mask
+from doexpy.functionals.doe_static_functionals import MultiPolicyOrigDesignD, MultiPolicyOrigDesignA, MultiPolicyOrigDesignC, StochasticMultiPolicyRewardFunctionalMixin, compute_mask
+
+# ============================================================================
+# Base Adaptive Design Classes
+# ============================================================================
 
 class AdaptiveDesignD(RewardFunctional):
-
+    """
+    Adaptive D-optimal design for experiment design.
+    """
     def __init__(self,
                  env: Environment,
                  lambd: float = 1e-3,
                  scale_reg: bool = True,
                  uniform_alpha: bool = False,
                  sigma: float = 1.0):
-
         super().__init__()
 
         self.dim = env.get_dim()
@@ -145,6 +150,9 @@ class AdaptiveDesignD(RewardFunctional):
 
 
 class AdaptiveDesignC(AdaptiveDesignD):
+    """
+    Adaptive C-optimal design for experiment design.
+    """
     def __init__(self, env: Environment, lambd: float = 1e-3, scale_reg: bool = False, sigma: float = 1.0, C=None):
         super().__init__(env, lambd=lambd, scale_reg=scale_reg, sigma=sigma)
         self.C = C
@@ -174,6 +182,9 @@ class AdaptiveDesignC(AdaptiveDesignD):
             return torch.trace(la.inv(self.C @ la.inv(z + (1. / episodes) * self.lambd) @ self.C.T))
 
 class AdaptiveDesignHeteroD(AdaptiveDesignD):
+    """
+    Adaptive D-optimal design with heteroscedastic noise.
+    """
     def __init__(self,
                  env: Environment,
                  lambd: float = 1e-3,
@@ -217,6 +228,9 @@ class AdaptiveDesignHeteroD(AdaptiveDesignD):
         return z
 
 class AdaptiveDesignA(RewardFunctional):
+    """
+    Adaptive A-optimal design for experiment design.
+    """
     def eval(self,
              emissions: torch.Tensor,
              distribution: torch.Tensor,
@@ -231,7 +245,14 @@ class AdaptiveDesignA(RewardFunctional):
         else:
             return -torch.trace(la.inv(z + (1. / episodes) * self.lambd))
 
+# ============================================================================
+# Adaptive Original Design Classes
+# ============================================================================
+
 class AdaptiveOrigDesignD(MultiPolicyOrigDesignD):
+    """
+    Adaptive D-optimal design for original design functionals.
+    """
     def __init__(self, env, lambd=1e-3, dim=0, uniform_alpha=False):
         super().__init__(env, lambd, dim)
         self.type = "adaptive"
@@ -263,6 +284,9 @@ class AdaptiveOrigDesignD(MultiPolicyOrigDesignD):
         return torch.linalg.slogdet(z + self.lambd/episodes * eye)[1]
 
 class AdaptiveOrigDesignA(MultiPolicyOrigDesignA):
+    """
+    Adaptive A-optimal design for original design functionals.
+    """
     def __init__(self, env, lambd=1e-3, dim=0, uniform_alpha=False, V=None):
         super().__init__(env, lambd, dim)
         self.type = "adaptive"
@@ -307,7 +331,14 @@ class AdaptiveOrigDesignA(MultiPolicyOrigDesignA):
         else:
             return -torch.trace(self.V @ torch.linalg.inv(z + self.lambd/(self.horizon * episodes) * eye))
 
+# ============================================================================
+# Stochastic Adaptive Original Design Classes
+# ============================================================================
+
 class StochasticAdaptiveOrigDesignA(StochasticMultiPolicyRewardFunctionalMixin, MultiPolicyOrigDesignA):
+    """
+    Stochastic adaptive A-optimal design for original design functionals.
+    """
     def __init__(self, env, lambd=1e-3, dim=0, uniform_alpha=False, V=None, batch_size=500):
         super().__init__(env, lambd, dim, batch_size=batch_size)
         self.type = "adaptive"
@@ -373,17 +404,25 @@ class StochasticAdaptiveOrigDesignA(StochasticMultiPolicyRewardFunctionalMixin, 
         else:
             return -torch.trace(self.V @ torch.linalg.inv(z + self.lambd/(self.horizon*episodes) * eye))
 
+# ============================================================================
+# Utility Functions
+# ============================================================================
+
 def combined_mask(current_aggregated: torch.Tensor,
                   history_aggregated: torch.Tensor,
                   additional: int) -> torch.Tensor:
     """
-    current_aggregated: 1D tensor of length A computed from the current distribution.
-    history_aggregated: 1D tensor of length A computed from visitation history.
-    additional: number of additional (zero in current) indices to sample.
+    Create a combined mask from current and historical distributions.
     
-    Returns a sorted tensor containing the union of:
-      - All indices where history_aggregated is nonzero, and
-      - Exactly `additional` indices sampled stochastically from indices where current_aggregated is zero.
+    Args:
+        current_aggregated: 1D tensor of length A computed from the current distribution.
+        history_aggregated: 1D tensor of length A computed from visitation history.
+        additional: number of additional (zero in current) indices to sample.
+    
+    Returns:
+        A sorted tensor containing the union of:
+          - All indices where history_aggregated is nonzero, and
+          - Exactly `additional` indices sampled stochastically from indices where current_aggregated is zero.
     """
     # Compute the stochastic mask from the current distribution.
     current_mask = compute_mask(current_aggregated, additional)
@@ -397,7 +436,11 @@ def combined_mask(current_aggregated: torch.Tensor,
     combined, _ = torch.sort(combined)
     return combined
 
+
 class StochasticAdaptiveOrigDesignD(StochasticMultiPolicyRewardFunctionalMixin, MultiPolicyOrigDesignA):
+    """
+    Stochastic adaptive D-optimal design for original design functionals.
+    """
     def __init__(self, env, lambd=1e-3, dim=0, uniform_alpha=False, V=None, batch_size=500):
         super().__init__(env, lambd, dim, batch_size=batch_size)
         self.type = "adaptive"
@@ -464,4 +507,72 @@ class StochasticAdaptiveOrigDesignD(StochasticMultiPolicyRewardFunctionalMixin, 
             return torch.linalg.slogdet(matrix)[1]  # Return the log determinant
         else:
             return torch.linalg.slogdet(self.V @ matrix)[1]  # Apply V and return log determinant
+
+class AdaptiveOrigDesignC(MultiPolicyOrigDesignC):
+    """
+    Adaptive C-optimal design for original design functionals.
+    """
+    def __init__(self, env, lambd=1e-3, dim=0, uniform_alpha=False, C=None, **kwargs):
+        super().__init__(env, lambd, dim, C=C, **kwargs)
+        self.type = "adaptive"
+        self.uniform_alpha = uniform_alpha
+
+    def eval(self, emissions, distributions, visitations_per_policy, episodes):
+        # Compute agg_densities for each policy's visitation history
+        agg_densities = [
+            self.build_density_from_trajectories(visitations)
+            for visitations in visitations_per_policy
+        ]
+
+        # For Stationary distributions, convert history density to stationary format if needed
+        for i in range(len(distributions)):
+            if len(distributions[i].shape) < len(agg_densities[i].shape):
+                agg_densities[i] = agg_densities[i].diagonal(dim1=0, dim2=1).T
+        
+        alpha = len(visitations_per_policy[0]) / episodes
+        print(alpha)
+        
+        # Calculate information matrices
+        new_z = super()._calculate_z(emissions, distributions, episodes)
+        agg_z = super()._calculate_z(emissions, agg_densities, episodes)
+        
+        # Weight combination based on alpha
+        if self.uniform_alpha:
+            z = (1.0 / episodes) * new_z + alpha * agg_z
+        else:
+            z = (1 - alpha) * new_z + alpha * agg_z
+        
+        # Create identity matrix for regularization
+        eye = torch.eye(z.shape[0], device=z.device, dtype=z.dtype)
+        z_reg = z + self.lambd/(self.horizon*episodes) * eye
+        
+        # Compute inverse of regularized z
+        inv_z_reg = torch.linalg.inv(z_reg)
+        
+        # If C is None, use identity matrix
+        if self.C is None:
+            return torch.trace(inv_z_reg)
+        # Handle C being either a list or a single tensor
+        elif isinstance(self.C, list):
+            # Compute traces for each C in the list and take the maximum
+            traces = [torch.trace(torch.linalg.inv(C @ inv_z_reg @ C.T)) for C in self.C]
+            return torch.max(torch.stack(traces))
+        else:
+            # Compute trace for single C
+            return torch.trace(torch.linalg.inv(self.C @ inv_z_reg @ self.C.T))
+
+    def eval_full(self, emissions, distributions, episodes):
+        # For final evaluation - directly use the provided distributions
+        z = super()._calculate_z(emissions, distributions, episodes)
+        eye = torch.eye(z.shape[0], device=z.device, dtype=z.dtype)
+        z_reg = z + self.lambd/(self.horizon*episodes) * eye
+        inv_z_reg = torch.linalg.inv(z_reg)
+        
+        if self.C is None:
+            return torch.trace(inv_z_reg)
+        elif isinstance(self.C, list):
+            traces = [torch.trace(torch.linalg.inv(C @ inv_z_reg @ C.T)) for C in self.C]
+            return torch.max(torch.stack(traces))
+        else:
+            return torch.trace(torch.linalg.inv(self.C @ inv_z_reg @ self.C.T))
 
