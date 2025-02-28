@@ -324,7 +324,7 @@ def create_prompt_from_tokens(tokens: List[str], base_prompt: str = '') -> str:
    
     if base_prompt:
         # If we have a base prompt, add the hashtag tokens after it with a space
-        return base_prompt + (" " + ", ".join(hashtag_tokens) if hashtag_tokens else "")
+        return base_prompt + (", " + ", ".join(hashtag_tokens) if hashtag_tokens else "")
     else:
         # If no base prompt, just join the hashtag tokens with spaces
         return " ".join(hashtag_tokens)
