@@ -61,16 +61,20 @@ class LLMExperiment:
         self.explorer = SolverFactory.create(cfg, self.env, self.design, self.feedback)
         
         # Build experiment_id with prefix if available
-        experiment_id = self.cfg.experiment_id
-        if hasattr(self.cfg.experiment, 'id_prefix') and self.cfg.experiment.id_prefix and not experiment_id.startswith(self.cfg.experiment.id_prefix):
-            # Only prepend if not already present
-            algorithm_code = self._get_algorithm_code()
-            feedback_code = self._get_feedback_code()
-            if experiment_id:
-                # If experiment_id is already set, use it as a suffix (typically seed number)
-                experiment_id = f"{self.cfg.experiment.id_prefix}-{algorithm_code}-{feedback_code}-{experiment_id}"
-            else:
-                experiment_id = f"{self.cfg.experiment.id_prefix}-{algorithm_code}-{feedback_code}"
+        experiment_id = str(self.cfg.experiment_id) if self.cfg.experiment_id is not None else ""
+        if hasattr(self.cfg.experiment, 'id_prefix') and self.cfg.experiment.id_prefix:
+            # Check if prefix is already present
+            prefix_present = experiment_id.startswith(self.cfg.experiment.id_prefix) if experiment_id else False
+            
+            if not prefix_present:
+                # Only prepend if not already present
+                algorithm_code = self._get_algorithm_code()
+                feedback_code = self._get_feedback_code()
+                if experiment_id:
+                    # If experiment_id is already set, use it as a suffix (typically seed number)
+                    experiment_id = f"{self.cfg.experiment.id_prefix}-{algorithm_code}-{feedback_code}-{experiment_id}"
+                else:
+                    experiment_id = f"{self.cfg.experiment.id_prefix}-{algorithm_code}-{feedback_code}"
         
         self.experiment_id = experiment_id
         
