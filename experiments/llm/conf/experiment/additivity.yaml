@@ -1,3 +1,4 @@
 name: "additivity"
+id_prefix: "add"  # Used for filename prefixes
 episodes: 100
 scorer_model: "art"

@@ -11,7 +11,7 @@ from doexpy.env.llm import (
 )
 from components.feedback import FeedbackFactory
 from components.solver  import SolverFactory
-from components.tester  import BaseTester
+from components.tester  import BaseTester, ImageGenerationTester
 from components.saver   import BaseSaver
 
 
@@ -49,9 +49,9 @@ class LLMExperiment:
         self.cfg = cfg
         self.rng = np.random.RandomState(int(cfg.seed))
         
-        os.makedirs(os.path.dirname(cfg.saver.params.path), exist_ok=True)
-        if os.path.exists(cfg.saver.params.path):
-            os.remove(cfg.saver.params.path)
+        # Create results directory
+        self.results_dir = cfg.results_dir
+        os.makedirs(self.results_dir, exist_ok=True)
 
         #self.training_words, self.testing_words, self.model_words = self._load_data_legacy()
         self.training_words, self.testing_words, self.model_words = self._load_data()
@@ -59,10 +59,25 @@ class LLMExperiment:
         self.env._scorer_vector = self._scorer_model.weight
         self.feedback, self.design, self.estimator = FeedbackFactory.create(cfg, self.env)
         self.explorer = SolverFactory.create(cfg, self.env, self.design, self.feedback)
-        self.testers = [hydra.utils.instantiate(t, scorer_model=self._scorer_model) for t in self.cfg.tester]
-        self.saver = hydra.utils.instantiate(cfg.saver)
         
-        self.visits = [] if self.cfg.feedback.num_policies == 1 else [[] for _ in range(self.cfg.feedback.num_policies )]
+        # Build experiment_id with prefix if available
+        experiment_id = self.cfg.experiment_id
+        if hasattr(self.cfg.experiment, 'id_prefix') and self.cfg.experiment.id_prefix and not experiment_id.startswith(self.cfg.experiment.id_prefix):
+            # Only prepend if not already present
+            algorithm_code = self._get_algorithm_code()
+            feedback_code = self._get_feedback_code()
+            if experiment_id:
+                # If experiment_id is already set, use it as a suffix (typically seed number)
+                experiment_id = f"{self.cfg.experiment.id_prefix}-{algorithm_code}-{feedback_code}-{experiment_id}"
+            else:
+                experiment_id = f"{self.cfg.experiment.id_prefix}-{algorithm_code}-{feedback_code}"
+        
+        self.experiment_id = experiment_id
+        
+        # Initialize testers and savers with results_dir and experiment_id
+        self.testers = [hydra.utils.instantiate(t, scorer_model=self._scorer_model) for t in self.cfg.tester]
+        self.savers = [hydra.utils.instantiate(s, scorer_model=self._scorer_model, results_dir=self.results_dir, experiment_id=self.experiment_id) for s in self.cfg.savers]
+        self.visits = [] if self.cfg.feedback.num_policies == 1 else [[] for _ in range(self.cfg.feedback.num_policies)]
 
     def run(self):
         total_episodes = self.cfg.experiment.episodes
@@ -146,6 +161,8 @@ class LLMExperiment:
     def test_and_save(self):
         """Final estimation, testing and saving of results"""
         combined_results = {}
+        
+        # Run all testers and collect results
         for tester in self.testers:
             tester_results = tester.run_test(
                 cfg=self.cfg,
@@ -155,9 +172,15 @@ class LLMExperiment:
                 training_words_list=self.training_words,
                 testing_words_list=self.testing_words
             )
-            # Optionally, you can namespace the results by tester type if needed.
+            
+            # Update combined results
             combined_results.update(tester_results)
-        self.saver.save_result(combined_results)
+        
+        # No need to add cfg to results anymore
+        
+        # Use all savers to save the results
+        for saver in self.savers:
+            saver.save_result(combined_results)
 
     def _load_data_legacy(self):
         """Returns training_words, test_words, and model_words in 60-20-20 split"""
@@ -195,6 +218,28 @@ class LLMExperiment:
     
         return training_words, testing_words, model_words
 
+    def _get_algorithm_code(self):
+        """Get a short code for the algorithm type"""
+        algorithm = self.cfg.algorithm.lower()
+        if algorithm == "greedy":
+            return "grd"
+        elif algorithm == "random":
+            return "rand"
+        elif algorithm == "optim":
+            return "opt"
+        else:
+            return algorithm[:3]  # First 3 chars as fallback
+            
+    def _get_feedback_code(self):
+        """Get a short code for the feedback type"""
+        feedback = self.cfg.feedback.name.lower()
+        if feedback == "numerical":
+            return "num"
+        elif feedback == "multinomial":
+            return "mult"
+        else:
+            return feedback[:3]  # First 3 chars as fallback
+            
     def _load_data(self):
         """Returns training_words and test_words in 75-25 split"""
         vocab_files = self.cfg.experiment.vocabulary

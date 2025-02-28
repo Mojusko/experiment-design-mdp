@@ -1,4 +1,5 @@
 name: "lambda_finding"
+id_prefix: "lambda"  # Used for filename prefixes
 episodes: 200
 vocab_size: 1000
 scorer_model: "aesthetics"

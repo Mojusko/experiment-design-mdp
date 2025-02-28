@@ -1,6 +1,7 @@
 import torch
 import torch.nn.functional as F
 import numpy as np
+from doexpy.env.llm import create_prompt, create_prompt_from_tokens
 
 from doexpy.functionals.doe_static_functionals import (
     DesignA, DesignD, MultiPolicyOrigDesignA, MultiPolicyOrigDesignD, MultiPolicyOrigDesignC

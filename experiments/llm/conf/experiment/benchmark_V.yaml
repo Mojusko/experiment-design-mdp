@@ -1,4 +1,5 @@
 name: "benchmark_V"
+id_prefix: "v-comp"  # Used for filename prefixes
 episodes: 100
 #scorer_model: "aesthetics"
 scorer_model: "random_combination"

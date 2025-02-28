@@ -6,11 +6,13 @@ feedback:
   num_components: 3
   adaptive_estimation_frequency: 0
   adaptive_estimation_start: 0
-  adaptive_design_frequency: 25
+  adaptive_design_frequency: 0
 experiment:
-   episodes: 100
+   episodes: 50
    vocab_size: 1000
   #scorer_model: "art"
+# Results directory for debug mode
+results_dir: "results/debug"
 tester:
   - _target_: components.tester.PreferenceTester
     params:
@@ -18,8 +20,19 @@ tester:
       N_pairs_eval: 500
   - _target_: components.tester.CosineTester
     params: null
-saver:
-  _target_: components.saver.FileSaver
-  params:
-    path: "results/dummy/dummy.txt" # Overwrite from Makefile
+  - _target_: components.tester.ImageGenerationTester
+    params:
+      take_best_worst_N: 8
+
+# Use a list of savers with debug settings
+savers:
+  - _target_: components.saver.FileSaver
+    params:
+      filename: "metrics.json"
+  - _target_: components.saver.ImageGenerationSaver
+    params:
+      take_best_worst_N: 8
+      debug_mode: true
+      image_size: 32
+      num_inference_steps: 20
 

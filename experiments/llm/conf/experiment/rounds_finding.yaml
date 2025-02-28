@@ -1,4 +1,5 @@
 name: "rounds_finding"
+id_prefix: "rounds"  # Used for filename prefixes
 episodes: 125
 vocab_size: 1000
 scorer_model: "aesthetics"

@@ -200,24 +200,6 @@ class ImageScorer(CLIPScorer):
     def score_prompt(self, prompt):
         raise NotImplementedError
 
-class RedImageScorer(ImageScorer):
-    def __init__(self, embedder, cache_dir):
-        super().__init__(embedder, cache_dir)
-        device = 'cuda' if torch.cuda.is_available() else 'cpu'
-        red_image_size = tuple([1] + list(self.generator.image_size)[::-1])
-        self.red_reference = torch.ones(red_image_size, device=device)
-        self.red_reference[:, 1:, :, :] = 0
-        
-    def score_prompt(self, prompt):
-        image, _ = self.generator.sample(prompt, raw=True)
-        clip_embedding = self.embedder.embed_text(prompt)
-        print('Should we do image[1] here?')
-        import ipdb; ipdb.set_trace()
-        
-        image_norm = image / torch.norm(image)
-        ref_norm = self.red_reference / torch.norm(self.red_reference)
-        return torch.sum(image_norm * ref_norm), clip_embeddings
-
 class AestheticsImageScorer(ImageScorer):
     def __init__(self, cache_dir, clip_model: CLIPModel, clip_processor: CLIPProcessor):
         super().__init__(cache_dir)
@@ -324,19 +306,44 @@ def setup_clip_model(cache_dir):
     model = CLIPModel.from_pretrained(model_id, cache_dir=cache_dir).to(device)
     return model, processor, tokenizer
 
-def create_prompt(actions: List[int], env) -> str:
-    """Create prompt from action sequence"""
-
-    prefix = env.base_prompt
-
-    tokens = [env.unique_elements[int(action)] for action in actions]
-    valid_tokens = [t for t in tokens if t != " "]
-
-    if env.base_prompt:
-        prompt = env.base_prompt + (" " + " ".join(f"#{str(token).strip()}" for token in tokens if str(token).strip()) if any(str(token).strip() for token in tokens) else "")
-        return prompt
+def create_prompt_from_tokens(tokens: List[str], base_prompt: str = '') -> str:
+    """Create a prompt from a list of tokens
+    
+    Args:
+        tokens: List of text tokens
+        base_prompt: Optional base prompt to prepend
+        
+    Returns:
+        Formatted prompt string with hashtags
+    """
+    # Filter out empty tokens and strip whitespace
+    valid_tokens = [str(token).strip() for token in tokens if str(token).strip()]
+    
+    # Format with hashtags
+    hashtag_tokens = [f"#{token}" for token in valid_tokens]
+    
+    if base_prompt:
+        # If we have a base prompt, add the hashtag tokens after it with a space
+        return base_prompt + (" " + " ".join(hashtag_tokens) if hashtag_tokens else "")
     else:
-        return '# '.join(valid_tokens)
+        # If no base prompt, just join the hashtag tokens with spaces
+        return " ".join(hashtag_tokens)
+
+def create_prompt(actions: List[int], env) -> str:
+    """Create prompt from action sequence
+    
+    Args:
+        actions: List of action indices
+        env: Environment with unique_elements and base_prompt attributes
+        
+    Returns:
+        Formatted prompt string with hashtags
+    """
+    # Convert action indices to tokens
+    tokens = [env.unique_elements[int(action)] for action in actions]
+    
+    # Use the shared function to create the prompt
+    return create_prompt_from_tokens(tokens, env.base_prompt)
 
 def get_scorer_model(model_name: str, embedder, clip_model, clip_processor, cache_dir, emissions_env=None):
     """Initialize embedder and scoring model
@@ -364,7 +371,8 @@ def get_scorer_model(model_name: str, embedder, clip_model, clip_processor, cach
         return  AestheticsImageScorer(embedder, cache_dir, clip_model, clip_processor)
         
     if model_name == 'red':
-        return RedImageScorer(embedder, cache_dir)
+        # RedImageScorer is not implemented, raise a more helpful error
+        raise NotImplementedError(f"The 'red' scorer model is not implemented. Available models: 'art', 'aesthetics', 'aesthetics-image', 'random_combination'")
     
     if model_name == 'random_combination':
         if emissions_env is None:

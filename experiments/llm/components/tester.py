@@ -1,6 +1,7 @@
 import torch
 import numpy as np
 from abc import ABC, abstractmethod
+from doexpy.env.llm import create_prompt_from_tokens
 
 def generate_test_sequence(rng, word_list, horizon):
     return [
@@ -39,12 +40,11 @@ class PreferenceTester(BaseTester):
         xtest = []
         ytest = []
         for sequence in test_sequences:
-           tokens = [t for t in sequence if t != " "]
-           #prompt = " #".join(tokens) if env.base_prompt == '' else env.base_prompt + " #".join(tokens)
-           prompt = env.base_prompt + (" " + " ".join(f"#{str(token).strip()}" for token in tokens if str(token).strip()) if any(str(token).strip() for token in tokens) else "")
-           yy, feat = self.scorer_model.score_prompt(prompt)
-           xtest.append(feat.detach().cpu())
-           ytest.append(yy.detach().cpu())
+            # Create prompt directly from the sequence tokens
+            prompt = create_prompt_from_tokens(sequence, env.base_prompt)
+            yy, feat = self.scorer_model.score_prompt(prompt)
+            xtest.append(feat.detach().cpu())
+            ytest.append(yy.detach().cpu())
         
         xtest = torch.vstack(xtest)
         ytest = torch.vstack(ytest)
@@ -85,4 +85,68 @@ class CosineTester(BaseTester):
         est_weight = estimator.theta_fit      # estimated weight
         error = self.cosine_error(est_weight, gt_weight)
         return {"cosine_error": error}
+
+class ImageGenerationTester(BaseTester):
+    def __init__(self, scorer_model, params=None):
+        self.params = params or {}
+        self.scorer_model = scorer_model
+        self.take_best_worst_N = self.params.get('take_best_worst_N', 8) if self.params else 8
+        super().__init__()
+        
+    def run_test(self, cfg, env, estimator, theta_star, training_words_list, testing_words_list):
+        """Run the image generation test
+        
+        This tester finds the best and worst prompts based on the scorer model.
+        """
+        # Sample horizon-1 random tokens from testing set
+        test_rng = np.random.RandomState(42)
+        horizon = cfg.horizon
+        prefix_length = horizon - 1
+        
+        # Generate a random prefix
+        prefix_sequence = [
+            " " if test_rng.random() < 0.1 else test_rng.choice(testing_words_list)
+            for _ in range(prefix_length)
+        ]
+        
+        # Score all possible completions
+        all_scores = []
+        all_prompts = []
+        all_embeddings = []
+        
+        for last_token in testing_words_list:
+            full_sequence = prefix_sequence + [last_token]
+            prompt = create_prompt_from_tokens(full_sequence, env.base_prompt)
+            score, embedding = self.scorer_model.score_prompt(prompt)
+            
+            all_scores.append(score.item())
+            all_prompts.append(prompt)
+            all_embeddings.append(embedding)
+        
+        # Sort by score (descending for best, ascending for worst)
+        sorted_indices = np.argsort(all_scores)
+        best_indices = sorted_indices[-self.take_best_worst_N:][::-1]  # Reverse to get descending order
+        worst_indices = sorted_indices[:self.take_best_worst_N]
+        
+        # Get the best prompts and their scores
+        best_prompts = [all_prompts[i] for i in best_indices]
+        best_scores = [all_scores[i] for i in best_indices]
+        
+        # Get the worst prompts and their scores
+        worst_prompts = [all_prompts[i] for i in worst_indices]
+        worst_scores = [all_scores[i] for i in worst_indices]
+        
+        # Store the prompts and scores in the test results
+        # Any saver can use this data if it knows how
+        return {
+            "image_generation": {
+                "best_prompts": best_prompts,
+                "best_scores": best_scores,
+                "worst_prompts": worst_prompts,
+                "worst_scores": worst_scores
+            },
+            "best_image_score": best_scores[0] if best_scores else 0,
+            "worst_image_score": worst_scores[0] if worst_scores else 0,
+            "avg_top_image_score": sum(best_scores) / len(best_scores) if best_scores else 0
+        }
 

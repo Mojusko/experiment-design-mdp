@@ -1,4 +1,5 @@
 name: "frequency_finding"
+id_prefix: "freq"  # Used for filename prefixes
 episodes: 200
 vocab_size: 1000
 scorer_model: "aesthetics"

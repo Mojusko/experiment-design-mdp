@@ -11,6 +11,10 @@ cache_dir: "${oc.env:HOME}/.cache/huggingface/hub"
 horizon: 3
 accuracy: 1e-14
 dense_feedback: true
+# Results directory path
+results_dir: "results/dummy"
+# Experiment identifier (can be overridden from Makefile)
+experiment_id: ""
 tester:
   - _target_: components.tester.PreferenceTester
     params:
@@ -18,8 +22,18 @@ tester:
       N_pairs_eval: 5000
   - _target_: components.tester.CosineTester
     params: null
-saver:
-  _target_: components.saver.FileSaver
-  params:
-    path: "results/dummy/dummy.txt" # Overwrite from Makefile
+  - _target_: components.tester.ImageGenerationTester
+    params:
+      take_best_worst_N: 4
+# Default savers configuration
+savers:
+  - _target_: components.saver.FileSaver
+    params:
+      filename: "metrics.json"
+  - _target_: components.saver.ImageGenerationSaver
+    params:
+      take_best_worst_N: 4
+      debug_mode: false
+      image_size: 512
+      num_inference_steps: 100
 
