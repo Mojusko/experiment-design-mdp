@@ -274,7 +274,8 @@ def generate_emissions(unique_elements, embedder, cache_dir, verbose=False):
             
     return emissions
 
-def load_aesthetics_embedding(weights_path='text_weights.pth'):
+#def load_aesthetics_embedding(weights_path='text_weights.pth'):
+def load_aesthetics_embedding(weights_path='vit_14_weights.pth'):
     """Load aesthetics model weights and bias
     
     Args:
