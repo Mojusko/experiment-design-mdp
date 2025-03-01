@@ -13,7 +13,7 @@ class StableDiffusionGenerator():
         self,
         stable_diffusion_id: str,
         num_inference_steps: int = 100, 
-        guidance_scale: float = 7,
+        guidance_scale: float = 15,
         image_size: int = 512, 
         seed: int = 0,
         
