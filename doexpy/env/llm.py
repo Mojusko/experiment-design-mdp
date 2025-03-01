@@ -288,8 +288,9 @@ def load_aesthetics_embedding(weights_path='vit_14_weights.pth'):
     
     try:
         state = torch.load(weights_path, map_location=device)
-        weight = state['net.0.weight'].to(device).double()
-        bias = state['net.0.bias'].to(device).double()
+        weight = state['weight'].to(device).double()
+        #weight = state['net.0.weight'].to(device).double()
+        #bias = state['net.0.bias'].to(device).double()
         return weight, None
         #return weight, bias
         #norm = torch.norm(weight, p=2, dim=1, keepdim=True)
