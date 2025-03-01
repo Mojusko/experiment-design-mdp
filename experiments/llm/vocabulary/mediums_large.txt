@@ -1,0 +1,298 @@
+3D render
+black and white photo
+bronze sculpture
+cartoon
+cave painting
+character portrait
+charcoal drawing
+child's drawing
+color pencil sketch
+colorized photo
+comic book panel
+computer rendering
+cross stitch
+cubist painting
+detailed drawing
+detailed matte painting
+detailed painting
+diagram
+digital painting
+digital rendering
+drawing
+fine art painting
+flemish Baroque
+gouache
+hologram
+hyperrealistic painting
+jigsaw puzzle
+low poly render
+macro photograph
+manga drawing
+marble sculpture
+matte painting
+microscopic photo
+mid-nineteenth century engraving
+minimalist painting
+mosaic
+painting
+pastel
+pencil sketch
+photo
+photocopy
+photorealistic painting
+picture
+pointillism painting
+polaroid photo
+pop art painting
+portrait
+poster
+raytraced image
+renaissance painting
+screenprint
+screenshot
+silk screen
+sketch
+statue
+still life
+stipple
+stock photo
+storybook illustration
+surrealist painting
+surrealist sculpture
+tattoo
+tilt shift photo
+watercolor painting
+wireframe diagram
+woodcut
+abstract drawing
+abstract painting
+abstract sculpture
+acrylic painting
+airbrush painting
+album cover
+ambient occlusion render
+anime drawing
+art deco painting
+art deco sculpture
+engraving
+etching
+illustration
+impressionist painting
+ink drawing
+oil on canvas painting
+oil painting
+ultrafine detailed painting
+16-bit pixel art
+3D printed sculpture
+3D wireframe model
+4K ultra HD render
+8-bit pixel art
+AI-generated artwork
+UV-reactive painting
+abstract collage
+acrylic pour painting
+algorithmic pattern
+ambrotype photograph
+animated GIF
+architectural blueprint
+assemblage sculpture
+augmented reality piece
+ballpoint pen drawing
+bas-relief carving
+batik fabric art
+beeswax painting
+binary code art
+biomechanical sculpture
+block print
+blown glass sculpture
+blueprint sketch
+bokeh photograph
+bone carving
+brushed metal engraving
+calligraphic piece
+camera obscura image
+carved ivory piece
+carved wood relief
+ceramic mosaic
+ceramic sculpture
+chalk pastel drawing
+charcoal portrait
+cinematic CGI
+clay sculpture
+colored pencil drawing
+colored pencil portrait
+computational art piece
+concrete sculpture
+conte crayon drawing
+copper plate etching
+crystal sculpture
+cyanotype print
+daguerreotype
+carved stone
+digital abstract
+digital animation
+digital architecture
+digital artwork
+digital collage
+digital composition
+digital concept
+digital elevation map
+digital fractal
+digital graffiti
+digital landscape
+digital manipulation
+digital portrait
+digital projection
+digital sculpture
+digital sketch
+dimensional paper art
+diorama
+dot matrix print
+double exposure photo
+drone photograph
+drypoint etching
+embossed metal work
+encaustic painting
+environmental sculpture
+epoxy resin art
+fiber art piece
+folded paper art
+found object assemblage
+fresco painting
+generative artwork
+glass etching
+glitch art piece
+gold leaf artwork
+graphite drawing
+hand carved sculpture
+hand painted ceramic
+hand woven tapestry
+hanging sculpture
+heat map visualization
+high contrast photo
+holographic display
+hybrid digital painting
+hydraulic sculpture
+illuminated manuscript
+industrial design sketch
+infrared photograph
+ink and wash painting
+ink splatter art
+installation piece
+interactive projection
+isometric rendering
+japanese brush painting
+kinetic sculpture
+laser cut design
+layered glass art
+lead pencil drawing
+leather tooling
+LED light installation
+letterpress print
+linocut print
+liquid light projection
+lithograph print
+long exposure photo
+lost wax casting
+luminogram
+macro lens photo
+mandala drawing
+marbled paper art
+marquetry piece
+mechanical drawing
+metal point drawing
+metal wire sculpture
+metallic ink drawing
+mixed media artwork
+mixed media collage
+monochrome drawing
+monotype print
+motion capture visualization
+mural painting
+nature print
+neon light sculpture
+neural art piece
+oil crayon drawing
+origami sculpture
+papercut art
+pen and ink sketch
+pencil rendering
+photo manipulation
+photo montage
+photogram
+pinhole camera photo
+plaster cast
+plein air painting
+procedural texture
+projection mapping
+quilt art piece
+quilling paper art
+recycled art piece
+relief print
+relief sculpture
+risograph print
+robotic drawing
+rust print
+sand art piece
+sandblasted glass
+satellite imagery
+scraperboard art
+sculptural installation
+serigraph print
+silver gelatin print
+site-specific installation
+solarized photograph
+spray paint art
+stained glass piece
+steel sculpture
+stencil art
+stone lithograph
+studio photograph
+synthetic media art
+tempera painting
+terracotta sculpture
+thermal imaging
+thread art piece
+tintype photograph
+tissue paper art
+toned photograph
+topographical map
+traditional oil painting
+virtual reality piece
+volumetric projection
+voxel art piece
+washi paper art
+water soluble pencil drawing
+wax crayon drawing
+wet plate collodion
+wood block print
+wood engraving
+x-ray art piece
+yarn art piece
+zinc plate etching
+aluminum sculpture
+animated projection
+architectural model
+augmented photo
+earth art installation
+electroformed sculpture
+enamel painting
+experimental print
+exploded view drawing
+found object sculpture
+HDR photograph
+ice sculpture
+intaglio print
+iron sculpture
+offset print
+chalk art
+charcoal art
+computer graphics
+concept art
+cyberpunk art
+digital art
+graffiti art
+lineart
+pixel art
+poster art
+vector art

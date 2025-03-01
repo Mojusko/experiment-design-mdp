@@ -138,14 +138,16 @@ class LLMExperiment:
         # Create token_lists for training environment
         horizon = self.cfg.horizon
         if self.cfg.algorithm == "optim":
-            combos = cartesian([self.training_words]*horizon)
+            # For optim, we need to create all possible combinations
+            combos = cartesian(self.training_words)
             words_list = []
             for row in combos:
                 tokens = [t for t in row if t != " "]
                 words_list.append(", ".join(tokens))
             token_lists = [words_list]
         else:
-            token_lists = [self.training_words]*horizon
+            # Use the horizon-specific token lists
+            token_lists = self.training_words
 
         # Build environment
         env = LLMGrid(token_lists, self._clip_model, self._clip_processor, self._clip_tokenizer, self.cfg.cache_dir, self.cfg.normalize_CLIP, base_prompt=self.cfg.base_prompt)
@@ -245,30 +247,41 @@ class LLMExperiment:
             return feedback[:3]  # First 3 chars as fallback
             
     def _load_data(self):
-        """Returns training_words and test_words in 75-25 split"""
+        """Returns training_words_lists and testing_words_lists for each horizon step"""
         vocab_files = self.cfg.experiment.vocabulary
-        if isinstance(vocab_files, str):
-            vocab_files = [vocab_files]
-        rng = np.random.RandomState(42)
-    
-        full_list = []
-        for path in vocab_files:
-            with open(path, 'r') as f:
-                full_list.extend([line.strip() for line in f])
-        full_list = list(dict.fromkeys(full_list))
-    
-        if len(full_list) > self.cfg.experiment.vocab_size:
-            print(f"Capping data at {self.cfg.experiment.vocab_size} items")
-            full_list = list(rng.choice(full_list, self.cfg.experiment.vocab_size, replace=False))
-    
-        n_total = len(full_list)
-        n_train = int(0.75 * n_total)
         
-        indices = rng.permutation(n_total)
-        train_idx = indices[:n_train]
-        test_idx = indices[n_train:]
-    
-        training_words = [full_list[i] for i in train_idx]
-        testing_words = [full_list[i] for i in test_idx]
-    
-        return training_words, testing_words, []
+        # Check if horizon matches the number of vocabulary files
+        # Make sure vocab_files is a flat list, not a list of lists
+        if len(vocab_files) != self.cfg.horizon:
+            raise ValueError(f"Number of vocabulary files ({len(vocab_files)}) must match horizon ({self.cfg.horizon})")
+        
+        rng = np.random.RandomState(42)
+        
+        training_words_lists = []
+        testing_words_lists = []
+        
+        # Process each vocabulary file separately
+        for path in vocab_files:
+            # Load words from file
+            with open(path, 'r') as f:
+                full_list = [line.strip() for line in f]
+            full_list = list(dict.fromkeys(full_list))  # Remove duplicates
+            
+            # Cap vocabulary if needed
+            if len(full_list) > self.cfg.experiment.vocab_size:
+                print(f"Capping data from {path} at {self.cfg.experiment.vocab_size} items")
+                full_list = list(rng.choice(full_list, self.cfg.experiment.vocab_size, replace=False))
+            
+            # Create 75-25 split for this file
+            n_total = len(full_list)
+            n_train = int(0.75 * n_total)
+            
+            indices = rng.permutation(n_total)
+            train_idx = indices[:n_train]
+            test_idx = indices[n_train:]
+            
+            # Add to lists
+            training_words_lists.append([full_list[i] for i in train_idx])
+            testing_words_lists.append([full_list[i] for i in test_idx])
+        
+        return training_words_lists, testing_words_lists, []

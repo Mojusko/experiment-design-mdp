@@ -3,10 +3,11 @@ import numpy as np
 from abc import ABC, abstractmethod
 from doexpy.env.llm import create_prompt_from_tokens
 
-def generate_test_sequence(rng, word_list, horizon):
+def generate_test_sequence(rng, word_lists, horizon):
+    """Generate a test sequence using the appropriate word list for each horizon step"""
     return [
-        " " if rng.random() < 0.1 else rng.choice(word_list)
-        for _ in range(horizon)
+        " " if rng.random() < 0.1 else rng.choice(word_lists[i])
+        for i in range(horizon)
     ]
 
 class BaseTester(ABC):
@@ -32,6 +33,10 @@ class PreferenceTester(BaseTester):
         #    N_pairs_eval   = 100
 
         horizon = cfg.horizon
+        # Make sure testing_words_list is a list of lists with one list per horizon step
+        if not isinstance(testing_words_list[0], list):
+            testing_words_list = [testing_words_list] * horizon
+            
         test_sequences = [generate_test_sequence(test_rng, testing_words_list, horizon) 
                 for _ in range(N_test_prompts)]
 
@@ -103,10 +108,14 @@ class ImageGenerationTester(BaseTester):
         horizon = cfg.horizon
         prefix_length = horizon - 1
         
-        # Generate a random prefix
+        # Make sure testing_words_list is a list of lists with one list per horizon step
+        if not isinstance(testing_words_list[0], list):
+            testing_words_list = [testing_words_list] * horizon
+            
+        # Generate a random prefix using the appropriate word list for each position
         prefix_sequence = [
-            " " if test_rng.random() < 0.1 else test_rng.choice(testing_words_list)
-            for _ in range(prefix_length)
+            " " if test_rng.random() < 0.1 else test_rng.choice(testing_words_list[i])
+            for i in range(prefix_length)
         ]
         
         # Score all possible completions
@@ -114,7 +123,8 @@ class ImageGenerationTester(BaseTester):
         all_prompts = []
         all_embeddings = []
         
-        for last_token in testing_words_list:
+        # Use the last horizon's word list for completions
+        for last_token in testing_words_list[-1]:
             full_sequence = prefix_sequence + [last_token]
             prompt = create_prompt_from_tokens(full_sequence, env.base_prompt)
             score, embedding = self.scorer_model.score_prompt(prompt)
