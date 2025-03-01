@@ -96,22 +96,152 @@ class ImageGenerationTester(BaseTester):
         self.params = params or {}
         self.scorer_model = scorer_model
         self.take_best_worst_N = self.params.get('take_best_worst_N', 8) if self.params else 8
+        self.use_greedy = self.params.get('use_greedy', True) if self.params else True
         super().__init__()
         
     def run_test(self, cfg, env, estimator, theta_star, training_words_list, testing_words_list):
         """Run the image generation test
         
         This tester finds the best and worst prompts based on the scorer model.
+        If use_greedy is True, it builds the sequence greedily by choosing the best token
+        at each timestep. Otherwise, it uses a random prefix and only varies the last token.
         """
-        # Sample horizon-1 random tokens from testing set
         test_rng = np.random.RandomState(42)
         horizon = cfg.horizon
-        prefix_length = horizon - 1
         
         # Make sure testing_words_list is a list of lists with one list per horizon step
         if not isinstance(testing_words_list[0], list):
             testing_words_list = [testing_words_list] * horizon
+        
+        if self.use_greedy:
+            # Greedy approach: build sequence by choosing best token at each step
+            return self._run_greedy_test(cfg, env, test_rng, horizon, testing_words_list)
+        else:
+            # Original approach: random prefix, vary only last token
+            return self._run_original_test(cfg, env, test_rng, horizon, testing_words_list)
+    
+    def _run_greedy_test(self, cfg, env, test_rng, horizon, testing_words_list):
+        """Greedy approach: build sequence by choosing best token at each step"""
+        # Start with empty sequence
+        best_sequence = []
+        worst_sequence = []
+        
+        # For each position in the sequence
+        for pos in range(horizon):
+            # Score all possible tokens at this position
+            best_scores_at_pos = []
+            best_tokens_at_pos = []
+            worst_scores_at_pos = []
+            worst_tokens_at_pos = []
             
+            for token in testing_words_list[pos]:
+                # Create temporary sequence with this token
+                temp_best_sequence = best_sequence + [token]
+                temp_worst_sequence = worst_sequence + [token]
+                
+                # Pad to full horizon length if needed
+                if len(temp_best_sequence) < horizon:
+                    # Use first token from each remaining position as padding
+                    padding = [testing_words_list[i][0] for i in range(pos+1, horizon)]
+                    temp_best_sequence = temp_best_sequence + padding
+                    temp_worst_sequence = temp_worst_sequence + padding
+                
+                # Score the sequences
+                best_prompt = create_prompt_from_tokens(temp_best_sequence, env.base_prompt)
+                best_score, _ = self.scorer_model.score_prompt(best_prompt)
+                
+                worst_prompt = create_prompt_from_tokens(temp_worst_sequence, env.base_prompt)
+                worst_score, _ = self.scorer_model.score_prompt(worst_prompt)
+                
+                best_scores_at_pos.append(best_score.item())
+                best_tokens_at_pos.append(token)
+                worst_scores_at_pos.append(worst_score.item())
+                worst_tokens_at_pos.append(token)
+            
+            # Choose best token for this position
+            best_idx = np.argmax(best_scores_at_pos)
+            best_sequence.append(best_tokens_at_pos[best_idx])
+            
+            # Choose worst token for this position
+            worst_idx = np.argmin(worst_scores_at_pos)
+            worst_sequence.append(worst_tokens_at_pos[worst_idx])
+        
+        # For the final position, get the top N best and worst completions
+        if horizon > 0:
+            # Score all possible completions for the last position
+            final_pos = horizon - 1
+            all_scores = []
+            all_prompts = []
+            
+            # Use best_sequence up to the second-to-last position
+            best_prefix = best_sequence[:-1]
+            worst_prefix = worst_sequence[:-1]
+            
+            # Try all tokens for the last position
+            for token in testing_words_list[final_pos]:
+                # Best sequence with this final token
+                full_best_sequence = best_prefix + [token]
+                best_prompt = create_prompt_from_tokens(full_best_sequence, env.base_prompt)
+                best_score, _ = self.scorer_model.score_prompt(best_prompt)
+                
+                # Worst sequence with this final token
+                full_worst_sequence = worst_prefix + [token]
+                worst_prompt = create_prompt_from_tokens(full_worst_sequence, env.base_prompt)
+                worst_score, _ = self.scorer_model.score_prompt(worst_prompt)
+                
+                all_scores.append((best_score.item(), best_prompt, "best"))
+                all_scores.append((worst_score.item(), worst_prompt, "worst"))
+            
+            # Sort all scores
+            all_scores.sort(reverse=True)  # Sort by score descending
+            
+            # Get top N best prompts
+            best_prompts = []
+            best_scores = []
+            for i in range(min(self.take_best_worst_N, len(all_scores))):
+                if all_scores[i][2] == "best":
+                    best_prompts.append(all_scores[i][1])
+                    best_scores.append(all_scores[i][0])
+                if len(best_prompts) >= self.take_best_worst_N:
+                    break
+            
+            # Sort all scores in ascending order for worst
+            all_scores.sort()  # Sort by score ascending
+            
+            # Get top N worst prompts
+            worst_prompts = []
+            worst_scores = []
+            for i in range(min(self.take_best_worst_N, len(all_scores))):
+                if all_scores[i][2] == "worst":
+                    worst_prompts.append(all_scores[i][1])
+                    worst_scores.append(all_scores[i][0])
+                if len(worst_prompts) >= self.take_best_worst_N:
+                    break
+        else:
+            # Handle edge case of horizon=0
+            best_prompts = []
+            best_scores = []
+            worst_prompts = []
+            worst_scores = []
+        
+        return {
+            "image_generation": {
+                "best_prompts": best_prompts,
+                "best_scores": best_scores,
+                "worst_prompts": worst_prompts,
+                "worst_scores": worst_scores,
+                "best_sequence": best_sequence,
+                "worst_sequence": worst_sequence
+            },
+            "best_image_score": best_scores[0] if best_scores else 0,
+            "worst_image_score": worst_scores[0] if worst_scores else 0,
+            "avg_top_image_score": sum(best_scores) / len(best_scores) if best_scores else 0
+        }
+    
+    def _run_original_test(self, cfg, env, test_rng, horizon, testing_words_list):
+        """Original approach: random prefix, vary only last token"""
+        prefix_length = horizon - 1
+        
         # Generate a random prefix using the appropriate word list for each position
         prefix_sequence = [
             " " if test_rng.random() < 0.1 else test_rng.choice(testing_words_list[i])
@@ -147,7 +277,6 @@ class ImageGenerationTester(BaseTester):
         worst_scores = [all_scores[i] for i in worst_indices]
         
         # Store the prompts and scores in the test results
-        # Any saver can use this data if it knows how
         return {
             "image_generation": {
                 "best_prompts": best_prompts,
