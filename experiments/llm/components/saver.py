@@ -93,7 +93,8 @@ class ImageGenerationSaver(BaseSaver):
             MODELS_CACHE_DIR=os.path.expanduser("~/.cache/huggingface/hub"),
             image_size=self.image_size,
             num_inference_steps=self.num_inference_steps,
-            seed=self.seed
+            #seed=self.seed
+            seed=int(self.params.base_prompt)
         )
         
         # Generate images for the best prompts
