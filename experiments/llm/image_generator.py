@@ -80,15 +80,18 @@ class StableDiffusionGenerator():
             num_train_timesteps=1000
         )
         
+        self.seed()
+
+        self._image_size = image_size
+        self.latents = None
+
+    def seed_generator(self) -> None:
         # Setup random generator
         if self.seed:
             self._generator = torch.manual_seed(self.seed)
         else:
             self._generator = None
             torch.seed()  # Ensure random initialization even without specific seed
-
-        self._image_size = image_size
-        self.latents = None
 
     @torch.no_grad()
     def resample_random(self) -> None:
@@ -112,6 +115,9 @@ class StableDiffusionGenerator():
         Returns:
             Union[np.ndarray, Tuple[np.ndarray, torch.Tensor]]: Generated image(s) and text embeddings
         """
+
+        self.seed_generator()
+
         if self.latents is None:
             self.resample_random()
 
@@ -261,6 +267,15 @@ class DoubleGuidanceStableDiffusionGenerator():
         self.latents = None
 
     @torch.no_grad()
+    def seed_generator(self) -> None:
+        # Setup random generator
+        if self.seed:
+            self._generator = torch.manual_seed(self.seed)
+        else:
+            self._generator = None
+            torch.seed()  # Ensure random initialization even without specific seed
+
+    @torch.no_grad()
     def resample_random(self) -> None:
         """Generates new random latents for image generation."""
         latents_height = self._image_size // 8
@@ -276,12 +291,14 @@ class DoubleGuidanceStableDiffusionGenerator():
 
         Args:
             base_prompt (str): The base prompt (e.g., "A man walking in paris").
-            full_prompt (str): The full prompt (e.g., "A man walking in paris photorealistic cute").
+            full_prompt (str): The full prompt (e.g., "A man walking in paris #photorealistic #cute").
             raw (bool): If True, returns both processed and raw image tensors.
 
         Returns:
             Union[np.ndarray, Tuple[np.ndarray, torch.Tensor]]: Generated image(s) and text embeddings.
         """
+
+        self.seed_generator()
         if self.latents is None:
             self.resample_random()
 

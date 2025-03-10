@@ -6,6 +6,7 @@ from PIL import Image
 from abc import ABC, abstractmethod
 from experiments.llm.image_generator import StableDiffusionGenerator, DoubleGuidanceStableDiffusionGenerator
 from doexpy.env.llm import create_prompt_from_tokens
+import hashlib
 
 class BaseSaver(ABC):
     def __init__(self, scorer_model=None, params=None, results_dir=None, experiment_id=None):
@@ -94,7 +95,7 @@ class ImageGenerationSaver(BaseSaver):
             image_size=self.image_size,
             num_inference_steps=self.num_inference_steps,
             #seed=self.seed
-            seed=int(float(self.params.base_prompt))
+            seed=_get_seed_from_prompt(self.base_prompt)
         )
         
         # Generate images for the best prompts
@@ -220,4 +221,11 @@ class ImageGenerationSaver(BaseSaver):
             for i, (prompt_score, prompt) in enumerate(zip(worst_scores, worst_prompts)):
                 image_score = worst_image_scores[i] if i < len(worst_image_scores) else "N/A"
                 f.write(f"{i+1}\t{prompt_score:.6f}\t{image_score}\t{prompt}\n")
-    
+
+
+def _get_seed_from_prompt(prompt: str) -> int:
+    # Compute SHA-256 hash of the prompt and convert to an integer.
+    hash_digest = hashlib.sha256(prompt.encode('utf-8')).hexdigest()
+    # Convert the hex digest to an integer and constrain it to 32 bits
+    return int(hash_digest, 16) % (2**32)
+        
