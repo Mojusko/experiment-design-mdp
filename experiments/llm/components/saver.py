@@ -47,14 +47,11 @@ class ImageGenerationSaver(BaseSaver):
     def __init__(self, scorer_model=None, params=None, results_dir=None, experiment_id=None):
         super().__init__(scorer_model, params, results_dir, experiment_id)
         self.take_best_worst_N = self.params.get('take_best_worst_N', 8)
+        self.seed = self.params.get('seed', 12)
         self.debug_mode = self.params.get('debug_mode', False)
         self.image_size = self.params.get('image_size', 512)
         self.num_inference_steps = self.params.get('num_inference_steps', 100)
         self.base_prompt = self.params.get('base_prompt', '')  # Extract base_prompt, default to empty string
-        
-        # Get CLIP model and processor for image embedding
-        from doexpy.env.llm import setup_clip_model
-        self._model, self._processor, _ = setup_clip_model(os.path.expanduser("~/.cache/huggingface/hub"))
         
     def save_result(self, result_dict):
         """Save the results to a JSON file and generate images if image data is present
@@ -95,7 +92,8 @@ class ImageGenerationSaver(BaseSaver):
             "CompVis/stable-diffusion-v1-4",
             MODELS_CACHE_DIR=os.path.expanduser("~/.cache/huggingface/hub"),
             image_size=self.image_size,
-            num_inference_steps=self.num_inference_steps
+            num_inference_steps=self.num_inference_steps,
+            seed=self.seed
         )
         
         # Generate images for the best prompts
