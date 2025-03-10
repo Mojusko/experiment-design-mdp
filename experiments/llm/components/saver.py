@@ -94,7 +94,7 @@ class ImageGenerationSaver(BaseSaver):
             image_size=self.image_size,
             num_inference_steps=self.num_inference_steps,
             #seed=self.seed
-            seed=int(self.params.base_prompt)
+            seed=int(float(self.params.base_prompt))
         )
         
         # Generate images for the best prompts
