@@ -135,7 +135,7 @@ class ImageGenerationSaver(BaseSaver):
         for i, (img, score, full_prompt) in enumerate(zip(best_generated_images, best_scores, best_prompts)):
             axes[0, i].imshow(img)
             axes[0, i].set_title(f"Best {i+1}: {score:.4f}")
-            axes[0, i].set_xlabel(prompt, fontsize=8)
+            axes[0, i].set_xlabel(full_prompt, fontsize=8)
             axes[0, i].set_xticks([])
             axes[0, i].set_yticks([])
         
