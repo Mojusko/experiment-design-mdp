@@ -14,13 +14,18 @@ class BaseTester(ABC):
     @abstractmethod
     def run_test(self, cfg, env, estimator, theta_star, training_words_list, testing_words_list):
         pass
+    
+    def __str__(self):
+        return self.__class__.__name__
 
 class PreferenceTester(BaseTester):
     def __init__(self, scorer_model, params=None):
         self.params = params or {}
         self.scorer_model = scorer_model
         super().__init__()  # Call to parent if needed
+        
     def run_test(self, cfg, env, estimator, theta_star, training_words_list, testing_words_list):
+        print(f"Running {self.__class__.__name__} with {self.params}")
         test_rng = np.random.RandomState(42)
         
         N_test_prompts = self.params['N_test_prompts']
@@ -37,10 +42,11 @@ class PreferenceTester(BaseTester):
         if not isinstance(testing_words_list[0], list):
             testing_words_list = [testing_words_list] * horizon
             
+        print(f"Generating {N_test_prompts} test sequences with horizon {horizon}")
         test_sequences = [generate_test_sequence(test_rng, testing_words_list, horizon) 
                 for _ in range(N_test_prompts)]
 
-
+        print(f"Computing embeddings and predictions for {len(test_sequences)} sequences")
         # Compute embeddings and predictions
         xtest = []
         ytest = []
@@ -55,6 +61,7 @@ class PreferenceTester(BaseTester):
         ytest = torch.vstack(ytest)
         ypred = estimator.mean(xtest)
 
+        print(f"Evaluating {N_pairs_eval} preference pairs")
         pair_indices = np.array([(i, j) for i in range(N_test_prompts) for j in range(i+1, N_test_prompts)])
         selected_pairs = pair_indices[test_rng.choice(len(pair_indices), N_pairs_eval, replace=False)]
         
@@ -66,8 +73,9 @@ class PreferenceTester(BaseTester):
                 correct_preferences += 1
         
         error = 1.0 - (correct_preferences / N_pairs_eval)
-
-
+        
+        print(f"Preference error: {error:.4f} ({correct_preferences}/{N_pairs_eval} correct)")
+        
         return {"preference_error": error}
 
 class CosineTester(BaseTester):
@@ -75,6 +83,7 @@ class CosineTester(BaseTester):
         self.params = params or {}
         self.scorer_model = scorer_model
         super().__init__()
+        print(f"Initialized {self.__class__.__name__} with {self.params}")
     
     @staticmethod
     def cosine_error(vec1, vec2): 
@@ -85,10 +94,12 @@ class CosineTester(BaseTester):
         return 1 - cos_sim.item()
     
     def run_test(self, cfg, env, estimator, theta_star, training_words_list, testing_words_list):
+        print(f"Running {self.__class__.__name__}")
         # Get the ground-truth model weights and the estimated weights
         gt_weight = self.scorer_model.weight  # ground truth weight from aesthetics model
         est_weight = estimator.theta_fit      # estimated weight
         error = self.cosine_error(est_weight, gt_weight)
+        print(f"Cosine error: {error:.4f}")
         return {"cosine_error": error}
 
 class ImageGenerationTester(BaseTester):
@@ -98,6 +109,7 @@ class ImageGenerationTester(BaseTester):
         self.take_best_worst_N = self.params.get('take_best_worst_N', 8) if self.params else 8
         self.use_greedy = self.params.get('use_greedy', True) if self.params else True
         super().__init__()
+        print(f"Initialized {self.__class__.__name__} with take_best_worst_N={self.take_best_worst_N}, use_greedy={self.use_greedy}")
         
     def run_test(self, cfg, env, estimator, theta_star, training_words_list, testing_words_list):
         """Run the image generation test
@@ -106,6 +118,7 @@ class ImageGenerationTester(BaseTester):
         If use_greedy is True, it builds the sequence greedily by choosing the best token
         at each timestep. Otherwise, it uses a random prefix and only varies the last token.
         """
+        print(f"Running {self.__class__.__name__} with {'greedy' if self.use_greedy else 'random prefix'} approach")
         test_rng = np.random.RandomState(42)
         horizon = cfg.horizon
         
@@ -122,12 +135,14 @@ class ImageGenerationTester(BaseTester):
     
     def _run_greedy_test(self, cfg, env, test_rng, horizon, testing_words_list):
         """Greedy approach: build sequence by choosing best token at each step"""
+        print(f"Running greedy test with horizon {horizon}")
         # Start with empty sequence
         best_sequence = []
         worst_sequence = []
         
         # For each position in the sequence
         for pos in range(horizon):
+            print(f"Processing position {pos+1}/{horizon} with {len(testing_words_list[pos])} possible tokens")
             # Score all possible tokens at this position
             best_scores_at_pos = []
             best_tokens_at_pos = []
@@ -165,9 +180,13 @@ class ImageGenerationTester(BaseTester):
             # Choose worst token for this position
             worst_idx = np.argmin(worst_scores_at_pos)
             worst_sequence.append(worst_tokens_at_pos[worst_idx])
+            
+            print(f"Position {pos+1}: Best token '{best_tokens_at_pos[best_idx]}' (score: {best_scores_at_pos[best_idx]:.4f}), "
+                  f"Worst token '{worst_tokens_at_pos[worst_idx]}' (score: {worst_scores_at_pos[worst_idx]:.4f})")
         
         # For the final position, get the top N best and worst completions
         if horizon > 0:
+            print(f"Getting top {self.take_best_worst_N} best and worst completions for the final position")
             # Score all possible completions for the last position
             final_pos = horizon - 1
             all_scores = []
@@ -205,6 +224,8 @@ class ImageGenerationTester(BaseTester):
                 if len(best_prompts) >= self.take_best_worst_N:
                     break
             
+            print(f"Found {len(best_prompts)} best prompts with scores ranging from {max(best_scores):.4f} to {min(best_scores) if best_scores else 0:.4f}")
+            
             # Sort all scores in ascending order for worst
             all_scores.sort()  # Sort by score ascending
             
@@ -217,6 +238,8 @@ class ImageGenerationTester(BaseTester):
                     worst_scores.append(all_scores[i][0])
                 if len(worst_prompts) >= self.take_best_worst_N:
                     break
+            
+            print(f"Found {len(worst_prompts)} worst prompts with scores ranging from {max(worst_scores) if worst_scores else 0:.4f} to {min(worst_scores) if worst_scores else 0:.4f}")
         else:
             # Handle edge case of horizon=0
             best_prompts = []
@@ -240,6 +263,7 @@ class ImageGenerationTester(BaseTester):
     
     def _run_original_test(self, cfg, env, test_rng, horizon, testing_words_list):
         """Original approach: random prefix, vary only last token"""
+        print(f"Running original test with horizon {horizon}")
         prefix_length = horizon - 1
         
         # Generate a random prefix using the appropriate word list for each position
@@ -248,11 +272,14 @@ class ImageGenerationTester(BaseTester):
             for i in range(prefix_length)
         ]
         
+        print(f"Generated random prefix: {' '.join(prefix_sequence)}")
+        
         # Score all possible completions
         all_scores = []
         all_prompts = []
         all_embeddings = []
         
+        print(f"Scoring {len(testing_words_list[-1])} possible completions")
         # Use the last horizon's word list for completions
         for last_token in testing_words_list[-1]:
             full_sequence = prefix_sequence + [last_token]
@@ -275,6 +302,9 @@ class ImageGenerationTester(BaseTester):
         # Get the worst prompts and their scores
         worst_prompts = [all_prompts[i] for i in worst_indices]
         worst_scores = [all_scores[i] for i in worst_indices]
+        
+        print(f"Best prompts scores: {best_scores}")
+        print(f"Worst prompts scores: {worst_scores}")
         
         # Store the prompts and scores in the test results
         return {

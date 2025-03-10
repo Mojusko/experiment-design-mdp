@@ -9,15 +9,15 @@ feedback:
   adaptive_design_frequency: 0
 experiment:
    episodes: 50
-   vocab_size: 1000
+   vocab_size: 200
   #scorer_model: "art"
 # Results directory for debug mode
 results_dir: "results/debug"
 tester:
   - _target_: components.tester.PreferenceTester
     params:
-      N_test_prompts: 100
-      N_pairs_eval: 500
+      N_test_prompts: 50
+      N_pairs_eval: 100
   - _target_: components.tester.CosineTester
     params: null
   - _target_: components.tester.ImageGenerationTester

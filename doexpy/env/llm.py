@@ -191,31 +191,31 @@ class DotProductModel(CLIPScorer):
         return score, x_clip_embedding
 
 
-class ImageScorer(CLIPScorer):
-    def __init__(self, embedder, cache_dir):
-        super().__init__(embedder)
-        self.generator = StableDiffusionGenerator("CompVis/stable-diffusion-v1-4", 
-                                                MODELS_CACHE_DIR=cache_dir)
-        
-    def score_prompt(self, prompt):
-        raise NotImplementedError
-
-class AestheticsImageScorer(ImageScorer):
-    def __init__(self, cache_dir, clip_model: CLIPModel, clip_processor: CLIPProcessor):
-        super().__init__(cache_dir)
-        # TODO: figure this one out
-        #self.aesthetic_model = AestheticsModel('vit_14_weights.pth')
-        #self.aesthetic_model = AestheticsModel('text_weights.pth')
-        self.clip_processor = clip_processor
-        self.clip_model = clip_model
-
-    def score_prompt(self, prompt):
-        image, _ = self.generator.sample(prompt, raw=True)
-        print('Should we do image[1] here?')
-        import ipdb; ipdb.set_trace()
-        inputs = self.clip_processor(images=image, return_tensors="pt")
-        clip_embeddings = self.clip_model.get_image_features(**inputs)
-        return self.aesthetic_model(clip_embeddings), clip_embeddings
+#class ImageScorer(CLIPScorer):
+#    def __init__(self, embedder, cache_dir):
+#        super().__init__(embedder)
+#        self.generator = StableDiffusionGenerator("CompVis/stable-diffusion-v1-4", 
+#                                                MODELS_CACHE_DIR=cache_dir)
+#        
+#    def score_prompt(self, prompt):
+#        raise NotImplementedError
+#
+#class AestheticsImageScorer(ImageScorer):
+#    def __init__(self, cache_dir, clip_model: CLIPModel, clip_processor: CLIPProcessor):
+#        super().__init__(cache_dir)
+#        # TODO: figure this one out
+#        #self.aesthetic_model = AestheticsModel('vit_14_weights.pth')
+#        #self.aesthetic_model = AestheticsModel('text_weights.pth')
+#        self.clip_processor = clip_processor
+#        self.clip_model = clip_model
+#
+#    def score_prompt(self, prompt):
+#        image, _ = self.generator.sample(prompt, raw=True)
+#        print('Should we do image[1] here?')
+#        import ipdb; ipdb.set_trace()
+#        inputs = self.clip_processor(images=image, return_tensors="pt")
+#        clip_embeddings = self.clip_model.get_image_features(**inputs)
+#        return self.aesthetic_model(clip_embeddings), clip_embeddings
 
 def generate_emissions(unique_elements, embedder, cache_dir, verbose=False):
 

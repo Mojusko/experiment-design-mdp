@@ -52,6 +52,10 @@ class ImageGenerationSaver(BaseSaver):
         self.num_inference_steps = self.params.get('num_inference_steps', 100)
         self.base_prompt = self.params.get('base_prompt', '')  # Extract base_prompt, default to empty string
         
+        # Get CLIP model and processor for image embedding
+        from doexpy.env.llm import setup_clip_model
+        self._model, self._processor, _ = setup_clip_model(os.path.expanduser("~/.cache/huggingface/hub"))
+        
     def save_result(self, result_dict):
         """Save the results to a JSON file and generate images if image data is present
         
@@ -96,6 +100,7 @@ class ImageGenerationSaver(BaseSaver):
         
         # Generate images for the best prompts
         best_generated_images = []
+        best_image_scores = []
         
         # Print debug info
         if self.debug_mode:
@@ -103,25 +108,60 @@ class ImageGenerationSaver(BaseSaver):
         
         print("Generating images for BEST prompts:")
         for i, (full_prompt, score) in enumerate(zip(best_prompts, best_scores)):
-            print(f"Generating best image {i+1}/{len(best_prompts)} for full_prompt: {full_prompt}")
-            image, _ = generator.sample(self.base_prompt, full_prompt, raw=False)
+            print(f"Generating best image {i+1}/{len(best_prompts)} for prompt: {full_prompt}")
+            image, image_embedding = generator.sample(self.base_prompt, full_prompt)
             
-            # Save the image
-            img_path = os.path.join(images_dir, f"best_{i+1}_score_{score:.4f}.png")
+            # Calculate image-based aesthetics score
+            if hasattr(self.scorer_model, 'score_embedding'):
+                # Process embedding: unsqueeze, normalize, convert to double, and move to correct device
+                image_embedding = image_embedding.unsqueeze(0)
+                image_embedding = image_embedding / image_embedding.norm(dim=1, keepdim=True)  # First L2 normalization
+                image_embedding = image_embedding / image_embedding.norm(dim=1, keepdim=True)  # Second L2 normalization
+                image_embedding = image_embedding.to(self.scorer_model.weight.device).double()
+                
+                # Score the embedding
+                image_score = self.scorer_model.score_embedding(image_embedding).item()
+                best_image_scores.append(image_score)
+            else:
+                image_score = None
+            
+            # Save the image with both scores in filename
+            score_text = f"prompt_{score:.4f}"
+            if image_score is not None:
+                score_text += f"_image_{image_score:.4f}"
+            img_path = os.path.join(images_dir, f"best_{i+1}_{score_text}.png")
             Image.fromarray(image).save(img_path)
             
             best_generated_images.append(image)
         
         # Generate images for the worst prompts
         worst_generated_images = []
+        worst_image_scores = []
         
         print("\nGenerating images for WORST prompts:")
         for i, (full_prompt, score) in enumerate(zip(worst_prompts, worst_scores)):
             print(f"Generating worst image {i+1}/{len(worst_prompts)} for prompt: {full_prompt}")
-            image, _ = generator.sample(self.base_prompt, full_prompt, raw=False)
+            image, image_embedding = generator.sample(self.base_prompt, full_prompt)
             
-            # Save the image
-            img_path = os.path.join(images_dir, f"worst_{i+1}_score_{score:.4f}.png")
+            # Calculate image-based aesthetics score
+            if hasattr(self.scorer_model, 'score_embedding'):
+                # Process embedding: unsqueeze, normalize, convert to double, and move to correct device
+                image_embedding = image_embedding.unsqueeze(0)
+                image_embedding = image_embedding / image_embedding.norm(dim=1, keepdim=True)  # First L2 normalization
+                image_embedding = image_embedding / image_embedding.norm(dim=1, keepdim=True)  # Second L2 normalization
+                image_embedding = image_embedding.to(self.scorer_model.weight.device).double()
+                
+                # Score the embedding
+                image_score = self.scorer_model.score_embedding(image_embedding).item()
+                worst_image_scores.append(image_score)
+            else:
+                image_score = None
+            
+            # Save the image with both scores in filename
+            score_text = f"prompt_{score:.4f}"
+            if image_score is not None:
+                score_text += f"_image_{image_score:.4f}"
+            img_path = os.path.join(images_dir, f"worst_{i+1}_{score_text}.png")
             Image.fromarray(image).save(img_path)
             
             worst_generated_images.append(image)
@@ -131,10 +171,15 @@ class ImageGenerationSaver(BaseSaver):
         n_cols = max(len(best_prompts), len(worst_prompts))
         fig, axes = plt.subplots(2, n_cols, figsize=(4*n_cols, 8))
         
+        # Image scores are already calculated during image generation
+        
         # Plot best images in the first row
-        for i, (img, score, full_prompt) in enumerate(zip(best_generated_images, best_scores, best_prompts)):
+        for i, (img, prompt_score, full_prompt) in enumerate(zip(best_generated_images, best_scores, best_prompts)):
             axes[0, i].imshow(img)
-            axes[0, i].set_title(f"Best {i+1}: {score:.4f}")
+            title = f"Best {i+1}: Prompt {prompt_score:.4f}"
+            if i < len(best_image_scores):
+                title += f"\nImage {best_image_scores[i]:.4f}"
+            axes[0, i].set_title(title)
             axes[0, i].set_xlabel(full_prompt, fontsize=8)
             axes[0, i].set_xticks([])
             axes[0, i].set_yticks([])
@@ -144,9 +189,12 @@ class ImageGenerationSaver(BaseSaver):
             axes[0, i].axis('off')
         
         # Plot worst images in the second row
-        for i, (img, score, full_prompt) in enumerate(zip(worst_generated_images, worst_scores, worst_prompts)):
+        for i, (img, prompt_score, full_prompt) in enumerate(zip(worst_generated_images, worst_scores, worst_prompts)):
             axes[1, i].imshow(img)
-            axes[1, i].set_title(f"Worst {i+1}: {score:.4f}")
+            title = f"Worst {i+1}: Prompt {prompt_score:.4f}"
+            if i < len(worst_image_scores):
+                title += f"\nImage {worst_image_scores[i]:.4f}"
+            axes[1, i].set_title(title)
             axes[1, i].set_xlabel(full_prompt, fontsize=8)
             axes[1, i].set_xticks([])
             axes[1, i].set_yticks([])
@@ -163,12 +211,14 @@ class ImageGenerationSaver(BaseSaver):
         # Save scores and prompts to a text file
         with open(os.path.join(images_dir, "results.txt"), "w") as f:
             f.write("BEST PROMPTS:\n")
-            f.write("Rank\tScore\tPrompt\n")
-            for i, (score, prompt) in enumerate(zip(best_scores, best_prompts)):
-                f.write(f"{i+1}\t{score:.6f}\t{prompt}\n")
+            f.write("Rank\tPrompt Score\tImage Score\tPrompt\n")
+            for i, (prompt_score, prompt) in enumerate(zip(best_scores, best_prompts)):
+                image_score = best_image_scores[i] if i < len(best_image_scores) else "N/A"
+                f.write(f"{i+1}\t{prompt_score:.6f}\t{image_score}\t{prompt}\n")
             
             f.write("\nWORST PROMPTS:\n")
-            f.write("Rank\tScore\tPrompt\n")
-            for i, (score, prompt) in enumerate(zip(worst_scores, worst_prompts)):
-                f.write(f"{i+1}\t{score:.6f}\t{prompt}\n")
+            f.write("Rank\tPrompt Score\tImage Score\tPrompt\n")
+            for i, (prompt_score, prompt) in enumerate(zip(worst_scores, worst_prompts)):
+                image_score = worst_image_scores[i] if i < len(worst_image_scores) else "N/A"
+                f.write(f"{i+1}\t{prompt_score:.6f}\t{image_score}\t{prompt}\n")
     

@@ -1,10 +1,11 @@
 import logging
+from PIL import Image
 from typing import List, Tuple, Union
 
 import numpy as np
 import torch
 from diffusers import AutoencoderKL, LMSDiscreteScheduler, UNet2DConditionModel
-from transformers import CLIPTextModel, CLIPTokenizer
+from transformers import CLIPTextModel, CLIPTokenizer, CLIPModel, CLIPProcessor
 
 logger = logging.getLogger(__name__)
 
@@ -33,6 +34,16 @@ class StableDiffusionGenerator():
         self.device = 'cuda' if torch.cuda.is_available() else 'cpu'
         self.num_inference_steps = num_inference_steps
         self.guidance_scale = guidance_scale
+
+        # Add CLIP model for image embeddings
+        self._clip_model = CLIPModel.from_pretrained(
+            "openai/clip-vit-large-patch14",
+            cache_dir=MODELS_CACHE_DIR
+        ).to(self.device)
+        self._clip_processor = CLIPProcessor.from_pretrained(
+            "openai/clip-vit-large-patch14",
+            cache_dir=MODELS_CACHE_DIR
+        )
 
         # Load tokenizer and text encoder from the SD model
         self._tokenizer = CLIPTokenizer.from_pretrained(
@@ -162,9 +173,18 @@ class StableDiffusionGenerator():
         image = image.detach().cpu().permute(0, 2, 3, 1).numpy()
         image = (image * 255).round().astype("uint8")[0]
 
+        # Convert to PIL Image and get CLIP embedding
+        pil_image = Image.fromarray(image)
+        inputs = self._clip_processor(
+            images=pil_image, 
+            return_tensors="pt"
+        ).to(self.device)
+        image_embedding = self._clip_model.get_image_features(**inputs)
+        image_embedding = image_embedding.detach().cpu()[0]  # Convert to numpy array
+
         if raw:
-            return image, image_raw, text_embeddings
-        return image, text_embeddings
+            return image, image_raw, image_embedding
+        return image, image_embedding
 
     @property
     def image_size(self) -> Tuple[int, int, int]:
@@ -203,7 +223,14 @@ class DoubleGuidanceStableDiffusionGenerator():
         self.num_inference_steps = num_inference_steps
         self.guidance_base = guidance_base
         self.guidance_tokens = guidance_tokens
-
+        self._clip_model = CLIPModel.from_pretrained(
+            "openai/clip-vit-large-patch14",
+            cache_dir=MODELS_CACHE_DIR
+        ).to(self.device)
+        self._clip_processor = CLIPProcessor.from_pretrained(
+            "openai/clip-vit-large-patch14",
+            cache_dir=MODELS_CACHE_DIR
+        )
         # Load tokenizer and text encoder
         self._tokenizer = CLIPTokenizer.from_pretrained(
             stable_diffusion_id, subfolder="tokenizer", cache_dir=MODELS_CACHE_DIR
@@ -319,9 +346,18 @@ class DoubleGuidanceStableDiffusionGenerator():
         image = image.detach().cpu().permute(0, 2, 3, 1).numpy()
         image = (image * 255).round().astype("uint8")[0]
 
+        # Convert to PIL Image and get CLIP embedding
+        pil_image = Image.fromarray(image)
+        inputs = self._clip_processor(
+            images=pil_image, 
+            return_tensors="pt"
+        ).to(self.device)
+        image_embedding = self._clip_model.get_image_features(**inputs)
+        image_embedding = image_embedding.detach().cpu()[0]  # Convert to numpy array
+
         if raw:
-            return image, image_raw, text_embeddings
-        return image, text_embeddings
+            return image, image_raw, image_embedding
+        return image, image_embedding
 
     @property
     def image_size(self) -> Tuple[int, int, int]:
