@@ -88,10 +88,10 @@ class StableDiffusionGenerator():
     def seed_generator(self) -> None:
         # Setup random generator
         if self.seed:
-            self._generator = torch.manual_seed(self.seed)
+            self._generator = torch.Generator(device=self.device).manual_seed(self.seed)
         else:
-            self._generator = None
-            torch.seed()  # Ensure random initialization even without specific seed
+            self._generator = torch.Generator(device=self.device)
+            self._generator.seed()  # Ensure random initialization even without specific seed
 
     @torch.no_grad()
     def resample_random(self) -> None:
@@ -259,9 +259,11 @@ class DoubleGuidanceStableDiffusionGenerator():
         )
 
         # Setup random generator
-        self._generator = torch.manual_seed(self.seed) if self.seed else None
-        if not self.seed:
-            torch.seed()
+        self._generator = torch.Generator(device=self.device)
+        if self.seed:
+            self._generator.manual_seed(self.seed)
+        else:
+            self._generator.seed()
 
         self._image_size = image_size
         self.latents = None
@@ -270,10 +272,10 @@ class DoubleGuidanceStableDiffusionGenerator():
     def seed_generator(self) -> None:
         # Setup random generator
         if self.seed:
-            self._generator = torch.manual_seed(self.seed)
+            self._generator = torch.Generator(device=self.device).manual_seed(self.seed)
         else:
-            self._generator = None
-            torch.seed()  # Ensure random initialization even without specific seed
+            self._generator = torch.Generator(device=self.device)
+            self._generator.seed()  # Ensure random initialization even without specific seed
 
     @torch.no_grad()
     def resample_random(self) -> None:
