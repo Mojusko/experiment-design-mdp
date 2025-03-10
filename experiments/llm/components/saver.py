@@ -116,9 +116,9 @@ class ImageGenerationSaver(BaseSaver):
         worst_generated_images = []
         
         print("\nGenerating images for WORST prompts:")
-        for i, (prompt, score) in enumerate(zip(worst_prompts, worst_scores)):
-            print(f"Generating worst image {i+1}/{len(worst_prompts)} for prompt: {prompt}")
-            image, _ = generator.sample(prompt, raw=False)
+        for i, (full_prompt, score) in enumerate(zip(worst_prompts, worst_scores)):
+            print(f"Generating worst image {i+1}/{len(worst_prompts)} for prompt: {full_prompt}")
+            image, _ = generator.sample(self.base_prompt, full_prompt, raw=False)
             
             # Save the image
             img_path = os.path.join(images_dir, f"worst_{i+1}_score_{score:.4f}.png")
