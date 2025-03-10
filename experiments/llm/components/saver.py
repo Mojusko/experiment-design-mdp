@@ -4,7 +4,7 @@ import os
 import matplotlib.pyplot as plt
 from PIL import Image
 from abc import ABC, abstractmethod
-from experiments.llm.image_generator import StableDiffusionGenerator
+from experiments.llm.image_generator import StableDiffusionGenerator, DoubleGuidanceStableDiffusionGenerator
 from doexpy.env.llm import create_prompt_from_tokens
 
 class BaseSaver(ABC):
@@ -50,6 +50,7 @@ class ImageGenerationSaver(BaseSaver):
         self.debug_mode = self.params.get('debug_mode', False)
         self.image_size = self.params.get('image_size', 512)
         self.num_inference_steps = self.params.get('num_inference_steps', 100)
+        self.base_prompt = self.params.get('base_prompt', '')  # Extract base_prompt, default to empty string
         
     def save_result(self, result_dict):
         """Save the results to a JSON file and generate images if image data is present
@@ -85,7 +86,8 @@ class ImageGenerationSaver(BaseSaver):
             os.makedirs(images_dir, exist_ok=True)
         
         # Initialize image generator with debug settings if needed
-        generator = StableDiffusionGenerator(
+        #generator = StableDiffusionGenerator(
+        generator = DoubleGuidanceStableDiffusionGenerator(
             "CompVis/stable-diffusion-v1-4",
             MODELS_CACHE_DIR=os.path.expanduser("~/.cache/huggingface/hub"),
             image_size=self.image_size,
@@ -100,9 +102,9 @@ class ImageGenerationSaver(BaseSaver):
             print(f"DEBUG MODE: Generating smaller images ({self.image_size}x{self.image_size}) with fewer steps ({self.num_inference_steps})")
         
         print("Generating images for BEST prompts:")
-        for i, (prompt, score) in enumerate(zip(best_prompts, best_scores)):
-            print(f"Generating best image {i+1}/{len(best_prompts)} for prompt: {prompt}")
-            image, _ = generator.sample(prompt, raw=False)
+        for i, (full_prompt, score) in enumerate(zip(best_prompts, best_scores)):
+            print(f"Generating best image {i+1}/{len(best_prompts)} for full_prompt: {full_prompt}")
+            image, _ = generator.sample(self.base_prompt, full_prompt, raw=False)
             
             # Save the image
             img_path = os.path.join(images_dir, f"best_{i+1}_score_{score:.4f}.png")
@@ -130,7 +132,7 @@ class ImageGenerationSaver(BaseSaver):
         fig, axes = plt.subplots(2, n_cols, figsize=(4*n_cols, 8))
         
         # Plot best images in the first row
-        for i, (img, score, prompt) in enumerate(zip(best_generated_images, best_scores, best_prompts)):
+        for i, (img, score, full_prompt) in enumerate(zip(best_generated_images, best_scores, best_prompts)):
             axes[0, i].imshow(img)
             axes[0, i].set_title(f"Best {i+1}: {score:.4f}")
             axes[0, i].set_xlabel(prompt, fontsize=8)
@@ -142,10 +144,10 @@ class ImageGenerationSaver(BaseSaver):
             axes[0, i].axis('off')
         
         # Plot worst images in the second row
-        for i, (img, score, prompt) in enumerate(zip(worst_generated_images, worst_scores, worst_prompts)):
+        for i, (img, score, full_prompt) in enumerate(zip(worst_generated_images, worst_scores, worst_prompts)):
             axes[1, i].imshow(img)
             axes[1, i].set_title(f"Worst {i+1}: {score:.4f}")
-            axes[1, i].set_xlabel(prompt, fontsize=8)
+            axes[1, i].set_xlabel(full_prompt, fontsize=8)
             axes[1, i].set_xticks([])
             axes[1, i].set_yticks([])
         

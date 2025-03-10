@@ -32,6 +32,7 @@ savers:
       filename: "metrics.json"
   - _target_: components.saver.ImageGenerationSaver
     params:
+      base_prompt: "${base_prompt}"  
       take_best_worst_N: 4
       debug_mode: false
       image_size: 512
