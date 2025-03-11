@@ -39,8 +39,8 @@ class LLMGrid(DiscreteEnv):
 
         # Add base prompt to first token list if needed
         if base_prompt:
-            first_tokens = [f"{base_prompt} #{t}" if t != ' ' else f'#{t}' for t in list_of_text_tokens[0]]
-            self.list_of_text_tokens = [first_tokens] + [[f"#{t}" for t in token_list] for token_list in list_of_text_tokens[1:]]
+            first_tokens = [f"{base_prompt}, {t}" if t != ' ' else f'{base_prompt}' for t in list_of_text_tokens[0]]
+            self.list_of_text_tokens = [first_tokens] + [[f"{t}" for t in token_list] for token_list in list_of_text_tokens[1:]]
             #self.list_of_text_tokens = [first_tokens] + list_of_text_tokens[1:]
         else:
             self.list_of_text_tokens = list_of_text_tokens
@@ -316,24 +316,20 @@ def create_prompt_from_tokens(tokens: List[str], base_prompt: str = '') -> str:
         base_prompt: Optional base prompt to prepend
         
     Returns:
-        Formatted prompt string with hashtags
+        Formatted prompt string with commas
     """
     # Filter out empty tokens and strip whitespace
     valid_tokens = [str(token).strip() for token in tokens if str(token).strip()]
     
-    # Format with hashtags
-    hashtag_tokens = [f"#{token}" for token in valid_tokens]
-   
     if base_prompt:
-        # If we have a base prompt, add the hashtag tokens after it with a space
-        # Comma-separated version (commented out):
-        # return base_prompt + (", " + ", ".join(hashtag_tokens) if hashtag_tokens else "")
-        
-        # Hashtag version:
-        return base_prompt + (" " + " ".join(hashtag_tokens) if hashtag_tokens else "")
+        # If we have a base prompt, add the tokens after it with commas
+        if valid_tokens:
+            return base_prompt + ", " + ", ".join(valid_tokens)
+        else:
+            return base_prompt
     else:
-        # If no base prompt, just join the hashtag tokens with spaces
-        return " ".join(hashtag_tokens)
+        # If no base prompt, just join the tokens with commas
+        return ", ".join(valid_tokens)
 
 def create_prompt(actions: List[int], env) -> str:
     """Create prompt from action sequence
