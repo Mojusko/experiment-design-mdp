@@ -207,8 +207,8 @@ class DoubleGuidanceStableDiffusionGenerator():
         self,
         stable_diffusion_id: str,
         num_inference_steps: int = 100,
-        guidance_base: float = 8,      # Guidance for base prompt
-        guidance_tokens: float = 4,    # Guidance for full prompt
+        guidance_base: float = 10,      # Guidance for base prompt
+        guidance_tokens: float = 5,    # Guidance for full prompt
         image_size: int = 512,
         seed: int = 0,
         MODELS_CACHE_DIR: str = '/tmp/models_cache_dir/'

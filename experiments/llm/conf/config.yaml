@@ -3,7 +3,7 @@ defaults:
   - feedback: numerical
 
 seed: 12
-base_prompt: 'An adventure'
+base_prompt: 'Adventure'
 #base_prompt: ''
 normalize_CLIP: true
 algorithm: "greedy"
