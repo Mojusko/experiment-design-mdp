@@ -1,6 +1,7 @@
 import os
 import torch
 import numpy as np
+import datetime
 
 import hydra
 from omegaconf import DictConfig
@@ -49,8 +50,9 @@ class LLMExperiment:
         self.cfg = cfg
         self.rng = np.random.RandomState(int(cfg.seed))
         
-        # Create results directory
-        self.results_dir = cfg.results_dir
+        # Create results directory with timestamp
+        timestamp = datetime.datetime.now().strftime("%Y-%m-%d-%H-%M")
+        self.results_dir = f"{cfg.results_dir}-{timestamp}"
         os.makedirs(self.results_dir, exist_ok=True)
 
         #self.training_words, self.testing_words, self.model_words = self._load_data_legacy()

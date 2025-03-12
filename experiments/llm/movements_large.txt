@@ -400,3 +400,392 @@ yogyakarta school
 yugoslav modernism
 zagreb school
 zen minimalism
+afro-futurism
+algorithmic art
+ancient egyptian art
+ancient mesopotamian art
+anthropocene art
+anti-design
+appropriation art
+archigram
+architectural brutalism
+art activism
+art and technology
+art informel
+art of the absurd
+art therapy
+artificial life art
+asian futurism
+atmospheric art
+audio-visual art
+augmented art
+avant-garde
+biomimetic art
+biotech art
+black mountain college
+body art
+book art
+border art
+calligraffiti
+camp aesthetic
+cave art
+cellular automaton art
+ceramic art
+chance operations
+chicano art
+chinese literati painting
+christo and jeanne-claude
+classical art
+classicism
+clean design
+climate art
+collage art
+colonial art
+color theory
+commercial art
+community-based art
+computational aesthetics
+confessional art
+contemporary african art
+contemporary asian art
+contemporary indigenous art
+contemporary realism
+corporate art
+craft movement
+critical design
+critical regionalism
+crypto art
+cultural jamming
+cybernetic art
+dark romanticism
+data art
+deconstruction
+degenerate art
+design fiction
+destructivist art
+detournement
+diaspora art
+digital humanities
+digital materialism
+digital sculpture
+dirty realism
+documentary art
+domestic art
+drone art
+earth works
+eco-design
+eco-fiction
+egyptian art
+electronic literature
+electronic music visualization
+embodied art
+emotional design
+empathic design
+end art
+engaged art
+ephemeral art
+erotic art
+esoteric art
+ethical design
+ethno-futurism
+expanded cinema
+expanded painting
+expanded sculpture
+experiential art
+experimental architecture
+experimental literature
+experimental music visualization
+experimental typography
+expressionist architecture
+extended reality art
+extreme art
+fantastic architecture
+feminist design
+fiber art
+figurative expressionism
+figurative sculpture
+film noir aesthetic
+folk horror aesthetic
+folk surrealism
+food design
+forensic architecture
+forensic aesthetics
+formalism
+found footage art
+found object art
+fourth world aesthetic
+fractalist art
+functional art
+futurist literature
+game art
+garden design
+gesamtkunstwerk
+global south aesthetics
+glyptic art
+gothic literature
+graphic medicine
+green design
+grotesque art
+guerrilla art
+hacker art
+handmade digital
+haptic art
+hard-edge painting
+hermetic art
+high tech architecture
+historical painting
+humanist design
+hybrid art
+hypermedia art
+identity art
+immaterial art
+immersive art
+indigenous futurism
+industrial design
+information art
+institutional art
+interactive fiction
+interdisciplinary art
+internet art
+inuit art
+islamic art
+japanese wabi-sabi
+junk art
+kinetic typography
+kitsch art
+land use art
+landscape art
+language art
+latin american baroque
+light art
+literary art
+living architecture
+locative media art
+lumen art
+luminism
+lyrical abstraction
+machine art
+magical realist architecture
+mail art
+maker movement
+marginalized art
+maritime art
+material culture
+materialist art
+mathematical art
+maximalist design
+media archaeology
+media art
+medieval art
+memphis design
+meta-modernism
+metamedia
+microdosing design
+middle eastern art
+militant design
+mimetic art
+minimal design
+minimal music visualization
+mission school
+mobile art
+modern primitive
+modernist architecture
+monumental art
+mural art
+museum art
+mythological art
+naive design
+narrative art
+nature art
+neoclassical architecture
+neoexpressionism
+neofuturism
+neomodernism
+neosurrealism
+net.art
+networked art
+new aesthetic
+new genre public art
+new image sculpture
+new materialism
+new media literature
+new sincerity
+new topographics
+new wave
+non-objective art
+nordic noir aesthetic
+northern renaissance
+nuclear culture
+object-oriented art
+oceanic art
+official art
+old masters
+olfactory art
+organic architecture
+organic design
+orientalism
+outsider art
+pacific northwest school
+packaging design
+paleolithic art
+participatory art
+pataphysical art
+pattern and decoration
+performance art
+performative architecture
+perspectivist art
+phenomenological art
+photo-conceptualism
+photographic abstraction
+photographic expressionism
+photographic surrealism
+physical computing art
+planetary art
+plastic arts
+pneumatic architecture
+poetic realism
+political art
+pop architecture
+pop design
+post-black art
+post-colonial art
+post-conceptual
+post-contemporary
+post-craft
+post-digital
+post-dramatic
+post-human
+post-industrial
+post-medium
+post-metaphysical
+post-modern
+post-photography
+post-physical
+post-pop
+post-representational
+post-studio
+post-surrealism
+postcolonial design
+prehistoric art
+primitive art
+prison art
+procedural art
+propaganda art
+proto-renaissance
+psychedelic design
+psychogeography
+public art
+punk aesthetic
+queer art
+radical architecture
+radical craft
+readymade
+recursive art
+reflexive design
+regional modernism
+relational aesthetics
+religious art
+remix culture
+renaissance revival
+retro design
+retrofuturistic design
+ritual art
+robotic art
+romantic realism
+rural studio
+russian cosmism
+sacred art
+sacred geometry
+satire art
+school of london
+science art
+scientific visualization
+sculptural installation
+second viennese school
+self-taught art
+semantic art
+semiotic art
+sensory art
+sequential art
+serial art
+service design
+shamanic art
+situationist
+slow design
+social design
+social sculpture
+socially engaged art
+software art
+sonic art
+sound sculpture
+south american art
+spatial art
+speculative architecture
+speculative design
+spiritual art
+spontaneous art
+staged photography
+steam punk
+stencil art
+strategic design
+structural film
+studio craft movement
+studio glass
+studio pottery
+sublime art
+subversive art
+super flat
+super normal design
+superstudio
+support/surface
+sustainable architecture
+sustainable design
+symbiotic art
+symbolic art
+synesthetic art
+synthetic cubism
+systems aesthetics
+tactical media
+tactical urbanism
+techno-orientalism
+technological art
+tectonic art
+telematic art
+textile art
+theater design
+theoretical art
+thermal design
+third culture aesthetics
+time-based media
+total design
+traditional art
+transcendental art
+transdisciplinary art
+transformative art
+transhumanist art
+transnational art
+tribal art
+tropical modernism
+typographic art
+uncanny art
+underground art
+universal design
+urban art
+utopian design
+vernacular art
+vertical art
+video game art
+video sculpture
+virtual architecture
+visionary architecture
+visionary art
+visual culture
+visual music
+visual poetry
+visual storytelling
+wearable art
+web art
+wet media
+wilderness art
+xenoaesthetics
+zero group
