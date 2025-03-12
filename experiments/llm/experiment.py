@@ -51,7 +51,7 @@ class LLMExperiment:
         self.rng = np.random.RandomState(int(cfg.seed))
         
         # Create results directory with timestamp
-        timestamp = datetime.datetime.now().strftime("%Y-%m-%d-%H-%M")
+        timestamp = os.environ.get('TIMESTAMP', datetime.datetime.now().strftime("%Y-%m-%d-%H-%M"))
         self.results_dir = f"{cfg.results_dir}-{timestamp}"
         os.makedirs(self.results_dir, exist_ok=True)
 

@@ -1,4 +1,6 @@
 PYTHONPATH=python
+TIMESTAMP := $(shell date +"%Y-%m-%d-%H-%M")
+export TIMESTAMP
 
 ###########################
 ###########################
@@ -286,7 +288,7 @@ STOCH: STOCH1 STOCH2 STOCH3 STOCH0
 
 
 ########################### LLMS
-REPEATS_LLM=5
+REPEATS_LLM=1
 NUMBERS_LLM := $(shell seq 1 ${REPEATS_LLM})
 
 
