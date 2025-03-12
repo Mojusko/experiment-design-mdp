@@ -25,7 +25,7 @@ tester:
   - _target_: components.tester.ImageGenerationTester
     params:
       take_best_worst_N: 4
-      use_estimator: false
+      use_estimator: true
 
 # Default savers configuration
 savers:
