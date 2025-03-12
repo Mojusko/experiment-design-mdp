@@ -174,14 +174,38 @@ class CLIPScorer(nn.Module):
 class DotProductModel(CLIPScorer):
     def __init__(self, embedder, weight, bias=None):
         super().__init__(embedder)
-        self.weight = weight.to(embedder.device)
-        self.bias = bias.to(embedder.device) if bias else None
+        # Standardize weight to always be a 2D tensor with shape [1, embedding_dim]
+        if weight.dim() == 1:
+            self.weight = weight.view(1, -1).to(embedder.device)
+        else:
+            # If it's already 2D, ensure it's [1, embedding_dim] or [embedding_dim, 1]
+            if weight.shape[0] == 1 or weight.shape[1] == 1:
+                # Make sure it's [1, embedding_dim]
+                if weight.shape[1] == 1:
+                    self.weight = weight.T.to(embedder.device)
+                else:
+                    self.weight = weight.to(embedder.device)
+            else:
+                raise ValueError(f"Weight must be 1D or have one dimension of size 1, got shape {weight.shape}")
+        
+        self.bias = bias.to(embedder.device) if bias is not None else None
     
     def score_embedding(self, x_clip_embedding):
         """Score a CLIP embedding directly"""
+        # Ensure input has correct shape [batch_size, embedding_dim]
+        if x_clip_embedding.dim() == 1:
+            x_clip_embedding = x_clip_embedding.view(1, -1)
+        
+        # Verify shapes are compatible
+        if x_clip_embedding.shape[1] != self.weight.shape[1]:
+            raise ValueError(f"Embedding dimension {x_clip_embedding.shape[1]} doesn't match weight dimension {self.weight.shape[1]}")
+        
+        # Simple dot product
         score = torch.mm(x_clip_embedding, self.weight.T)
+        
         if self.bias is not None:
             score += self.bias
+            
         return score
 
     def score_prompt(self, x):
@@ -370,11 +394,12 @@ def get_scorer_model(model_name: str, embedder, clip_model, clip_processor, cach
         return DotProductModel(embedder, aes_weight, bias=aes_bias).eval()
         
     if model_name == 'aesthetics-image':
-        return  AestheticsImageScorer(embedder, cache_dir, clip_model, clip_processor)
+        # AestheticsImageScorer is not implemented, raise a helpful error
+        raise NotImplementedError(f"The 'aesthetics-image' scorer model is not implemented. Available models: 'art', 'aesthetics', 'random_combination'")
         
     if model_name == 'red':
         # RedImageScorer is not implemented, raise a more helpful error
-        raise NotImplementedError(f"The 'red' scorer model is not implemented. Available models: 'art', 'aesthetics', 'aesthetics-image', 'random_combination'")
+        raise NotImplementedError(f"The 'red' scorer model is not implemented. Available models: 'art', 'aesthetics', 'random_combination'")
     
     if model_name == 'random_combination':
         if emissions_env is None:

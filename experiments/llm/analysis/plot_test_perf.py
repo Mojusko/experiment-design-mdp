@@ -147,17 +147,17 @@ def plot_feedback_results(feedback_results):
     plt.tight_layout()
 
 def plot_results(directory):
-    pattern = os.path.join(directory, "*.txt")
+    pattern = os.path.join(directory, "*.json")
     files = glob.glob(pattern)
 
-    # Dictionaries for non-feedback experiments.
+    # Dictionaries for non-feedback experiments
     results_by_type = {
         "lambda": {},
         "v_comparison": {},
         "frequency": {},
         "rounds": {}
     }
-    # For feedback experiments (algorithm comparison), group by algorithm.
+    # For feedback experiments
     feedback_results = {}
 
     for f in files:
@@ -165,10 +165,8 @@ def plot_results(directory):
         val = safe_load_data(f)
 
         if exp_type == "feedback":
-            # key is a tuple: (alg_type, feedback_type). We group by algorithm only.
-            alg = key[0]
-            # Map shorthand names to full algorithm names.
-            alg_map = {"grd": "Greedy", "rnd": "Random"}
+            alg = key[0]  # alg_type from tuple
+            alg_map = {"grd": "Greedy", "rand": "Random"}
             alg_name = alg_map.get(alg, alg)
             if alg_name not in feedback_results:
                 feedback_results[alg_name] = {"preference_error": [], "cosine_error": []}
@@ -178,18 +176,17 @@ def plot_results(directory):
                 if "cosine_error" in val:
                     feedback_results[alg_name]["cosine_error"].append(val["cosine_error"])
         else:
-            # For other experiments, use the existing grouping.
             if key not in results_by_type[exp_type]:
                 results_by_type[exp_type][key] = []
             if val is not None:
                 results_by_type[exp_type][key].append(val)
 
-    # Plot non-feedback experiments.
+    # Plot non-feedback experiments
     for exp_type in results_by_type:
         if results_by_type[exp_type]:
             plot_results_with_type(results_by_type[exp_type], exp_type)
 
-    # Plot the feedback (algorithm comparison) results.
+    # Plot feedback results
     if feedback_results:
         plot_feedback_results(feedback_results)
 

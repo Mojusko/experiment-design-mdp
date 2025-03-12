@@ -20,20 +20,21 @@ tester:
       N_pairs_eval: 100
   - _target_: components.tester.CosineTester
     params: null
-  #  - _target_: components.tester.ImageGenerationTester
-  #    params:
-  #      take_best_worst_N: 4
+  - _target_: components.tester.ImageGenerationTester
+    params:
+      use_estimator: true
+      take_best_worst_N: 4
 
 # Use a list of savers with debug settings
 savers:
   - _target_: components.saver.FileSaver
     params:
       filename: "metrics.json"
-  #  - _target_: components.saver.ImageGenerationSaver
-  #    params:
-  #      seed: "${seed}"
-  #      take_best_worst_N: 4
-  #      debug_mode: true
-  #      image_size: 32
-  #      num_inference_steps: 20
+  - _target_: components.saver.ImageGenerationSaver
+    params:
+      seed: "${seed}"
+      take_best_worst_N: 4
+      debug_mode: true
+      image_size: 32
+      num_inference_steps: 20
 
