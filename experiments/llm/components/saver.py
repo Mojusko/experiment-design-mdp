@@ -53,6 +53,7 @@ class ImageGenerationSaver(BaseSaver):
         self.image_size = self.params.get('image_size', 512)
         self.num_inference_steps = self.params.get('num_inference_steps', 100)
         self.base_prompt = self.params.get('base_prompt', '')  # Extract base_prompt, default to empty string
+        self.add_image_score = self.params.get('add_image_score', False)  # Whether to add image scores
         
     def save_result(self, result_dict):
         """Save the results to a JSON file and generate images if image data is present
@@ -112,7 +113,7 @@ class ImageGenerationSaver(BaseSaver):
             image, image_embedding = generator.sample(self.base_prompt, full_prompt)
             
             # Calculate image-based aesthetics score
-            if hasattr(self.scorer_model, 'score_embedding'):
+            if self.add_image_score:
                 # Process embedding: unsqueeze, normalize, convert to double, and move to correct device
                 image_embedding = image_embedding.unsqueeze(0)
                 image_embedding = image_embedding / image_embedding.norm(dim=1, keepdim=True)  # First L2 normalization
@@ -144,7 +145,7 @@ class ImageGenerationSaver(BaseSaver):
             image, image_embedding = generator.sample(self.base_prompt, full_prompt)
             
             # Calculate image-based aesthetics score
-            if hasattr(self.scorer_model, 'score_embedding'):
+            if self.add_image_score and hasattr(self.scorer_model, 'score_embedding'):
                 # Process embedding: unsqueeze, normalize, convert to double, and move to correct device
                 image_embedding = image_embedding.unsqueeze(0)
                 image_embedding = image_embedding / image_embedding.norm(dim=1, keepdim=True)  # First L2 normalization

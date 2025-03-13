@@ -214,33 +214,6 @@ class DotProductModel(CLIPScorer):
         score = self.score_embedding(x_clip_embedding)
         return score, x_clip_embedding
 
-
-#class ImageScorer(CLIPScorer):
-#    def __init__(self, embedder, cache_dir):
-#        super().__init__(embedder)
-#        self.generator = StableDiffusionGenerator("CompVis/stable-diffusion-v1-4", 
-#                                                MODELS_CACHE_DIR=cache_dir)
-#        
-#    def score_prompt(self, prompt):
-#        raise NotImplementedError
-#
-#class AestheticsImageScorer(ImageScorer):
-#    def __init__(self, cache_dir, clip_model: CLIPModel, clip_processor: CLIPProcessor):
-#        super().__init__(cache_dir)
-#        # TODO: figure this one out
-#        #self.aesthetic_model = AestheticsModel('vit_14_weights.pth')
-#        #self.aesthetic_model = AestheticsModel('text_weights.pth')
-#        self.clip_processor = clip_processor
-#        self.clip_model = clip_model
-#
-#    def score_prompt(self, prompt):
-#        image, _ = self.generator.sample(prompt, raw=True)
-#        print('Should we do image[1] here?')
-#        import ipdb; ipdb.set_trace()
-#        inputs = self.clip_processor(images=image, return_tensors="pt")
-#        clip_embeddings = self.clip_model.get_image_features(**inputs)
-#        return self.aesthetic_model(clip_embeddings), clip_embeddings
-
 def generate_emissions(unique_elements, embedder, cache_dir, verbose=False):
 
     """Generate emissions for a list of unique elements
@@ -385,22 +358,14 @@ def get_scorer_model(model_name: str, embedder, clip_model, clip_processor, cach
     Returns:
         Tuple of (text_model, image_scorer), one will be None
     """
-    if model_name == 'art':
-        art_embedding = embedder.embed_text('art', normalize=True)
-        return DotProductModel(embedder, art_embedding).eval()
+    if model_name == 'roman-cinematic':
+        embedding = embedder.embed_text('An image with roman, cinematic style')
+        return DotProductModel(embedder, embedding).eval()
         
     if model_name == 'aesthetics':
         aes_weight, aes_bias = load_aesthetics_embedding()
         return DotProductModel(embedder, aes_weight, bias=aes_bias).eval()
         
-    if model_name == 'aesthetics-image':
-        # AestheticsImageScorer is not implemented, raise a helpful error
-        raise NotImplementedError(f"The 'aesthetics-image' scorer model is not implemented. Available models: 'art', 'aesthetics', 'random_combination'")
-        
-    if model_name == 'red':
-        # RedImageScorer is not implemented, raise a more helpful error
-        raise NotImplementedError(f"The 'red' scorer model is not implemented. Available models: 'art', 'aesthetics', 'random_combination'")
-    
     if model_name == 'random_combination':
         if emissions_env is None:
             raise ValueError("emissions_env must be provided for random_combination model")
