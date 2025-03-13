@@ -3,10 +3,10 @@ id_prefix: "feedback"  # Used for filename prefixes
 episodes: 200
 scorer_model: 'roman-cinematic'
 #scorer_model: "random_combination"
-vocab_size: 2000
+vocab_size: 1000
 vocabulary: 
-  - 'vocabulary/mediums_large.txt'
-  - 'vocabulary/movements_large.txt'
+  - 'vocabulary/mediums.txt'
+  - 'vocabulary/movements.txt'
   - 'vocabulary/emotions.txt'
 #vocabulary: 'diverse.txt'
 #vocabulary: 'diffusiondb.txt'
