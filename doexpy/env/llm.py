@@ -359,7 +359,7 @@ def get_scorer_model(model_name: str, embedder, clip_model, clip_processor, cach
         Tuple of (text_model, image_scorer), one will be None
     """
     if model_name == 'roman-cinematic':
-        embedding = embedder.embed_text('An image with roman, cinematic style')
+        embedding = embedder.embed_text('Roman style image, cinematic')
         return DotProductModel(embedder, embedding).eval()
         
     if model_name == 'aesthetics':
