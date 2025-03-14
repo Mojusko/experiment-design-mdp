@@ -287,7 +287,7 @@ STOCH0: STOCH_ada0 STOCH_opt0 STOCH_static0
 STOCH: STOCH1 STOCH2 STOCH3 STOCH0
 
 ########################### LLMS
-REPEATS_LLM=1
+REPEATS_LLM=5
 NUMBERS_LLM := $(shell seq 1 ${REPEATS_LLM})
 
 JOBS_LLM_GRD_MULT_V := $(addprefix job-llm-feedback-grd-mult-v,$(NUMBERS_LLM))
