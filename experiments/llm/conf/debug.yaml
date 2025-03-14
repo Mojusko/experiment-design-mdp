@@ -16,8 +16,8 @@ results_dir: "results/debug"
 tester:
   - _target_: components.tester.PreferenceTester
     params:
-      N_test_prompts: 50
-      N_pairs_eval: 100
+      N_test_prompts: 250
+      N_pairs_eval: 1000
   - _target_: components.tester.CosineTester
     params: null
   #- _target_: components.tester.ImageGenerationTester

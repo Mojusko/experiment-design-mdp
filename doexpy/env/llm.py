@@ -344,24 +344,26 @@ def create_prompt(actions: List[int], env) -> str:
     # Use the shared function to create the prompt
     return create_prompt_from_tokens(tokens, env.base_prompt)
 
-def get_scorer_model(model_name: str, embedder, clip_model, clip_processor, cache_dir, emissions_env=None):
+def get_scorer_model(model_name: str, env, clip_model, clip_processor, cache_dir):
     """Initialize embedder and scoring model
     
     Args:
-        embedder: CLIPEmbedder
         model_name: Scorer type ('art', 'aesthetics', 'aesthetics-image', 'red', 'random_combination')
+        env: complete this
         clip_model: CLIP model, required for aesthetics-image
         clip_processor: CLIP processor, required for aesthetics-image 
         cache_dir: Cache directory for image scorers
-    emissions_env: Environment containing emissions matrix, required for 'random_combination'
     
     Returns:
         Tuple of (text_model, image_scorer), one will be None
     """
 
-    scorer_embedder = embedder
+    emissions_env = env.emissions
+    scorer_embedder = env.embedder
     if model_name == 'roman-cinematic':
-        embedding = scorer_embedder.embed_text('A man walking in paris, roman style, cinematic')
+        # Use the base prompt from the environment instead of hardcoded text
+        prompt = f"{env.base_prompt}, roman style, cinematic" 
+        embedding = scorer_embedder.embed_text(prompt)
         return DotProductModel(scorer_embedder, embedding).eval()
         
     if model_name == 'aesthetics':
@@ -369,9 +371,6 @@ def get_scorer_model(model_name: str, embedder, clip_model, clip_processor, cach
         return DotProductModel(scorer_embedder, aes_weight, bias=aes_bias).eval()
         
     if model_name == 'random_combination':
-        if emissions_env is None:
-            raise ValueError("emissions_env must be provided for random_combination model")
-            
         rng = np.random.RandomState(42)
         device = emissions_env.device
         dtype = emissions_env.dtype

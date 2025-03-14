@@ -3,7 +3,7 @@ defaults:
   - feedback: numerical
 
 seed: 12
-base_prompt: 'A man walking in paris'
+base_prompt: 'A man walking alone'
 #base_prompt: ''
 normalize_CLIP: true
 algorithm: "greedy"
