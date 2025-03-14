@@ -358,8 +358,8 @@ def get_scorer_model(model_name: str, embedder, clip_model, clip_processor, cach
     Returns:
         Tuple of (text_model, image_scorer), one will be None
     """
-    # Create a non-normalized embedder for scoring models
-    scorer_embedder = CLIPEmbedder(embedder.tokenizer, embedder.model, normalize=False)
+
+    scorer_embedder = embedder
     if model_name == 'roman-cinematic':
         embedding = scorer_embedder.embed_text('Roman style image, cinematic')
         return DotProductModel(scorer_embedder, embedding).eval()
