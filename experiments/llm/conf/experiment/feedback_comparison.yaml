@@ -1,6 +1,6 @@
 name: "feedback_comparison"
 id_prefix: "feedback"  # Used for filename prefixes
-episodes: 300
+episodes: 100
 vocab_size: 1000
 vocabulary: 
   - 'vocabulary/mediums.txt'
@@ -9,8 +9,8 @@ vocabulary:
 
 # Override lambda depending on model
 scorer_model: 'roman-cinematic'
-#feedback:
-#  lambda_reg: 1
+feedback:
+  lambda_reg: 10
 
 #scorer_model: 'aesthetics'
 #feedback:

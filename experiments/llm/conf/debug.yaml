@@ -8,7 +8,7 @@ feedback:
   adaptive_estimation_start: 0
   adaptive_design_frequency: 0
 experiment:
-   episodes: 50
+   episodes: 100
    vocab_size: 500
   #scorer_model: "art"
 # Results directory for debug mode

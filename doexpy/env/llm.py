@@ -361,7 +361,7 @@ def get_scorer_model(model_name: str, embedder, clip_model, clip_processor, cach
 
     scorer_embedder = embedder
     if model_name == 'roman-cinematic':
-        embedding = scorer_embedder.embed_text('Roman style image, cinematic')
+        embedding = scorer_embedder.embed_text('A man walking in paris, roman style, cinematic')
         return DotProductModel(scorer_embedder, embedding).eval()
         
     if model_name == 'aesthetics':
