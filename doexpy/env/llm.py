@@ -214,7 +214,7 @@ class DotProductModel(CLIPScorer):
         score = self.score_embedding(x_clip_embedding)
         return score, x_clip_embedding
 
-def generate_emissions(unique_elements, embedder, cache_dir, verbose=False):
+def generate_emissions(unique_elements, embedder, cache_dir, verbose=True):
 
     """Generate emissions for a list of unique elements
     
