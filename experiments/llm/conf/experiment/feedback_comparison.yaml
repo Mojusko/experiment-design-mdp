@@ -1,13 +1,18 @@
 name: "feedback_comparison"
 id_prefix: "feedback"  # Used for filename prefixes
-episodes: 100
-scorer_model: 'roman-cinematic'
-#scorer_model: "random_combination"
+episodes: 50
 vocab_size: 1000
 vocabulary: 
   - 'vocabulary/mediums.txt'
   - 'vocabulary/movements.txt'
   - 'vocabulary/emotions.txt'
-#vocabulary: 'diverse.txt'
-#vocabulary: 'diffusiondb.txt'
+
+# Override lambda depending on model
+scorer_model: 'roman-cinematic'
+feedback:
+  lambda_reg: 1
+
+#scorer_model: 'aesthetics'
+#feedback:
+#  lambda_reg: 10
 

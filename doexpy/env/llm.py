@@ -358,13 +358,15 @@ def get_scorer_model(model_name: str, embedder, clip_model, clip_processor, cach
     Returns:
         Tuple of (text_model, image_scorer), one will be None
     """
+    # Create a non-normalized embedder for scoring models
+    scorer_embedder = CLIPEmbedder(embedder.tokenizer, embedder.model, normalize=False)
     if model_name == 'roman-cinematic':
-        embedding = embedder.embed_text('Roman style image, cinematic')
-        return DotProductModel(embedder, embedding).eval()
+        embedding = scorer_embedder.embed_text('Roman style image, cinematic')
+        return DotProductModel(scorer_embedder, embedding).eval()
         
     if model_name == 'aesthetics':
         aes_weight, aes_bias = load_aesthetics_embedding()
-        return DotProductModel(embedder, aes_weight, bias=aes_bias).eval()
+        return DotProductModel(scorer_embedder, aes_weight, bias=aes_bias).eval()
         
     if model_name == 'random_combination':
         if emissions_env is None:
@@ -384,7 +386,7 @@ def get_scorer_model(model_name: str, embedder, clip_model, clip_processor, cach
         random_combination_vec = torch.mm(random_coeffs.view(1, -1), emissions_env)
         #random_combination_vec = random_combination_vec / torch.norm(random_combination_vec, p=2)
         
-        return DotProductModel(embedder, random_combination_vec).eval()
+        return DotProductModel(scorer_embedder, random_combination_vec).eval()
        
     if model_name == 'random_combination':
         if emissions_env is None:
@@ -401,7 +403,7 @@ def get_scorer_model(model_name: str, embedder, clip_model, clip_processor, cach
         random_combination_vec = torch.mm(random_coeffs.view(1, -1), emissions_env)
         random_combination_vec = random_combination_vec / torch.norm(random_combination_vec, p=2)
         
-        return DotProductModel(embedder, random_combination_vec).eval()
+        return DotProductModel(scorer_embedder, random_combination_vec).eval()
         
     raise ValueError(f"Unknown model_name: {model_name}")
 

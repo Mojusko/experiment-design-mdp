@@ -154,7 +154,7 @@ class LLMExperiment:
         # Build environment
         env = LLMGrid(token_lists, self._clip_model, self._clip_processor, self._clip_tokenizer, self.cfg.cache_dir, self.cfg.normalize_CLIP, base_prompt=self.cfg.base_prompt)
 
-        # Build scorer using model emissions
+        # Build scorer using model emissions with non-normalized embedder
         self._scorer_model = get_scorer_model(
             self.cfg.experiment.scorer_model,
             env.embedder,
