@@ -152,7 +152,7 @@ class LLMExperiment:
             token_lists = self.training_words
 
         # Build environment
-        env = LLMGrid(token_lists, self._clip_model, self._clip_processor, self._clip_tokenizer, self.cfg.cache_dir, self.cfg.normalize_CLIP, base_prompt=self.cfg.base_prompt)
+        env = LLMGrid(token_lists, self._clip_model, self._clip_processor, self._clip_tokenizer, self.cfg.cache_dir, self.cfg.normalize_CLIP, base_prompt=self.cfg.base_prompt, include_base_prompt_in_first_tokens=self.cfg.include_base_prompt_in_first_tokens, verbose=True)
 
         # Build scorer using model emissions with non-normalized embedder
         self._scorer_model = get_scorer_model(
