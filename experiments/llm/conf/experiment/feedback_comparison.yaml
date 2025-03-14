@@ -3,9 +3,9 @@ id_prefix: "feedback"  # Used for filename prefixes
 episodes: 100
 vocab_size: 1000
 vocabulary: 
-  - 'vocabulary/emotions.txt'
   - 'vocabulary/mediums.txt'
   - 'vocabulary/movements.txt'
+  - 'vocabulary/emotions.txt'
 
 # Override lambda depending on model
 scorer_model: 'roman-cinematic'

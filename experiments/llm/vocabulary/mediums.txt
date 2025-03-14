@@ -474,7 +474,7 @@ linen thread embroidery
 liquid metal casting
 lizard skin relief
 lodestone drawing
-lotus petal art
+lotus petal art 
 lucite embedding
 lunar dust sketch
 madder root dye painting
@@ -1058,7 +1058,7 @@ rosehip dye art
 rosemary dye painting
 rowan wood relief
 ruby inlay
-rudbeckia pressing
+rudbeckia pressing 
 rue dye painting
 rush weaving
 rust dye painting
@@ -1212,3 +1212,598 @@ yucca fiber weaving
 zebra mussel shell mosaic
 zinc dust drawing
 zirconia inlay
+acorn shell mosaic
+acrylic ink drawing
+aerial drone painting
+alabaster carving
+albatross feather art
+aloe vera gel painting
+aluminum wire weaving
+amaranth dye art
+amber resin sculpture
+amethyst inlay
+andesite relief
+anemone petal collage
+animated hologram
+apple seed mosaic
+apricot wood carving
+aquatint etching
+arctic fox fur painting
+argon plasma drawing
+arroyo sand art
+aspen bark relief
+asteroid dust painting
+aurora photography
+bamboo fiber weaving
+banana peel relief
+bark cloth painting
+barley husk mosaic
+basalt carving
+bat wing collage
+beaver fur painting
+beeswax relief
+beetle shell mosaic
+birch wood relief
+bismuth crystal sculpture
+blackberry dye painting
+bladderwrack print
+bloodstone inlay
+blue jay feather art
+bog peat drawing
+bone meal painting
+brass wire sculpture
+brazilwood dye painting
+bubble chamber art
+buckthorn dye art
+burdock root carving
+burl wood relief
+burnt sienna painting
+butterfly scale art
+cabbage dye painting
+calcium sulfate relief
+camel bone carving
+candlenut shell mosaic
+cane sugar drawing
+canvas embroidery
+carbon dust drawing
+cardamom seed mosaic
+caribou antler relief
+carmine dye painting
+carrot dye art
+cat fur painting
+cauliflower dye art
+cedar oil painting
+celery dye painting
+chalk stone relief
+charcoal powder drawing
+cherry blossom pressing
+chestnut dye art
+chiffon overlay art
+chromium oxide painting
+cinnamon bark relief
+citrus oil painting
+clay bead mosaic
+clove dye art
+cobalt pigment painting
+coconut shell relief
+coffee bean mosaic
+coral reef sculpture
+cormorant feather art
+corncob relief
+cotton boll weaving
+crane feather art
+crayfish shell mosaic
+crushed stone painting
+cumin dye painting
+cyanotype drawing
+cypress wood relief
+dandelion fluff art
+deer hoof relief
+desert rose sculpture
+diamond dust painting
+diatomite drawing
+diesel soot art
+digital embroidery
+dove feather art
+driftwood relief
+drizzle photography
+dry ice sculpture
+dune grass weaving
+dust storm photography
+eagle feather painting
+ebony carving
+echidna quill art
+elder wood relief
+electroluminescent art
+elephant hair weaving
+elm leaf pressing
+emery dust drawing
+emu egg carving
+enamel inlay
+eucalyptus oil painting
+evaporite relief
+fennel dye painting
+ferret fur painting
+fiber optic art
+fig leaf print
+fire opal inlay
+fish skin relief
+flame ash relief
+flaxseed relief
+flint carving
+floral dye painting
+fluorite dust art
+foam rubber relief
+fog photography
+fox fur painting
+fused glass relief
+galaxy photography
+garlic dye art
+gazelle horn carving
+gel pen drawing
+geothermal ash art
+ginkgo leaf pressing
+glass fiber weaving
+glowworm silk art
+gold dust painting
+goose down art
+gossamer thread weaving
+grape seed mosaic
+graphene drawing
+grasshopper wing collage
+guava wood carving
+gull feather art
+gum resin painting
+hailstone photography
+hawthorn dye art
+hazel twig weaving
+heather dye painting
+helium gas drawing
+hemp seed mosaic
+heron feather art
+hibiscus dye painting
+holographic etching
+honey drawing
+horse tail weaving
+hummingbird feather art
+hydrangea dye painting
+hydrogel sculpture
+iceberg photography
+iguana skin relief
+impasto oil painting
+incense smoke drawing
+inkjet dye painting
+insect resin art
+iodine vapor art
+iron filing drawing
+ivory inlay
+jackal fur painting
+jadeite relief
+jasmine dye art
+jellyfish tentacle art
+jet inlay
+juniper berry dye art
+kangaroo fur painting
+kelp relief
+kiwi feather art
+krypton gas drawing
+lacewing collage
+lake ice sculpture
+lamb wool weaving
+lamp oil drawing
+larch needle weaving
+laser hologram
+latex relief
+laurel wood carving
+lava ash drawing
+leaf vein print
+leather dye painting
+lichen print
+lightning photography
+lilac dye art
+limewood relief
+linen dye painting
+liquid crystal art
+lizard scale mosaic
+locust shell collage
+lotus leaf print
+luminous paint drawing
+lynx fur painting
+macaw feather art
+madder root painting
+magnesium dust art
+mahogany carving
+maize silk weaving
+malachite dust painting
+mango seed mosaic
+maple leaf pressing
+marble dust painting
+marigold petal collage
+marten fur painting
+mastic dye art
+meadow grass weaving
+melon rind relief
+mica dust painting
+microfiber weaving
+milkweed fluff art
+mink fur painting
+mist drawing
+mocha dye art
+mold casting
+moonlight photography
+moose hair weaving
+moth wing collage
+mountain ash relief
+mud dye painting
+mushroom dye art
+muskrat fur painting
+mustard dye art
+neon dye painting
+nitrogen gas drawing
+nut shell mosaic
+oak leaf pressing
+ocean wave photography
+okra dye painting
+olive pit mosaic
+opal relief
+orange dye painting
+orca skin relief
+oregano leaf print
+osprey feather art
+owl pellet mosaic
+oxygen gas drawing
+oyster pearl inlay
+palm oil painting
+panda fur painting
+papaya dye art
+paper mache relief
+parrot feather art
+peach dye art
+peacock quill drawing
+pearl dust painting
+peat relief
+penguin feather art
+pepper dye art
+periwinkle dye art
+petal dye painting
+phoenix ash drawing
+pine resin relief
+plankton print
+plaster relief
+platinum dust painting
+plum dye art
+polar bear fur painting
+pollen dye art
+pomegranate dye painting
+poppy seed mosaic
+porcelain inlay
+porcupine fur painting
+prairie dust drawing
+prickly pear relief
+prism dye painting
+puffin feather art
+pumpkin dye art
+pyrite relief
+quartz dust painting
+rabbit foot relief
+radish root carving
+rain photography
+raspberry leaf print
+rattan relief
+raven quill drawing
+redwood relief
+reed dye painting
+rhino horn carving
+rice dye art
+river pebble mosaic
+rose dye painting
+rosemary leaf print
+ruby relief
+saffron thread weaving
+sage leaf print
+salmon dye art
+salt dye painting
+sandalwood relief
+sandstone carving
+sapphire dust painting
+satin dye painting
+sea foam drawing
+sea lion fur painting
+seagull feather art
+seal wax relief
+sesame dye art
+shadow photography
+shark tooth mosaic
+shearwater feather art
+silk dye painting
+silver dust painting
+sisal relief
+slate relief
+smoke photography
+snapdragon dye art
+snowflake relief
+soap foam drawing
+solar dye painting
+sorghum dye art
+soundwave drawing
+sparrow quill art
+speckled trout skin relief
+spider web photography
+spruce needle weaving
+squid bone relief
+star dust painting
+steel wire weaving
+stone dust painting
+straw dye art
+sugar cane relief
+sumac leaf print
+sunflower dye art
+swamp mud drawing
+swan quill drawing
+sweet pea dye art
+sycamore relief
+talc dust painting
+tangerine dye art
+teak relief
+terra cotta inlay
+thistle dye art
+thunder photography
+tiger fur painting
+tin dust painting
+toadstool print
+tobacco dye art
+topaz relief
+tornado photography
+toucan quill art
+tree bark relief
+tulip dye art
+tundra ice sculpture
+turmeric relief
+turtle bone mosaic
+twilight dye painting
+ultraviolet dye art
+umber relief
+vanilla dye painting
+velvet dye art
+vermilion relief
+vine dye painting
+violet leaf print
+volcanic dust painting
+vulture quill art
+walnut dye art
+wasabi relief
+water lily dye art
+waxberry relief
+weathered stone relief
+whale oil painting
+wheat dye art
+wildflower dye art
+willow relief
+wind photography
+wine dye art
+wintergreen relief
+wisteria leaf print
+wood dye painting
+wool dye art
+worm dye art
+x-ray dye painting
+yarrow leaf print
+yeast dye art
+yellow dye painting
+yolk dye art
+zebra fur painting
+zinc relief
+acacia wood relief
+aerial photography
+agate relief
+almond shell mosaic
+aluminum dust painting
+amber dye art
+amethyst relief
+apple dye art
+apricot dye art
+aquamarine relief
+arctic dye painting
+ash dye art
+aspen dye art
+aster dye art
+aurora dye painting
+bamboo dye art
+banana dye art
+barley dye art
+basalt dust painting
+beech dye art
+birch dye art
+blackberry leaf print
+blueberry dye art
+bone dye art
+brass dust painting
+brazilwood relief
+buckwheat dye art
+cactus dye art
+calcium dust painting
+camel dye art
+candle dye art
+cane dye art
+caramel dye painting
+carbon dye art
+cardamom dye art
+cedar dye art
+cherry dye art
+chestnut relief
+chia dye art
+cinnamon relief
+citrus dye art
+clay dust painting
+clove relief
+cobalt dye art
+coconut dye art
+coffee dye art
+copper dust painting
+coral dye art
+corn dye art
+cotton dye art
+cranberry relief
+crystal dye art
+cucumber dye art
+cumin relief
+cypress dye art
+dandelion dye art
+date dye art
+diamond relief
+diesel dye art
+dove quill drawing
+driftwood dye art
+ebony dye art
+elder dye art
+elm dye art
+emerald relief
+eucalyptus relief
+fennel relief
+fig dye art
+fir dye art
+flax dye art
+floral relief
+fluorite relief
+foam dye art
+fossil dye art
+fox quill drawing
+garlic relief
+garnet relief
+ginger dye art
+glass dust painting
+gold relief
+goose quill drawing
+grape dye art
+graphite relief
+grass dye art
+guava dye art
+hazel dye art
+heather relief
+hemlock dye art
+hickory dye art
+honey relief
+hops relief
+horse dye art
+huckleberry relief
+hydrangea relief
+ice dye art
+indigo relief
+ink dye art
+iron dye art
+ivory relief
+jade relief
+jasmine relief
+jet relief
+juniper dye art
+kelp dye art
+kiwi dye art
+lace dye art
+larch dye art
+lavender relief
+leaf dye art
+leather relief
+lichen relief
+lilac relief
+lime dye art
+linen relief
+lotus dye art
+lunar dye art
+madder relief
+magnesium relief
+mahogany dye art
+maize dye art
+mango dye art
+maple dye art
+marble relief
+marigold relief
+mica relief
+milk dye art
+mint relief
+moss dye art
+mud relief
+mushroom relief
+mustard relief
+neon relief
+nutmeg relief
+oak dye art
+olive dye art
+onyx relief
+opal dye art
+orange relief
+orchid relief
+palm dye art
+papaya relief
+peach relief
+pear dye art
+pecan dye art
+pepper relief
+pine dye art
+plum relief
+pomegranate relief
+poppy relief
+prune dye art
+pumpkin relief
+quartz relief
+rabbit quill drawing
+raspberry relief
+reed relief
+rhubarb relief
+rice relief
+rose relief
+ruby dye art
+saffron relief
+sage relief
+salt relief
+sandalwood dye art
+sapphire relief
+satin relief
+sea dye art
+sesame relief
+silk relief
+silver relief
+sisal dye art
+slate dye art
+smoke relief
+snapdragon relief
+soil relief
+solar relief
+sorghum relief
+soy dye art
+spruce dye art
+squash relief
+star dye art
+steel relief
+stone relief
+straw relief
+sugar dye art
+sumac relief
+sunflower relief
+swamp dye art
+sweet pea relief
+sycamore dye art
+tangerine relief
+tea dye art
+teak dye art
+thyme relief
+tiger dye art
+tin relief
+tobacco relief
+topaz dye art
+tulip relief
+turmeric dye art
+twig dye art
+violet relief
+walnut relief
+water dye art
+wax dye art
+wheat relief
+willow dye art
+wine relief
+wood relief
+wool relief
+yarrow relief
+yellow relief
+yolk relief
+zebra dye art
+zinc dye art
