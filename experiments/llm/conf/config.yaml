@@ -3,10 +3,11 @@ defaults:
   - feedback: numerical
 
 seed: 12
+verbose: false
 base_prompt: 'A man walking alone'
 #base_prompt: ''
 normalize_CLIP: true
-include_base_prompt_in_first_tokens: true
+include_base_prompt_in_first_tokens: false
 algorithm: "greedy"
 cache_dir: "${oc.env:HOME}/.cache/huggingface/hub"
 horizon: 3

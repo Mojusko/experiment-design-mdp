@@ -38,13 +38,16 @@ class LLMGrid(DiscreteEnv):
         self.max_episode_length = len(list_of_text_tokens)
 
         # Process token lists based on configuration
-        if base_prompt and include_base_prompt_in_first_tokens:
+        if base_prompt: 
+            if include_base_prompt_in_first_tokens:
             # Add base prompt to first token list only
-            first_tokens = [f"{base_prompt}, {t}" if t != ' ' else f'{base_prompt}' for t in list_of_text_tokens[0]]
-            list_of_text_tokens = [first_tokens] + [[f"{t}" for t in token_list] for token_list in list_of_text_tokens[1:]]
+                first_tokens = [f"{base_prompt}, {t}" if t != ' ' else f'{base_prompt}' for t in list_of_text_tokens[0]]
+                list_of_text_tokens = [first_tokens] + [[f"{t}" for t in token_list] for token_list in list_of_text_tokens[1:]]
 
-            # We don't need a real base_prompt since base_prompt is already part of first_tokens
-            base_prompt = ''
+                # We don't need a real base_prompt since base_prompt is already part of first_tokens
+                base_prompt = ''
+            else:
+                self.base_prompt = base_prompt
         else:
             # Treat all token lists the same
             list_of_text_tokens = [[f"{t}" for t in token_list] for token_list in list_of_text_tokens]
