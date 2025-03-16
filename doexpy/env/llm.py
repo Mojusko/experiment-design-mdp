@@ -77,7 +77,7 @@ class LLMGrid(DiscreteEnv):
         self.action_space_pre_embedding = torch.arange(self.actions_num, dtype=torch.float64).to(self.device).reshape(-1, 1)
         self.emiss_num = self.actions_num
         self.transition_matrix = None
-        self.emissions = generate_emissions(self.unique_elements, self.embedder, self.cache_dir, self.verbose, include_base_prompt=True, base_prompt=self.base_prompt)
+        self.emissions = generate_emissions(self.unique_elements, self.embedder, self.cache_dir, self.verbose, base_prompt=self.base_prompt)
         self.action_space = self.emissions
         self.visitations = torch.zeros(self.states_num, self.actions_num, dtype=torch.float64).to(self.device)
 
@@ -223,7 +223,7 @@ class DotProductModel(CLIPScorer):
         score = self.score_embedding(x_clip_embedding)
         return score, x_clip_embedding
 
-def generate_emissions(unique_elements, embedder, cache_dir, verbose=True, include_base_prompt=True, base_prompt=''):
+def generate_emissions(unique_elements, embedder, cache_dir, verbose=True, include_base_prompt=False, base_prompt=''):
 
     """Generate emissions for a list of unique elements
     

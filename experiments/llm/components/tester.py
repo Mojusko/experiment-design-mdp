@@ -53,6 +53,7 @@ class PreferenceTester(BaseTester):
         for sequence in test_sequences:
             # Create prompt directly from the sequence tokens
             prompt = create_prompt_from_tokens(sequence, env.base_prompt)
+            print(prompt)
             yy, feat = self.scorer_model.score_prompt(prompt)
             xtest.append(feat.detach().cpu())
             ytest.append(yy.detach().cpu())
