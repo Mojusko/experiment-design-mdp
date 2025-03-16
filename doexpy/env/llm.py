@@ -77,7 +77,7 @@ class LLMGrid(DiscreteEnv):
         self.action_space_pre_embedding = torch.arange(self.actions_num, dtype=torch.float64).to(self.device).reshape(-1, 1)
         self.emiss_num = self.actions_num
         self.transition_matrix = None
-        self.emissions = generate_emissions(self.unique_elements, self.embedder, self.cache_dir, self.verbose)
+        self.emissions = generate_emissions(self.unique_elements, self.embedder, self.cache_dir, self.verbose, include_base_prompt=True, base_prompt=self.base_prompt)
         self.action_space = self.emissions
         self.visitations = torch.zeros(self.states_num, self.actions_num, dtype=torch.float64).to(self.device)
 
@@ -223,7 +223,7 @@ class DotProductModel(CLIPScorer):
         score = self.score_embedding(x_clip_embedding)
         return score, x_clip_embedding
 
-def generate_emissions(unique_elements, embedder, cache_dir, verbose=True):
+def generate_emissions(unique_elements, embedder, cache_dir, verbose=True, include_base_prompt=True, base_prompt=''):
 
     """Generate emissions for a list of unique elements
     
@@ -232,6 +232,8 @@ def generate_emissions(unique_elements, embedder, cache_dir, verbose=True):
         embedder: CLIPEmbedder instance with normalize attribute
         cache_dir: Directory for caching emissions
         verbose: Whether to print progress messages
+        include_base_prompt: Whether to include base prompt in embeddings
+        base_prompt: Base prompt to prepend to tokens when include_base_prompt is True
         
     Returns:
         torch.Tensor: Matrix of emissions
@@ -242,6 +244,9 @@ def generate_emissions(unique_elements, embedder, cache_dir, verbose=True):
     hasher = hashlib.sha256()
     hasher.update(str(len(unique_elements)).encode())
     hasher.update(str(getattr(embedder, 'normalize', False)).encode())
+    hasher.update(str(include_base_prompt).encode())  # Add include_base_prompt to cache key
+    if include_base_prompt and base_prompt:
+        hasher.update(base_prompt.encode())  # Add the actual base_prompt to cache key
     for elem in unique_elements:
         hasher.update(elem.encode())
     cache_id = hasher.hexdigest()
@@ -262,9 +267,14 @@ def generate_emissions(unique_elements, embedder, cache_dir, verbose=True):
         print("PREPROCESS: Generating emissions") 
     emissions = []
     for i, text in enumerate(unique_elements):
+        # If include_base_prompt is True and base_prompt is provided, prepend it
+        if include_base_prompt and base_prompt:
+            embed_text = f"{base_prompt}, {text}" if text != ' ' else base_prompt
+        else:
+            embed_text = text
         if verbose:
-            print(f"Generating emission for action {i}, text: {text}")
-        feat = embedder.embed_text(text)
+            print(f"Generating emission for action {i}, text: {embed_text}")
+        feat = embedder.embed_text(embed_text)
         emissions.append(feat)
     
     if verbose:

@@ -135,7 +135,7 @@ class LLMExperiment:
 
         # Generate separate emissions for ground truth model using model_words
         clip_embedder = CLIPEmbedder(self._clip_tokenizer, self._clip_model)
-        model_emissions = generate_emissions(self.model_words, clip_embedder, self.cfg.cache_dir) if self.model_words else None
+        #model_emissions = generate_emissions(self.model_words, clip_embedder, self.cfg.cache_dir) if self.model_words else None
 
         # Create token_lists for training environment
         horizon = self.cfg.horizon
