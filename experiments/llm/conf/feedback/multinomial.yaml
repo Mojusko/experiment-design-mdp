@@ -3,7 +3,7 @@ num_policies: 2
 num_components: 3
 num_rounds: 7
 #lambda_reg: 4000 best for static design [need to revalidate]
-lambda_reg: 10
+lambda_reg: 20
 adaptive_estimation_frequency: 0
 adaptive_estimation_start: 0
 adaptive_design_frequency: 0
