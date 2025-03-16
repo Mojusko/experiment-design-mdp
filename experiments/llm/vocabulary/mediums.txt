@@ -1807,3 +1807,246 @@ yellow relief
 yolk relief
 zebra dye art
 zinc dye art
+aerogel sculpture
+air ink drawing
+algaeprint
+amino acid painting
+amorphous metal casting
+anammox art
+ancient amber carving
+animal-shaped cloud art
+anti-reflective coating art
+aquafaba art
+aqueous ozone painting
+archaea art
+areogel painting
+aromatic resin art
+artificial snow painting
+atmospheric water generator art
+atomic layer deposition art
+aurifilament
+bacterial cellulose sculpture
+bagasse art
+baking soda painting
+ballistic gel sculpture
+balsa foam carving
+banana fiber art
+baryte crystal art
+basalt fiber art
+bath bomb art
+bay laurel oil painting
+beach glass mosaic
+beeswax wrap art
+benthic clay sculpture
+bio concrete sculpture
+biofoam art
+bioluminescent ink
+bioplastic art
+birch polypore carving
+bird nest sculpture
+bismuth crystal art
+black ice sculpture
+black soldier fly larvae art
+blood meal painting
+blue cheese painting
+bog wood carving
+bone char drawing
+borax crystal art
+breathable concrete sculpture
+brewer's yeast art
+brick dust painting
+buffalo gourd carving
+burnt sugar painting
+cactus leather art
+calcium alginate sculpture
+calcite clay relief
+camelthorn carving
+candelilla wax sculpture
+carbon aerogel sculpture
+carbon fiber weaving
+carnauba wax sculpture
+casein paint
+cassava flour art
+cast iron sand mold
+cattail fiber art
+cellulose nanocrystal art
+cement board carving
+ceramic foam sculpture
+chaff art
+chalk paint
+charcoal briquette art
+chestnut flour art
+chitin sculpture
+chitosan film art
+chlorophyll ink
+chocolate clay sculpture
+chondrite meteorite carving
+citric acid painting
+clay marbling
+cloud chamber art
+coagulated latex sculpture
+coffee cherry art
+coffee husk art
+cold cast bronze
+collagen film art
+colloidal silver painting
+compostable plastic art
+compressed air painting
+conch shell carving
+conductive ink
+conjugated polymer film
+copal resin carving
+copper foam sculpture
+corn gluten meal art
+cornstarch bioplastic
+cork dust art
+cotton linters art
+crab shell bioplastic
+cracked earth art
+cranberry fiber art
+cryogenic fluid art
+cultured meat sculpture
+cuttlebone carving
+cyanobacteria art
+cyclic olefin polymer art
+dahlia tuber art
+daphnia art
+date seed art
+diatomaceous earth art
+digital light processing sculpture
+digital paper art
+directional solidification sculpture
+disaccharide crystal art
+dissolved air flotation art
+DNA origami
+dragon fruit leather art
+dried blood painting
+ductile iron casting
+dune grass weaving
+durum wheat semolina art
+earthworm casting art
+eco resin art
+edible ink printing
+eggshell membrane art
+electrochromic film art
+electroluminescent polymer art
+electron beam melting sculpture
+electrospinning nanofiber
+elm seed art
+emulsified oil painting
+enoki mushroom art
+enzyme washed denim art
+epiphyte art
+epson salt crystal art
+erythrina seed art
+esparto grass weaving
+essential oil painting
+expanded perlite sculpture
+exploded diagram art
+extracellular matrix sculpture
+fabric formed concrete
+far infrared ceramic
+feather meal art
+feldspar porcelain
+fermented fruit art
+ferrofluid art
+fiber reinforced gypsum
+filamentous algae art
+fingerprint art
+fire retardant gel art
+fish emulsion painting
+fish leather art
+flax shive art
+flexible graphite
+flocking fiber art
+fluidized bed coating
+fluoropolymer film
+fly ash concrete
+foam glass sculpture
+food grade silicone
+foraminifera art
+fractal burning art
+freeze dried fruit art
+friction stir welding art
+fulgurite glass sculpture
+fumed silica art
+fungal mycelium sculpture
+galvanic corrosion art
+gametophyte art
+gas plasma etching
+gelatin silver paper
+gelcoat casting
+generative design art
+geopolymer concrete
+giant kelp art
+gibbsite clay sculpture
+glass frit casting
+glass microsphere art
+glass noodle sculpture
+glow in the dark bioplastic
+gluten film art
+glycocalyx sculpture
+glyptal resin casting
+gold leaf electroplating
+graphene aerogel
+grass paper art
+green concrete
+guar gum film
+guayusa leaf art
+gum arabic solution
+gum tragacanth sculpture
+gypsum plaster bandage
+hair felt art
+halite crystal growth
+hand felted wool
+haptonema art
+hardwood veneer art
+hay bale sculpture
+heat activated paint
+helical carbon nanotube
+hemp hurd art
+high density polyethylene
+high performance concrete
+high temperature alloy
+holographic polymer
+honeycomb cardboard
+hop bine weaving
+horn meal art
+hot melt adhesive art
+human hair sculpture
+hyaluronic acid gel
+hydraulic lime plaster
+hydrogel microbead art
+hydroponic sculpture
+hydroxyapatite ceramic
+hyperaccumulator plant art
+ice core art
+Icelandic moss art
+illuminated aerogel
+immersion lithography art
+impact resistant polymer
+incandescent gas art
+Indian corn art
+indigo carmine dye
+industrial hemp art
+infrared absorbing pigment
+inkjet clay printing
+in situ concrete
+insect frass art
+insulating concrete form
+intaglio polymer plate
+ion implanted glass
+iridescent mica powder
+isinglass art
+jackfruit fiber art
+Japanese paper clay
+jet fuel soot art
+jojoba wax sculpture
+jute burlap collage
+kaolin clay slip
+kapok fiber art
+keratin film art
+kieselguhr art
+kinetic sand sculpture
+kombucha leather art
+kudzuvine weaving

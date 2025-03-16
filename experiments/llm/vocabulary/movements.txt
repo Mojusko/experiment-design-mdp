@@ -1535,3 +1535,379 @@ vortex realism
 western impressionism
 windblown futurism
 zodiacal realism
+neo-auroral realism
+neo-barometric impressionism
+neo-biogenic abstraction
+neo-boreal futurism
+neo-caustic realism
+neo-cave art revival
+neo-celestial impressionism
+neo-chthonic abstraction
+neo-cirrus realism
+neo-combustion art
+neo-convective abstraction
+neo-cordillera impressionism
+neo-crepuscular realism
+neo-cryogenic art
+neo-deluge realism
+neo-dendritic abstraction
+neo-diagenetic art
+neo-distillationism
+neo-ebb and flow art
+neo-echolocationism
+neo-efflorescence
+neo-ephemeralism
+neo-equinox art
+neo-eutrophic abstraction
+neo-feral expressionism
+neo-fjord realism
+neo-fluorescent realism
+neo-fractal impressionism
+neo-friable art
+neo-frostwork realism
+neo-fulgurite art
+neo-gaseous abstraction
+neo-geothermal art
+neo-glacier realism
+neo-halocline abstraction
+neo-harmonic convergence
+neo-hyaline art
+neo-hydrothermalism
+neo-iceberg realism
+neo-incandescent art
+neo-inversionism
+neo-lacustrine art
+neo-laminar flow art
+neo-lapilli art
+neo-lenticularism
+neo-lithospheric art
+neo-littoral art
+neo-lunar dust art
+neo-maritime abstraction
+neo-meandering realism
+neo-mesospheric art
+neo-microbial art
+neo-migratory art
+neo-nacreous art
+neo-nadir art
+neo-nebulous abstraction
+neo-neritic art
+neo-nimbostratus
+neo-noctilucent art
+neo-nutrient cycling
+neo-oceanic abyss
+neo-orographic art
+neo-paleosol art
+neo-penumbra art
+neo-percolationism
+neo-petrichor art
+neo-photic art
+neo-pyrocumulus
+neo-radiant energy art
+neo-rain shadow art
+neo-red tide art
+neo-riffle art
+neo-rip current art
+neo-saline futurism
+neo-scalar abstraction
+neo-spheric realism
+neo-sylvan futurism
+neo-torrid abstraction
+neo-zodiacal realism
+nocturnal impressionism
+northern impressionism
+oceanic impressionism
+orbital impressionism
+organic impressionism
+paleo-realism
+panoramic futurism
+parallax realism
+peri-urban realism
+phantom impressionism
+planetary impressionism
+pluvial futurism
+polyphonic realism
+post-auroral futurism
+post-cascade realism
+post-cavernous abstraction
+post-cobalt futurism
+post-cryonic realism
+post-cyclonic abstraction
+post-fissured realism
+post-morphogenic abstraction
+post-saline realism
+post-scalar futurism
+post-spheric abstraction
+post-sylvan realism
+post-torrid futurism
+post-zodiacal abstraction
+prairie realism
+prismatic impressionism
+psychic futurism
+pulse realism
+radiant futurism
+reconstructed futurism
+refractive realism
+resonant futurism
+retro-impressionism
+sacred futurism
+saharan realism
+saline futurism
+savanna realism
+scalar futurism
+seismic impressionism
+shadow impressionism
+silurian realism
+solar futurism
+sonic impressionism
+spectral realism
+spheric futurism
+stellar realism
+stratified futurism
+subalpine realism
+sublime impressionism
+subtropical impressionism
+sylvan futurism
+taiga realism
+tectonic impressionism
+terraqueous realism
+torrid futurism
+translucent impressionism
+twilight realism
+underwater impressionism
+urban realism
+valley futurism
+vector futurism
+vortex realism
+western impressionism
+windblown futurism
+zodiacal realism
+aero-surrealism
+agro-expressionism
+albedo-impressionism
+alluvial-abstraction
+amber-romanticism
+anabatic-realism
+annular-futurism
+anthropogenic-art
+aquifer-abstraction
+arboreal-expressionism
+arenic-realism
+argillaceous-art
+arid-surrealism
+ashen-impressionism
+atoll-futurism
+bathyal-abstraction
+benthic-realism
+biofluorescent-art
+bioluminescent-expressionism
+briny-impressionism
+caliche-art
+capillary-abstraction
+carbonaceous-realism
+cataclysmic-futurism
+cave-expressionism
+channelled-abstraction
+chaotic-realism
+chemosynthetic-art
+chrystalline-impressionism
+cimmerian-futurism
+circumpolar-realism
+clastic-abstraction
+cloud-expressionism
+coalescent-art
+coastal-futurism
+colluvial-realism
+cometary-impressionism
+concretionary-abstraction
+confluent-art
+continental-expressionism
+convergent-realism
+corrasion-futurism
+cryogenic-abstraction
+cyclonic-art
+dark matter art
+deep time art
+deltaic-expressionism
+depositional-realism
+diagenetic-abstraction
+diaphanous-impressionism
+divergent-futurism
+dolomitic-art
+dune-expressionism
+earthquake-realism
+effusive-abstraction
+endolithic-art
+eolian-impressionism
+epipelagic-futurism
+errant-realism
+estuarine-abstraction
+euphotic-art
+evaporitic-expressionism
+extraterrestrial-impressionism
+fallow-realism
+fault-line-art
+ferruginous-abstraction
+fluvial-futurism
+fogbow-impressionism
+fumarolic-art
+galactic-expressionism
+geanticlinal-realism
+geochronological-abstraction
+geodetic-art
+geomorphological-impressionism
+geostrophic-futurism
+geothermal-expressionism
+glaciofluvial-realism
+gossan-art
+greenhouse-abstraction
+groundwater-impressionism
+guyot-futurism
+hadal-realism
+halophytic-art
+harmonic-abstraction
+hematitic-expressionism
+hydrothermal-impressionism
+hypabyssal-realism
+hypsographic-art
+ice sheet art
+igneous-expressionism
+inselberg-realism
+intertidal-abstraction
+intraterrestrial-futurism
+karst-impressionism
+katabatic-art
+laccolithic-expressionism
+lagoonal-realism
+landslide-realism
+lateritic-abstraction
+lee wave art
+loess-impressionism
+longshore drift art
+abyssal minimalism
+acid rain art
+aeolian landform art
+albedo effect art
+alpine tundra art
+antarctic circle art
+anticline art
+aquifer depletion art
+arroyo art
+badlands art
+barrier reef art
+batholith art
+bayou art
+bioaccumulation art
+biodiversity hotspot art
+biogeochemical cycle art
+biome art
+boreal forest art
+caldera art
+canyon art
+carbon sequestration art
+chaparral art
+cirque art
+cloud forest art
+continental divide art
+coral bleaching art
+cryosphere art
+dead zone art
+deciduous forest art
+delta plain art
+desert pavement art
+diurnal cycle art
+drainage basin art
+dune migration art
+earthquake swarm art
+El Niño art
+epilimnion art
+estuary ecosystem art
+eutrophication art
+exoplanet atmosphere art
+fault scarp art
+fjord ecosystem art
+flood basalt art
+fog drip art
+fumarole field art
+geyser basin art
+glacial erratic art
+guyot seamount art
+halocline layer art
+hydrothermal vent art
+ice calving art
+ice sheet dynamics art
+inselberg formation art
+interglacial period art
+karst topography art
+katabatic wind art
+lacustrine deposit art
+landslide dam art
+laterite soil art
+levee system art
+limnetic zone art
+loess deposit art
+mangrove forest art
+marine snow art
+meander cutoff art
+mesa butte art
+monsoon season art
+moraine ridge art
+neap tide art
+neritic zone art
+nivation process art
+nollan wind art
+ocean acidification art
+orographic lift art
+oxbow lake art
+paleolake art
+palsa formation art
+parabolic dune art
+permafrost thaw art
+petrichor effect art
+playa lake art
+polar vortex art
+pothole erosion art
+pyroclastic flow art
+rain shadow effect art
+regolith layer art
+rift valley art
+riparian zone art
+roche moutonnée art
+salt dome art
+sand dune stabilization art
+savanna biome art
+scree slope art
+sea ice extent art
+seamount chain art
+sediment plume art
+shield volcano art
+sinkhole collapse art
+solifluction process art
+spring tide art
+stalactite formation art
+stalagmite formation art
+steppe ecosystem art
+storm surge art
+stratovolcano eruption art
+subduction zone art
+subtropical gyre art
+taiga forest art
+tarn lake formation art
+thermohaline circulation art
+tidal bore art
+till plain art
+tombolo formation art
+trade wind pattern art
+trench abyssal plain art
+tropical rainforest art
+tundra ecosystem art
+turbidity current art
+u-shaped valley art
+upwelling current art
+varve chronology art
+vernal pool art
+volcanic ash cloud art
+wadi formation art
+watershed divide art
+wave-cut platform art
+xeriscaping art
