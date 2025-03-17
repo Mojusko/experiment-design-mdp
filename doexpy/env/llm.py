@@ -15,18 +15,18 @@ class LLMGrid(DiscreteEnv):
         self,
         list_of_text_tokens: List[str],
         model: CLIPModel,
-        processor: CLIPProcessor, 
+        processor: CLIPProcessor,
         tokenizer: CLIPTokenizer,
         cache_dir: str,
         normalize_embedder: bool,
-        base_prompt:str ='',
+        base_prompt: str = '',
         verbose: bool = False,
         include_base_prompt_in_first_tokens: bool = True,
     ):
         self.verbose = verbose
         self.constrained = False
         super().__init__(init_state=0)
-        
+
         self.device = next(model.parameters()).device
         self.embedder = CLIPEmbedder(tokenizer, model, normalize=normalize_embedder)
         self._processor = processor
@@ -35,25 +35,16 @@ class LLMGrid(DiscreteEnv):
         self.cache_dir = cache_dir
 
         self.include_base_prompt_in_first_tokens = include_base_prompt_in_first_tokens
-        self.max_episode_length = len(list_of_text_tokens)
+        self.base_prompt = base_prompt  # Always store the actual base_prompt
 
         # Process token lists based on configuration
-        if base_prompt: 
-            if include_base_prompt_in_first_tokens:
+        if include_base_prompt_in_first_tokens and base_prompt:
             # Add base prompt to first token list only
-                first_tokens = [f"{base_prompt}, {t}" if t != ' ' else f'{base_prompt}' for t in list_of_text_tokens[0]]
-                list_of_text_tokens = [first_tokens] + [[f"{t}" for t in token_list] for token_list in list_of_text_tokens[1:]]
-
-                # We don't need a real base_prompt since base_prompt is already part of first_tokens
-                base_prompt = ''
-            else:
-                self.base_prompt = base_prompt
+            first_tokens = [f"{base_prompt}, {t}" if t != ' ' else f'{base_prompt}' for t in list_of_text_tokens[0]]
+            list_of_text_tokens = [first_tokens] + [[f"{t}" for t in token_list] for token_list in list_of_text_tokens[1:]]
         else:
-            # Treat all token lists the same
             list_of_text_tokens = [[f"{t}" for t in token_list] for token_list in list_of_text_tokens]
-            self.base_prompt = base_prompt
-            
-        self.base_prompt = base_prompt
+
         self.max_episode_length = len(list_of_text_tokens)
         # Setup tokens dictionary
         self.tokens = {}
@@ -70,14 +61,14 @@ class LLMGrid(DiscreteEnv):
                     self.tokens[token] += [order]
 
         total_tokens = len(self.unique_elements)
-        
+
         self.states_num = self.max_episode_length
         self.actions_num = total_tokens
         self.h = 0
         self.action_space_pre_embedding = torch.arange(self.actions_num, dtype=torch.float64).to(self.device).reshape(-1, 1)
         self.emiss_num = self.actions_num
         self.transition_matrix = None
-        self.emissions = generate_emissions(self.unique_elements, self.embedder, self.cache_dir, self.verbose, base_prompt=self.base_prompt)
+        self.emissions = generate_emissions(self.unique_elements, self.embedder, self.cache_dir, self.verbose)
         self.action_space = self.emissions
         self.visitations = torch.zeros(self.states_num, self.actions_num, dtype=torch.float64).to(self.device)
 
@@ -127,8 +118,6 @@ class LLMGrid(DiscreteEnv):
         for s in range(self.states_num):
             for a in range(self.actions_num):
                 if self.is_valid_action(a, s):
-                    #if self.verbose:
-                    #    print(f"Valid action {a} in state {s}")
                     probs = self.p_next(s, a)
                     for s_state in probs.keys():
                         P[s, a, s_state] = probs[s_state]
@@ -138,6 +127,7 @@ class LLMGrid(DiscreteEnv):
     def reset(self) -> None:
         self.state = self.init_state
         self.h = 0
+
 
 class CLIPEmbedder:
     """Embed text using CLIP model
@@ -149,7 +139,7 @@ class CLIPEmbedder:
     Returns:
         Text embedding
     """
-    def __init__(self, tokenizer, model, normalize: bool=True):
+    def __init__(self, tokenizer, model, normalize: bool = True):
         self.tokenizer = tokenizer
         self.model = model
         self.device = next(model.parameters()).device  # Track model device
@@ -171,6 +161,7 @@ class CLIPEmbedder:
 
         return embedding.view(1, -1)
 
+
 class CLIPScorer(nn.Module):
     """Base class for CLIP-based scoring models"""
     def __init__(self, embedder):
@@ -179,6 +170,7 @@ class CLIPScorer(nn.Module):
 
     def score_prompt(self, x):
         raise NotImplementedError
+
 
 class DotProductModel(CLIPScorer):
     def __init__(self, embedder, weight, bias=None):
@@ -196,25 +188,25 @@ class DotProductModel(CLIPScorer):
                     self.weight = weight.to(embedder.device)
             else:
                 raise ValueError(f"Weight must be 1D or have one dimension of size 1, got shape {weight.shape}")
-        
+
         self.bias = bias.to(embedder.device) if bias is not None else None
-    
+
     def score_embedding(self, x_clip_embedding):
         """Score a CLIP embedding directly"""
         # Ensure input has correct shape [batch_size, embedding_dim]
         if x_clip_embedding.dim() == 1:
             x_clip_embedding = x_clip_embedding.view(1, -1)
-        
+
         # Verify shapes are compatible
         if x_clip_embedding.shape[1] != self.weight.shape[1]:
             raise ValueError(f"Embedding dimension {x_clip_embedding.shape[1]} doesn't match weight dimension {self.weight.shape[1]}")
-        
+
         # Simple dot product
         score = torch.mm(x_clip_embedding, self.weight.T)
-        
+
         if self.bias is not None:
             score += self.bias
-            
+
         return score
 
     def score_prompt(self, x):
@@ -223,30 +215,25 @@ class DotProductModel(CLIPScorer):
         score = self.score_embedding(x_clip_embedding)
         return score, x_clip_embedding
 
-def generate_emissions(unique_elements, embedder, cache_dir, verbose=True, include_base_prompt=False, base_prompt=''):
 
+def generate_emissions(unique_elements, embedder, cache_dir, verbose=True):
     """Generate emissions for a list of unique elements
-    
+
     Args:
         unique_elements: List of text tokens to generate emissions for
         embedder: CLIPEmbedder instance with normalize attribute
         cache_dir: Directory for caching emissions
         verbose: Whether to print progress messages
-        include_base_prompt: Whether to include base prompt in embeddings
-        base_prompt: Base prompt to prepend to tokens when include_base_prompt is True
-        
+
     Returns:
         torch.Tensor: Matrix of emissions
     """
     os.makedirs(cache_dir, exist_ok=True)
-    
+
     # Include normalization in cache key
     hasher = hashlib.sha256()
     hasher.update(str(len(unique_elements)).encode())
     hasher.update(str(getattr(embedder, 'normalize', False)).encode())
-    hasher.update(str(include_base_prompt).encode())  # Add include_base_prompt to cache key
-    if include_base_prompt and base_prompt:
-        hasher.update(base_prompt.encode())  # Add the actual base_prompt to cache key
     for elem in unique_elements:
         hasher.update(elem.encode())
     cache_id = hasher.hexdigest()
@@ -264,56 +251,47 @@ def generate_emissions(unique_elements, embedder, cache_dir, verbose=True, inclu
             os.remove(cache_path)
 
     if verbose:
-        print("PREPROCESS: Generating emissions") 
+        print("PREPROCESS: Generating emissions")
     emissions = []
     for i, text in enumerate(unique_elements):
-        # If include_base_prompt is True and base_prompt is provided, prepend it
-        if include_base_prompt and base_prompt:
-            embed_text = f"{base_prompt}, {text}" if text != ' ' else base_prompt
-        else:
-            embed_text = text
+        embed_text = text  # Always embed the text as is
         if verbose:
             print(f"Generating emission for action {i}, text: {embed_text}")
         feat = embedder.embed_text(embed_text)
         emissions.append(feat)
-    
+
     if verbose:
         print("Done generating.")
     emissions = torch.vstack(emissions)
-    
+
     try:
         with open(cache_path, 'wb') as f:
             pickle.dump(emissions, f)
     except Exception as e:
         if verbose:
             print(f"Failed to cache emissions: {e}")
-            
+
     return emissions
 
-#def load_aesthetics_embedding(weights_path='text_weights.pth'):
+
 def load_aesthetics_embedding(weights_path='vit_14_weights.pth'):
     """Load aesthetics model weights and bias
-    
+
     Args:
         weights_path: Path to aesthetics weights file
-        
+
     Returns:
         tuple: (weight tensor, bias tensor) both on appropriate device
     """
     device = 'cuda' if torch.cuda.is_available() else 'cpu'
-    
+
     try:
         state = torch.load(weights_path, map_location=device)
         weight = state['weight'].to(device).double()
-        #weight = state['net.0.weight'].to(device).double()
-        #bias = state['net.0.bias'].to(device).double()
         return weight, None
-        #return weight, bias
-        #norm = torch.norm(weight, p=2, dim=1, keepdim=True)
-        #return weight / norm , bias / norm
-        
     except FileNotFoundError:
         raise FileNotFoundError(f"Could not find weights file: {weights_path}")
+
 
 def setup_clip_model(cache_dir):
     """Initialize shared CLIP model"""
@@ -324,19 +302,20 @@ def setup_clip_model(cache_dir):
     model = CLIPModel.from_pretrained(model_id, cache_dir=cache_dir).to(device)
     return model, processor, tokenizer
 
+
 def create_prompt_from_tokens(tokens: List[str], base_prompt: str = '') -> str:
     """Create a prompt from a list of tokens
-    
+
     Args:
         tokens: List of text tokens
         base_prompt: Optional base prompt to prepend
-        
+
     Returns:
         Formatted prompt string with commas
     """
     # Filter out empty tokens and strip whitespace
     valid_tokens = [str(token).strip() for token in tokens if str(token).strip()]
-    
+
     if base_prompt:
         # If we have a base prompt, add the tokens after it with commas
         if valid_tokens:
@@ -347,96 +326,76 @@ def create_prompt_from_tokens(tokens: List[str], base_prompt: str = '') -> str:
         # If no base prompt, just join the tokens with commas
         return ", ".join(valid_tokens)
 
+
 def create_prompt(actions: List[int], env) -> str:
     """Create prompt from action sequence
-    
+
     Args:
         actions: List of action indices
-        env: Environment with unique_elements and base_prompt attributes
-        
+        env: Environment with unique_elements, base_prompt, and include_base_prompt_in_first_tokens attributes
+
     Returns:
         Formatted prompt string with hashtags
     """
-    # Convert action indices to tokens
     tokens = [env.unique_elements[int(action)] for action in actions]
-    
-    # Use the shared function to create the prompt
-    return create_prompt_from_tokens(tokens, env.base_prompt)
+    if env.include_base_prompt_in_first_tokens:
+        # Base prompt is already included in the first token, so don't add it again
+        return create_prompt_from_tokens(tokens, base_prompt='')
+    else:
+        return create_prompt_from_tokens(tokens, base_prompt=env.base_prompt)
+
 
 def get_scorer_model(model_name: str, env, clip_model, clip_processor, cache_dir):
     """Initialize embedder and scoring model
-    
-    Args:
-        model_name: Scorer type ('art', 'aesthetics', 'aesthetics-image', 'red', 'random_combination')
-        env: complete this
-        clip_model: CLIP model, required for aesthetics-image
-        clip_processor: CLIP processor, required for aesthetics-image 
-        cache_dir: Cache directory for image scorers
-    
-    Returns:
-        Tuple of (text_model, image_scorer), one will be None
-    """
 
+    Args:
+        model_name: Scorer type ('roman-cinematic', 'aesthetics', 'random_combination')
+        env: Environment object
+        clip_model: CLIP model, required for aesthetics-image
+        clip_processor: CLIP processor, required for aesthetics-image
+        cache_dir: Cache directory for image scorers
+
+    Returns:
+        Scoring model instance
+    """
     emissions_env = env.emissions
     scorer_embedder = env.embedder
     if model_name == 'roman-cinematic':
-        # Use the base prompt from the environment instead of hardcoded text
-        prompt = f"{env.base_prompt}, roman style, cinematic" 
+        prompt = f"{env.base_prompt}, roman style, cinematic"
         embedding = scorer_embedder.embed_text(prompt)
         return DotProductModel(scorer_embedder, embedding).eval()
-        
+
     if model_name == 'aesthetics':
         aes_weight, aes_bias = load_aesthetics_embedding()
         return DotProductModel(scorer_embedder, aes_weight, bias=aes_bias).eval()
-        
+
     if model_name == 'random_combination':
         rng = np.random.RandomState(42)
         device = emissions_env.device
         dtype = emissions_env.dtype
-        
+
         k = 25
         selected_indices = rng.choice(emissions_env.shape[0], k, replace=False)
-        
+
         random_coeffs = torch.zeros(emissions_env.shape[0], device=device, dtype=dtype)
         selected_coeffs = 2 * rng.rand(k) - 1  # Uniform in [-1, 1]
         random_coeffs[selected_indices] = torch.tensor(selected_coeffs, device=device, dtype=dtype)
-        
+
         random_combination_vec = torch.mm(random_coeffs.view(1, -1), emissions_env)
-        #random_combination_vec = random_combination_vec / torch.norm(random_combination_vec, p=2)
-        
         return DotProductModel(scorer_embedder, random_combination_vec).eval()
-       
-    if model_name == 'random_combination':
-        if emissions_env is None:
-            raise ValueError("emissions_env must be provided for random_combination model")
-            
-        # Use numpy RNG with fixed seed for reproducibility
-        rng = np.random.RandomState(42)
-        
-        # Generate random coefficients using numpy
-        random_coeffs = 2 * rng.rand(emissions_env.shape[0]) - 1  # Uniform in [-1, 1]
-        random_coeffs = torch.from_numpy(random_coeffs).to(emissions_env.device)
-        
-        # Create random combination vector and normalize it
-        random_combination_vec = torch.mm(random_coeffs.view(1, -1), emissions_env)
-        random_combination_vec = random_combination_vec / torch.norm(random_combination_vec, p=2)
-        
-        return DotProductModel(scorer_embedder, random_combination_vec).eval()
-        
+
     raise ValueError(f"Unknown model_name: {model_name}")
 
-def make_theta_star(env, scorer_model, verbose = False):
 
+def make_theta_star(env, scorer_model, verbose=False):
     def theta_star(actions: List[int]) -> Union[torch.Tensor, Tuple[torch.Tensor, torch.Tensor]]:
         assert len(actions) > 0
         prompt = create_prompt(actions, env)
-        
+
         if verbose:
             print(prompt)
 
         score, clip_embedding = scorer_model.score_prompt(prompt)
+        return score, clip_embedding
 
-        return (score, clip_embedding)
-    
     return theta_star
-
