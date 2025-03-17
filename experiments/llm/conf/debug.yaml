@@ -2,13 +2,13 @@ defaults:
   - config
   - override feedback: multinomial
 feedback:
-  num_rounds: 10
+  num_rounds: 7
   num_components: 3
   adaptive_estimation_frequency: 0
   adaptive_estimation_start: 0
   adaptive_design_frequency: 0
 experiment:
-   episodes: 100
+   episodes: 50
    vocab_size: 500
   #scorer_model: "art"
 # Results directory for debug mode
