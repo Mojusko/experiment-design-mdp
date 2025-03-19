@@ -195,10 +195,8 @@ class LLMExperiment:
             return "rand"
         elif algorithm == "optim":
             return "opt"
-        elif algorithm == "design":  # For backward compatibility
-            return "dsn"
         else:
-            return algorithm[:3]  # First 3 chars as fallback
+            raise ValueError(f"Unknown algorithm: {algorithm}. Expected one of: design, random, optim")
             
     def _get_feedback_code(self):
         """Get a short code for the feedback type"""
