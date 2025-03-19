@@ -16,25 +16,6 @@ from components.tester  import BaseTester, ImageGenerationTester
 from components.saver   import BaseSaver
 
 
-def compute_prob_mae(emissions, estimator, scorer_model):
-    """Compute mean absolute error between predicted and true pairwise probabilities."""
-    # Get logits
-    pred_logits = estimator.mean(emissions).to(emissions.device)
-    true_logits = scorer_model.score_embedding(emissions)
-    
-    # Convert to probabilities
-    pred_exp = torch.exp(pred_logits)
-    true_exp = torch.exp(true_logits)
-    
-    # Compute pairwise probs efficiently
-    pred_probs = pred_exp.view(-1, 1) / (pred_exp.view(-1, 1) + pred_exp.view(1, -1))
-    true_probs = true_exp.view(-1, 1) / (true_exp.view(-1, 1) + true_exp.view(1, -1))
-    
-    # Get MAE from upper triangle
-    mask = torch.triu(torch.ones_like(pred_probs), diagonal=1).bool()
-    mae = torch.mean(torch.abs(pred_probs[mask] - true_probs[mask])).item()
-    
-    return mae
 
 class LLMExperiment:
     """
@@ -82,7 +63,16 @@ class LLMExperiment:
         
         # Initialize testers and savers with results_dir and experiment_id
         self.testers = [hydra.utils.instantiate(t, scorer_model=self._scorer_model) for t in self.cfg.tester]
-        self.savers = [hydra.utils.instantiate(s, scorer_model=self._scorer_model, results_dir=self.results_dir, experiment_id=self.experiment_id) for s in self.cfg.savers]
+        
+        # Initialize savers with just what they need
+        self.savers = [
+            hydra.utils.instantiate(
+                s, 
+                scorer_model=self._scorer_model,
+                results_dir=self.results_dir,
+                experiment_id=self.experiment_id
+            ) for s in self.cfg.savers
+        ]
         self.visits = [] if self.cfg.feedback.num_policies == 1 else [[] for _ in range(self.cfg.feedback.num_policies)]
 
     def run(self):
@@ -103,8 +93,7 @@ class LLMExperiment:
                 self.feedback.collect_labels(self.cfg, recent_visits_buffer, self._theta_star)
                 self.feedback.fit_estimator()
                 self.design.update_estimator(self.estimator, self.env.emissions)
-                mae = compute_prob_mae(self.env.emissions, self.estimator, self._scorer_model)
-                print(f"Episode {ep_idx} partial re-fit, MAE: {mae}")
+                print(f"Episode {ep_idx} partial re-fit complete")
                 for p_i in range(num_policies):
                     recent_visits_buffer[p_i].clear()
 
@@ -122,8 +111,7 @@ class LLMExperiment:
 
         self.feedback.fit_estimator()
         self.design.update_estimator(self.estimator, self.env.emissions)
-        final_mae = compute_prob_mae(self.env.emissions, self.estimator, self._scorer_model)
-        print(f"Final MAE after all {total_episodes} episodes: {final_mae}")
+        print(f"Final estimation after all {total_episodes} episodes complete")
         
     def _init_env(self):
         """
@@ -167,9 +155,20 @@ class LLMExperiment:
 
     def test_and_save(self):
         """Final estimation, testing and saving of results"""
-        combined_results = {}
+        # Create a container for all results
+        from components.results import ExperimentResults
+        results = ExperimentResults()
         
-        # Run all testers and collect results
+        # Set the estimator and visits
+        results.set_estimator(self.estimator)
+        results.set_visits(self.visits)
+        
+        # Add experiment metadata
+        results.add_metadata('horizon', self.cfg.horizon)
+        results.add_metadata('algorithm', self.cfg.algorithm)
+        results.add_metadata('base_prompt', self.cfg.base_prompt)
+        
+        # Run all testers and collect metrics
         for tester in self.testers:
             tester_results = tester.run_test(
                 cfg=self.cfg,
@@ -180,14 +179,12 @@ class LLMExperiment:
                 testing_words_list=self.testing_words
             )
             
-            # Update combined results
-            combined_results.update(tester_results)
-        
-        # No need to add cfg to results anymore
+            # Add metrics to results container
+            results.add_metrics(tester_results)
         
         # Use all savers to save the results
         for saver in self.savers:
-            saver.save_result(combined_results)
+            saver.save_result(results)
 
     def _get_algorithm_code(self):
         """Get a short code for the algorithm type"""

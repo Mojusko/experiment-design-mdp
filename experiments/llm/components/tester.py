@@ -11,18 +11,22 @@ def generate_test_sequence(rng, word_lists, horizon):
     ]
 
 class BaseTester(ABC):
+    """Base class for all testers with simplified interface."""
+    
+    def __init__(self, scorer_model=None, params=None):
+        self.scorer_model = scorer_model
+        self.params = params or {}
+    
     @abstractmethod
     def run_test(self, cfg, env, estimator, theta_star, training_words_list, testing_words_list):
+        """Run tests and return metrics dictionary"""
         pass
     
     def __str__(self):
         return self.__class__.__name__
 
 class PreferenceTester(BaseTester):
-    def __init__(self, scorer_model, params=None):
-        self.params = params or {}
-        self.scorer_model = scorer_model
-        super().__init__()  # Call to parent if needed
+    """Tests preference prediction accuracy on held-out test data."""
         
     def run_test(self, cfg, env, estimator, theta_star, training_words_list, testing_words_list):
         print(f"Running {self.__class__.__name__} with {self.params}")
@@ -73,10 +77,8 @@ class PreferenceTester(BaseTester):
         return {"preference_error": error}
 
 class CosineTester(BaseTester):
-    def __init__(self, scorer_model, params=None):
-        self.params = params or {}
-        self.scorer_model = scorer_model
-        super().__init__()
+    def __init__(self, scorer_model=None, params=None):
+        super().__init__(scorer_model, params)
         print(f"Initialized {self.__class__.__name__} with {self.params}")
     
     @staticmethod

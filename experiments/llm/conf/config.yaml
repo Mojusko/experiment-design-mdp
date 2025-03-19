@@ -31,9 +31,16 @@ tester:
 
 # Default savers configuration
 savers:
-  - _target_: components.saver.FileSaver
+  - _target_: components.saver.MetricsSaver
     params:
       filename: "metrics.json"
+      metrics_keys: ["preference_error", "cosine_error"]
+  - _target_: components.saver.LearnedEstimatorSaver
+    params:
+      filename: "estimator.pt"
+  - _target_: components.saver.VisitsSaver
+    params:
+      filename: "visits.pkl"
   #  - _target_: components.saver.ImageGenerationSaver
   #    params:
   #      seed: "${seed}"
