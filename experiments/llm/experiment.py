@@ -189,12 +189,14 @@ class LLMExperiment:
     def _get_algorithm_code(self):
         """Get a short code for the algorithm type"""
         algorithm = self.cfg.algorithm.lower()
-        if algorithm == "greedy":
-            return "grd"
+        if algorithm == "design":
+            return "dsn"
         elif algorithm == "random":
             return "rand"
         elif algorithm == "optim":
             return "opt"
+        elif algorithm == "design":  # For backward compatibility
+            return "dsn"
         else:
             return algorithm[:3]  # First 3 chars as fallback
             

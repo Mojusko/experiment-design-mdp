@@ -24,7 +24,7 @@ def parse_filename(filename):
         rounds_val = int(parts[-2])
         return ("rounds", rounds_val)
     else:
-        # For feedback experiments, assume file names like "grd-multinomial-1.txt" or "rnd-sample-1.txt"
+        # For feedback experiments, assume file names like "dsn-multinomial-1.txt" or "rnd-sample-1.txt"
         alg_type, feedback_type, _ = base.rsplit('-', 2)
         return ("feedback", (alg_type, feedback_type))
 
@@ -166,7 +166,7 @@ def plot_results(directory):
 
         if exp_type == "feedback":
             alg = key[0]  # alg_type from tuple
-            alg_map = {"grd": "Greedy", "rand": "Random"}
+            alg_map = {"dsn": "Design", "rand": "Random"}
             alg_name = alg_map.get(alg, alg)
             if alg_name not in feedback_results:
                 feedback_results[alg_name] = {"preference_error": [], "cosine_error": []}

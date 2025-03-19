@@ -13,6 +13,7 @@ experiment:
   #scorer_model: "art"
 # Results directory for debug mode
 results_dir: "results/debug"
+algorithm: "design"
 tester:
   - _target_: components.tester.PreferenceTester
     params:

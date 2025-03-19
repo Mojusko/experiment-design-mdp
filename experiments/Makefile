@@ -290,21 +290,21 @@ STOCH: STOCH1 STOCH2 STOCH3 STOCH0
 REPEATS_LLM=10
 NUMBERS_LLM := $(shell seq 1 ${REPEATS_LLM})
 
-JOBS_LLM_GRD_MULT_V := $(addprefix job-llm-feedback-grd-mult-v,$(NUMBERS_LLM))
-JOBS_LLM_GRD_MULT_NOV := $(addprefix job-llm-feedback-grd-mult-nov,$(NUMBERS_LLM))
+JOBS_LLM_DSN_MULT_V := $(addprefix job-llm-feedback-dsn-mult-v,$(NUMBERS_LLM))
+JOBS_LLM_DSN_MULT_NOV := $(addprefix job-llm-feedback-dsn-mult-nov,$(NUMBERS_LLM))
 
-$(JOBS_LLM_GRD_MULT_V): job-llm-feedback-grd-mult-v%:
-	cd llm && TIMESTAMP=$(TIMESTAMP) OMP_NUM_THREADS=1 MKL_NUM_THREADS=1 $(PYTHONPATH) run_exp.py experiment=benchmark_V algorithm=greedy feedback=multinomial feedback.pass_V=true results_dir="results/feedback-V-adaptive" experiment_id="withV-$*" seed=$*
+$(JOBS_LLM_DSN_MULT_V): job-llm-feedback-dsn-mult-v%:
+	cd llm && TIMESTAMP=$(TIMESTAMP) OMP_NUM_THREADS=1 MKL_NUM_THREADS=1 $(PYTHONPATH) run_exp.py experiment=benchmark_V algorithm=design feedback=multinomial feedback.pass_V=true results_dir="results/feedback-V-adaptive" experiment_id="withV-$*" seed=$*
 
-$(JOBS_LLM_GRD_MULT_NOV): job-llm-feedback-grd-mult-nov%:
-	cd llm && TIMESTAMP=$(TIMESTAMP) OMP_NUM_THREADS=1 MKL_NUM_THREADS=1 $(PYTHONPATH) run_exp.py experiment=benchmark_V algorithm=greedy feedback=multinomial feedback.pass_V=false results_dir="results/feedback-V-adaptive" experiment_id="noV-$*" seed=$*
+$(JOBS_LLM_DSN_MULT_NOV): job-llm-feedback-dsn-mult-nov%:
+	cd llm && TIMESTAMP=$(TIMESTAMP) OMP_NUM_THREADS=1 MKL_NUM_THREADS=1 $(PYTHONPATH) run_exp.py experiment=benchmark_V algorithm=design feedback=multinomial feedback.pass_V=false results_dir="results/feedback-V-adaptive" experiment_id="noV-$*" seed=$*
 
-llm-V-comparison: $(JOBS_LLM_GRD_MULT_V) $(JOBS_LLM_GRD_MULT_NOV)
+llm-V-comparison: $(JOBS_LLM_DSN_MULT_V) $(JOBS_LLM_DSN_MULT_NOV)
 
 # Jobs for additivity experiment
 JOBS_LLM_ALG_ADD := $(addprefix job-llm-add-alg,${NUMBERS_LLM})
 JOBS_LLM_RAN_ADD := $(addprefix job-llm-add-ran,${NUMBERS_LLM})
-JOBS_LLM_GRD_ADD := $(addprefix job-llm-add-grd,${NUMBERS_LLM})
+JOBS_LLM_DSN_ADD := $(addprefix job-llm-add-dsn,${NUMBERS_LLM})
 
 $(JOBS_LLM_ALG_ADD): job-llm-add-alg%:
 	cd llm && TIMESTAMP=$(TIMESTAMP) OMP_NUM_THREADS=1 MKL_NUM_THREADS=1 $(PYTHONPATH) run_exp.py experiment=additivity algorithm="optim" feedback="numerical" results_dir="results/additivity" experiment_id="$*" seed=$*
@@ -312,34 +312,34 @@ $(JOBS_LLM_ALG_ADD): job-llm-add-alg%:
 $(JOBS_LLM_RAN_ADD): job-llm-add-ran%:
 	cd llm && TIMESTAMP=$(TIMESTAMP) OMP_NUM_THREADS=1 MKL_NUM_THREADS=1 $(PYTHONPATH) run_exp.py experiment=additivity algorithm="random" feedback="numerical" results_dir="results/additivity" experiment_id="$*" seed=$*
 
-$(JOBS_LLM_GRD_ADD): job-llm-add-grd%:
-	cd llm && TIMESTAMP=$(TIMESTAMP) OMP_NUM_THREADS=1 MKL_NUM_THREADS=1 $(PYTHONPATH) run_exp.py experiment=additivity algorithm="greedy" feedback="numerical" results_dir="results/additivity" experiment_id="$*" seed=$*
+$(JOBS_LLM_DSN_ADD): job-llm-add-dsn%:
+	cd llm && TIMESTAMP=$(TIMESTAMP) OMP_NUM_THREADS=1 MKL_NUM_THREADS=1 $(PYTHONPATH) run_exp.py experiment=additivity algorithm="design" feedback="numerical" results_dir="results/additivity" experiment_id="$*" seed=$*
 
-llm-additivity: $(JOBS_LLM_ALG_ADD) $(JOBS_LLM_RAN_ADD) $(JOBS_LLM_GRD_ADD)
+llm-additivity: $(JOBS_LLM_ALG_ADD) $(JOBS_LLM_RAN_ADD) $(JOBS_LLM_DSN_ADD)
 
 # Jobs for feedback comparison
-JOBS_LLM_GRD_NUM := $(addprefix job-llm-feedback-grd-num,$(NUMBERS_LLM))
+JOBS_LLM_DSN_NUM := $(addprefix job-llm-feedback-dsn-num,$(NUMBERS_LLM))
 JOBS_LLM_RAN_NUM := $(addprefix job-llm-feedback-ran-num,$(NUMBERS_LLM))
 
-$(JOBS_LLM_GRD_NUM): job-llm-feedback-grd-num%:
-	cd llm && TIMESTAMP=$(TIMESTAMP) OMP_NUM_THREADS=1 MKL_NUM_THREADS=1 $(PYTHONPATH) run_exp.py experiment=feedback_comparison algorithm=greedy feedback=numerical results_dir="results/feedback-comparison" experiment_id="$*" seed=$*
+$(JOBS_LLM_DSN_NUM): job-llm-feedback-dsn-num%:
+	cd llm && TIMESTAMP=$(TIMESTAMP) OMP_NUM_THREADS=1 MKL_NUM_THREADS=1 $(PYTHONPATH) run_exp.py experiment=feedback_comparison algorithm=design feedback=numerical results_dir="results/feedback-comparison" experiment_id="$*" seed=$*
 
 $(JOBS_LLM_RAN_NUM): job-llm-feedback-ran-num%:
 	cd llm && TIMESTAMP=$(TIMESTAMP) OMP_NUM_THREADS=1 MKL_NUM_THREADS=1 $(PYTHONPATH) run_exp.py experiment=feedback_comparison algorithm=random feedback=numerical results_dir="results/feedback-comparison" experiment_id="$*" seed=$*
 
 # Split multinomial feedback jobs  
-JOBS_LLM_GRD_MULT := $(addprefix job-llm-feedback-grd-mult,$(NUMBERS_LLM))
+JOBS_LLM_DSN_MULT := $(addprefix job-llm-feedback-dsn-mult,$(NUMBERS_LLM))
 JOBS_LLM_RAN_MULT := $(addprefix job-llm-feedback-ran-mult,$(NUMBERS_LLM))
 
-$(JOBS_LLM_GRD_MULT): job-llm-feedback-grd-mult%:
-	cd llm && TIMESTAMP=$(TIMESTAMP) OMP_NUM_THREADS=1 MKL_NUM_THREADS=1 $(PYTHONPATH) run_exp.py experiment=feedback_comparison algorithm=greedy feedback=multinomial results_dir="results/feedback-comparison" experiment_id="$*" seed=$*
+$(JOBS_LLM_DSN_MULT): job-llm-feedback-dsn-mult%:
+	cd llm && TIMESTAMP=$(TIMESTAMP) OMP_NUM_THREADS=1 MKL_NUM_THREADS=1 $(PYTHONPATH) run_exp.py experiment=feedback_comparison algorithm=design feedback=multinomial results_dir="results/feedback-comparison" experiment_id="$*" seed=$*
 
 $(JOBS_LLM_RAN_MULT): job-llm-feedback-ran-mult%:
 	cd llm && TIMESTAMP=$(TIMESTAMP) OMP_NUM_THREADS=1 MKL_NUM_THREADS=1 $(PYTHONPATH) run_exp.py experiment=feedback_comparison algorithm=random feedback=multinomial results_dir="results/feedback-comparison" experiment_id="$*" seed=$* 
 
 # Combined targets
-llm-feedback-comparison-num: $(JOBS_LLM_GRD_NUM) $(JOBS_LLM_RAN_NUM)
-llm-feedback-comparison-mul: $(JOBS_LLM_GRD_MULT) $(JOBS_LLM_RAN_MULT)
+llm-feedback-comparison-num: $(JOBS_LLM_DSN_NUM) $(JOBS_LLM_RAN_NUM)
+llm-feedback-comparison-mul: $(JOBS_LLM_DSN_MULT) $(JOBS_LLM_RAN_MULT)
 llm-feedback-comparison: llm-feedback-comparison-num llm-feedback-comparison-mul
 
 # Test different numbers of rounds for feedback optimization
@@ -352,7 +352,7 @@ JOBS_LLM_ROUNDS := \
 
 define rounds_job_template
 job-llm-rounds-$(1)-$(2):
-	cd llm && TIMESTAMP=$(TIMESTAMP) OMP_NUM_THREADS=1 MKL_NUM_THREADS=1 $(PYTHONPATH) run_exp.py experiment=rounds_finding feedback=multinomial algorithm=greedy feedback.num_rounds=$(1) seed=$(2) results_dir="results/rounds-finding" experiment_id="$(1)-$(2)"
+	cd llm && TIMESTAMP=$(TIMESTAMP) OMP_NUM_THREADS=1 MKL_NUM_THREADS=1 $(PYTHONPATH) run_exp.py experiment=rounds_finding feedback=multinomial algorithm=design feedback.num_rounds=$(1) seed=$(2) results_dir="results/rounds-finding" experiment_id="$(1)-$(2)"
 endef
 
 $(foreach rounds,$(ROUNDS_VALUES), \
@@ -380,12 +380,12 @@ JOBS_LLM_LAMBDA_NUM := \
 # Macros to define each job type
 define lambda_job_template_mul
 job-llm-lambda-mul-$(1)-$(2):
-	cd llm && TIMESTAMP=$(TIMESTAMP) OMP_NUM_THREADS=1 MKL_NUM_THREADS=1 $(PYTHONPATH) run_exp.py experiment=lambda_finding feedback=multinomial algorithm=greedy feedback.lambda_reg=$(1) seed=$(2) results_dir="results/lambda-finding-normalized" experiment_id="mul-$(1)-$(2)"
+	cd llm && TIMESTAMP=$(TIMESTAMP) OMP_NUM_THREADS=1 MKL_NUM_THREADS=1 $(PYTHONPATH) run_exp.py experiment=lambda_finding feedback=multinomial algorithm=design feedback.lambda_reg=$(1) seed=$(2) results_dir="results/lambda-finding-normalized" experiment_id="mul-$(1)-$(2)"
 endef
 
 define lambda_job_template_num
 job-llm-lambda-num-$(1)-$(2):
-	cd llm && TIMESTAMP=$(TIMESTAMP) OMP_NUM_THREADS=1 MKL_NUM_THREADS=1 $(PYTHONPATH) run_exp.py experiment=lambda_finding feedback=numerical algorithm=greedy feedback.lambda_reg=$(1) seed=$(2) results_dir="results/lambda-finding" experiment_id="num-$(1)-$(2)"
+	cd llm && TIMESTAMP=$(TIMESTAMP) OMP_NUM_THREADS=1 MKL_NUM_THREADS=1 $(PYTHONPATH) run_exp.py experiment=lambda_finding feedback=numerical algorithm=design feedback.lambda_reg=$(1) seed=$(2) results_dir="results/lambda-finding" experiment_id="num-$(1)-$(2)"
 endef
 
 # Instantiate all jobs from the macros
@@ -415,7 +415,7 @@ JOBS_LLM_FREQUENCY := \
 # Macro to define each frequency job
 define frequency_job_template
 job-llm-freq-$(1)-$(2):
-	cd llm && TIMESTAMP=$(TIMESTAMP) OMP_NUM_THREADS=1 MKL_NUM_THREADS=1 $(PYTHONPATH) run_exp.py experiment=frequency_finding feedback=multinomial algorithm=greedy feedback.adaptive_estimation_frequency=$(1) seed=$(2) results_dir="results/frequency-finding" experiment_id="$(1)-$(2)"
+	cd llm && TIMESTAMP=$(TIMESTAMP) OMP_NUM_THREADS=1 MKL_NUM_THREADS=1 $(PYTHONPATH) run_exp.py experiment=frequency_finding feedback=multinomial algorithm=design feedback.adaptive_estimation_frequency=$(1) seed=$(2) results_dir="results/frequency-finding" experiment_id="$(1)-$(2)"
 endef
 
 # Instantiate all frequency jobs from the macro
