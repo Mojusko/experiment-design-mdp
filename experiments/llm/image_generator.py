@@ -413,6 +413,16 @@ if __name__ == "__main__":
 
     args = parser.parse_args()
 
+    # Print the configuration being used
+    print("Using configuration:")
+    print(f"  stable_diffusion_id: {DEFAULT_CONFIG['stable_diffusion_id']}")
+    print(f"  num_inference_steps: {args.num_inference_steps}")
+    print(f"  guidance_base: {args.guidance_base}")
+    print(f"  guidance_tokens: {args.guidance_tokens}")
+    print(f"  image_size: {args.image_size}")
+    print(f"  seed: {args.seed}")
+    print(f"  output_dir: {args.output_dir}")
+    
     # Initialize the generator with provided parameters
     generator = DoubleGuidanceStableDiffusionGenerator(
         DEFAULT_CONFIG["stable_diffusion_id"],
