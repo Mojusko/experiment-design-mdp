@@ -30,17 +30,11 @@ class PreferenceTester(BaseTester):
         
         N_test_prompts = self.params['N_test_prompts']
         N_pairs_eval = self.params['N_pairs_eval']
-        #if cfg.scorer_model in ['art','aesthetics']:
-        #    N_test_prompts = 1000
-        #    N_pairs_eval   = 5000
-        #else:
-        #    N_test_prompts = 50
-        #    N_pairs_eval   = 100
 
         horizon = cfg.horizon
+
         # Make sure testing_words_list is a list of lists with one list per horizon step
-        if not isinstance(testing_words_list[0], list):
-            testing_words_list = [testing_words_list] * horizon
+        assert isinstance(testing_words_list[0], list)
             
         print(f"Generating {N_test_prompts} test sequences with horizon {horizon}")
         test_sequences = [generate_test_sequence(test_rng, testing_words_list, horizon) 
@@ -129,18 +123,16 @@ class ImageGenerationTester(BaseTester):
         self.params = params or {}
         self.scorer_model = scorer_model
         self.take_best_worst_N = self.params.get('take_best_worst_N', 8) if self.params else 8
-        self.use_greedy = self.params.get('use_greedy', True) if self.params else True
         self.use_estimator = self.params.get('use_estimator', False) if self.params else False
         super().__init__()
         print(f"Initialized {self.__class__.__name__} with take_best_worst_N={self.take_best_worst_N}, "
-              f"use_greedy={self.use_greedy}, use_estimator={self.use_estimator}")
+              f"use_estimator={self.use_estimator}")
         
     def run_test(self, cfg, env, estimator, theta_star, training_words_list, testing_words_list):
         """Run the image generation test
         
         This tester finds the best and worst prompts based on the scorer model or estimator.
-        If use_greedy is True, it builds the sequence greedily by choosing the best token
-        at each timestep. Otherwise, it uses a random prefix and only varies the last token.
+        It builds the sequence greedily by choosing the best token at each timestep.
         
         If use_estimator is True, it will use the estimator instead of the ground truth model.
         """
@@ -151,7 +143,7 @@ class ImageGenerationTester(BaseTester):
         else:
             print(f"Using ground truth model for {self.__class__.__name__}")
             
-        print(f"Running {self.__class__.__name__} with {'greedy' if self.use_greedy else 'random prefix'} approach")
+        print(f"Running {self.__class__.__name__} with greedy approach")
         test_rng = np.random.RandomState(42)
         horizon = cfg.horizon
         
@@ -159,19 +151,14 @@ class ImageGenerationTester(BaseTester):
         if not isinstance(testing_words_list[0], list):
             testing_words_list = [testing_words_list] * horizon
         
-        if self.use_greedy:
-            # Greedy approach: build sequence by choosing best token at each step
-            return self._run_greedy_test(cfg, env, test_rng, horizon, testing_words_list)
-        else:
-            # Original approach: random prefix, vary only last token
-            return self._run_original_test(cfg, env, test_rng, horizon, testing_words_list)
+        # Greedy approach: build sequence by choosing best token at each step
+        return self._run_greedy_test(cfg, env, test_rng, horizon, testing_words_list)
     
     def _run_greedy_test(self, cfg, env, test_rng, horizon, testing_words_list):
         """Greedy approach: build sequence by choosing best token at each step"""
         # Use the scoring model from the parent method
         try:
             if self.use_estimator:
-                from doexpy.env.llm import DotProductModel
                 scoring_model = create_dot_product_model_from_estimator(self.estimator, env.embedder)
             else:
                 scoring_model = self.scorer_model
@@ -328,88 +315,4 @@ class ImageGenerationTester(BaseTester):
             "worst_image_score": worst_scores[0] if worst_scores else 0,
             "avg_top_image_score": sum(best_scores) / len(best_scores) if best_scores else 0
         }
-    
-    def _run_original_test(self, cfg, env, test_rng, horizon, testing_words_list):
-        """Original approach: random prefix, vary only last token"""
-        try:
-            # Use the scoring model from the parent method
-            if hasattr(self, 'use_estimator') and self.use_estimator:
-                from doexpy.env.llm import DotProductModel
-                scoring_model = create_dot_product_model_from_estimator(self.estimator, env.embedder)
-            else:
-                scoring_model = self.scorer_model
-                
-            print(f"Running original test with horizon {horizon}")
-            prefix_length = horizon - 1
-            
-            # Generate a random prefix using the appropriate word list for each position
-            prefix_sequence = [
-                " " if test_rng.random() < 0.1 else test_rng.choice(testing_words_list[i])
-                for i in range(prefix_length)
-            ]
-            
-            print(f"Generated random prefix: {' '.join(prefix_sequence)}")
-            
-            # Score all possible completions
-            all_scores = []
-            all_prompts = []
-            all_embeddings = []
-            
-            print(f"Scoring {len(testing_words_list[-1])} possible completions")
-            # Use the last horizon's word list for completions
-            for last_token in testing_words_list[-1]:
-                try:
-                    full_sequence = prefix_sequence + [last_token]
-                    prompt = create_prompt_from_tokens(full_sequence, env.base_prompt)
-                    score, embedding = scoring_model.score_prompt(prompt)
-                    
-                    all_scores.append(score.item())
-                    all_prompts.append(prompt)
-                    all_embeddings.append(embedding)
-                except Exception as e:
-                    print(f"Error scoring token '{last_token}': {e}")
-                    continue
-            
-            # Sort by score (descending for best, ascending for worst)
-            sorted_indices = np.argsort(all_scores)
-            best_indices = sorted_indices[-self.take_best_worst_N:][::-1]  # Reverse to get descending order
-            worst_indices = sorted_indices[:self.take_best_worst_N]
-            
-            # Get the best prompts and their scores
-            best_prompts = [all_prompts[i] for i in best_indices]
-            best_scores = [all_scores[i] for i in best_indices]
-            
-            # Get the worst prompts and their scores
-            worst_prompts = [all_prompts[i] for i in worst_indices]
-            worst_scores = [all_scores[i] for i in worst_indices]
-            
-            print(f"Best prompts scores: {best_scores}")
-            print(f"Worst prompts scores: {worst_scores}")
-            
-            # Store the prompts and scores in the test results
-            return {
-                "image_generation": {
-                    "best_prompts": best_prompts,
-                    "best_scores": best_scores,
-                    "worst_prompts": worst_prompts,
-                    "worst_scores": worst_scores
-                },
-                "best_image_score": best_scores[0] if best_scores else 0,
-                "worst_image_score": worst_scores[0] if worst_scores else 0,
-                "avg_top_image_score": sum(best_scores) / len(best_scores) if best_scores else 0
-            }
-        except Exception as e:
-            print(f"Error in original test: {e}")
-            return {
-                "image_generation": {
-                    "best_prompts": [],
-                    "best_scores": [],
-                    "worst_prompts": [],
-                    "worst_scores": []
-                },
-                "best_image_score": 0,
-                "worst_image_score": 0,
-                "avg_top_image_score": 0,
-                "error": str(e)
-            }
 
