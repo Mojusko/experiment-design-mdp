@@ -1,4 +1,7 @@
 import logging
+import argparse
+import os
+from PIL import Image
 from PIL import Image
 from typing import List, Tuple, Union
 
@@ -201,17 +204,18 @@ class StableDiffusionGenerator():
         """
         return (self._image_size, self._image_size, 3)
 
+
 ### New Class: DoubleGuidanceStableDiffusionGenerator
 class DoubleGuidanceStableDiffusionGenerator():
     def __init__(
         self,
         stable_diffusion_id: str,
         num_inference_steps: int = 100,
-        guidance_base: float = 8,      # Guidance for base prompt
-        guidance_tokens: float = 4,    # Guidance for full prompt
+        guidance_base: float = 8.0,      # Guidance for base prompt
+        guidance_tokens: float = 4.0,    # Guidance for full prompt
         image_size: int = 512,
         seed: int = 0,
-        MODELS_CACHE_DIR: str = '/tmp/models_cache_dir/'
+        MODELS_CACHE_DIR: str = os.path.expanduser("~/.cache/huggingface/hub")
     ) -> None:
         """An implementation of Stable Diffusion's text-to-image generator with separate guidance for base and full prompts.
 
@@ -383,35 +387,50 @@ class DoubleGuidanceStableDiffusionGenerator():
         """Returns the output image dimensions."""
         return (self._image_size, self._image_size, 3)
 
-# Example usage
+# Default configuration for image generation
+DEFAULT_CONFIG = {
+    "stable_diffusion_id": "CompVis/stable-diffusion-v1-4",
+    "num_inference_steps": 100,
+    "guidance_base": 8.0,
+    "guidance_tokens": 4.0,
+    "image_size": 512,
+    "seed": 0,
+    "MODELS_CACHE_DIR": os.path.expanduser("~/.cache/huggingface/hub"),
+    "output_dir": "generated_images"
+}
+
 if __name__ == "__main__":
-    import os
-    import matplotlib.pyplot as plt
+    # Set up argument parser
+    parser = argparse.ArgumentParser(description="Generate an image using DoubleGuidanceStableDiffusionGenerator")
+    parser.add_argument("--base_prompt", type=str, required=True, help="Base prompt for image generation (e.g., 'A man walking in paris')")
+    parser.add_argument("--full_prompt", type=str, required=True, help="Full prompt for image generation (e.g., 'A man walking in paris #photorealistic #cute')")
+    parser.add_argument("--output_dir", type=str, default=DEFAULT_CONFIG["output_dir"], help=f"Directory to save the generated image (default: {DEFAULT_CONFIG['output_dir']})")
+    parser.add_argument("--seed", type=int, default=DEFAULT_CONFIG["seed"], help=f"Random seed for reproducibility (default: {DEFAULT_CONFIG['seed']})")
+    parser.add_argument("--image_size", type=int, default=DEFAULT_CONFIG["image_size"], help=f"Size of the generated image (default: {DEFAULT_CONFIG['image_size']})")
+    parser.add_argument("--num_inference_steps", type=int, default=DEFAULT_CONFIG["num_inference_steps"], help=f"Number of inference steps (default: {DEFAULT_CONFIG['num_inference_steps']})")
+    parser.add_argument("--guidance_base", type=float, default=DEFAULT_CONFIG["guidance_base"], help=f"Guidance scale for base prompt (default: {DEFAULT_CONFIG['guidance_base']})")
+    parser.add_argument("--guidance_tokens", type=float, default=DEFAULT_CONFIG["guidance_tokens"], help=f"Guidance scale for full prompt tokens (default: {DEFAULT_CONFIG['guidance_tokens']})")
 
-    cache_dir = os.path.expanduser("~/.cache/huggingface/hub")
-    
-    # Using the original class
-    generator = StableDiffusionGenerator(
-        "CompVis/stable-diffusion-v1-4",
-        seed=None,
-        MODELS_CACHE_DIR=cache_dir
-    )
-    image, _ = generator.sample("A cat sitting on a windowsill")
-    plt.imshow(image)
-    plt.axis('off')
-    plt.show()
+    args = parser.parse_args()
 
-    # Using the new class
-    image_generator = DoubleGuidanceStableDiffusionGenerator(
-        "CompVis/stable-diffusion-v1-4",
-        guidance_base=7.5,    # Strong influence for base prompt
-        guidance_tokens=2.5,  # Reduced influence for full prompt
-        seed=None,
-        MODELS_CACHE_DIR=cache_dir
+    # Initialize the generator with provided parameters
+    generator = DoubleGuidanceStableDiffusionGenerator(
+        DEFAULT_CONFIG["stable_diffusion_id"],
+        num_inference_steps=args.num_inference_steps,
+        guidance_base=args.guidance_base,
+        guidance_tokens=args.guidance_tokens,
+        image_size=args.image_size,
+        seed=args.seed,
+        MODELS_CACHE_DIR=DEFAULT_CONFIG["MODELS_CACHE_DIR"]
     )
-    base_prompt = "A man walking in paris"
-    full_prompt = "A man walking in paris #photorealistic #cute"
-    image, _ = image_generator.sample(base_prompt, full_prompt)
-    plt.imshow(image)
-    plt.axis('off')
-    plt.show()
+
+    # Generate the image
+    image, _ = generator.sample(args.base_prompt, args.full_prompt)
+
+    # Create the output directory if it doesn’t exist
+    os.makedirs(args.output_dir, exist_ok=True)
+
+    # Save the image with a simple filename
+    image_path = os.path.join(args.output_dir, "generated_image.png")
+    Image.fromarray(image).save(image_path)
+    print(f"Image saved to {image_path}")

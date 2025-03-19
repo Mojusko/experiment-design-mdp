@@ -57,7 +57,9 @@ fi
 
 # Process each line
 while IFS= read -r line || [ -n "$line" ]; do
-   MODIFIED_LINE="${PREFIX}\"${line}\" ${SUFFIX}"
+   MODIFIED_LINE="${SUFFIX} ${PREFIX}\"${line}\""
+   #MODIFIED_LINE="${PREFIX}\"${line}\" ${SUFFIX}"
+
    COMMAND="$PRE_CMD && sbatch $MODIFIED_LINE"
    echo "Executing on $SERVER: $COMMAND"
    ssh -f "$SERVER" "$COMMAND"
