@@ -1,5 +1,4 @@
 from doexpy.env.discrete_env import DiscreteEnv
-from image_generator import StableDiffusionGenerator
 from transformers import CLIPModel, CLIPProcessor, CLIPTokenizer
 from typing import List, Tuple, Union
 import torch
