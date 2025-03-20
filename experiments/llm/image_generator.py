@@ -402,18 +402,21 @@ DEFAULT_CONFIG = {
 if __name__ == "__main__":
     # Set up argument parser
     parser = argparse.ArgumentParser(description="Generate an image using StableDiffusionGenerator")
+    parser.add_argument("--base_prompt", type=str, required=True, help="Base prompt for image generation (e.g., 'A man walking in paris')")
     parser.add_argument("--full_prompt", type=str, required=True, help="Full prompt for image generation (e.g., 'A man walking in paris #photorealistic #cute')")
     parser.add_argument("--output_dir", type=str, default=DEFAULT_CONFIG["output_dir"], help=f"Directory to save the generated image (default: {DEFAULT_CONFIG['output_dir']})")
     parser.add_argument("--seed", type=int, default=DEFAULT_CONFIG["seed"], help=f"Random seed for reproducibility (default: {DEFAULT_CONFIG['seed']})")
     parser.add_argument("--image_size", type=int, default=DEFAULT_CONFIG["image_size"], help=f"Size of the generated image (default: {DEFAULT_CONFIG['image_size']})")
     parser.add_argument("--num_inference_steps", type=int, default=DEFAULT_CONFIG["num_inference_steps"], help=f"Number of inference steps (default: {DEFAULT_CONFIG['num_inference_steps']})")
-    parser.add_argument("--guidance_base", type=float, default=DEFAULT_CONFIG["guidance_base"], help=f"Guidance scale (default: {DEFAULT_CONFIG['guidance_base']})")
+    parser.add_argument("--guidance_base", type=float, default=DEFAULT_CONFIG["guidance_base"], help=f"Guidance scale for base prompt (default: {DEFAULT_CONFIG['guidance_base']})")
+    parser.add_argument("--guidance_tokens", type=float, default=DEFAULT_CONFIG["guidance_tokens"], help=f"Guidance scale for full prompt tokens (default: {DEFAULT_CONFIG['guidance_tokens']})")
 
     args = parser.parse_args()
 
     # Print the configuration being used
     print("Using configuration:")
-    print(f"  prompt: '{args.full_prompt}'")
+    print(f"  base_prompt: '{args.base_prompt}'")
+    print(f"  full_prompt: '{args.full_prompt}'")
     print(f"  stable_diffusion_id: {DEFAULT_CONFIG['stable_diffusion_id']}")
     print(f"  num_inference_steps: {args.num_inference_steps}")
     print(f"  guidance_scale: {args.guidance_base}")
@@ -431,8 +434,11 @@ if __name__ == "__main__":
         MODELS_CACHE_DIR=DEFAULT_CONFIG["MODELS_CACHE_DIR"]
     )
 
-    # Generate the image
+    # Generate the image (temporarily using only StableDiffusionGenerator with full_prompt)
     image, _ = generator.sample(args.full_prompt)
+    
+    # NOTE: We're temporarily using StableDiffusionGenerator instead of DoubleGuidanceStableDiffusionGenerator
+    # The base_prompt and guidance_tokens parameters are accepted but not used in this version
 
     # Create the output directory if it doesn’t exist
     os.makedirs(args.output_dir, exist_ok=True)
@@ -442,7 +448,7 @@ if __name__ == "__main__":
     sanitized_prompt = args.full_prompt.replace(' ', '_').replace('/', '_').replace('\\', '_')
     sanitized_prompt = ''.join(c for c in sanitized_prompt if c.isalnum() or c in '_-#')[:50]  # Limit length
     
-    filename = f"{sanitized_prompt}_guidance{args.guidance_base}_steps{args.num_inference_steps}.png"
+    filename = f"{sanitized_prompt}_guidance{args.guidance_base}_tokens{args.guidance_tokens}_steps{args.num_inference_steps}.png"
     
     # Save the image with the descriptive filename
     image_path = os.path.join(args.output_dir, filename)
