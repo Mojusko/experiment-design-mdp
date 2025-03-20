@@ -415,6 +415,8 @@ if __name__ == "__main__":
 
     # Print the configuration being used
     print("Using configuration:")
+    print(f"  base_prompt: '{args.base_prompt}'")
+    print(f"  full_prompt: '{args.full_prompt}'")
     print(f"  stable_diffusion_id: {DEFAULT_CONFIG['stable_diffusion_id']}")
     print(f"  num_inference_steps: {args.num_inference_steps}")
     print(f"  guidance_base: {args.guidance_base}")
@@ -440,7 +442,14 @@ if __name__ == "__main__":
     # Create the output directory if it doesn’t exist
     os.makedirs(args.output_dir, exist_ok=True)
 
-    # Save the image with a simple filename
-    image_path = os.path.join(args.output_dir, "generated_image.png")
+    # Create a filename that includes prompt and parameters
+    # Sanitize the prompt for filename use
+    sanitized_prompt = args.full_prompt.replace(' ', '_').replace('/', '_').replace('\\', '_')
+    sanitized_prompt = ''.join(c for c in sanitized_prompt if c.isalnum() or c in '_-#')[:50]  # Limit length
+    
+    filename = f"{sanitized_prompt}_base{args.guidance_base}_tokens{args.guidance_tokens}_steps{args.num_inference_steps}.png"
+    
+    # Save the image with the descriptive filename
+    image_path = os.path.join(args.output_dir, filename)
     Image.fromarray(image).save(image_path)
     print(f"Image saved to {image_path}")
