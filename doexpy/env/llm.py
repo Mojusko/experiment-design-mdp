@@ -361,7 +361,7 @@ def get_scorer_model(model_name: str, env, clip_model, clip_processor, cache_dir
     scorer_embedder = env.embedder
     if model_name == 'japanese':
         #prompt = f"{env.base_prompt}, roman style, cinematic"
-        prompt = f"japanese"
+        prompt = f"japanese style"
         embedding = scorer_embedder.embed_text(prompt)
         return DotProductModel(scorer_embedder, embedding).eval()
 

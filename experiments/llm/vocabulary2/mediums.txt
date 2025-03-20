@@ -768,6 +768,16 @@ greek mycenaean gold
 roman glass mosaic
 etruscan bronze figurine
 celtic wood carving
+washi paper craft
+sumi-e brush painting
+ukiyo-e woodblock printing
+raku pottery firing
+kintsugi gold repair
+mizuhiki cord knotting
+urushi lacquerware
+byōbu folding screen
+shakudō metal alloy art
+katagami stencil dyeing
 indian tamil bronze
 chinese wei sculpture
 japanese nara bronze
@@ -1631,3 +1641,18 @@ baltic stone sculpture
 latvian clay relief
 lithuanian wood carving
 estonian stone inlay
+Washi paper painting
+Lacquerware on wood
+Bamboo carving
+Tatami mat weaving
+Kintsugi ceramic repair
+Shoji screen ink painting
+Netsuke ivory carving
+Origami paper folding
+Kirigami cut paper art
+Tsuchi-ningyo clay doll sculpting
+Raku pottery firing
+Hakone yosegi wood mosaic
+Silk kimono dyeing
+Tsuba sword guard engraving
+Ukiyo-e woodblock on washi
