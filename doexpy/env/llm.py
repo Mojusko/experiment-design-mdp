@@ -359,9 +359,9 @@ def get_scorer_model(model_name: str, env, clip_model, clip_processor, cache_dir
     """
     emissions_env = env.emissions
     scorer_embedder = env.embedder
-    if model_name == 'roman-cinematic':
+    if model_name == 'japanese':
         #prompt = f"{env.base_prompt}, roman style, cinematic"
-        prompt = f"roman style image, cinematic"
+        prompt = f"japanese"
         embedding = scorer_embedder.embed_text(prompt)
         return DotProductModel(scorer_embedder, embedding).eval()
 

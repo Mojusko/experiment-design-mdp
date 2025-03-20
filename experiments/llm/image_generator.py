@@ -18,7 +18,7 @@ class StableDiffusionGenerator():
         self,
         stable_diffusion_id: str,
         num_inference_steps: int = 100, 
-        guidance_scale: float = 15,
+        guidance_scale: float = 10,
         image_size: int = 512, 
         seed: int = 0,
         MODELS_CACHE_DIR: str = '/tmp/models_cache_dir/'

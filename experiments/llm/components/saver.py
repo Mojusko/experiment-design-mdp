@@ -198,14 +198,14 @@ class ImageGenerationSaver(BaseSaver):
             os.makedirs(images_dir, exist_ok=True)
         
         # Initialize image generator with debug settings if needed
-        #generator = StableDiffusionGenerator(
-        generator = DoubleGuidanceStableDiffusionGenerator(
+        generator = StableDiffusionGenerator(
+        #generator = DoubleGuidanceStableDiffusionGenerator(
             "CompVis/stable-diffusion-v1-4",
             MODELS_CACHE_DIR=os.path.expanduser("~/.cache/huggingface/hub"),
             image_size=self.image_size,
             num_inference_steps=self.num_inference_steps,
             #seed=self.seed
-            seed=_get_seed_from_prompt(self.base_prompt)
+            seed=_get_seed_from_prompt(self.base_prompt),
         )
         
         # Generate images for the best prompts
@@ -219,7 +219,9 @@ class ImageGenerationSaver(BaseSaver):
         print("Generating images for BEST prompts:")
         for i, (full_prompt, score) in enumerate(zip(best_prompts, best_scores)):
             print(f"Generating best image {i+1}/{len(best_prompts)} for prompt: {full_prompt}")
-            image, image_embedding = generator.sample(self.base_prompt, full_prompt)
+            # Temporarily using only full_prompt with StableDiffusionGenerator
+            image, image_embedding = generator.sample(full_prompt)
+            # Original: image, image_embedding = generator.sample(self.base_prompt, full_prompt)
             
             # Calculate image-based aesthetics score
             if self.add_image_score:
@@ -251,7 +253,9 @@ class ImageGenerationSaver(BaseSaver):
         print("\nGenerating images for WORST prompts:")
         for i, (full_prompt, score) in enumerate(zip(worst_prompts, worst_scores)):
             print(f"Generating worst image {i+1}/{len(worst_prompts)} for prompt: {full_prompt}")
-            image, image_embedding = generator.sample(self.base_prompt, full_prompt)
+            # Temporarily using only full_prompt with StableDiffusionGenerator
+            image, image_embedding = generator.sample(full_prompt)
+            # Original: image, image_embedding = generator.sample(self.base_prompt, full_prompt)
             
             # Calculate image-based aesthetics score
             if self.add_image_score and hasattr(self.scorer_model, 'score_embedding'):

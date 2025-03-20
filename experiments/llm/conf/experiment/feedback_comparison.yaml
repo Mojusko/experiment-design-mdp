@@ -9,6 +9,6 @@ vocabulary:
   - 'vocabulary2/mediums.txt'
   - 'vocabulary2/movements.txt'
   - 'vocabulary2/emotions.txt'
-scorer_model: 'roman-cinematic'
+scorer_model: 'japanese'
 #scorer_model: 'aesthetics'
 
