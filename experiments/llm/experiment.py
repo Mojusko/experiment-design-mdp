@@ -213,6 +213,11 @@ class LLMExperiment:
                 print(f"Using original results directory: {original_dir}")
                 print(f"Saving test results to: {self.results_dir}")
                 os.makedirs(self.results_dir, exist_ok=True)
+            
+                # Update results_dir for all savers
+                for saver in self.savers:
+                    saver.results_dir = self.results_dir
+                    print(f"Updated saver {type(saver).__name__} to use results_dir: {self.results_dir}")
         
         if not self.load_estimator(estimator_path):
             return False
@@ -236,6 +241,12 @@ class LLMExperiment:
         # Set the estimator and visits
         results.set_estimator(self.estimator)
         results.set_visits(self.visits)
+        
+        # Ensure all savers have the correct results_dir
+        for saver in self.savers:
+            if saver.results_dir != self.results_dir:
+                print(f"Updating saver {type(saver).__name__} results_dir from {saver.results_dir} to {self.results_dir}")
+                saver.results_dir = self.results_dir
         
         # Add experiment metadata
         results.add_metadata('horizon', self.cfg.horizon)
