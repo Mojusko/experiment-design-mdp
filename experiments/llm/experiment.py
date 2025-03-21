@@ -80,11 +80,6 @@ class LLMExperiment:
         self.visits = [] if self.cfg.feedback.num_policies == 1 else [[] for _ in range(self.cfg.feedback.num_policies)]
 
     def run(self):
-        # If estimator is None (because we're set up for test-only mode but running normally),
-        # restore the original estimator
-        if self.estimator is None and hasattr(self, '_original_estimator'):
-            self.estimator = self._original_estimator
-            
         total_episodes = self.cfg.experiment.episodes
         est_freq = self.cfg.feedback.adaptive_estimation_frequency
         est_start = self.cfg.feedback.adaptive_estimation_start
@@ -119,6 +114,7 @@ class LLMExperiment:
             self.feedback.collect_labels(self.cfg, all_visits, self._theta_star)
 
         self.feedback.fit_estimator()
+        self.estimator = self.feedback.estimator  # Store the fitted estimator
         self.design.update_estimator(self.estimator, self.env.emissions)
         print(f"Final estimation after all {total_episodes} episodes complete")
         
