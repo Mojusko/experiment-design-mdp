@@ -20,6 +20,7 @@ experiment_id: ""
 # Test-only mode configuration
 test_only: false  # Set to true to run test-only mode
 estimator_path: null  # Path to saved estimator file
+override_results_dir: false  # If true, use results_dir instead of deriving from estimator_path
 tester:
   - _target_: components.tester.PreferenceTester
     params:

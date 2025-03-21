@@ -354,16 +354,67 @@ llm-feedback-comparison-num: $(JOBS_LLM_DSN_NUM) $(JOBS_LLM_RAN_NUM)
 llm-feedback-comparison-mul: $(JOBS_LLM_DSN_MULT) $(JOBS_LLM_RAN_MULT)
 llm-feedback-comparison: llm-feedback-comparison-num llm-feedback-comparison-mul
 
-# Test-only mode for feedback comparison with multinomial feedback
-# Usage: make llm-feedback-comparison-mul-test-only ESTIMATOR_PATH=/path/to/estimator.pt
-JOBS_LLM_DSN_MULT_TEST := $(addprefix job-llm-feedback-dsn-mult-test,$(NUMBERS_LLM))
+# Simple direct test-only commands for submit_euler compatibility
+llm-test-dsn-mult:
+	cd llm && TIMESTAMP=$(TIMESTAMP) OMP_NUM_THREADS=1 MKL_NUM_THREADS=1 $(PYTHONPATH) run_exp.py experiment=feedback_comparison algorithm=design feedback=multinomial experiment_id="test-dsn-mult-1" seed=1 test_only=true estimator_path="$(ESTIMATOR_PATH)" $(if $(RESULTS_DIR),results_dir="$(RESULTS_DIR)" override_results_dir=true,)
 
-$(JOBS_LLM_DSN_MULT_TEST): job-llm-feedback-dsn-mult-test%:
-	cd llm && TIMESTAMP=$(TIMESTAMP) OMP_NUM_THREADS=1 MKL_NUM_THREADS=1 $(PYTHONPATH) run_exp.py experiment=feedback_comparison algorithm=design feedback=multinomial results_dir="results/feedback-comparison-test" experiment_id="test-$*" seed=$* test_only=true estimator_path="$(ESTIMATOR_PATH)"
+llm-test-dsn-num:
+	cd llm && TIMESTAMP=$(TIMESTAMP) OMP_NUM_THREADS=1 MKL_NUM_THREADS=1 $(PYTHONPATH) run_exp.py experiment=feedback_comparison algorithm=design feedback=numerical experiment_id="test-dsn-num-1" seed=1 test_only=true estimator_path="$(ESTIMATOR_PATH)" $(if $(RESULTS_DIR),results_dir="$(RESULTS_DIR)" override_results_dir=true,)
 
-llm-feedback-comparison-mul-test-only: 
+llm-test-ran-mult:
+	cd llm && TIMESTAMP=$(TIMESTAMP) OMP_NUM_THREADS=1 MKL_NUM_THREADS=1 $(PYTHONPATH) run_exp.py experiment=feedback_comparison algorithm=random feedback=multinomial experiment_id="test-ran-mult-1" seed=1 test_only=true estimator_path="$(ESTIMATOR_PATH)" $(if $(RESULTS_DIR),results_dir="$(RESULTS_DIR)" override_results_dir=true,)
+
+llm-test-ran-num:
+	cd llm && TIMESTAMP=$(TIMESTAMP) OMP_NUM_THREADS=1 MKL_NUM_THREADS=1 $(PYTHONPATH) run_exp.py experiment=feedback_comparison algorithm=random feedback=numerical experiment_id="test-ran-num-1" seed=1 test_only=true estimator_path="$(ESTIMATOR_PATH)" $(if $(RESULTS_DIR),results_dir="$(RESULTS_DIR)" override_results_dir=true,)
+
+# Main test-only targets with direct execution (no nested make)
+llm-test-only-design-mult:
 	$(if $(ESTIMATOR_PATH),,$(error ESTIMATOR_PATH is required))
-	$(foreach n,$(NUMBERS_LLM),$(MAKE) job-llm-feedback-dsn-mult-test$(n);)
+	cd llm && TIMESTAMP=$(TIMESTAMP) OMP_NUM_THREADS=1 MKL_NUM_THREADS=1 $(PYTHONPATH) run_exp.py experiment=feedback_comparison algorithm=design feedback=multinomial experiment_id="test-dsn-mult-1" seed=1 test_only=true estimator_path="$(ESTIMATOR_PATH)" $(if $(RESULTS_DIR),results_dir="$(RESULTS_DIR)" override_results_dir=true,)
+
+llm-test-only-design-num:
+	$(if $(ESTIMATOR_PATH),,$(error ESTIMATOR_PATH is required))
+	cd llm && TIMESTAMP=$(TIMESTAMP) OMP_NUM_THREADS=1 MKL_NUM_THREADS=1 $(PYTHONPATH) run_exp.py experiment=feedback_comparison algorithm=design feedback=numerical experiment_id="test-dsn-num-1" seed=1 test_only=true estimator_path="$(ESTIMATOR_PATH)" $(if $(RESULTS_DIR),results_dir="$(RESULTS_DIR)" override_results_dir=true,)
+
+llm-test-only-random-mult:
+	$(if $(ESTIMATOR_PATH),,$(error ESTIMATOR_PATH is required))
+	cd llm && TIMESTAMP=$(TIMESTAMP) OMP_NUM_THREADS=1 MKL_NUM_THREADS=1 $(PYTHONPATH) run_exp.py experiment=feedback_comparison algorithm=random feedback=multinomial experiment_id="test-ran-mult-1" seed=1 test_only=true estimator_path="$(ESTIMATOR_PATH)" $(if $(RESULTS_DIR),results_dir="$(RESULTS_DIR)" override_results_dir=true,)
+
+llm-test-only-random-num:
+	$(if $(ESTIMATOR_PATH),,$(error ESTIMATOR_PATH is required))
+	cd llm && TIMESTAMP=$(TIMESTAMP) OMP_NUM_THREADS=1 MKL_NUM_THREADS=1 $(PYTHONPATH) run_exp.py experiment=feedback_comparison algorithm=random feedback=numerical experiment_id="test-ran-num-1" seed=1 test_only=true estimator_path="$(ESTIMATOR_PATH)" $(if $(RESULTS_DIR),results_dir="$(RESULTS_DIR)" override_results_dir=true,)
+
+# Simple variants with direct execution
+llm-test-only-design:
+	$(if $(ESTIMATOR_PATH),,$(error ESTIMATOR_PATH is required))
+	$(if $(FEEDBACK),\
+		$(if $(findstring multinomial,$(FEEDBACK)),\
+			cd llm && TIMESTAMP=$(TIMESTAMP) OMP_NUM_THREADS=1 MKL_NUM_THREADS=1 $(PYTHONPATH) run_exp.py experiment=feedback_comparison algorithm=design feedback=multinomial experiment_id="test-dsn-1" seed=1 test_only=true estimator_path="$(ESTIMATOR_PATH)" $(if $(RESULTS_DIR),results_dir="$(RESULTS_DIR)" override_results_dir=true,),\
+			cd llm && TIMESTAMP=$(TIMESTAMP) OMP_NUM_THREADS=1 MKL_NUM_THREADS=1 $(PYTHONPATH) run_exp.py experiment=feedback_comparison algorithm=design feedback=numerical experiment_id="test-dsn-1" seed=1 test_only=true estimator_path="$(ESTIMATOR_PATH)" $(if $(RESULTS_DIR),results_dir="$(RESULTS_DIR)" override_results_dir=true,)\
+		),\
+		cd llm && TIMESTAMP=$(TIMESTAMP) OMP_NUM_THREADS=1 MKL_NUM_THREADS=1 $(PYTHONPATH) run_exp.py experiment=feedback_comparison algorithm=design feedback=multinomial experiment_id="test-dsn-1" seed=1 test_only=true estimator_path="$(ESTIMATOR_PATH)" $(if $(RESULTS_DIR),results_dir="$(RESULTS_DIR)" override_results_dir=true,)\
+	)
+
+llm-test-only-random:
+	$(if $(ESTIMATOR_PATH),,$(error ESTIMATOR_PATH is required))
+	$(if $(FEEDBACK),\
+		$(if $(findstring multinomial,$(FEEDBACK)),\
+			cd llm && TIMESTAMP=$(TIMESTAMP) OMP_NUM_THREADS=1 MKL_NUM_THREADS=1 $(PYTHONPATH) run_exp.py experiment=feedback_comparison algorithm=random feedback=multinomial experiment_id="test-ran-1" seed=1 test_only=true estimator_path="$(ESTIMATOR_PATH)" $(if $(RESULTS_DIR),results_dir="$(RESULTS_DIR)" override_results_dir=true,),\
+			cd llm && TIMESTAMP=$(TIMESTAMP) OMP_NUM_THREADS=1 MKL_NUM_THREADS=1 $(PYTHONPATH) run_exp.py experiment=feedback_comparison algorithm=random feedback=numerical experiment_id="test-ran-1" seed=1 test_only=true estimator_path="$(ESTIMATOR_PATH)" $(if $(RESULTS_DIR),results_dir="$(RESULTS_DIR)" override_results_dir=true,)\
+		),\
+		cd llm && TIMESTAMP=$(TIMESTAMP) OMP_NUM_THREADS=1 MKL_NUM_THREADS=1 $(PYTHONPATH) run_exp.py experiment=feedback_comparison algorithm=random feedback=multinomial experiment_id="test-ran-1" seed=1 test_only=true estimator_path="$(ESTIMATOR_PATH)" $(if $(RESULTS_DIR),results_dir="$(RESULTS_DIR)" override_results_dir=true,)\
+	)
+
+# Automatic algorithm detection with direct execution
+llm-test-only:
+	$(if $(ESTIMATOR_PATH),,$(error ESTIMATOR_PATH is required))
+	$(if $(findstring -dsn-,$(ESTIMATOR_PATH)),\
+		cd llm && TIMESTAMP=$(TIMESTAMP) OMP_NUM_THREADS=1 MKL_NUM_THREADS=1 $(PYTHONPATH) run_exp.py experiment=feedback_comparison algorithm=design feedback=multinomial experiment_id="test-auto-1" seed=1 test_only=true estimator_path="$(ESTIMATOR_PATH)" $(if $(RESULTS_DIR),results_dir="$(RESULTS_DIR)" override_results_dir=true,),\
+		$(if $(findstring -rand-,$(ESTIMATOR_PATH)),\
+			cd llm && TIMESTAMP=$(TIMESTAMP) OMP_NUM_THREADS=1 MKL_NUM_THREADS=1 $(PYTHONPATH) run_exp.py experiment=feedback_comparison algorithm=random feedback=multinomial experiment_id="test-auto-1" seed=1 test_only=true estimator_path="$(ESTIMATOR_PATH)" $(if $(RESULTS_DIR),results_dir="$(RESULTS_DIR)" override_results_dir=true,),\
+			cd llm && TIMESTAMP=$(TIMESTAMP) OMP_NUM_THREADS=1 MKL_NUM_THREADS=1 $(PYTHONPATH) run_exp.py experiment=feedback_comparison algorithm=design feedback=multinomial experiment_id="test-auto-1" seed=1 test_only=true estimator_path="$(ESTIMATOR_PATH)" $(if $(RESULTS_DIR),results_dir="$(RESULTS_DIR)" override_results_dir=true,)\
+		)\
+	)
 
 # Test different numbers of rounds for feedback optimization
 ROUNDS_VALUES := 5 10 15 20

@@ -203,6 +203,17 @@ class LLMExperiment:
         Returns:
             True if successful, False otherwise
         """
+        # Use original results directory if not explicitly specified
+        if not self.cfg.get('override_results_dir', False):
+            # Extract original results directory from estimator path
+            original_dir = os.path.dirname(estimator_path)
+            if os.path.exists(original_dir):
+                # Create additional_tests subdirectory
+                self.results_dir = os.path.join(original_dir, "additional_tests")
+                print(f"Using original results directory: {original_dir}")
+                print(f"Saving test results to: {self.results_dir}")
+                os.makedirs(self.results_dir, exist_ok=True)
+        
         if not self.load_estimator(estimator_path):
             return False
             
