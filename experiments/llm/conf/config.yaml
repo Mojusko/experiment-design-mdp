@@ -53,5 +53,5 @@ savers:
       debug_mode: false
       image_size: 512
       num_inference_steps: 100
-      add_image_score: false
+      add_image_score: true
   
