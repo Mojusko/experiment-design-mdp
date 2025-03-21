@@ -2,6 +2,7 @@ import os
 import torch
 import numpy as np
 import datetime
+import sys
 
 import hydra
 from omegaconf import DictConfig
@@ -42,6 +43,9 @@ class LLMExperiment:
         self.env._scorer_vector = self._scorer_model.weight
         self.feedback, self.design, self.estimator = FeedbackFactory.create(cfg, self.env)
         self.explorer = SolverFactory.create(cfg, self.env, self.design, self.feedback)
+        
+        # For test-only mode, initialize estimator to None, will be loaded later
+        self.estimator = None
         
         # Build experiment_id with prefix if available
         experiment_id = str(self.cfg.experiment_id) if self.cfg.experiment_id is not None else ""
@@ -153,6 +157,65 @@ class LLMExperiment:
         self._theta_star = make_theta_star(env, self._scorer_model)
         return env
 
+    def load_estimator(self, estimator_path):
+        """Load a pre-computed estimator from file
+        
+        Args:
+            estimator_path: Path to the saved estimator file
+            
+        Returns:
+            True if estimator loaded successfully, False otherwise
+        """
+        try:
+            print(f"Loading estimator from {estimator_path}")
+            if not os.path.exists(estimator_path):
+                print(f"Error: Estimator file not found at {estimator_path}")
+                return False
+                
+            # Load the theta tensor
+            theta = torch.load(estimator_path)
+            
+            # Ensure theta is on the right device
+            if hasattr(self.env, 'device'):
+                device = self.env.device
+            else:
+                device = torch.device('cuda' if torch.cuda.is_available() else 'cpu')
+            
+            theta = theta.to(device)
+            
+            # Setup feedback components with the loaded theta
+            self.feedback.fit_estimator(preloaded_theta=theta)
+            self.estimator = self.feedback.estimator
+            self.design.update_estimator(self.estimator, self.env.emissions)
+            
+            print(f"Successfully loaded estimator with shape {theta.shape}")
+            return True
+        except Exception as e:
+            print(f"Error loading estimator: {e}")
+            return False
+    
+    def run_test_only(self, estimator_path):
+        """Run only the testing and saving parts with a pre-loaded estimator
+        
+        Args:
+            estimator_path: Path to the saved estimator file
+            
+        Returns:
+            True if successful, False otherwise
+        """
+        if not self.load_estimator(estimator_path):
+            return False
+            
+        print("Running tests with pre-loaded estimator (skipping optimization)")
+        
+        # Empty visits if needed
+        if not hasattr(self, 'visits') or self.visits is None:
+            self.visits = [] if self.cfg.feedback.num_policies == 1 else [[] for _ in range(self.cfg.feedback.num_policies)]
+            
+        # Run tests and save results
+        self.test_and_save()
+        return True
+    
     def test_and_save(self):
         """Final estimation, testing and saving of results"""
         # Create a container for all results

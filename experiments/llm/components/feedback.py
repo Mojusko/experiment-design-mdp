@@ -50,7 +50,23 @@ class NumericalFeedback(BaseFeedback):
         y_torch = torch.vstack(y_list)
         self._collected_data.append((x_torch, y_torch))
 
-    def fit_estimator(self):
+    def fit_estimator(self, preloaded_theta=None):
+        """
+        Fit the estimator with collected data or preloaded theta
+        
+        Args:
+            preloaded_theta: Pre-computed theta parameter to use instead of fitting
+        """
+        if preloaded_theta is not None:
+            # Use preloaded theta directly
+            if hasattr(self.estimator, 'set_theta'):
+                self.estimator.set_theta(preloaded_theta)
+            else:
+                # If the estimator doesn't have set_theta, try to set the attribute
+                self.estimator.theta_fit = preloaded_theta
+                self.estimator.fitted = True
+            return
+            
         if not self._collected_data:
             return
             
@@ -93,7 +109,20 @@ class MultinomialFeedback(BaseFeedback):
 
         self._collected_data.append((trajectory_indices, labels))
 
-    def fit_estimator(self):
+    def fit_estimator(self, preloaded_theta=None):
+        """
+        Fit the estimator with collected data or preloaded theta
+        
+        Args:
+            preloaded_theta: Pre-computed theta parameter to use instead of fitting
+        """
+        if preloaded_theta is not None:
+            # Load emissions first to ensure the estimator has the right dimensions
+            self.estimator.load_data((self.env.emissions.detach().cpu(), torch.zeros(len(self.env.emissions))))
+            # Then use preloaded theta directly
+            self.estimator.fit(preloaded_theta=preloaded_theta)
+            return
+            
         if not self._collected_data:
             return
             

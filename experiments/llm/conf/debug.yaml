@@ -14,6 +14,11 @@ experiment:
 # Results directory for debug mode
 results_dir: "results/debug"
 algorithm: "design"
+
+# Test-only mode configuration
+test_only: false  # Set to true to run test-only mode
+estimator_path: null  # Path to saved estimator file
+
 tester:
   - _target_: components.tester.PreferenceTester
     params:

@@ -36,6 +36,7 @@ class BaseSaver(ABC):
         self.scorer_model = kwargs.get('scorer_model')
         self.results_dir = kwargs.get('results_dir')
         self.experiment_id = kwargs.get('experiment_id')
+        self.skip_existing = kwargs.get('skip_existing', False)
         
     def get_output_path(self, filename=None):
         """Get the output path with experiment_id if provided."""
@@ -54,7 +55,13 @@ class BaseSaver(ABC):
         os.makedirs(self.results_dir, exist_ok=True)
         
         # Return full path
-        return os.path.join(self.results_dir, filename)
+        path = os.path.join(self.results_dir, filename)
+        
+        # Check if file exists and skip_existing is True
+        if self.skip_existing and os.path.exists(path):
+            return None
+            
+        return path
         
     @abstractmethod
     def save_result(self, results):
