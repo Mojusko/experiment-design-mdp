@@ -208,8 +208,18 @@ class LLMExperiment:
             # Extract original results directory from estimator path
             original_dir = os.path.dirname(estimator_path)
             if os.path.exists(original_dir):
-                # Create additional_tests subdirectory
-                self.results_dir = os.path.join(original_dir, "additional_tests")
+                # Create a timestamp-based subdirectory under additional_tests
+                timestamp = os.environ.get('TIMESTAMP', datetime.datetime.now().strftime("%Y-%m-%d-%H-%M"))
+            
+                # Get algorithm and feedback type for directory name
+                algorithm = self._get_algorithm_code()
+                feedback_type = self._get_feedback_code()
+                experiment_id = self.experiment_id or "test"
+            
+                # Create directory structure: original_dir/additional_tests/test-algorithm-feedback-timestamp
+                tests_base_dir = os.path.join(original_dir, "additional_tests")
+                self.results_dir = os.path.join(tests_base_dir, f"test-{algorithm}-{feedback_type}-{timestamp}")
+            
                 print(f"Using original results directory: {original_dir}")
                 print(f"Saving test results to: {self.results_dir}")
                 os.makedirs(self.results_dir, exist_ok=True)
