@@ -270,7 +270,7 @@ class MultiPolicyOrigDesignD(RewardFunctional):
 
         return term1 + term2
 
-    def _calculate_z(self, emissions, distributions, episodes, mask=None):
+    def _calculate_z(self, emissions, distributions, episodes):
         distributions = [d.to(emissions.device) for d in distributions]
         emissions = emissions.type(distributions[0].dtype)
         # Assume emissions has shape (n_actions, d_features)
@@ -288,12 +288,10 @@ class MultiPolicyOrigDesignD(RewardFunctional):
             elif self.dim == 1:
                 d1_h = torch.sum(distributions[0][h], dim=0)  
                 d2_h = torch.sum(distributions[1][h], dim=0)
-                
+
             prob_matrix = self._get_prob_matrix(emissions)
-            if mask is not None and len(prob_matrix) > len(mask):
-                prob_matrix = prob_matrix[mask][:, mask]
             prob_matrix = prob_matrix.type(d1_h.dtype)
-            
+
             diag_terms = self._compute_diagonal_terms(emissions, prob_matrix, d1_h, d2_h)
             cross_terms = self._compute_cross_terms(emissions, prob_matrix, d1_h, d2_h)
             z += time_weight * (diag_terms - cross_terms)
@@ -405,41 +403,5 @@ class MultiPolicyOrigDesignC(MultiPolicyOrigDesignD):
         - float: The evaluation result.
         """
         return self.eval(emissions, distributions, episodes)
-
-def compute_mask(aggregated: torch.Tensor, additional: int) -> torch.Tensor:
-    """
-    Given a 1D tensor `aggregated` (e.g. aggregated action weights),
-    returns a sorted tensor of indices that includes:
-      - all indices where the value is nonzero, and
-      - exactly `additional` indices randomly sampled among the zero entries (if available).
-      
-    If there are fewer than `additional` zero indices, all of them are included.
-    """
-    nonzero_idx = (aggregated != 0).nonzero(as_tuple=True)[0]
-    zero_idx = (aggregated == 0).nonzero(as_tuple=True)[0]
-    
-    if additional > 0 and len(zero_idx) > 0:
-        if additional >= len(zero_idx):
-            sampled_zero_idx = zero_idx
-        else:
-            perm = torch.randperm(len(zero_idx))
-            sampled_zero_idx = zero_idx[perm[:additional]]
-        mask = torch.cat([nonzero_idx, sampled_zero_idx])
-    else:
-        mask = nonzero_idx
-
-    mask, _ = torch.sort(mask)
-    return mask
-
-
-class StochasticMultiPolicyRewardFunctionalMixin:
-    def __init__(self, *args, batch_size: int = None, **kwargs):
-        """
-        batch_size: Number of additional (zero) action indices to include alongside all nonzero indices.
-                    If None, no masking is performed.
-        """
-        super().__init__(*args, **kwargs)
-        self.batch_size = batch_size
-
 
 
