@@ -126,7 +126,8 @@ class ImageGenerationTester(BaseTester):
         self.scorer_model = scorer_model
         self.take_best_worst_N = self.params.get('take_best_worst_N', 8) if self.params else 8
         self.use_estimator = self.params.get('use_estimator', False) if self.params else False
-        super().__init__()
+        # Pass scorer_model to the base class constructor
+        super().__init__(scorer_model=scorer_model, params=params)
         print(f"Initialized {self.__class__.__name__} with take_best_worst_N={self.take_best_worst_N}, "
               f"use_estimator={self.use_estimator}")
         

@@ -244,23 +244,29 @@ def generate_emissions(unique_elements, embedder, cache_dir, verbose=True):
         try:
             with open(cache_path, 'rb') as f:
                 return pickle.load(f)
-        except (pickle.UnpicklingError, EOFError):
+        except (pickle.UnpicklingError, EOFError, RuntimeError):
             if verbose:
                 print("Cache file corrupted, regenerating")
             os.remove(cache_path)
 
-    if verbose:
-        print("PREPROCESS: Generating emissions")
+    print("PREPROCESS: Generating emissions...")
     emissions = []
+    total_elements = len(unique_elements)
+    print_interval = 10  # Print progress every 10 iterations
+
     for i, text in enumerate(unique_elements):
         embed_text = text  # Always embed the text as is
         if verbose:
-            print(f"Generating emission for action {i}, text: {embed_text}")
+            print(f"Embedding text: {embed_text}") # Keep verbose detail if needed
+
         feat = embedder.embed_text(embed_text)
         emissions.append(feat)
 
-    if verbose:
-        print("Done generating.")
+        # Print progress every `print_interval` iterations or on the last iteration
+        if verbose and ((i + 1) % print_interval == 0 or (i + 1) == total_elements):
+            print(f"Generated emission {i + 1}/{total_elements}")
+
+    print("Done generating emissions.")
     emissions = torch.vstack(emissions)
 
     try:
@@ -360,10 +366,39 @@ def get_scorer_model(model_name: str, env, clip_model, clip_processor, cache_dir
     emissions_env = env.emissions
     scorer_embedder = env.embedder
     if model_name == 'japanese':
-        #prompt = f"{env.base_prompt}, roman style, cinematic"
-        prompt = f"An image with clear observable japanese influence, japanese history, japanese traditions or japanese symbols"
-        embedding = scorer_embedder.embed_text(prompt)
-        return DotProductModel(scorer_embedder, embedding).eval()
+        # Comment out previous text-based Japanese model
+        # #prompt = f"{env.base_prompt}, roman style, cinematic"
+        # prompt = f"An image with clear observable japanese influence, japanese history, japanese traditions or japanese symbols"
+        # embedding = scorer_embedder.embed_text(prompt)
+        # return DotProductModel(scorer_embedder, embedding).eval()
+    
+        # Load and embed the japan.jpg image using CLIP
+        from PIL import Image
+        import os
+    
+        # Load the image from the llm directory
+        image_path = 'japan.jpg'
+        if not os.path.exists(image_path):
+            raise FileNotFoundError(f"Image file not found: {image_path}")
+    
+        image = Image.open(image_path)
+    
+        # Process image with CLIP
+        inputs = clip_processor(
+            images=image, 
+            return_tensors="pt"
+        ).to(env.embedder.device)
+    
+        # Get CLIP image features
+        with torch.no_grad():
+            image_embedding = clip_model.get_image_features(**inputs).detach().double()
+            # L2 normalize the embedding
+            image_embedding = image_embedding / torch.norm(image_embedding, p=2)
+            # Make sure it's a 2D tensor with shape [1, embedding_dim]
+            if image_embedding.dim() == 1:
+                image_embedding = image_embedding.view(1, -1)
+    
+        return DotProductModel(scorer_embedder, image_embedding).eval()
 
     if model_name == 'aesthetics':
         aes_weight, aes_bias = load_aesthetics_embedding()
