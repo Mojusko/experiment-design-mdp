@@ -299,7 +299,7 @@ llm-generate-image:
 	cd llm && TIMESTAMP=$(TIMESTAMP) OMP_NUM_THREADS=1 MKL_NUM_THREADS=1 $(PYTHONPATH) image_generator.py --base_prompt '$(BASE_PROMPT)' --full_prompt '$(FULL_PROMPT)' $(if $(OUTPUT_DIR),--output_dir "$(OUTPUT_DIR)",) $(if $(SEED),--seed $(SEED),) $(if $(IMAGE_SIZE),--image_size $(IMAGE_SIZE),) $(if $(NUM_STEPS),--num_inference_steps $(NUM_STEPS),) $(if $(GUIDANCE_BASE),--guidance_base $(GUIDANCE_BASE),) $(if $(GUIDANCE_TOKENS),--guidance_tokens $(GUIDANCE_TOKENS),)
 
 ########################### LLMS
-REPEATS_LLM=1
+REPEATS_LLM=5
 NUMBERS_LLM := $(shell seq 1 ${REPEATS_LLM})
 
 JOBS_LLM_DSN_MULT_V := $(addprefix job-llm-feedback-dsn-mult-v,$(NUMBERS_LLM))
