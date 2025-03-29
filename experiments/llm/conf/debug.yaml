@@ -9,7 +9,7 @@ feedback:
   adaptive_design_frequency: 20
 experiment:
    episodes: 50
-   vocab_size: 200
+   vocab_size: 500
   #scorer_model: "art"
 # Results directory for debug mode
 results_dir: "results/debug"

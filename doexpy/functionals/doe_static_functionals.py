@@ -352,6 +352,8 @@ class MultiPolicyOrigDesignC(MultiPolicyOrigDesignD):
         Returns:
         - float: The C-optimal value (trace or max trace).
         """
+        target_device = inv_z_reg.device  # Get the device of inv_z_reg
+        
         # Handle the case where C is None - use A-optimal criterion (with negative sign)
         if self.C is None:
             return -torch.trace(inv_z_reg)
@@ -359,21 +361,23 @@ class MultiPolicyOrigDesignC(MultiPolicyOrigDesignD):
         # Handle C being a list of vectors
         if isinstance(self.C, list):
             traces = []
-            for C in self.C:
+            for C_item in self.C:
+                C_item_dev = C_item.to(target_device) # Move C_item to the target device
                 # Ensure C has the right shape for matrix multiplication
-                if C.dim() == 2 and C.shape[1] == 1:
-                    C_reshaped = C.T  # Transpose to make it 1xN instead of Nx1
+                if C_item_dev.dim() == 2 and C_item_dev.shape[1] == 1:
+                    C_reshaped = C_item_dev.T  # Transpose to make it 1xN instead of Nx1
                     traces.append(torch.trace(torch.linalg.inv(C_reshaped @ inv_z_reg @ C_reshaped.T)))
                 else:
-                    traces.append(torch.trace(torch.linalg.inv(C @ inv_z_reg @ C.T)))
+                    traces.append(torch.trace(torch.linalg.inv(C_item_dev @ inv_z_reg @ C_item_dev.T)))
             return torch.max(torch.stack(traces))
         
         # Handle C being a single vector
-        if self.C.dim() == 2 and self.C.shape[1] == 1:
-            C_reshaped = self.C.T  # Transpose to make it 1xN instead of Nx1
+        C_dev = self.C.to(target_device) # Move self.C to the target device
+        if C_dev.dim() == 2 and C_dev.shape[1] == 1:
+            C_reshaped = C_dev.T  # Transpose to make it 1xN instead of Nx1
             return torch.trace(torch.linalg.inv(C_reshaped @ inv_z_reg @ C_reshaped.T))
         else:
-            return torch.trace(torch.linalg.inv(self.C @ inv_z_reg @ self.C.T))
+            return torch.trace(torch.linalg.inv(C_dev @ inv_z_reg @ C_dev.T))
 
     def eval(self, emissions, distributions, episodes):
         """
