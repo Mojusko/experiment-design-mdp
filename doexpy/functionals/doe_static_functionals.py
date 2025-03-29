@@ -218,28 +218,17 @@ class MultiPolicyOrigDesignD(RewardFunctional):
         self.dim = dim
 
     def update_estimator(self, estimator, emissions):
-        """Update the estimator and recompute probability matrix."""
+        """Update the estimator and set C to be the parameter vector."""
         self.estimator = estimator
-        # Define the mean method for the estimator
+        theta_fit = estimator.theta_fit  # Direct access to theta_fit
         
-        # Attach the mean method to the estimator object
-        #if not isinstance(self.estimator, RegularizedMultinomialEstimator):
-        #    def mean(x):
-        #        # Assuming estimator is a numpy array/matrix, compute transpose multiplied by x
-        #        return x @ self.estimator[0]
-        #    self.estimator.mean = mean
-        #self._update_probability_matrix(emissions)
-
-        #def _update_probability_matrix(self, emissions):
-        #    """Update pairwise probability matrix based on emissions."""
-        #    logits = self.estimator.mean(emissions)
-        #    logits = logits.to(emissions.device)
-        #    exp_logits = torch.exp(logits)
-        #    exp_logits_i = exp_logits.view(-1, 1)
-        #    exp_logits_j = exp_logits.view(1, -1)
-        #    denominators = exp_logits_i + exp_logits_j
-        #    
-        #    self.prob_matrix = exp_logits_i / denominators
+        # Ensure theta_fit is properly shaped for C-optimal calculations
+        # For C-optimal design, we typically need a row vector (1xN)
+        # If theta_fit is a column vector (Nx1), reshape it to a row vector
+        if theta_fit.dim() == 2 and theta_fit.shape[1] == 1:
+            self.C = theta_fit  # Keep as column vector, we'll transpose when needed
+        else:
+            self.C = theta_fit
 
     def _get_prob_matrix(self, emissions):
         """Return pairwise probability matrix or default to 0.5 on the specified device and dtype."""
@@ -344,15 +333,47 @@ class MultiPolicyOrigDesignC(MultiPolicyOrigDesignD):
         Update the estimator and set C to be the estimator.
         
         Parameters:
-        - estimator: Can be either a vector or RegularizedMultinomialEstimator
+        - estimator: A RegularizedMultinomialEstimator with theta_fit property
         - emissions: The emissions tensor
         """
         # Call parent's update_estimator method
         super().update_estimator(estimator, emissions)
         
-        # Set C to be the estimator directly, no need to extract theta_ml
-        # The RegularizedMultinomialEstimator now supports tensor operations
-        self.C = estimator
+        # Set C directly to the parameter vector - will crash if not available
+        self.C = estimator.theta_fit
+
+    def _compute_c_optimal_value(self, inv_z_reg):
+        """
+        Compute C-optimal design value using the inverse regularized z matrix.
+        
+        Parameters:
+        - inv_z_reg (torch.Tensor): The inverse of the regularized z matrix.
+        
+        Returns:
+        - float: The C-optimal value (trace or max trace).
+        """
+        # Handle the case where C is None - use A-optimal criterion (with negative sign)
+        if self.C is None:
+            return -torch.trace(inv_z_reg)
+            
+        # Handle C being a list of vectors
+        if isinstance(self.C, list):
+            traces = []
+            for C in self.C:
+                # Ensure C has the right shape for matrix multiplication
+                if C.dim() == 2 and C.shape[1] == 1:
+                    C_reshaped = C.T  # Transpose to make it 1xN instead of Nx1
+                    traces.append(torch.trace(torch.linalg.inv(C_reshaped @ inv_z_reg @ C_reshaped.T)))
+                else:
+                    traces.append(torch.trace(torch.linalg.inv(C @ inv_z_reg @ C.T)))
+            return torch.max(torch.stack(traces))
+        
+        # Handle C being a single vector
+        if self.C.dim() == 2 and self.C.shape[1] == 1:
+            C_reshaped = self.C.T  # Transpose to make it 1xN instead of Nx1
+            return torch.trace(torch.linalg.inv(C_reshaped @ inv_z_reg @ C_reshaped.T))
+        else:
+            return torch.trace(torch.linalg.inv(self.C @ inv_z_reg @ self.C.T))
 
     def eval(self, emissions, distributions, episodes):
         """
@@ -372,23 +393,13 @@ class MultiPolicyOrigDesignC(MultiPolicyOrigDesignD):
         # Create an identity matrix matching z's shape and device
         eye = torch.eye(z.shape[0], device=z.device, dtype=z.dtype)
         
-        # Apply horizon*T regularization: z + (lambda / ( Ascertainment of horizon (self.horizon * episodes)
+        # Apply horizon*T regularization: z + (lambda / horizon * episodes)
         z_reg = z + (self.lambd / (self.horizon * episodes)) * eye
         
         # Compute the inverse of the regularized z
         inv_z_reg = torch.linalg.inv(z_reg)
         
-        # If C is None, use identity matrix
-        if self.C is None:
-            return torch.trace(inv_z_reg)
-        # Handle C being either a list or a single tensor
-        elif isinstance(self.C, list):
-            # Compute traces for each C in the list and take the maximum
-            traces = [torch.trace(torch.linalg.inv(C @ inv_z_reg @ C.T)) for C in self.C]
-            return torch.max(torch.stack(traces))
-        else:
-            # Compute trace for single C
-            return torch.trace(torch.linalg.inv(self.C @ inv_z_reg @ self.C.T))
+        return self._compute_c_optimal_value(inv_z_reg)
 
     def eval_full(self, emissions, distributions, episodes):
         """

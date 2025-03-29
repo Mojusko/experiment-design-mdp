@@ -79,6 +79,14 @@ class LLMExperiment:
         ]
         self.visits = [] if self.cfg.feedback.num_policies == 1 else [[] for _ in range(self.cfg.feedback.num_policies)]
 
+    def calculate_cosine_error(self, est_weight, gt_weight):
+        """Calculate cosine error between two weight vectors"""
+        est_weight = est_weight.cpu()
+        gt_weight = gt_weight.cpu()
+        # Compute cosine similarity and convert it to an error metric
+        cos_sim = torch.nn.functional.cosine_similarity(est_weight.flatten(), gt_weight.flatten(), dim=0)
+        return 1 - cos_sim.item()
+    
     def run(self):
         total_episodes = self.cfg.experiment.episodes
         est_freq = self.cfg.feedback.adaptive_estimation_frequency
@@ -96,8 +104,15 @@ class LLMExperiment:
             if est_freq > 0 and ep_idx < total_episodes - 1 and ep_idx >= est_start and ep_idx % est_freq == 0:
                 self.feedback.collect_labels(self.cfg, recent_visits_buffer, self._theta_star)
                 self.feedback.fit_estimator()
+                self.estimator = self.feedback.estimator  # Store the updated estimator
                 self.design.update_estimator(self.estimator, self.env.emissions)
-                print(f"Episode {ep_idx} partial re-fit complete")
+                
+                # Calculate and print cosine error
+                est_weight = self.estimator.theta_fit
+                gt_weight = self._scorer_model.weight
+                error = self.calculate_cosine_error(est_weight, gt_weight)
+                print(f"Episode {ep_idx} partial re-fit complete. Cosine error: {error:.4f}")
+                
                 for p_i in range(num_policies):
                     recent_visits_buffer[p_i].clear()
 
@@ -116,7 +131,12 @@ class LLMExperiment:
         self.feedback.fit_estimator()
         self.estimator = self.feedback.estimator  # Store the fitted estimator
         self.design.update_estimator(self.estimator, self.env.emissions)
-        print(f"Final estimation after all {total_episodes} episodes complete")
+        
+        # Calculate and print final cosine error
+        est_weight = self.estimator.theta_fit
+        gt_weight = self._scorer_model.weight
+        error = self.calculate_cosine_error(est_weight, gt_weight)
+        print(f"Final estimation after all {total_episodes} episodes complete. Cosine error: {error:.4f}")
         
     def _init_env(self):
         """

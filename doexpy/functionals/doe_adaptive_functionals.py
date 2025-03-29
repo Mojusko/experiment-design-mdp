@@ -357,7 +357,6 @@ class AdaptiveOrigDesignC(MultiPolicyOrigDesignC):
                 agg_densities[i] = agg_densities[i].diagonal(dim1=0, dim2=1).T
         
         alpha = len(visitations_per_policy[0]) / episodes
-        print(alpha)
         
         # Calculate information matrices
         new_z = super()._calculate_z(emissions, distributions, episodes)
@@ -376,17 +375,8 @@ class AdaptiveOrigDesignC(MultiPolicyOrigDesignC):
         # Compute inverse of regularized z
         inv_z_reg = torch.linalg.inv(z_reg)
         
-        # If C is None, use identity matrix
-        if self.C is None:
-            return torch.trace(inv_z_reg)
-        # Handle C being either a list or a single tensor
-        elif isinstance(self.C, list):
-            # Compute traces for each C in the list and take the maximum
-            traces = [torch.trace(torch.linalg.inv(C @ inv_z_reg @ C.T)) for C in self.C]
-            return torch.max(torch.stack(traces))
-        else:
-            # Compute trace for single C
-            return torch.trace(torch.linalg.inv(self.C @ inv_z_reg @ self.C.T))
+        # Use parent class method to compute C-optimal value
+        return super()._compute_c_optimal_value(inv_z_reg)
 
     def eval_full(self, emissions, distributions, episodes):
         # For final evaluation - directly use the provided distributions
@@ -395,11 +385,6 @@ class AdaptiveOrigDesignC(MultiPolicyOrigDesignC):
         z_reg = z + self.lambd/(self.horizon*episodes) * eye
         inv_z_reg = torch.linalg.inv(z_reg)
         
-        if self.C is None:
-            return torch.trace(inv_z_reg)
-        elif isinstance(self.C, list):
-            traces = [torch.trace(torch.linalg.inv(C @ inv_z_reg @ C.T)) for C in self.C]
-            return torch.max(torch.stack(traces))
-        else:
-            return torch.trace(torch.linalg.inv(self.C @ inv_z_reg @ self.C.T))
+        # Use parent class method to compute C-optimal value
+        return super()._compute_c_optimal_value(inv_z_reg)
 

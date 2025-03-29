@@ -1,12 +1,11 @@
 name: "multinomial"
 num_policies: 2
 num_components: 3
-#num_rounds: 8
-num_rounds: 3
+num_rounds: 5
+#num_rounds: 3
 #lambda_reg: 4000 best for static design [need to revalidate]
-#lambda_reg: 25
 lambda_reg: 25
-adaptive_estimation_frequency: 0
+adaptive_estimation_frequency: 50
 adaptive_estimation_start: 0
-adaptive_design_frequency: 25
+adaptive_design_frequency: 50
 pass_V: false

@@ -4,12 +4,12 @@ defaults:
 feedback:
   num_rounds: 2
   num_components: 3
-  adaptive_estimation_frequency: 0
+  adaptive_estimation_frequency: 20
   adaptive_estimation_start: 0
-  adaptive_design_frequency: 0
+  adaptive_design_frequency: 20
 experiment:
    episodes: 50
-   vocab_size: 500
+   vocab_size: 200
   #scorer_model: "art"
 # Results directory for debug mode
 results_dir: "results/debug"
