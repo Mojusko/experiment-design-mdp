@@ -8,4 +8,4 @@ lambda_reg: 5
 adaptive_estimation_frequency: 20
 adaptive_estimation_start: 80
 adaptive_design_frequency: 20
-pass_V: false
+pass_V: true
