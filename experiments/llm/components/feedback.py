@@ -171,10 +171,10 @@ class FeedbackFactory:
             else:
                 V=None
             if cfg.feedback.adaptive_design_frequency > 0:
-                #design = AdaptiveOrigDesignA(env=env, lambd=cfg.feedback.lambda_reg, dim=1, V=V)
+                design = AdaptiveOrigDesignA(env=env, lambd=cfg.feedback.lambda_reg, dim=1, V=V)
                 #design = AdaptiveOrigDesignD(env=env, lambd=cfg.feedback.lambda_reg, dim=1) 
 
-                design = AdaptiveOrigDesignC(env=env, lambd=cfg.feedback.lambda_reg, dim=1) 
+                #design = AdaptiveOrigDesignC(env=env, lambd=cfg.feedback.lambda_reg, dim=1) 
             else:
                 design = MultiPolicyOrigDesignA(env=env, lambd=cfg.feedback.lambda_reg, dim=1,V=V)
                 #design = MultiPolicyOrigDesignC(env=env, lambd=cfg.feedback.lambda_reg, dim=1, C=env._scorer_vector)

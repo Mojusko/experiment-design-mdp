@@ -4,8 +4,8 @@ num_components: 3
 num_rounds: 5
 #num_rounds: 3
 #lambda_reg: 4000 best for static design [need to revalidate]
-lambda_reg: 10
-adaptive_estimation_frequency: 50
-adaptive_estimation_start: 50
-adaptive_design_frequency: 50
+lambda_reg: 5
+adaptive_estimation_frequency: 20
+adaptive_estimation_start: 100
+adaptive_design_frequency: 20
 pass_V: false
