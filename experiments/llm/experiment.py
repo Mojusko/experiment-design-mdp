@@ -41,7 +41,7 @@ class LLMExperiment:
         self.training_words, self.testing_words, self.model_words = self._load_data()
         self.env = self._init_env()
         self.env._scorer_vector = self._scorer_model.weight
-        self.feedback, self.design, self.estimator = FeedbackFactory.create(cfg, self.env, self._clip_model, self._clip_tokenizer)
+        self.feedback, self.design, self.estimator = FeedbackFactory.create(cfg, self.env)
         self.explorer = SolverFactory.create(cfg, self.env, self.design, self.feedback)
         
         # For test-only mode, initialize estimator to None, will be loaded later

@@ -16,7 +16,6 @@ from stpy.regression.regularized_dictionary.regularized_multinomial_estimator im
 from stpy.probability.multinomial_likelihood import MultinomialLikelihood
 from stpy.regularization.regularizer import L2Regularizer
 from abc import abstractmethod
-from doexpy.env.llm import CLIPEmbedder
 
 class BaseFeedback:
     def __init__(self, env, design, estimator):
@@ -140,13 +139,9 @@ class FeedbackFactory:
     Decides which feedback type to build + design + estimator for numerical or multinomial.
     """
     @staticmethod
-    def create(cfg, env, clip_model, clip_tokenizer):
+    def create(cfg, env):
         m = 768
         embedding = CustomEmbedding(m, lambda x: x, m)
-
-        # Embed the base prompt using CLIP
-        clip_embedder = CLIPEmbedder(clip_tokenizer, clip_model)
-        base_prompt_embedding = clip_embedder.embed_text(cfg.base_prompt)
 
         # Decide which feedback type
         if cfg.feedback.name == 'numerical':
@@ -179,15 +174,11 @@ class FeedbackFactory:
                 #design = AdaptiveOrigDesignA(env=env, lambd=cfg.feedback.lambda_reg, dim=1, V=V)
                 #design = AdaptiveOrigDesignD(env=env, lambd=cfg.feedback.lambda_reg, dim=1) 
 
-                # Use base prompt embedding for C instead of ground truth scorer vector
-                # design = AdaptiveOrigDesignC(env=env, lambd=cfg.feedback.lambda_reg, dim=1, C=env._scorer_vector) 
-                design = AdaptiveOrigDesignC(env=env, lambd=cfg.feedback.lambda_reg, dim=1, C=base_prompt_embedding)
+                design = AdaptiveOrigDesignC(env=env, lambd=cfg.feedback.lambda_reg, dim=1, C=env._scorer_vector) 
             else:
-                #design = MultiPolicyOrigDesignA(env=env, lambd=cfg.feedback.lambda_reg, dim=1,V=V)
-                # Use base prompt embedding for C instead of ground truth scorer vector (commented out)
-                # design = MultiPolicyOrigDesignC(env=env, lambd=cfg.feedback.lambda_reg, dim=1, C=env._scorer_vector)
-                design = MultiPolicyOrigDesignC(env=env, lambd=cfg.feedback.lambda_reg, dim=1, C=base_prompt_embedding)
-                # design.update_estimator(env._scorer_vector, env.emissions.detach()) # This line might need adjustment depending on whether C should be static or updated
+                design = MultiPolicyOrigDesignA(env=env, lambd=cfg.feedback.lambda_reg, dim=1,V=V)
+                #design = MultiPolicyOrigDesignC(env=env, lambd=cfg.feedback.lambda_reg, dim=1, C=env._scorer_vector)
+                #design.update_estimator(env._scorer_vector, env.emissions.detach())
 
             likelihood = MultinomialLikelihood()
             regularizer = L2Regularizer(lam=cfg.feedback.lambda_reg)
