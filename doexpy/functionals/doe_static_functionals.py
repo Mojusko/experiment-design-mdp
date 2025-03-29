@@ -338,9 +338,21 @@ class MultiPolicyOrigDesignC(MultiPolicyOrigDesignD):
         """
         # Call parent's update_estimator method
         super().update_estimator(estimator, emissions)
-        
-        # Set C directly to the parameter vector - will crash if not available
-        self.C = estimator.theta_fit
+
+        # Get the fitted parameter vector
+        theta_fit = estimator.theta_fit
+
+        # Normalize the parameter vector before using it as C
+        norm = torch.linalg.norm(theta_fit)
+        if norm > 1e-9: # Avoid division by zero or near-zero
+            self.C = theta_fit / norm
+        else:
+            # Handle zero vector case (e.g., keep it as None or a zero vector)
+            # Setting to None reverts to A-optimality if the fit is zero.
+            print("Warning: Estimator theta_fit has near-zero norm. Reverting to A-optimality for this step.")
+            self.C = None 
+            # Alternatively, could set self.C = torch.zeros_like(theta_fit) 
+            # but that might cause issues in the inverse calculation later.
 
     def _compute_c_optimal_value(self, inv_z_reg):
         """
@@ -354,10 +366,10 @@ class MultiPolicyOrigDesignC(MultiPolicyOrigDesignD):
         """
         target_device = inv_z_reg.device  # Get the device of inv_z_reg
         
-        # Handle the case where C is None - use A-optimal criterion (with negative sign)
+        # Handle the case where C is None - use A-optimal criterion (maximize negative trace)
         if self.C is None:
-            return -torch.trace(inv_z_reg)
-            
+            return -torch.trace(inv_z_reg) # Added negative sign back
+
         # Handle C being a list of vectors
         if isinstance(self.C, list):
             traces = []
