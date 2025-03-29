@@ -5,8 +5,10 @@ import torch
 import matplotlib.pyplot as plt
 from PIL import Image
 from abc import ABC, abstractmethod
-from experiments.llm.image_generator import StableDiffusionGenerator, DoubleGuidanceStableDiffusionGenerator
-from doexpy.env.llm import create_prompt_from_tokens
+# Removed top-level import causing circular dependency
+# from experiments.llm.image_generator import StableDiffusionGenerator, DoubleGuidanceStableDiffusionGenerator, _get_seed_from_prompt
+# Removed unused import causing circular dependency
+# from doexpy.env.llm import create_prompt_from_tokens
 import hashlib
 import types
 
@@ -203,7 +205,10 @@ class ImageGenerationSaver(BaseSaver):
         if self.experiment_id:
             images_dir = os.path.join(images_dir, self.experiment_id)
             os.makedirs(images_dir, exist_ok=True)
-        
+
+        # Import generator classes and seed function locally to avoid circular import
+        from experiments.llm.image_generator import StableDiffusionGenerator, DoubleGuidanceStableDiffusionGenerator, _get_seed_from_prompt
+
         # Initialize image generator with debug settings if needed
         generator = StableDiffusionGenerator(
         #generator = DoubleGuidanceStableDiffusionGenerator(
@@ -389,10 +394,4 @@ class VisitsSaver(BaseSaver):
                 print(f"Saved converted visits to {file_path}")
             except Exception as e2:
                 print(f"Failed to save visits: {e2}")
-
-def _get_seed_from_prompt(prompt: str) -> int:
-    # Compute SHA-256 hash of the prompt and convert to an integer.
-    hash_digest = hashlib.sha256(prompt.encode('utf-8')).hexdigest()
-    # Convert the hex digest to an integer and constrain it to 32 bits
-    return int(hash_digest, 16) % (2**32)
         

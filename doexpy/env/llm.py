@@ -7,6 +7,8 @@ import os
 import hashlib
 import pickle
 import numpy as np
+import torch # Added for prior generation
+from experiments.llm.image_generator import StableDiffusionGenerator, DEFAULT_CONFIG as IMAGE_GEN_DEFAULT_CONFIG # Added for prior generation
 
 
 class LLMGrid(DiscreteEnv):
@@ -21,10 +23,13 @@ class LLMGrid(DiscreteEnv):
         base_prompt: str = '',
         verbose: bool = False,
         include_base_prompt_in_first_tokens: bool = True,
+        prior_prompt: str = None, # Added parameter for prior generation
+        image_gen_config: dict = None, # Added parameter for image gen settings
     ):
         self.verbose = verbose
         self.constrained = False
         super().__init__(init_state=0)
+        self._prior_vector = None # Initialize prior vector
 
         self.device = next(model.parameters()).device
         self.embedder = CLIPEmbedder(tokenizer, model, normalize=normalize_embedder)
@@ -70,6 +75,50 @@ class LLMGrid(DiscreteEnv):
         self.emissions = generate_emissions(self.unique_elements, self.embedder, self.cache_dir, self.verbose)
         self.action_space = self.emissions
         self.visitations = torch.zeros(self.states_num, self.actions_num, dtype=torch.float64).to(self.device)
+
+        # Generate prior vector from image if prior_prompt is provided
+        if prior_prompt:
+            if verbose:
+                print(f"LLMGrid: Generating prior image embedding for C-optimal design using prompt: '{prior_prompt}'")
+
+            # Determine image generation settings based on debug mode in config
+            gen_config = image_gen_config or {}
+            is_debug = gen_config.get('debug_mode', False)
+
+            if is_debug:
+                if verbose:
+                    print("LLMGrid: Using DEBUG settings for prior image generation.")
+                num_steps = gen_config.get('num_inference_steps', 20) # Default debug steps
+                img_size = gen_config.get('image_size', 32) # Default debug size
+            else:
+                if verbose:
+                    print("LLMGrid: Using DEFAULT settings for prior image generation.")
+                num_steps = IMAGE_GEN_DEFAULT_CONFIG["num_inference_steps"]
+                img_size = IMAGE_GEN_DEFAULT_CONFIG["image_size"]
+
+            # Use determined settings for the generator
+            prior_generator = StableDiffusionGenerator(
+                stable_diffusion_id=IMAGE_GEN_DEFAULT_CONFIG["stable_diffusion_id"],
+                num_inference_steps=num_steps,
+                guidance_scale=IMAGE_GEN_DEFAULT_CONFIG["guidance_base"], # Keep default guidance
+                image_size=img_size,
+                # Seed is derived from the prompt internally by the generator
+                MODELS_CACHE_DIR=self.cache_dir # Use environment's cache dir
+            )
+            _, prior_image_embedding = prior_generator.sample(prior_prompt)
+
+            # Normalize the prior embedding (L2 normalization)
+            prior_image_embedding_norm = prior_image_embedding / torch.norm(prior_image_embedding, p=2)
+
+            # Store the normalized prior embedding in the environment
+            # Ensure it's on the correct device and dtype
+            self._prior_vector = prior_image_embedding_norm.to(self.device).to(self.emissions.dtype).unsqueeze(0) # Ensure shape [1, dim]
+            if verbose:
+                print(f"LLMGrid: Stored prior vector with shape: {self._prior_vector.shape}")
+
+    def get_prior_vector(self):
+        """Returns the generated prior vector, if available."""
+        return self._prior_vector
 
     def get_dim(self):
         return 768

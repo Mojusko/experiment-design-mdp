@@ -176,9 +176,11 @@ class FeedbackFactory:
 
                 #design = AdaptiveOrigDesignC(env=env, lambd=cfg.feedback.lambda_reg, dim=1) 
             else:
-                design = MultiPolicyOrigDesignA(env=env, lambd=cfg.feedback.lambda_reg, dim=1,V=V)
-                #design = MultiPolicyOrigDesignC(env=env, lambd=cfg.feedback.lambda_reg, dim=1, C=env._scorer_vector)
-                #design.update_estimator(env._scorer_vector, env.emissions.detach())
+                #design = MultiPolicyOrigDesignA(env=env, lambd=cfg.feedback.lambda_reg, dim=1,V=V)
+                # Use the pre-generated prior vector (assuming it exists when design='C')
+                initial_C = env._prior_vector
+                design = MultiPolicyOrigDesignC(env=env, lambd=cfg.feedback.lambda_reg, dim=1, C=initial_C)
+                    #design.update_estimator(env._scorer_vector, env.emissions.detach())
 
             likelihood = MultinomialLikelihood()
             regularizer = L2Regularizer(lam=cfg.feedback.lambda_reg)

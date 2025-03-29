@@ -10,7 +10,15 @@ import torch
 from diffusers import AutoencoderKL, LMSDiscreteScheduler, UNet2DConditionModel
 from transformers import CLIPTextModel, CLIPTokenizer, CLIPModel, CLIPProcessor
 
+import hashlib # Added for seed generation
+
 logger = logging.getLogger(__name__)
+
+def _get_seed_from_prompt(prompt: str) -> int:
+    # Compute SHA-256 hash of the prompt and convert to an integer.
+    hash_digest = hashlib.sha256(prompt.encode('utf-8')).hexdigest()
+    # Convert the hex digest to an integer and constrain it to 32 bits
+    return int(hash_digest, 16) % (2**32)
 
 ### Original Class: StableDiffusionGenerator
 class StableDiffusionGenerator():
@@ -118,7 +126,8 @@ class StableDiffusionGenerator():
         Returns:
             Union[np.ndarray, Tuple[np.ndarray, torch.Tensor]]: Generated image(s) and text embeddings
         """
-
+        # Set seed based on the prompt for deterministic generation
+        self.seed = _get_seed_from_prompt(prompt)
         self.seed_generator()
 
         if self.latents is None:
@@ -303,7 +312,8 @@ class DoubleGuidanceStableDiffusionGenerator():
         Returns:
             Union[np.ndarray, Tuple[np.ndarray, torch.Tensor]]: Generated image(s) and text embeddings.
         """
-
+        # Set seed based on the full prompt for deterministic generation
+        self.seed = _get_seed_from_prompt(full_prompt)
         self.seed_generator()
         if self.latents is None:
             self.resample_random()
@@ -392,7 +402,7 @@ DEFAULT_CONFIG = {
     "stable_diffusion_id": "CompVis/stable-diffusion-v1-4",
     "num_inference_steps": 100,
     "guidance_base": 8.0,
-    "guidance_tokens": 4.0,
+#    "guidance_tokens": 4.0,
     "image_size": 512,
     "seed": 0,
     "MODELS_CACHE_DIR": os.path.expanduser("~/.cache/huggingface/hub"),
@@ -409,7 +419,7 @@ if __name__ == "__main__":
     parser.add_argument("--image_size", type=int, default=DEFAULT_CONFIG["image_size"], help=f"Size of the generated image (default: {DEFAULT_CONFIG['image_size']})")
     parser.add_argument("--num_inference_steps", type=int, default=DEFAULT_CONFIG["num_inference_steps"], help=f"Number of inference steps (default: {DEFAULT_CONFIG['num_inference_steps']})")
     parser.add_argument("--guidance_base", type=float, default=DEFAULT_CONFIG["guidance_base"], help=f"Guidance scale for base prompt (default: {DEFAULT_CONFIG['guidance_base']})")
-    parser.add_argument("--guidance_tokens", type=float, default=DEFAULT_CONFIG["guidance_tokens"], help=f"Guidance scale for full prompt tokens (default: {DEFAULT_CONFIG['guidance_tokens']})")
+    #parser.add_argument("--guidance_tokens", type=float, default=DEFAULT_CONFIG["guidance_tokens"], help=f"Guidance scale for full prompt tokens (default: {DEFAULT_CONFIG['guidance_tokens']})")
 
     args = parser.parse_args()
 
@@ -430,7 +440,7 @@ if __name__ == "__main__":
         num_inference_steps=args.num_inference_steps,
         guidance_scale=args.guidance_base,
         image_size=args.image_size,
-        seed=args.seed,
+        # Seed is now derived from the prompt internally by the generator
         MODELS_CACHE_DIR=DEFAULT_CONFIG["MODELS_CACHE_DIR"]
     )
 

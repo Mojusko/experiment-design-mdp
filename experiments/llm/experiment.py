@@ -11,6 +11,10 @@ from stpy.helpers.helper import cartesian  # We'll use in _make_token_lists
 from doexpy.env.llm import (
     LLMGrid, setup_clip_model, get_scorer_model, make_theta_star, CLIPEmbedder, generate_emissions
 )
+from doexpy.env.llm import (
+    LLMGrid, setup_clip_model, get_scorer_model, make_theta_star, CLIPEmbedder, generate_emissions
+)
+# Removed image generator imports, now handled in LLMGrid
 from components.feedback import FeedbackFactory
 from components.solver  import SolverFactory
 from components.tester  import BaseTester, ImageGenerationTester
@@ -164,8 +168,32 @@ class LLMExperiment:
             # Use the horizon-specific token lists
             token_lists = self.training_words
 
-        # Build environment
-        env = LLMGrid(token_lists, self._clip_model, self._clip_processor, self._clip_tokenizer, self.cfg.cache_dir, self.cfg.normalize_CLIP, base_prompt=self.cfg.base_prompt, include_base_prompt_in_first_tokens=self.cfg.include_base_prompt_in_first_tokens, verbose=self.cfg.verbose)
+        # Determine prior prompt based on config
+        prior_prompt_str = None
+        if self.cfg.experiment.scorer_model == 'japanese':
+            prior_prompt_str = "An image with clear observable japanese influence, japanese history, japanese traditions or japanese symbols"
+
+        # Find ImageGenerationSaver config to pass debug settings
+        image_gen_saver_config = {}
+        for saver_cfg in self.cfg.savers:
+            if saver_cfg._target_.endswith('ImageGenerationSaver'):
+                image_gen_saver_config = saver_cfg.get('params', {})
+                break
+
+        # Build environment, passing the prior prompt and image gen config
+        env = LLMGrid(
+            token_lists,
+            self._clip_model,
+            self._clip_processor,
+            self._clip_tokenizer,
+            self.cfg.cache_dir,
+            self.cfg.normalize_CLIP,
+            base_prompt=self.cfg.base_prompt,
+            include_base_prompt_in_first_tokens=self.cfg.include_base_prompt_in_first_tokens,
+            verbose=self.cfg.verbose,
+            prior_prompt=prior_prompt_str, # Pass the prior prompt string
+            image_gen_config=image_gen_saver_config # Pass image gen settings
+        )
 
         # Build scorer using model emissions with non-normalized embedder
         self._scorer_model = get_scorer_model(
@@ -176,6 +204,22 @@ class LLMExperiment:
             self.cfg.cache_dir,
         )
         self._theta_star = make_theta_star(env, self._scorer_model)
+
+        # Prior vector (_prior_vector) is handled within LLMGrid initialization.
+        # Calculate and print similarity between prior and GT scorer if prior exists.
+        generated_prior_vector = env.get_prior_vector()
+        if generated_prior_vector is not None:
+            gt_vector = self._scorer_model.weight.data # Ground truth vector
+            # Ensure both are on the same device and dtype for comparison
+            prior_vec = generated_prior_vector.to(gt_vector.device, dtype=gt_vector.dtype)
+
+            # Calculate cosine similarity
+            cos_sim = torch.nn.functional.cosine_similarity(prior_vec.flatten(), gt_vector.flatten(), dim=0)
+            print(f"Cosine similarity between generated prior image embedding and GT scorer: {cos_sim.item():.4f}")
+        elif self.cfg.experiment.scorer_model == 'japanese' and self.cfg.feedback.design == 'C':
+             print("Warning: Prior vector was expected but not generated in LLMGrid.")
+
+
         return env
 
     def load_estimator(self, estimator_path):
