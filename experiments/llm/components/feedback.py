@@ -140,12 +140,12 @@ class FeedbackFactory:
     Decides which feedback type to build + design + estimator for numerical or multinomial.
     """
     @staticmethod
-    def create(cfg, env):
+    def create(cfg, env, clip_model, clip_tokenizer):
         m = 768
         embedding = CustomEmbedding(m, lambda x: x, m)
 
         # Embed the base prompt using CLIP
-        clip_embedder = CLIPEmbedder(env._tokenizer, env._model)
+        clip_embedder = CLIPEmbedder(clip_tokenizer, clip_model)
         base_prompt_embedding = clip_embedder.embed_text(cfg.base_prompt)
 
         # Decide which feedback type
