@@ -6,7 +6,7 @@ lambda_reg: 100 # Default lambda, used if use_model_specific_lambda is false
 use_model_specific_lambda: true # Set to false to use the lambda_reg above
 adaptive_estimation_frequency: 0 
 adaptive_estimation_start: 0
-adaptive_design_frequency: 50 
+adaptive_design_frequency: 25 
 #adaptive_design_frequency: 0 
 pass_V: true
 

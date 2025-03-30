@@ -468,8 +468,8 @@ class MdpExploreMultiPolicy:
             # Evaluate exactly 1 episode for each policy
             # 'keep=True' means we keep the trajectories for callback processing
             self.evaluate(episodes=1, keep=True)
-    
-                        # Optionally save trajectory
+
+            # Optionally save trajectory
             if save_trajectory is not None:
                 for policy_idx in range(self.num_policies):
                     np.savetxt(
