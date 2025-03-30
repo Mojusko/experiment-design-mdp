@@ -196,9 +196,9 @@ class FeedbackFactory:
                 # design = AdaptiveOrigDesignD(env=env, lambd=cfg.feedback.lambda_reg, dim=1)
             else:
                 # Static designs
-                # design = MultiPolicyOrigDesignA(env=env, lambd=cfg.feedback.lambda_reg, dim=1,V=V)
+                design = MultiPolicyOrigDesignA(env=env, lambd=cfg.feedback.lambda_reg, dim=1,V=V)
                 # The MultiPolicyOrigDesignC constructor will raise ValueError if initial_C is None.
-                design = MultiPolicyOrigDesignC(env=env, lambd=cfg.feedback.lambda_reg, dim=1, C=initial_C)
+                #design = MultiPolicyOrigDesignC(env=env, lambd=cfg.feedback.lambda_reg, dim=1, C=initial_C)
 
             likelihood = MultinomialLikelihood()
             regularizer = L2Regularizer(lam=cfg.feedback.lambda_reg)
