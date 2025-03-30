@@ -454,7 +454,7 @@ JOBS_LLM_LAMBDA_NUM := \
 # Macros to define each job type
 define lambda_job_template_mul
 job-llm-lambda-mul-$(1)-$(2):
-	cd llm && TIMESTAMP=$(TIMESTAMP) OMP_NUM_THREADS=1 MKL_NUM_THREADS=1 $(PYTHONPATH) run_exp.py experiment=lambda_finding feedback=multinomial algorithm=design feedback.lambda_reg=$(1) seed=$(2) results_dir="results/lambda-finding" experiment_id="mul-$(1)-$(2)"
+	cd llm && TIMESTAMP=$(TIMESTAMP) OMP_NUM_THREADS=1 MKL_NUM_THREADS=1 $(PYTHONPATH) run_exp.py experiment=lambda_finding feedback=multinomial algorithm=design feedback.lambda_reg=$(1) feedback.use_model_specific_lambda=false seed=$(2) results_dir="results/lambda-finding" experiment_id="mul-$(1)-$(2)"
 endef
 
 define lambda_job_template_num

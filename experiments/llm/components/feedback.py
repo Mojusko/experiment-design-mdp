@@ -151,12 +151,21 @@ class FeedbackFactory:
         m = 768
         embedding = CustomEmbedding(m, lambda x: x, m)
 
-        # Determine lambda_reg based on scorer_model from experiment config, using params from feedback config
-        scorer_model_name = cfg.experiment.scorer_model
-        # Read model_specific_params from the feedback config (e.g., multinomial.yaml)
-        model_params = cfg.feedback.model_specific_params.get(scorer_model_name, cfg.feedback.model_specific_params.default)
-        lambda_reg = model_params.lambda_reg
-        print(f"Using lambda_reg = {lambda_reg} for scorer_model = {scorer_model_name} (from feedback config)")
+        # Determine lambda_reg based on the configuration strategy
+        if cfg.feedback.name == 'multinomial' and cfg.feedback.use_model_specific_lambda:
+            # Use model-specific lambda from the dictionary
+            scorer_model_name = cfg.experiment.scorer_model
+            model_params = cfg.feedback.model_specific_params.get(scorer_model_name, cfg.feedback.model_specific_params.default)
+            lambda_reg = model_params.lambda_reg
+            print(f"Using model-specific lambda_reg = {lambda_reg} for scorer_model = {scorer_model_name}")
+        else:
+            # Use the general lambda_reg (either for numerical or if flag is false for multinomial)
+            # Ensure lambda_reg exists in the feedback config
+            if not hasattr(cfg.feedback, 'lambda_reg'):
+                 raise ValueError(f"lambda_reg not found in feedback config '{cfg.feedback.name}' and use_model_specific_lambda is false or feedback is not multinomial.")
+            lambda_reg = cfg.feedback.lambda_reg
+            print(f"Using general lambda_reg = {lambda_reg} (numerical feedback or use_model_specific_lambda=false)")
+
 
         # Decide which feedback type
         if cfg.feedback.name == 'numerical':
