@@ -30,6 +30,9 @@ from typing import Union
 
 from doexpy.convex_solvers.convex_solvers_base import ConvexSolverBase
 
+# Import sys to use sys.stdout.flush() if needed, though flush=True is preferred for Python 3.3+
+import sys 
+
 class FrankWolfe(ConvexSolverBase):
     def __init__(self, env,
                  objective,
@@ -215,12 +218,14 @@ class FrankWolfe(ConvexSolverBase):
                 empirical_gap = torch.minimum((reward * (new_density - density)).sum(), empirical_gap)
 
                 if self.verbosity > 0:
-                    print(f'component: {counter}, gap: {empirical_gap}, objective: {objective}, stepsize: {step_size}, gradient:{la.norm(reward)}, hess_max:{hess_max}, hess_min:{hess_min}')
+                    # Added flush=True
+                    print(f'component: {counter}, gap: {empirical_gap}, objective: {objective}, stepsize: {step_size}, gradient:{la.norm(reward)}, hess_max:{hess_max}, hess_min:{hess_min}', flush=True)
             
             #TODO: add gradient norm and empirical gap to continuous case
             elif self.env.type == 'continuous':
                 if self.verbosity > 0:
-                    print(f'component: {counter}, objective: {objective}, stepsize: {step_size}, hess_max:{hess_max}, hess_min:{hess_min}')
+                    # Added flush=True
+                    print(f'component: {counter}, objective: {objective}, stepsize: {step_size}, hess_max:{hess_max}, hess_min:{hess_min}', flush=True)
 
             self.weights = [(1 - step_size) * weight for weight in self.weights] + [step_size]
 
@@ -318,12 +323,14 @@ class FrankWolfe(ConvexSolverBase):
                                 
                                 if self.env.type == 'discrete':
                                     total_grad_norm = sum(la.norm(r) for r in rewards)
+                                    # Added flush=True
                                     print(f'Round: {round_idx}, Policy: {policy_idx}, Component: {policy_counters[policy_idx]}, '
                                           f'Gap: {empirical_gap}, Objective: {objective}, '
-                                          f'Stepsize: {step_size} ({self.step}), Gradient: {total_grad_norm}')
+                                          f'Stepsize: {step_size} ({self.step}), Gradient: {total_grad_norm}', flush=True)
                                 elif self.env.type == 'continuous':
+                                    # Added flush=True
                                     print(f'Round: {round_idx}, Policy: {policy_idx}, '
-                                          f'Objective: {objective}')
+                                          f'Objective: {objective}', flush=True)
                             
                             # Increment the persistent counter for this policy
                             policy_counters[policy_idx] += 1
