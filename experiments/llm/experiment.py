@@ -168,10 +168,14 @@ class LLMExperiment:
             # Use the horizon-specific token lists
             token_lists = self.training_words
 
-        # Determine prior prompt based on config
+        # Determine prior prompt based on config - used for C-optimal design initialization
         prior_prompt_str = None
-        if self.cfg.experiment.scorer_model == 'japanese':
+        # Use the same prompt for the prior as the japanese-text scorer model uses for its weight
+        if self.cfg.experiment.scorer_model == 'japanese-text':
             prior_prompt_str = "An image with clear observable japanese influence, japanese history, japanese traditions or japanese symbols"
+        # Also allow explicitly setting a prior prompt if needed for other models, like japanese-image
+        elif self.cfg.experiment.get('prior_prompt_override'):
+             prior_prompt_str = self.cfg.experiment.prior_prompt_override
 
         # Find ImageGenerationSaver config to pass debug settings
         image_gen_saver_config = {}
@@ -216,8 +220,9 @@ class LLMExperiment:
             # Calculate cosine similarity
             cos_sim = torch.nn.functional.cosine_similarity(prior_vec.flatten(), gt_vector.flatten(), dim=0)
             print(f"Cosine similarity between generated prior image embedding and GT scorer: {cos_sim.item():.4f}")
-        elif self.cfg.experiment.scorer_model == 'japanese' and self.cfg.feedback.design == 'C':
-             print("Warning: Prior vector was expected but not generated in LLMGrid.")
+        # Check if a prior was expected (e.g., for japanese-text or if overridden) but not generated
+        elif prior_prompt_str and self.cfg.feedback.design == 'C':
+             print(f"Warning: Prior vector was expected (scorer: {self.cfg.experiment.scorer_model}, prior_prompt: '{prior_prompt_str}') but not generated in LLMGrid.")
 
 
         return env

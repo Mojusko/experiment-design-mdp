@@ -403,9 +403,9 @@ def get_scorer_model(model_name: str, env, clip_model, clip_processor, cache_dir
     """Initialize embedder and scoring model
 
     Args:
-        model_name: Scorer type ('roman-cinematic', 'aesthetics', 'random_combination')
+        model_name: Scorer type ('japanese-text', 'japanese-image', 'aesthetics', 'random_combination')
         env: Environment object
-        clip_model: CLIP model, required for aesthetics-image
+        clip_model: CLIP model, required for image-based scorers
         clip_processor: CLIP processor, required for aesthetics-image
         cache_dir: Cache directory for image scorers
 
@@ -414,13 +414,14 @@ def get_scorer_model(model_name: str, env, clip_model, clip_processor, cache_dir
     """
     emissions_env = env.emissions
     scorer_embedder = env.embedder
-    if model_name == 'japanese':
-        # Comment out previous text-based Japanese model
-        # #prompt = f"{env.base_prompt}, roman style, cinematic"
-        # prompt = f"An image with clear observable japanese influence, japanese history, japanese traditions or japanese symbols"
-        # embedding = scorer_embedder.embed_text(prompt)
-        # return DotProductModel(scorer_embedder, embedding).eval()
-    
+
+    if model_name == 'japanese-text':
+        # Use a specific text prompt for the scorer weight
+        prompt = f"An image with clear observable japanese influence, japanese history, japanese traditions or japanese symbols"
+        embedding = scorer_embedder.embed_text(prompt)
+        return DotProductModel(scorer_embedder, embedding).eval()
+
+    elif model_name == 'japanese-image':
         # Load and embed the japan.jpg image using CLIP
         from PIL import Image
         import os

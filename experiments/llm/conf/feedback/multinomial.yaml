@@ -2,11 +2,21 @@ name: "multinomial"
 num_policies: 2
 num_components: 3
 num_rounds: 5
-#num_rounds: 3
-#lambda_reg: 4000 best for static design [need to revalidate]
-lambda_reg: 100
 adaptive_estimation_frequency: 0 # Set to 0 to use GT weights for C-design and disable re-estimation
 adaptive_estimation_start: 0
 #adaptive_design_frequency: 50 # Set > 0 to enable adaptive design updates (vs static)
-adaptive_design_frequency: 50 # Set > 0 to enable adaptive design updates (vs static)
+adaptive_design_frequency: 0 # Set > 0 to enable adaptive design updates (vs static)
 pass_V: false
+
+# Model-specific parameters (moved from experiment config)
+model_specific_params:
+  default:
+    lambda_reg: 100 # Default lambda if model not specified below
+  japanese-text:
+    lambda_reg: 10
+  japanese-image:
+    lambda_reg: 100
+  aesthetics:
+    lambda_reg: 10
+  random_combination:
+     lambda_reg: 10

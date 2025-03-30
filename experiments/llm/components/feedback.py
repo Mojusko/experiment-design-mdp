@@ -151,15 +151,22 @@ class FeedbackFactory:
         m = 768
         embedding = CustomEmbedding(m, lambda x: x, m)
 
+        # Determine lambda_reg based on scorer_model from experiment config, using params from feedback config
+        scorer_model_name = cfg.experiment.scorer_model
+        # Read model_specific_params from the feedback config (e.g., multinomial.yaml)
+        model_params = cfg.feedback.model_specific_params.get(scorer_model_name, cfg.feedback.model_specific_params.default)
+        lambda_reg = model_params.lambda_reg
+        print(f"Using lambda_reg = {lambda_reg} for scorer_model = {scorer_model_name} (from feedback config)")
+
         # Decide which feedback type
         if cfg.feedback.name == 'numerical':
-            #design = DesignA(env=env, lambd=cfg.feedback.lambda_reg, dim=1)
-            design = DesignD(env=env, lambd=cfg.feedback.lambda_reg, dim=1)
+            #design = DesignA(env=env, lambd=lambda_reg, dim=1) # Use determined lambda_reg
+            design = DesignD(env=env, lambd=lambda_reg, dim=1) # Use determined lambda_reg
             estimator = KernelizedFeatures(embedding, m)
             fb = NumericalFeedback(env, design, estimator)
-        else:
+        else: # Multinomial feedback
 
-            #design = MultiPolicyOrigDesignD(env=env, lambd=cfg.feedback.lambda_reg, dim=1)
+            #design = MultiPolicyOrigDesignD(env=env, lambd=lambda_reg, dim=1) # Use determined lambda_reg
             if cfg.feedback.pass_V:
                 # Assuming env.emissions is a tensor of shape [n x 768]
                 X = env.emissions  # Shape: [n x 768]
@@ -187,22 +194,22 @@ class FeedbackFactory:
                 # Pass initial_C and estimation frequency to the adaptive design constructor
                 design = AdaptiveOrigDesignC(
                     env=env,
-                    lambd=cfg.feedback.lambda_reg,
+                    lambd=lambda_reg, # Use determined lambda_reg
                     dim=1,
                     C=initial_C,
                     adaptive_estimation_frequency=cfg.feedback.adaptive_estimation_frequency # Pass frequency
                 )
-                #design = AdaptiveOrigDesignA(env=env, lambd=cfg.feedback.lambda_reg, dim=1, V=V)
-                design = AdaptiveOrigDesignD(env=env, lambd=cfg.feedback.lambda_reg, dim=1)
+                design = AdaptiveOrigDesignA(env=env, lambd=lambda_reg, dim=1, V=V) # Use determined lambda_reg
+                #design = AdaptiveOrigDesignD(env=env, lambd=lambda_reg, dim=1) # Use determined lambda_reg
             else:
                 # Static designs
-                #design = MultiPolicyOrigDesignA(env=env, lambd=cfg.feedback.lambda_reg, dim=1,V=V)
-                design = MultiPolicyOrigDesignD(env=env, lambd=cfg.feedback.lambda_reg, dim=1)
+                design = MultiPolicyOrigDesignA(env=env, lambd=lambda_reg, dim=1,V=V) # Use determined lambda_reg
+                #design = MultiPolicyOrigDesignD(env=env, lambd=lambda_reg, dim=1) # Use determined lambda_reg
                 # The MultiPolicyOrigDesignC constructor will raise ValueError if initial_C is None.
-                #design = MultiPolicyOrigDesignC(env=env, lambd=cfg.feedback.lambda_reg, dim=1, C=initial_C)
+                #design = MultiPolicyOrigDesignC(env=env, lambd=lambda_reg, dim=1, C=initial_C) # Use determined lambda_reg
 
             likelihood = MultinomialLikelihood()
-            regularizer = L2Regularizer(lam=cfg.feedback.lambda_reg)
+            regularizer = L2Regularizer(lam=lambda_reg) # Use determined lambda_reg
             estimator = RegularizedMultinomialEstimator(embedding, likelihood, regularizer)
             fb = MultinomialFeedback(env, design, estimator)
 
