@@ -176,25 +176,47 @@ class FeedbackFactory:
         else: # Multinomial feedback
 
             #design = MultiPolicyOrigDesignD(env=env, lambd=lambda_reg, dim=1) # Use determined lambda_reg
+            V = None
             if cfg.feedback.pass_V:
-                # Assuming env.emissions is a tensor of shape [n x 768]
-                X = env.emissions  # Shape: [n x 768]
-                n = X.shape[0]
-                
-                # Compute the sum of all rows
-                S = torch.sum(X, dim=0)  # Shape: [768]
-                
-                # Compute X.T @ X
-                XTX = torch.mm(X.T, X)  # Shape: [768 x 768]
-                
-                # Compute the outer product S @ S.T
-                S_outer = torch.outer(S, S)  # Shape: [768 x 768]
-                
-                # Compute V
-                V = 2 * n * XTX - 2 * S_outer  # Shape: [768 x 768]
-            else:
-                V=None
+                # Calculate V by summing state-specific V_h matrices
+                # V_h considers differences only between actions valid for state h
+                embedding_dim = env.get_dim()
+                V = torch.zeros((embedding_dim, embedding_dim), 
+                                dtype=env.emissions.dtype, 
+                                device=env.emissions.device)
 
+                for h in range(env.max_episode_length):
+                    # Find valid action indices for state h
+                    valid_action_indices = [
+                        action_idx for action_idx in range(env.actions_num) 
+                        if env.is_valid_action(action_idx, h)
+                    ]
+                    
+                    if not valid_action_indices:
+                        continue # Skip if no valid actions for this state
+
+                    # Extract corresponding emissions
+                    X_h = env.emissions[valid_action_indices, :] # Shape: [n_h x 768]
+                    n_h = X_h.shape[0]
+
+                    if n_h <= 1:
+                        continue # Need at least 2 actions to compute differences
+
+                    # Compute sum of rows for state h
+                    S_h = torch.sum(X_h, dim=0)  # Shape: [768]
+                    
+                    # Compute X_h.T @ X_h
+                    XTX_h = torch.mm(X_h.T, X_h)  # Shape: [768 x 768]
+                    
+                    # Compute the outer product S_h @ S_h.T
+                    S_outer_h = torch.outer(S_h, S_h)  # Shape: [768 x 768]
+                    
+                    # Compute V_h for state h
+                    V_h = 2 * n_h * XTX_h - 2 * S_outer_h  # Shape: [768 x 768]
+                    
+                    # Add to the total V
+                    V += V_h
+            
             # Determine the initial C vector. Currently using GT scorer weights directly.
             initial_C = scorer_model.weight.data # Use passed scorer_model
             # initial_C = env.get_prior_vector() # Uncomment to use the generated prior vector instead
