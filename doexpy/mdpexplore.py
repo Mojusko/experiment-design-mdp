@@ -481,7 +481,7 @@ class MdpExploreMultiPolicy:
                     )
     
             # For logging, compute the objective so far
-            if self.verbosity > 2 and ep_i % 25 == 0:
+            if self.verbosity > 2 and (ep_i % 25 == 0 or ep_i == episodes-1):
                 aggregate_distributions = []
                 for policy_idx in range(self.num_policies):
                     agg_dist = self.objective.build_density_from_trajectories(
