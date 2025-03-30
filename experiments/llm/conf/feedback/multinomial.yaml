@@ -1,7 +1,7 @@
 name: "multinomial"
 num_policies: 2
 num_components: 3
-num_rounds: 6
+num_rounds: 7
 #num_rounds: 3
 #lambda_reg: 4000 best for static design [need to revalidate]
 lambda_reg: 25
