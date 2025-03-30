@@ -1,6 +1,10 @@
 name: "lambda_finding"
 id_prefix: "lambda"  # Used for filename prefixes
 episodes: 200
-vocab_size: 1000
-scorer_model: "aesthetics"
-vocabulary: 'diffusiondb.txt'
+vocab_size: 2000
+vocabulary: 
+  - 'vocabulary2/mediums.txt'
+  - 'vocabulary2/movements.txt'
+  - 'vocabulary2/emotions.txt'
+scorer_model: 'japanese'
+#
