@@ -7,5 +7,5 @@ num_rounds: 6
 lambda_reg: 25
 adaptive_estimation_frequency: 0 # Set to 0 to use GT weights for C-design and disable re-estimation
 adaptive_estimation_start: 0
-adaptive_design_frequency: 50 # Set > 0 to enable adaptive design updates (vs static)
+adaptive_design_frequency: 0 # Set > 0 to enable adaptive design updates (vs static)
 pass_V: false
