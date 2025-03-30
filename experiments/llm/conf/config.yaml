@@ -18,10 +18,6 @@ results_dir: "results/dummy"
 # Experiment identifier (can be overridden from Makefile)
 experiment_id: ""
 
-# --- Feedback Configuration ---
-feedback:
-  # ... other feedback settings ...
-  adaptive_estimation_frequency: 0 # Set to 0 to disable re-estimation
 
 # --- Test-only mode configuration ---
 test_only: false  # Set to true to run test-only mode
