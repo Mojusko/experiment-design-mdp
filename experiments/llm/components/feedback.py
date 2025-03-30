@@ -139,7 +139,15 @@ class FeedbackFactory:
     Decides which feedback type to build + design + estimator for numerical or multinomial.
     """
     @staticmethod
-    def create(cfg, env):
+    def create(cfg, env, scorer_model):
+        """
+        Creates feedback components.
+
+        Args:
+            cfg: Configuration object.
+            env: Environment object (LLMGrid).
+            scorer_model: The ground truth scorer model instance.
+        """
         m = 768
         embedding = CustomEmbedding(m, lambda x: x, m)
 
@@ -170,17 +178,27 @@ class FeedbackFactory:
                 V = 2 * n * XTX - 2 * S_outer  # Shape: [768 x 768]
             else:
                 V=None
-            if cfg.feedback.adaptive_design_frequency > 0:
-                design = AdaptiveOrigDesignA(env=env, lambd=cfg.feedback.lambda_reg, dim=1, V=V)
-                #design = AdaptiveOrigDesignD(env=env, lambd=cfg.feedback.lambda_reg, dim=1) 
 
-                #design = AdaptiveOrigDesignC(env=env, lambd=cfg.feedback.lambda_reg, dim=1) 
+            # Determine the initial C vector. Currently using GT scorer weights directly.
+            initial_C = scorer_model.weight.data # Use passed scorer_model
+            # initial_C = env.get_prior_vector() # Uncomment to use the generated prior vector instead
+
+            if cfg.feedback.adaptive_design_frequency > 0:
+                # Pass initial_C and estimation frequency to the adaptive design constructor
+                design = AdaptiveOrigDesignC(
+                    env=env,
+                    lambd=cfg.feedback.lambda_reg,
+                    dim=1,
+                    C=initial_C,
+                    adaptive_estimation_frequency=cfg.feedback.adaptive_estimation_frequency # Pass frequency
+                )
+                # design = AdaptiveOrigDesignA(env=env, lambd=cfg.feedback.lambda_reg, dim=1, V=V)
+                # design = AdaptiveOrigDesignD(env=env, lambd=cfg.feedback.lambda_reg, dim=1)
             else:
-                #design = MultiPolicyOrigDesignA(env=env, lambd=cfg.feedback.lambda_reg, dim=1,V=V)
-                # Use the pre-generated prior vector (assuming it exists when design='C')
-                initial_C = env._prior_vector
+                # Static designs
+                # design = MultiPolicyOrigDesignA(env=env, lambd=cfg.feedback.lambda_reg, dim=1,V=V)
+                # The MultiPolicyOrigDesignC constructor will raise ValueError if initial_C is None.
                 design = MultiPolicyOrigDesignC(env=env, lambd=cfg.feedback.lambda_reg, dim=1, C=initial_C)
-                    #design.update_estimator(env._scorer_vector, env.emissions.detach())
 
             likelihood = MultinomialLikelihood()
             regularizer = L2Regularizer(lam=cfg.feedback.lambda_reg)

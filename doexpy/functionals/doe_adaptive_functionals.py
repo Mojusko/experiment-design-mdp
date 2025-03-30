@@ -5,7 +5,10 @@ from typing import List, Union, Callable
 from abc import ABC, abstractmethod
 from doexpy.env.discrete_env import Environment
 from doexpy.functionals.reward_functional import RewardFunctional
+import logging
 from doexpy.functionals.doe_static_functionals import MultiPolicyOrigDesignD, MultiPolicyOrigDesignA, MultiPolicyOrigDesignC
+
+logger = logging.getLogger(__name__)
 
 # ============================================================================
 # Base Adaptive Design Classes
@@ -338,11 +341,69 @@ class AdaptiveOrigDesignA(MultiPolicyOrigDesignA):
 class AdaptiveOrigDesignC(MultiPolicyOrigDesignC):
     """
     Adaptive C-optimal design for original design functionals.
+    Updates C based on estimator unless adaptive_estimation_frequency is 0.
     """
-    def __init__(self, env, lambd=1e-3, dim=0, uniform_alpha=False, C=None, **kwargs):
-        super().__init__(env, lambd, dim, C=C, **kwargs)
+    def __init__(self, env, lambd=1e-3, dim=0, uniform_alpha=False, C=None, adaptive_estimation_frequency=1, **kwargs):
+        """
+        Initializes AdaptiveOrigDesignC.
+
+        Args:
+            env: Environment object.
+            lambd: Regularization parameter.
+            dim: Dimension parameter.
+            uniform_alpha: Flag for alpha weighting.
+            C: Initial C vector (e.g., prior or GT weights). If None, expects update_estimator.
+            adaptive_estimation_frequency: Frequency of estimator updates. If 0, C will not be updated.
+            **kwargs: Additional arguments for parent classes.
+        """
+        self.adaptive_estimation_frequency = adaptive_estimation_frequency
+        # Initialize the parent MultiPolicyOrigDesignC first
+        # We temporarily allow C=None here, but log a warning if estimation freq is > 0.
+        # We handle the C=None case specifically for the adaptive scenario.
+        try:
+            super().__init__(env, lambd, dim, C=C, **kwargs)
+        except ValueError as e:
+            # If C is None and estimation frequency is > 0, it's an issue unless update_estimator is called first.
+            if C is None and self.adaptive_estimation_frequency > 0:
+                logger.warning("AdaptiveOrigDesignC initialized with C=None and adaptive_estimation_frequency > 0. "
+                               "Expecting `update_estimator` to be called before evaluation.")
+                # Call grandparent init to set up basic attributes
+                super(MultiPolicyOrigDesignC, self).__init__(env, lambd, dim, **kwargs)
+                self.C = None # Explicitly set C to None
+            # If C is None and frequency is 0, this is an error because C won't be updated.
+            elif C is None and self.adaptive_estimation_frequency == 0:
+                 logger.error("AdaptiveOrigDesignC initialized with C=None and adaptive_estimation_frequency=0. "
+                              "C must be provided if no updates are planned.")
+                 raise ValueError("C cannot be None for AdaptiveOrigDesignC when adaptive_estimation_frequency is 0.")
+            else:
+                # If C was not None and still failed, re-raise the error
+                raise e
+        else:
+             # If super().__init__ succeeded (meaning C was not None)
+             if C is not None:
+                 c_norm_l2 = torch.linalg.norm(C).item()
+                 c_norm_l1 = torch.linalg.norm(C, ord=1).item()
+                 logger.info(f"AdaptiveOrigDesignC initialized with C vector: L2 norm={c_norm_l2:.4f}, L1 norm={c_norm_l1:.4f}")
+             # Log update behavior based on frequency
+             if self.adaptive_estimation_frequency == 0:
+                 logger.info("adaptive_estimation_frequency is 0. C vector will NOT be updated.")
+             else:
+                 logger.info(f"adaptive_estimation_frequency is {self.adaptive_estimation_frequency}. C vector WILL be updated.")
+
         self.type = "adaptive"
         self.uniform_alpha = uniform_alpha
+
+    def update_estimator(self, estimator, emissions):
+        """
+        Update the C vector based on the estimator, unless adaptive_estimation_frequency is 0.
+        """
+        if self.adaptive_estimation_frequency == 0:
+            logger.info("adaptive_estimation_frequency is 0. Skipping update_estimator for AdaptiveOrigDesignC.")
+            return
+        else:
+            # Proceed with the normal update from the estimator via the parent method
+            logger.info(f"adaptive_estimation_frequency > 0. Updating C based on estimator {type(estimator).__name__}.")
+            super().update_estimator(estimator, emissions)
 
     def eval(self, emissions, distributions, visitations_per_policy, episodes):
         # Compute agg_densities for each policy's visitation history

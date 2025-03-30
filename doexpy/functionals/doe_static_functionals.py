@@ -6,7 +6,10 @@ from abc import ABC, abstractmethod
 from doexpy.env.discrete_env import Environment
 from doexpy.functionals.reward_functional import RewardFunctional
 import torch.linalg as la
+import logging
 from stpy.regression.regularized_dictionary.regularized_multinomial_estimator import RegularizedMultinomialEstimator
+
+logger = logging.getLogger(__name__)
 
 class ExperimentDesignFunctional(RewardFunctional):
 
@@ -326,17 +329,27 @@ class MultiPolicyOrigDesignC(MultiPolicyOrigDesignD):
         # Call the parent class's __init__ to set up common attributes
         super().__init__(env, lambd, dim, **kwargs)
         # Set the C attribute specific to this class
+        if C is None:
+            raise ValueError("C cannot be None for MultiPolicyOrigDesignC. It must be provided or set via update_estimator.")
         self.C = C
-        
+
     def update_estimator(self, estimator, emissions):
         """
-        Update the estimator and set C to be the estimator.
+        Update the estimator and set C based on the estimator's parameters.
         
         Parameters:
         - estimator: A RegularizedMultinomialEstimator with theta_fit property
         - emissions: The emissions tensor
         """
-        # Call parent's update_estimator method
+        # Log previous C state
+        if self.C is not None:
+            old_c_norm_l2 = torch.linalg.norm(self.C).item()
+            old_c_norm_l1 = torch.linalg.norm(self.C, ord=1).item()
+            logger.info(f"Updating C vector. Previous C: L2 norm={old_c_norm_l2:.4f}, L1 norm={old_c_norm_l1:.4f}")
+        else:
+            logger.info("Updating C vector. Previous C was None.")
+
+        # Call parent's update_estimator method (if applicable, though not strictly needed here as we override C logic)
         super().update_estimator(estimator, emissions)
 
         # Get the fitted parameter vector
@@ -345,14 +358,16 @@ class MultiPolicyOrigDesignC(MultiPolicyOrigDesignD):
         # Normalize the parameter vector before using it as C
         norm = torch.linalg.norm(theta_fit)
         if norm > 1e-9: # Avoid division by zero or near-zero
-            self.C = theta_fit / norm
+            # Assume theta_fit is a 1D vector or (d, 1) or (1, d). Normalize and reshape to (1, d).
+            new_C = (theta_fit / norm).view(1, -1)
+            new_c_norm_l2 = torch.linalg.norm(new_C).item() # Should be ~1.0
+            new_c_norm_l1 = torch.linalg.norm(new_C, ord=1).item()
+            logger.info(f"New C vector set from estimator {type(estimator).__name__} (reshaped to {new_C.shape}): L2 norm={new_c_norm_l2:.4f}, L1 norm={new_c_norm_l1:.4f}")
+            self.C = new_C
         else:
-            # Handle zero vector case (e.g., keep it as None or a zero vector)
-            # Setting to None reverts to A-optimality if the fit is zero.
-            print("Warning: Estimator theta_fit has near-zero norm. Reverting to A-optimality for this step.")
-            self.C = None 
-            # Alternatively, could set self.C = torch.zeros_like(theta_fit) 
-            # but that might cause issues in the inverse calculation later.
+            # Handle zero vector case - raise error as C cannot be None or zero for C-optimality trace calculation
+            logger.error("Estimator theta_fit has near-zero norm. Cannot compute C-optimal design. Raising ValueError.")
+            raise ValueError("Estimator theta_fit has near-zero norm, cannot set C for C-optimal design.")
 
     def _compute_c_optimal_value(self, inv_z_reg):
         """
@@ -365,31 +380,24 @@ class MultiPolicyOrigDesignC(MultiPolicyOrigDesignD):
         - float: The C-optimal value (trace or max trace).
         """
         target_device = inv_z_reg.device  # Get the device of inv_z_reg
-        
-        # Handle the case where C is None - use A-optimal criterion (maximize negative trace)
+
         if self.C is None:
-            return -torch.trace(inv_z_reg) # Added negative sign back
+             # This case should ideally not be reached due to checks in __init__ and update_estimator
+             raise ValueError("C is None during C-optimal value computation. This should not happen.")
 
         # Handle C being a list of vectors
         if isinstance(self.C, list):
-            traces = []
-            for C_item in self.C:
-                C_item_dev = C_item.to(target_device) # Move C_item to the target device
-                # Ensure C has the right shape for matrix multiplication
-                if C_item_dev.dim() == 2 and C_item_dev.shape[1] == 1:
-                    C_reshaped = C_item_dev.T  # Transpose to make it 1xN instead of Nx1
-                    traces.append(torch.trace(torch.linalg.inv(C_reshaped @ inv_z_reg @ C_reshaped.T)))
-                else:
-                    traces.append(torch.trace(torch.linalg.inv(C_item_dev @ inv_z_reg @ C_item_dev.T)))
+            # Assume each C_item is a (1, d) tensor
+            traces = [
+                torch.trace(torch.linalg.inv(C_item.to(target_device) @ inv_z_reg @ C_item.to(target_device).T))
+                for C_item in self.C
+            ]
             return torch.max(torch.stack(traces))
-        
+
         # Handle C being a single vector
+        # Assume self.C is a (1, d) tensor
         C_dev = self.C.to(target_device) # Move self.C to the target device
-        if C_dev.dim() == 2 and C_dev.shape[1] == 1:
-            C_reshaped = C_dev.T  # Transpose to make it 1xN instead of Nx1
-            return torch.trace(torch.linalg.inv(C_reshaped @ inv_z_reg @ C_reshaped.T))
-        else:
-            return torch.trace(torch.linalg.inv(C_dev @ inv_z_reg @ C_dev.T))
+        return torch.trace(torch.linalg.inv(C_dev @ inv_z_reg @ C_dev.T))
 
     def eval(self, emissions, distributions, episodes):
         """

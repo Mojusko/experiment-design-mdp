@@ -43,11 +43,11 @@ class LLMExperiment:
 
         #self.training_words, self.testing_words, self.model_words = self._load_data_legacy()
         self.training_words, self.testing_words, self.model_words = self._load_data()
-        self.env = self._init_env()
-        self.env._scorer_vector = self._scorer_model.weight
-        self.feedback, self.design, self.estimator = FeedbackFactory.create(cfg, self.env)
+        self.env = self._init_env() # This initializes self._scorer_model
+        self.env._scorer_vector = self._scorer_model.weight # Keep this for potential other uses
+        self.feedback, self.design, self.estimator = FeedbackFactory.create(cfg, self.env, self._scorer_model) # Pass scorer_model
         self.explorer = SolverFactory.create(cfg, self.env, self.design, self.feedback)
-        
+
         # For test-only mode, initialize estimator to None, will be loaded later
         self.estimator = None
         
