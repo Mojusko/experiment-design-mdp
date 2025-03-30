@@ -444,8 +444,23 @@ class MdpExploreMultiPolicy:
     
         # Main loop: run exactly one new episode each iteration
         for ep_i in range(start_ep_idx, episodes):
+            # Print episode number and potentially the objective value
             if self.verbosity > 2:
-                print("Episode:", ep_i)
+                # Original condition: Log every 25 episodes or the last one
+                if ep_i % 10 == 0 or ep_i == episodes - 1:
+                    aggregate_distributions = []
+                    for policy_idx in range(self.num_policies):
+                        agg_dist = self.objective.build_density_from_trajectories(
+                            self.visitations_per_policy[policy_idx]
+                        )
+                        aggregate_distributions.append(agg_dist)
+                    val = self.objective.eval_full(self.emissions, aggregate_distributions, episodes)
+                    if isinstance(val, torch.Tensor):
+                        val = val.detach()
+                    print(f"Episode {ep_i}, Objective Value: {val}")
+                    run_objective_values.append(val) # Keep track of logged values
+                else:
+                    print("Episode:", ep_i) # Print only episode number otherwise
 
             # If user provided a callback, call it to do partial re-fitting, etc.
             if update_callback is not None and ep_i > 0:
@@ -479,21 +494,6 @@ class MdpExploreMultiPolicy:
                             for s in self.trajectory_per_policy[policy_idx]
                         ])
                     )
-    
-            # For logging, compute the objective so far
-            if self.verbosity > 2 and (ep_i % 25 == 0 or ep_i == episodes-1):
-                aggregate_distributions = []
-                for policy_idx in range(self.num_policies):
-                    agg_dist = self.objective.build_density_from_trajectories(
-                        self.visitations_per_policy[policy_idx]
-                    )
-                    aggregate_distributions.append(agg_dist)
-    
-                val = self.objective.eval_full(self.emissions, aggregate_distributions, episodes)
-                if isinstance(val, torch.Tensor):
-                    val = val.detach()
-                print(f"Episode {ep_i}, Objective Value: {val}")
-                run_objective_values.append(val)
     
         # Convert objective values to NumPy
         objective_values = []
