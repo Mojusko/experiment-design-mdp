@@ -47,6 +47,9 @@ savers:
   - _target_: components.saver.VisitsSaver
     params:
       filename: "visits.pkl"
+  - _target_: components.saver.ConfSaver
+    params:
+      filename: "config_resolved.yaml"
   #- _target_: components.saver.ImageGenerationSaver
   #  params:
   #    seed: "${seed}"

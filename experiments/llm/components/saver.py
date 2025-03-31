@@ -4,7 +4,9 @@ import os
 import torch
 import matplotlib.pyplot as plt
 from PIL import Image
+import yaml
 from abc import ABC, abstractmethod
+from omegaconf import OmegaConf, DictConfig
 # Removed top-level import causing circular dependency
 # from experiments.llm.image_generator import StableDiffusionGenerator, DoubleGuidanceStableDiffusionGenerator, _get_seed_from_prompt
 # Removed unused import causing circular dependency
@@ -32,14 +34,15 @@ def _convert_to_serializable(obj):
 
 class BaseSaver(ABC):
     """Base class for all savers with simplified interface."""
-    
-    def __init__(self, **kwargs):
+
+    def __init__(self, cfg: DictConfig = None, **kwargs):
+        self.cfg = cfg # Store the full config if provided
         self.params = kwargs.get('params', {})
         self.scorer_model = kwargs.get('scorer_model')
         self.results_dir = kwargs.get('results_dir')
         self.experiment_id = kwargs.get('experiment_id')
         self.skip_existing = kwargs.get('skip_existing', False)
-        
+
     def get_output_path(self, filename=None):
         """Get the output path with experiment_id if provided."""
         # Use instance filename if none provided
@@ -394,4 +397,26 @@ class VisitsSaver(BaseSaver):
                 print(f"Saved converted visits to {file_path}")
             except Exception as e2:
                 print(f"Failed to save visits: {e2}")
-        
+
+class ConfSaver(BaseSaver):
+    """Saves the full experiment configuration to a YAML file."""
+
+    def save_result(self, results):
+        """Saves the configuration stored during initialization."""
+        file_path = self.get_output_path(self.params.get('filename', 'config_resolved.yaml'))
+        if file_path is None: # Skip if file exists and skip_existing is True
+            print(f"Skipping saving config to {self.params.get('filename', 'config_resolved.yaml')} as it already exists.")
+            return
+
+        if self.cfg is None:
+            print("Error: Configuration (cfg) not provided to ConfSaver during initialization.")
+            return
+
+        try:
+            # Resolve interpolations before saving
+            resolved_cfg = OmegaConf.to_container(self.cfg, resolve=True)
+            with open(file_path, 'w') as f:
+                yaml.dump(resolved_cfg, f, default_flow_style=False, sort_keys=False)
+            print(f"Saved resolved configuration to {file_path}")
+        except Exception as e:
+            print(f"Error saving configuration: {e}")

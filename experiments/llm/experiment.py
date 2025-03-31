@@ -72,10 +72,11 @@ class LLMExperiment:
         # Initialize testers and savers with results_dir and experiment_id
         self.testers = [hydra.utils.instantiate(t, scorer_model=self._scorer_model) for t in self.cfg.tester]
         
-        # Initialize savers with just what they need
+        # Initialize savers, passing the full config (cfg) and other necessary components
         self.savers = [
             hydra.utils.instantiate(
-                s, 
+                s,
+                cfg=self.cfg, # Pass the full config
                 scorer_model=self._scorer_model,
                 results_dir=self.results_dir,
                 experiment_id=self.experiment_id
