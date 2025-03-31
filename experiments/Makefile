@@ -479,8 +479,8 @@ llm-find-lambda: llm-find-lambda-mul llm-find-lambda-num
 
 # Design Frequency Finding (using lambda_finding base config)
 # Iterates over episodes and adaptive_design_frequency
-EPISODES_DESIGN_FREQ := 50
-DESIGN_FREQ_VALUES := 10 25
+EPISODES_DESIGN_FREQ := 200
+DESIGN_FREQ_VALUES := 50 100
 
 # Generate job names: ep<episodes>-df<design_freq>-<seed>
 JOBS_LLM_DESIGN_FREQUENCY := \
