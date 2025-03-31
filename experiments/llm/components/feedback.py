@@ -155,7 +155,7 @@ class FeedbackFactory:
         if cfg.feedback.name == 'multinomial' and cfg.feedback.use_model_specific_lambda:
             # Use model-specific lambda from the dictionary
             scorer_model_name = cfg.experiment.scorer_model
-            model_params = cfg.feedback.model_specific_params.get(scorer_model_name, cfg.feedback.model_specific_params.default)
+            model_params = cfg.feedback.model_specific_params.get(scorer_model_name, cfg.feedback.lambda_reg)
             lambda_reg = model_params.lambda_reg
             print(f"Using model-specific lambda_reg = {lambda_reg} for scorer_model = {scorer_model_name}")
         else:
