@@ -231,7 +231,7 @@ class FeedbackFactory:
                 #    adaptive_estimation_frequency=cfg.feedback.adaptive_estimation_frequency # Pass frequency
                 #)
                 #design = AdaptiveOrigDesignA(env=env, lambd=lambda_reg, dim=1, V=V) # Use determined lambda_reg
-                design = AdaptiveOrigDesignA(env=env, lambd=lambda_reg, dim=1, V=V) # Use determined lambda_reg
+                design = AdaptiveOrigDesignANovel(env=env, lambd=lambda_reg, dim=1, V=V) # Use determined lambda_reg
                 #design = AdaptiveOrigDesignD(env=env, lambd=lambda_reg, dim=1) # Use determined lambda_reg
             else:
                 # Static designs

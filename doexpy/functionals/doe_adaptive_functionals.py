@@ -478,6 +478,15 @@ class AdaptiveOrigDesignC(MultiPolicyOrigDesignC):
         # Use parent class method to compute C-optimal value
         return super()._compute_c_optimal_value(inv_z_reg)
 
+    def eval_full(self, emissions, distributions, episodes):
+        # For final evaluation - directly use the provided distributions
+        z = super()._calculate_z(emissions, distributions, episodes)
+        eye = torch.eye(z.shape[0], device=z.device, dtype=z.dtype)
+        z_reg = z + self.lambd/(self.horizon*episodes) * eye
+        inv_z_reg = torch.linalg.inv(z_reg)
+        
+        # Use parent class method to compute C-optimal value
+        return super()._compute_c_optimal_value(inv_z_reg)
 
 class AdaptiveOrigDesignANovel(MultiPolicyOrigDesignA):
     """
@@ -577,13 +586,4 @@ class AdaptiveOrigDesignANovel(MultiPolicyOrigDesignA):
             V_dev = self.V.to(z.device, dtype=z.dtype)
             return -torch.trace(V_dev @ torch.linalg.inv(z + self.lambd/(self.horizon * episodes) * eye))
 
-    def eval_full(self, emissions, distributions, episodes):
-        # For final evaluation - directly use the provided distributions
-        z = super()._calculate_z(emissions, distributions, episodes)
-        eye = torch.eye(z.shape[0], device=z.device, dtype=z.dtype)
-        z_reg = z + self.lambd/(self.horizon*episodes) * eye
-        inv_z_reg = torch.linalg.inv(z_reg)
-        
-        # Use parent class method to compute C-optimal value
-        return super()._compute_c_optimal_value(inv_z_reg)
 
