@@ -15,7 +15,7 @@ model_specific_params:
   default:
     lambda_reg: 100 # Default lambda if model not specified below
   japanese-text:
-    lambda_reg: 500
+    lambda_reg: 1
   japanese-image:
     lambda_reg: 100
   aesthetics:
