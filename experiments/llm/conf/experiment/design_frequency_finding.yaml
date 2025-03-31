@@ -1,0 +1,11 @@
+# Configuration for Design Frequency Finding experiment
+# Based on lambda_finding, but episodes are set in Makefile
+name: "design_frequency_finding"
+id_prefix: "design-freq"  # Used for filename prefixes
+vocab_size: 2000
+vocabulary: 
+  - 'vocabulary2/mediums.txt'
+  - 'vocabulary2/movements.txt'
+  - 'vocabulary2/emotions.txt'
+scorer_model: 'japanese-text'
+episodes: 50 # Default value, overridden in Makefile

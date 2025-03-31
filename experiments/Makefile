@@ -476,32 +476,44 @@ llm-find-lambda-mul: $(JOBS_LLM_LAMBDA_MUL)
 llm-find-lambda-num: $(JOBS_LLM_LAMBDA_NUM)
 llm-find-lambda: llm-find-lambda-mul llm-find-lambda-num
 
-# Frequency-finding for adaptive estimation
-# We'll run each frequency value for REPEATS_LLM seeds
-FREQUENCY_VALUES := 0 10 25 50
+# Design Frequency Finding (using lambda_finding base config)
+# Iterates over episodes and adaptive_design_frequency
+EPISODES_DESIGN_FREQ := 25 50
+DESIGN_FREQ_VALUES := 5 10 25
 
-# Generate job names for each (frequency, seed) pair
-JOBS_LLM_FREQUENCY := \
-  $(foreach freq,$(FREQUENCY_VALUES), \
-    $(foreach n,$(NUMBERS_LLM), \
-      job-llm-freq-$(freq)-$(n)))
+# Generate job names: ep<episodes>-df<design_freq>-<seed>
+JOBS_LLM_DESIGN_FREQUENCY := \
+  $(foreach episodes,$(EPISODES_DESIGN_FREQ), \
+    $(foreach freq,$(DESIGN_FREQ_VALUES), \
+      $(foreach n,$(NUMBERS_LLM), \
+        job-llm-design-freq-ep$(episodes)-df$(freq)-$(n))))
 
-# Macro to define each frequency job
-define frequency_job_template
-job-llm-freq-$(1)-$(2):
-	cd llm && TIMESTAMP=$(TIMESTAMP) OMP_NUM_THREADS=1 MKL_NUM_THREADS=1 $(PYTHONPATH) run_exp.py experiment=frequency_finding feedback=multinomial algorithm=design feedback.adaptive_estimation_frequency=$(1) seed=$(2) results_dir="results/frequency-finding" experiment_id="$(1)-$(2)"
+# Macro to define each design frequency job
+# Note: adaptive_estimation_frequency=0 and adaptive_estimation_start=0 are defaults in multinomial.yaml
+define design_frequency_job_template
+job-llm-design-freq-ep$(1)-df$(2)-$(3):
+	cd llm && TIMESTAMP=$(TIMESTAMP) OMP_NUM_THREADS=1 MKL_NUM_THREADS=1 $(PYTHONPATH) run_exp.py \
+	  experiment=design_frequency_finding \
+	  feedback=multinomial \
+	  algorithm=design \
+	  experiment.episodes=$(1) \
+	  feedback.adaptive_design_frequency=$(2) \
+	  seed=$(3) \
+	  results_dir="results/design-frequency-finding" \
+	  experiment_id="ep$(1)-df$(2)-$(3)"
 endef
 
-# Instantiate all frequency jobs from the macro
-$(foreach freq,$(FREQUENCY_VALUES), \
-  $(foreach n,$(NUMBERS_LLM), \
-    $(eval $(call frequency_job_template,$(freq),$(n)))))
+# Instantiate all design frequency jobs
+$(foreach episodes,$(EPISODES_DESIGN_FREQ), \
+  $(foreach freq,$(DESIGN_FREQ_VALUES), \
+    $(foreach n,$(NUMBERS_LLM), \
+      $(eval $(call design_frequency_job_template,$(episodes),$(freq),$(n))))))
 
-# Target to run all frequency finding jobs
-llm-find-frequency: $(JOBS_LLM_FREQUENCY)
+# Target to run all design frequency finding jobs
+llm-find-design-frequency: $(JOBS_LLM_DESIGN_FREQUENCY)
 
 
-PLOTS: 
+PLOTS:
 	${PYTHONPATH} plot_grids.py && ${PYTHONPATH} plot_pharma.py && ${PYTHONPATH} plot.py
 
 PLOTS_STOCH: 

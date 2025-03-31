@@ -41,9 +41,9 @@ savers:
     params:
       filename: "metrics.json"
       metrics_keys: ["preference_error", "cosine_error"]
-  - _target_: components.saver.LearnedEstimatorSaver
-    params:
-      filename: "estimator.pt"
+  #  - _target_: components.saver.LearnedEstimatorSaver
+  #    params:
+  #      filename: "estimator.pt"
   - _target_: components.saver.VisitsSaver
     params:
       filename: "visits.pkl"
