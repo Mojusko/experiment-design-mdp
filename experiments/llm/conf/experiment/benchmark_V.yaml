@@ -1,6 +1,6 @@
 name: "benchmark_V"
 id_prefix: "v-comp"  # Used for filename prefixes
-episodes: 50
+episodes: 100
 vocab_size: 2000
 vocabulary:
   - 'vocabulary2/mediums.txt'
