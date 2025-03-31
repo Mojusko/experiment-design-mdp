@@ -12,5 +12,4 @@ vocabulary:
 #scorer_model: 'japanese-image' # Changed from 'japanese'
 scorer_model: 'japanese-text'
 #scorer_model: 'aesthetics'
-#prior_prompt_override: "An image with clear observable japanese influence, japanese history, japanese traditions or japanese symbols" # Optional: uncomment to force prior for japanese-image
 

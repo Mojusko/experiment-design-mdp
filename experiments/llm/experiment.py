@@ -72,16 +72,17 @@ class LLMExperiment:
         # Initialize testers and savers with results_dir and experiment_id
         self.testers = [hydra.utils.instantiate(t, scorer_model=self._scorer_model) for t in self.cfg.tester]
         
-        # Initialize savers, passing the full config (cfg) and other necessary components
-        self.savers = [
-            hydra.utils.instantiate(
+        # Initialize the savers with appropriate parameters
+        self.savers = []
+        for s in self.cfg.savers:
+            # Pass standard parameters to all savers
+            saver = hydra.utils.instantiate(
                 s,
-                cfg=self.cfg, # Pass the full config
                 scorer_model=self._scorer_model,
                 results_dir=self.results_dir,
                 experiment_id=self.experiment_id
-            ) for s in self.cfg.savers
-        ]
+            )
+            self.savers.append(saver)
         self.visits = [] if self.cfg.feedback.num_policies == 1 else [[] for _ in range(self.cfg.feedback.num_policies)]
 
     def calculate_cosine_error(self, est_weight, gt_weight):
@@ -169,23 +170,8 @@ class LLMExperiment:
             # Use the horizon-specific token lists
             token_lists = self.training_words
 
-        # Determine prior prompt based on config - used for C-optimal design initialization
-        prior_prompt_str = None
-        # Use the same prompt for the prior as the japanese-text scorer model uses for its weight
-        if self.cfg.experiment.scorer_model == 'japanese-text':
-            prior_prompt_str = "An image with clear observable japanese influence, japanese history, japanese traditions or japanese symbols"
-        # Also allow explicitly setting a prior prompt if needed for other models, like japanese-image
-        elif self.cfg.experiment.get('prior_prompt_override'):
-             prior_prompt_str = self.cfg.experiment.prior_prompt_override
 
-        # Find ImageGenerationSaver config to pass debug settings
-        image_gen_saver_config = {}
-        for saver_cfg in self.cfg.savers:
-            if saver_cfg._target_.endswith('ImageGenerationSaver'):
-                image_gen_saver_config = saver_cfg.get('params', {})
-                break
-
-        # Build environment, passing the prior prompt and image gen config
+        # Build environment
         env = LLMGrid(
             token_lists,
             self._clip_model,
@@ -195,9 +181,7 @@ class LLMExperiment:
             self.cfg.normalize_CLIP,
             base_prompt=self.cfg.base_prompt,
             include_base_prompt_in_first_tokens=self.cfg.include_base_prompt_in_first_tokens,
-            verbose=self.cfg.verbose,
-            prior_prompt=prior_prompt_str, # Pass the prior prompt string
-            image_gen_config=image_gen_saver_config # Pass image gen settings
+            verbose=self.cfg.verbose
         )
 
         # Build scorer using model emissions with non-normalized embedder
@@ -210,20 +194,6 @@ class LLMExperiment:
         )
         self._theta_star = make_theta_star(env, self._scorer_model)
 
-        # Prior vector (_prior_vector) is handled within LLMGrid initialization.
-        # Calculate and print similarity between prior and GT scorer if prior exists.
-        generated_prior_vector = env.get_prior_vector()
-        if generated_prior_vector is not None:
-            gt_vector = self._scorer_model.weight.data # Ground truth vector
-            # Ensure both are on the same device and dtype for comparison
-            prior_vec = generated_prior_vector.to(gt_vector.device, dtype=gt_vector.dtype)
-
-            # Calculate cosine similarity
-            cos_sim = torch.nn.functional.cosine_similarity(prior_vec.flatten(), gt_vector.flatten(), dim=0)
-            print(f"Cosine similarity between generated prior image embedding and GT scorer: {cos_sim.item():.4f}")
-        # Check if a prior was expected (e.g., for japanese-text or if overridden) but not generated
-        elif prior_prompt_str and self.cfg.feedback.design == 'C':
-             print(f"Warning: Prior vector was expected (scorer: {self.cfg.experiment.scorer_model}, prior_prompt: '{prior_prompt_str}') but not generated in LLMGrid.")
 
 
         return env
@@ -333,6 +303,11 @@ class LLMExperiment:
         results.add_metadata('horizon', self.cfg.horizon)
         results.add_metadata('algorithm', self.cfg.algorithm)
         results.add_metadata('base_prompt', self.cfg.base_prompt)
+        
+        # Add the resolved config as a plain dictionary for the ConfSaver
+        from omegaconf import OmegaConf
+        config_dict = OmegaConf.to_container(self.cfg, resolve=True)
+        results.add_metadata('config_dict', config_dict)
         
         # Run all testers and collect metrics
         for tester in self.testers:

@@ -399,24 +399,25 @@ class VisitsSaver(BaseSaver):
                 print(f"Failed to save visits: {e2}")
 
 class ConfSaver(BaseSaver):
-    """Saves the full experiment configuration to a YAML file."""
+    """Saves the experiment configuration to a YAML file."""
 
     def save_result(self, results):
-        """Saves the configuration stored during initialization."""
+        """Saves the configuration to a YAML file."""
         file_path = self.get_output_path(self.params.get('filename', 'config_resolved.yaml'))
         if file_path is None: # Skip if file exists and skip_existing is True
-            print(f"Skipping saving config to {self.params.get('filename', 'config_resolved.yaml')} as it already exists.")
+            print(f"Skipping saving config as it already exists.")
             return
 
-        if self.cfg is None:
-            print("Error: Configuration (cfg) not provided to ConfSaver during initialization.")
+        # Get the raw dictionary config from the experiment result metadata
+        config_dict = results.metadata.get('config_dict')
+        
+        if config_dict is None:
+            print("Error: No configuration data in results metadata. Add it with results.add_metadata('config_dict', config_dict)")
             return
 
         try:
-            # Resolve interpolations before saving
-            resolved_cfg = OmegaConf.to_container(self.cfg, resolve=True)
             with open(file_path, 'w') as f:
-                yaml.dump(resolved_cfg, f, default_flow_style=False, sort_keys=False)
-            print(f"Saved resolved configuration to {file_path}")
+                yaml.dump(config_dict, f, default_flow_style=False, sort_keys=False)
+            print(f"Saved configuration to {file_path}")
         except Exception as e:
             print(f"Error saving configuration: {e}")

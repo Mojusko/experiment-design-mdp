@@ -4,6 +4,7 @@ import glob
 import os
 import argparse
 import json
+import re # Import re for pattern matching
 
 def parse_filename(filename):
     base = os.path.basename(filename)
@@ -15,10 +16,12 @@ def parse_filename(filename):
         parts = base.split('-')
         lambda_val = float(parts[-2])
         return ("lambda", lambda_val)
-    elif "freq" in base:
-        parts = base.split('-')
-        freq_val = int(parts[-2])
-        return ("frequency", freq_val)
+    # Match design frequency filenames like metrics-design-freq-dsn-mult-ep25-df10-1.json
+    elif match := re.search(r"ep(\d+)-df(\d+)-(\d+)\.json$", base):
+        episodes = int(match.group(1))
+        frequency = int(match.group(2))
+        # seed = int(match.group(3)) # Seed not used for grouping key
+        return ("design_frequency", (episodes, frequency))
     elif "rounds" in base:
         parts = base.split('-')
         rounds_val = int(parts[-2])
@@ -84,6 +87,7 @@ def plot_results_with_type(results, plot_type):
             plt.xlabel("Number of Rounds")
         elif plot_type == "v_comparison":
             plt.xlabel("Design Matrix Type")
+        # Note: design_frequency is handled by plot_design_frequency_results now
         else:
             plt.xlabel(plot_type)
 
@@ -124,6 +128,44 @@ def plot_comparison_results(results, plot_type):
     plt.legend()
     plt.tight_layout()
 
+def plot_design_frequency_results(design_freq_results):
+    # Create a grouped bar chart comparing both metrics for each (episodes, frequency) pair.
+    # Sort keys first by episodes, then by frequency for consistent plotting order
+    labels = sorted(design_freq_results.keys(), key=lambda x: (x[0], x[1]))
+    
+    # Prepare data, ensuring we handle cases where a metric might be missing for a run
+    preference_means = []
+    preference_stds = []
+    cosine_means = []
+    cosine_stds = []
+
+    for key in labels:
+        pref_errors = [d["preference_error"] for d in design_freq_results[key] if isinstance(d, dict) and "preference_error" in d]
+        cos_errors = [d["cosine_error"] for d in design_freq_results[key] if isinstance(d, dict) and "cosine_error" in d]
+        
+        preference_means.append(np.mean(pref_errors) if pref_errors else 0)
+        preference_stds.append(np.std(pref_errors) if len(pref_errors) > 1 else 0)
+        cosine_means.append(np.mean(cos_errors) if cos_errors else 0)
+        cosine_stds.append(np.std(cos_errors) if len(cos_errors) > 1 else 0)
+
+    x = np.arange(len(labels))
+    width = 0.35
+    
+    # Format labels for the x-axis
+    x_labels = [f"Ep{ep}-Df{df}" for ep, df in labels]
+
+    plt.figure(figsize=(12, 7)) # Adjusted size for potentially more labels
+    plt.bar(x - width/2, preference_means, width, yerr=preference_stds, capsize=5, label="Preference Error")
+    plt.bar(x + width/2, cosine_means, width, yerr=cosine_stds, capsize=5, label="Cosine Error")
+
+    plt.xlabel("Configuration (Episodes - Design Frequency)")
+    plt.ylabel("Error")
+    plt.xticks(x, x_labels, rotation=45, ha="right") # Rotate labels for better readability
+    plt.title("Design Frequency Experiment Results")
+    plt.legend()
+    plt.tight_layout()
+
+
 def plot_feedback_results(feedback_results):
     # Create a grouped bar chart comparing both metrics for each algorithm.
     labels = list(feedback_results.keys())
@@ -154,8 +196,9 @@ def plot_results(directory):
     results_by_type = {
         "lambda": {},
         "v_comparison": {},
-        "frequency": {},
-        "rounds": {}
+        "frequency": {}, # Old frequency key, might be unused now
+        "rounds": {},
+        "design_frequency": {} # New key for design frequency results
     }
     # For feedback experiments
     feedback_results = {}
@@ -181,10 +224,14 @@ def plot_results(directory):
             if val is not None:
                 results_by_type[exp_type][key].append(val)
 
-    # Plot non-feedback experiments
+    # Plot non-feedback experiments (excluding design_frequency)
     for exp_type in results_by_type:
-        if results_by_type[exp_type]:
+        if exp_type != "design_frequency" and results_by_type[exp_type]:
             plot_results_with_type(results_by_type[exp_type], exp_type)
+
+    # Plot design frequency results separately
+    if results_by_type["design_frequency"]:
+        plot_design_frequency_results(results_by_type["design_frequency"])
 
     # Plot feedback results
     if feedback_results:
@@ -194,6 +241,6 @@ def plot_results(directory):
 
 if __name__ == "__main__":
     parser = argparse.ArgumentParser(description="Plot experiment results.")
-    parser.add_argument('directory', help='Directory containing experiment result .txt files.')
+    parser.add_argument('directory', help='Directory containing experiment result .json files.')
     args = parser.parse_args()
     plot_results(args.directory)

@@ -302,16 +302,17 @@ llm-generate-image:
 REPEATS_LLM=7
 NUMBERS_LLM := $(shell seq 1 ${REPEATS_LLM})
 
-JOBS_LLM_DSN_MULT_V := $(addprefix job-llm-feedback-dsn-mult-v,$(NUMBERS_LLM))
-JOBS_LLM_DSN_MULT_NOV := $(addprefix job-llm-feedback-dsn-mult-nov,$(NUMBERS_LLM))
+# Jobs for V comparison (non-adaptive design)
+JOBS_LLM_V_COMP_WITHV := $(addprefix job-llm-v-comp-withV-,$(NUMBERS_LLM))
+JOBS_LLM_V_COMP_NOV := $(addprefix job-llm-v-comp-noV-,$(NUMBERS_LLM))
 
-$(JOBS_LLM_DSN_MULT_V): job-llm-feedback-dsn-mult-v%:
-	cd llm && TIMESTAMP=$(TIMESTAMP) OMP_NUM_THREADS=1 MKL_NUM_THREADS=1 $(PYTHONPATH) run_exp.py experiment=benchmark_V algorithm=design feedback=multinomial feedback.pass_V=true results_dir="results/feedback-V-adaptive" experiment_id="withV-$*" seed=$*
+$(JOBS_LLM_V_COMP_WITHV): job-llm-v-comp-withV-%:
+	cd llm && TIMESTAMP=$(TIMESTAMP) OMP_NUM_THREADS=1 MKL_NUM_THREADS=1 $(PYTHONPATH) run_exp.py experiment=benchmark_V algorithm=design feedback=multinomial feedback.pass_V=true feedback.adaptive_design_frequency=0 results_dir="results/feedback-V" experiment_id="design-withV-$*" seed=$*
 
-$(JOBS_LLM_DSN_MULT_NOV): job-llm-feedback-dsn-mult-nov%:
-	cd llm && TIMESTAMP=$(TIMESTAMP) OMP_NUM_THREADS=1 MKL_NUM_THREADS=1 $(PYTHONPATH) run_exp.py experiment=benchmark_V algorithm=design feedback=multinomial feedback.pass_V=false results_dir="results/feedback-V-adaptive" experiment_id="noV-$*" seed=$*
+$(JOBS_LLM_V_COMP_NOV): job-llm-v-comp-noV-%:
+	cd llm && TIMESTAMP=$(TIMESTAMP) OMP_NUM_THREADS=1 MKL_NUM_THREADS=1 $(PYTHONPATH) run_exp.py experiment=benchmark_V algorithm=design feedback=multinomial feedback.pass_V=false feedback.adaptive_design_frequency=0 results_dir="results/feedback-V" experiment_id="design-noV-$*" seed=$*
 
-llm-V-comparison: $(JOBS_LLM_DSN_MULT_V) $(JOBS_LLM_DSN_MULT_NOV)
+llm-V-comparison: $(JOBS_LLM_V_COMP_WITHV) $(JOBS_LLM_V_COMP_NOV)
 
 # Jobs for additivity experiment
 JOBS_LLM_ALG_ADD := $(addprefix job-llm-add-alg,${NUMBERS_LLM})
