@@ -446,21 +446,28 @@ class MdpExploreMultiPolicy:
         for ep_i in range(start_ep_idx, episodes):
             # Print episode number and potentially the objective value
             if self.verbosity > 2:
-                # Original condition: Log every 25 episodes or the last one
+                # Log every 10 episodes or the last one
                 if ep_i % 10 == 0 or ep_i == episodes - 1:
-                    aggregate_distributions = []
+                    aggregate_distributions_per_policy = []
                     for policy_idx in range(self.num_policies):
-                        agg_dist = self.objective.build_density_from_trajectories(
+                        # This should return a (H, S, A) tensor
+                        empirical_density_hsa = self.objective.build_density_from_trajectories(
                             self.visitations_per_policy[policy_idx]
                         )
-                        aggregate_distributions.append(agg_dist)
-                    val = self.objective.eval_full(self.emissions, aggregate_distributions, episodes)
+                        # Assert it's 3D (H x S x A) and average over H
+                        assert empirical_density_hsa.ndim == 3, \
+                            f"Expected 3D empirical density (H, S, A), got shape {empirical_density_hsa.shape}"
+                        stationary_empirical_density_sa = torch.mean(empirical_density_hsa, dim=0)
+                        aggregate_distributions_per_policy.append(stationary_empirical_density_sa) # Use the averaged density
+
+                    # Pass the list of (S, A) densities
+                    val = self.objective.eval_full(self.emissions, aggregate_distributions_per_policy, episodes)
                     if isinstance(val, torch.Tensor):
                         val = val.detach()
                     print(f"Episode {ep_i}, Objective Value: {val}")
                     run_objective_values.append(val) # Keep track of logged values
-                else:
-                    print("Episode:", ep_i) # Print only episode number otherwise
+                # else: # No need to print just the episode number if only logging every 10
+                #     pass
 
             # If user provided a callback, call it to do partial re-fitting, etc.
             if update_callback is not None and ep_i > 0:

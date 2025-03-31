@@ -208,16 +208,14 @@ class MultiPolicyAggDesignD(MultiPolicyAggDesignA):
         return torch.linalg.slogdet(z + self.lambd/episodes * eye)[1]
 
 class MultiPolicyOrigDesignD(RewardFunctional):
-    def __init__(self, env, lambd=1e-3, dim=0, V=None, time_weigh=True):
+    def __init__(self, env, lambd=1e-3, dim=0, V=None):
         super().__init__()
         self.lambd = lambd
         self.type = "static"
         self.env = env
         self.V = V
-        self.horizon = env.max_episode_length
-        self.time_weigh = time_weigh
+        self.horizon = env.max_episode_length # Keep horizon for regularization scaling
         self.estimator = None
-        self.prob_matrix = None
         self.dim = dim
 
     def update_estimator(self, estimator, emissions):
@@ -233,13 +231,6 @@ class MultiPolicyOrigDesignD(RewardFunctional):
         else:
             self.C = theta_fit
 
-    def _get_prob_matrix(self, emissions):
-        """Return pairwise probability matrix or default to 0.5 on the specified device and dtype."""
-        n = emissions.shape[0]
-        if self.prob_matrix is None:
-            return 0.5 * torch.ones((n, n), device=emissions.device, dtype=emissions.dtype)
-        return self.prob_matrix
-
     def _compute_diagonal_terms(self, emissions, prob_matrix, d1_h, d2_h):
         """Compute diagonal terms of the Fisher."""
         d2_h_or_unif = torch.ones_like(d2_h) / d2_h.shape[0] if d2_h.sum() == 0 else d2_h
@@ -253,7 +244,8 @@ class MultiPolicyOrigDesignD(RewardFunctional):
         return term1 + term2
 
     def _compute_cross_terms(self, emissions, prob_matrix, d1_h, d2_h):
-        probs = prob_matrix * (1 - prob_matrix)
+        # Since prob_matrix is always 0.5, prob * (1 - prob) is always 0.25
+        probs = 0.25
         d1d2 = d1_h.unsqueeze(1) @ d2_h.unsqueeze(0)  # [n_states, n_states]
         d2d1 = d2_h.unsqueeze(1) @ d1_h.unsqueeze(0)  # [n_states, n_states]
         
@@ -266,28 +258,34 @@ class MultiPolicyOrigDesignD(RewardFunctional):
         distributions = [d.to(emissions.device) for d in distributions]
         emissions = emissions.type(distributions[0].dtype)
         # Assume emissions has shape (n_actions, d_features)
-        z = torch.zeros((emissions.shape[1], emissions.shape[1]), 
+        z = torch.zeros((emissions.shape[1], emissions.shape[1]),
                         dtype=distributions[0].dtype, device=emissions.device)
-        if len(distributions[0].shape) == 2:
-            distributions = [dist[None, :] for dist in distributions]
+        if distributions[0].ndim == 2:
+            # If input is 2D (S, A), add a singleton horizon dimension -> (1, S, A)
+            distributions = [dist.unsqueeze(0) for dist in distributions]
+
         H = distributions[0].shape[0]
-        
-        for h in range(H):
-            time_weight = (H - h)/H if self.time_weigh else 1.0
-            if self.dim == 0:
-                d1_h = torch.sum(distributions[0][h], dim=1)
-                d2_h = torch.sum(distributions[1][h], dim=1)
-            elif self.dim == 1:
-                d1_h = torch.sum(distributions[0][h], dim=0)  
-                d2_h = torch.sum(distributions[1][h], dim=0)
+        assert H == 1, f"This functional only supports stationary policies (horizon H=1). Got H={H}."
 
-            prob_matrix = self._get_prob_matrix(emissions)
-            prob_matrix = prob_matrix.type(d1_h.dtype)
+        # Since H=1, we only consider the first time step (index 0)
+        h = 0
+        if self.dim == 0: # Sum over actions
+            d1_h = torch.sum(distributions[0][h], dim=1)
+            d2_h = torch.sum(distributions[1][h], dim=1)
+        elif self.dim == 1: # Sum over states
+            d1_h = torch.sum(distributions[0][h], dim=0)
+            d2_h = torch.sum(distributions[1][h], dim=0)
 
-            diag_terms = self._compute_diagonal_terms(emissions, prob_matrix, d1_h, d2_h)
-            cross_terms = self._compute_cross_terms(emissions, prob_matrix, d1_h, d2_h)
-            z += time_weight * (diag_terms - cross_terms)
-            
+        # Create the 0.5 probability matrix directly
+        n_actions = emissions.shape[0] # Assuming emissions are (n_actions, d_features)
+        prob_matrix = 0.5 * torch.ones((n_actions, n_actions), device=emissions.device, dtype=d1_h.dtype)
+
+        diag_terms = self._compute_diagonal_terms(emissions, prob_matrix, d1_h, d2_h)
+        cross_terms = self._compute_cross_terms(emissions, prob_matrix, d1_h, d2_h)
+
+        # No time weighting needed as H=1
+        z = diag_terms - cross_terms
+
         return z
 
     def eval(self, emissions, distributions, episodes):
@@ -324,10 +322,11 @@ class MultiPolicyOrigDesignC(MultiPolicyOrigDesignD):
         - lambd (float): The regularization parameter lambda.
         - Sigma (float): The Sigma parameter.
         - C (torch.Tensor, list, or None): The C parameter, which can be a tensor, list of tensors, or None.
-        - **kwargs: Additional keyword arguments passed to the parent class.
+        - **kwargs: Additional keyword arguments passed to the parent class (time_weigh is ignored).
         """
         # Call the parent class's __init__ to set up common attributes
-        super().__init__(env, lambd, dim, **kwargs)
+        # Note: time_weigh is no longer accepted by the parent __init__
+        super().__init__(env, lambd, dim, **kwargs) 
         # Set the C attribute specific to this class
         if C is None:
             raise ValueError("C cannot be None for MultiPolicyOrigDesignC. It must be provided or set via update_estimator.")

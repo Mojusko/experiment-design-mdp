@@ -223,13 +223,13 @@ class FeedbackFactory:
 
             if cfg.feedback.adaptive_design_frequency > 0:
                 # Pass initial_C and estimation frequency to the adaptive design constructor
-                design = AdaptiveOrigDesignC(
-                    env=env,
-                    lambd=lambda_reg, # Use determined lambda_reg
-                    dim=1,
-                    C=initial_C,
-                    adaptive_estimation_frequency=cfg.feedback.adaptive_estimation_frequency # Pass frequency
-                )
+                #design = AdaptiveOrigDesignC(
+                #    env=env,
+                #    lambd=lambda_reg, # Use determined lambda_reg
+                #    dim=1,
+                #    C=initial_C,
+                #    adaptive_estimation_frequency=cfg.feedback.adaptive_estimation_frequency # Pass frequency
+                #)
                 design = AdaptiveOrigDesignA(env=env, lambd=lambda_reg, dim=1, V=V) # Use determined lambda_reg
                 #design = AdaptiveOrigDesignD(env=env, lambd=lambda_reg, dim=1) # Use determined lambda_reg
             else:
