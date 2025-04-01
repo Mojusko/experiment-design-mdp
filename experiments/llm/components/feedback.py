@@ -7,7 +7,7 @@ from doexpy.functionals.doe_static_functionals import (
     DesignA, DesignD, MultiPolicyOrigDesignA, MultiPolicyOrigDesignD, MultiPolicyOrigDesignC
 )
 from doexpy.functionals.doe_adaptive_functionals import (
-    AdaptiveOrigDesignD, AdaptiveOrigDesignA, AdaptiveOrigDesignC, AdaptiveOrigDesignANovel
+    AdaptiveOrigDesignD, AdaptiveOrigDesignA, AdaptiveOrigDesignC 
 )
 from doexpy.feedback.feedback_base import EmptyFeedback
 from stpy.embeddings.polynomial_embedding import CustomEmbedding
@@ -230,8 +230,7 @@ class FeedbackFactory:
                 #    C=initial_C,
                 #    adaptive_estimation_frequency=cfg.feedback.adaptive_estimation_frequency # Pass frequency
                 #)
-                #design = AdaptiveOrigDesignA(env=env, lambd=lambda_reg, dim=1, V=V) # Use determined lambda_reg
-                design = AdaptiveOrigDesignANovel(env=env, lambd=lambda_reg, dim=1, V=V) # Use determined lambda_reg
+                design = AdaptiveOrigDesignA(env=env, lambd=lambda_reg, dim=1, V=V) # Use determined lambda_reg
                 #design = AdaptiveOrigDesignD(env=env, lambd=lambda_reg, dim=1) # Use determined lambda_reg
             else:
                 # Static designs

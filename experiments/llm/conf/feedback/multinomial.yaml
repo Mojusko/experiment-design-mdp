@@ -14,7 +14,8 @@ pass_V: true
 # Model-specific parameters (moved from experiment config)
 model_specific_params:
   japanese-text:
-    lambda_reg: 10
+    #lambda_reg: 10 #static
+    lambda_reg: 25 #adaptive
   japanese-image:
     lambda_reg: 100
   aesthetics:

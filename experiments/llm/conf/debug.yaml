@@ -6,10 +6,10 @@ feedback:
   num_components: 3
   adaptive_estimation_frequency: 0
   adaptive_estimation_start: 0
-  adaptive_design_frequency: 0
+  adaptive_design_frequency: 25
 experiment:
    episodes: 50
-   vocab_size: 500
+   vocab_size: 100
 # Results directory for debug mode
 results_dir: "results/debug"
 algorithm: "design"

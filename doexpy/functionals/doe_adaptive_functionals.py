@@ -467,7 +467,7 @@ class AdaptiveOrigDesignC(MultiPolicyOrigDesignC):
             z = (1.0 / episodes) * new_z + alpha * agg_z
         else:
             z = (1 - alpha) * new_z + alpha * agg_z
-        
+
         # Create identity matrix for regularization
         eye = torch.eye(z.shape[0], device=z.device, dtype=z.dtype)
         z_reg = z + self.lambd/(self.horizon*episodes) * eye
@@ -487,103 +487,5 @@ class AdaptiveOrigDesignC(MultiPolicyOrigDesignC):
         
         # Use parent class method to compute C-optimal value
         return super()._compute_c_optimal_value(inv_z_reg)
-
-class AdaptiveOrigDesignANovel(MultiPolicyOrigDesignA):
-    """
-    Adaptive A-optimal design using distribution blending instead of matrix blending.
-    Combines the candidate distribution with the aggregated historical distribution
-    before calculating the Fisher information matrix.
-    """
-    def __init__(self, env, lambd=1e-3, dim=0, uniform_alpha=False, V=None):
-        # Initialize exactly like AdaptiveOrigDesignA
-        super().__init__(env, lambd, dim)
-        self.type = "adaptive"
-        self.uniform_alpha = uniform_alpha # Note: uniform_alpha doesn't make sense in this context but kept for signature compatibility
-        self.V = V
-        if uniform_alpha:
-             logger.warning("uniform_alpha=True has no effect in AdaptiveOrigDesignANovel as blending happens at distribution level.")
-
-
-    def eval(self, emissions, distributions, visitations_per_policy, episodes):
-        """
-        Evaluates the design by blending distributions adaptively.
-
-        Args:
-            emissions: Tensor of emissions.
-            distributions: List of candidate stationary distributions (S, A) for each policy.
-            visitations_per_policy: List of lists of trajectories for each policy.
-            episodes: Total number of episodes (budget).
-
-        Returns:
-            The A-optimal value based on the blended distribution.
-        """
-        # 1. Calculate aggregated empirical densities (averaged over time)
-        agg_densities = [
-            self.build_density_from_trajectories(visitations)
-            for visitations in visitations_per_policy
-        ]
-
-        processed_agg_densities = []
-        for i in range(len(distributions)):
-            agg_density = agg_densities[i]
-            if agg_density.ndim == 3: # Should be H, S, A
-                 # Average over the time dimension (H)
-                 processed_agg_densities.append(torch.mean(agg_density, dim=0))
-            elif agg_density.ndim == 2: # Already S, A
-                 processed_agg_densities.append(agg_density)
-            else:
-                 raise ValueError(f"Unexpected aggregated density shape: {agg_density.shape}")
-
-            # Ensure candidate and processed aggregate densities have compatible shapes (S, A)
-            if distributions[i].shape != processed_agg_densities[-1].shape:
-                 raise ValueError(f"Shape mismatch: Candidate dist {distributions[i].shape}, Aggregated dist {processed_agg_densities[-1].shape}")
-
-        # 2. Calculate alpha
-        # Ensure visitations_per_policy is not empty before accessing len
-        if not visitations_per_policy or not visitations_per_policy[0]:
-             alpha = 0.0
-        else:
-             alpha = len(visitations_per_policy[0]) / episodes
-
-        # 3. Create the combined distributions
-        combined_distributions = []
-        for i in range(len(distributions)):
-            new_dist = distributions[i].to(processed_agg_densities[i].device, dtype=processed_agg_densities[i].dtype)
-            agg_dist = processed_agg_densities[i]
-
-            # Blend: (1 - alpha) * new + alpha * aggregated
-            combined_dist = (1 - alpha) * new_dist + alpha * agg_dist
-            combined_distributions.append(combined_dist)
-
-        # 4. Calculate z using the parent's method on the combined distributions
-        # _calculate_z expects a list of distributions, potentially HxSxA, handles SxA internally
-        z = super()._calculate_z(emissions, combined_distributions, episodes)
-
-        # 5. Compute A-optimal value
-        eye = torch.eye(z.shape[0], device=z.device, dtype=z.dtype)
-        # Apply regularization. Note: horizon is used in parent's regularization scaling.
-        regularization = self.lambd / (self.horizon * episodes)
-        z_reg = z + regularization * eye
-
-        if self.V is None:
-            return -torch.trace(torch.linalg.inv(z_reg))
-        else:
-            # Ensure V is on the correct device
-            V_dev = self.V.to(z_reg.device, dtype=z_reg.dtype)
-            return -torch.trace(V_dev @ torch.linalg.inv(z_reg))
-
-    # eval_full remains the same as in AdaptiveOrigDesignA, evaluating based purely
-    # on the input distributions without any adaptive blending.
-    def eval_full(self, emissions, distributions, episodes):
-        # For final evaluation - directly use the provided distributions
-        # This reuses the implementation from AdaptiveOrigDesignA's eval_full
-        z = super(MultiPolicyOrigDesignA, self)._calculate_z(emissions, distributions, episodes)
-        eye = torch.eye(z.shape[0], device=z.device, dtype=z.dtype)
-        if self.V is None:
-            return -torch.trace(torch.linalg.inv(z + self.lambd/(self.horizon * episodes) * eye))
-        else:
-            # Ensure V is on the correct device
-            V_dev = self.V.to(z.device, dtype=z.dtype)
-            return -torch.trace(V_dev @ torch.linalg.inv(z + self.lambd/(self.horizon * episodes) * eye))
 
 

@@ -438,7 +438,7 @@ llm-find-rounds: $(JOBS_LLM_ROUNDS)
 
 # Lambda-finding
 # We'll run each lambda_reg value for REPEATS_LLM seeds
-LAMBDA_VALUES_MUL := 5 10 25 50 
+LAMBDA_VALUES_MUL := 50 100 200
 LAMBDA_VALUES_NUM := 0.0001 0.001 0.01 0.1 1 10
 
 # Generate job names for each (lambda, seed) pair for both types
@@ -479,7 +479,7 @@ llm-find-lambda: llm-find-lambda-mul llm-find-lambda-num
 
 # Design Frequency Finding (using lambda_finding base config)
 # Iterates over episodes and adaptive_design_frequency
-EPISODES_DESIGN_FREQ := 200
+EPISODES_DESIGN_FREQ := 100 200
 DESIGN_FREQ_VALUES := 50 100
 
 # Generate job names: ep<episodes>-df<design_freq>-<seed>
