@@ -513,10 +513,29 @@ class MdpExploreMultiPolicy:
     
         # Handle optional "optimal" value computation if not adaptive
         if self.objective.get_type() != "adaptive":
-            densities = [policy.return_density() for policy in self.general_policies]
-            opt = self.objective.eval_full(self.emissions, densities, self.episodes)
-            if isinstance(opt, torch.Tensor):
-                opt = opt.detach().cpu().numpy()
+            # Get densities from policies
+            raw_densities = [policy.return_density() for policy in self.general_policies]
+            
+            # Ensure densities are stationary (S, A) by averaging over H if needed
+            processed_densities = []
+            for density in raw_densities:
+                if density is not None and density.ndim == 3:
+                    # Average over the horizon dimension (H)
+                    processed_densities.append(torch.mean(density, dim=0))
+                elif density is not None: # Already stationary (S, A) or other expected format
+                    processed_densities.append(density)
+                else: # Handle None case if necessary
+                    processed_densities.append(None) # Or handle appropriately
+
+            # Check if all densities were None or processing failed
+            if any(d is None for d in processed_densities):
+                 # Decide how to handle this: maybe skip eval_full or raise error
+                 print("Warning: Could not process all densities for final evaluation.")
+                 opt = None # Example: set opt to None
+            else:
+                opt = self.objective.eval_full(self.emissions, processed_densities, self.episodes)
+                if isinstance(opt, torch.Tensor):
+                    opt = opt.detach().cpu().numpy()
         else:
             opt = None
     

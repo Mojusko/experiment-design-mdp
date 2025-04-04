@@ -1,13 +1,14 @@
 defaults:
   - config
   - override feedback: multinomial
+  - override embedder: siglip2 
   - _self_ # Ensure debug-specific values override defaults correctly
 feedback:
   num_rounds: 2
   num_components: 3
   adaptive_estimation_frequency: 0
   adaptive_estimation_start: 0
-  adaptive_design_frequency: 25
+  adaptive_design_frequency: 0
 experiment:
    episodes: 50
    vocab_size: 100

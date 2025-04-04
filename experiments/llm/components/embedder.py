@@ -147,7 +147,154 @@ class CLIPEmbedder(BaseEmbedder):
         else:
              # Fallback for older models or unexpected configs
              print("Warning: Could not reliably determine embedding dimension from model config. Assuming 768.")
-             return 768 # Common for large models
+             print("Warning: Could not reliably determine embedding dimension from model config. Assuming 768 for CLIP.")
+             return 768 # Common for large CLIP models
+
+
+# --- Concrete Implementation: SigLIP2Embedder ---
+
+class SigLIP2Embedder(BaseEmbedder):
+    """Embed text or images using a SigLIP 2 model."""
+
+    def _load_model(self):
+        """Load SigLIP 2 model, processor, and tokenizer."""
+        # SigLIP 2 uses the same Auto* classes
+        # Note: SigLIP models often use Gemma tokenizer.
+        # Explicitly load the tokenizer first with trust_remote_code=True
+        try:
+            self._tokenizer = AutoTokenizer.from_pretrained(
+                self.model_id,
+                cache_dir=self.cache_dir,
+                trust_remote_code=True # Trust remote code for tokenizer too
+            )
+            print(f"Successfully loaded tokenizer: {self._tokenizer.__class__.__name__}")
+        except Exception as e:
+            print(f"Error loading tokenizer explicitly for {self.model_id}: {e}")
+            # If explicit loading fails, maybe AutoProcessor can still handle it?
+            # Or raise the error if tokenizer is strictly required.
+            raise RuntimeError(f"Failed to load tokenizer for {self.model_id}") from e
+
+        # Load the processor, passing the explicitly loaded tokenizer
+        # This should prevent AutoProcessor from loading the wrong tokenizer class.
+        try:
+            self._processor = AutoProcessor.from_pretrained(
+                self.model_id,
+                tokenizer=self._tokenizer, # Pass the loaded tokenizer
+                cache_dir=self.cache_dir,
+                trust_remote_code=True # Keep for processor-specific code if any
+            )
+            print(f"Successfully loaded processor: {self._processor.__class__.__name__}")
+        except Exception as e:
+             print(f"Error loading processor for {self.model_id} even with explicit tokenizer: {e}")
+             raise RuntimeError(f"Failed to load processor for {self.model_id}") from e
+
+        # Load the model as before
+        self._model = AutoModel.from_pretrained(
+            self.model_id,
+            cache_dir=self.cache_dir,
+            trust_remote_code=True # Keep for model-specific code
+        ).to(self.device)
+        self._model.eval()
+
+    @torch.no_grad()
+    def embed_text(self, text: str) -> torch.Tensor:
+        """Embed text using SigLIP 2."""
+        # Handle the placeholder space character explicitly
+        if text == ' ':
+            emb_dim = self.get_embedding_dim()
+            return torch.zeros((1, emb_dim), dtype=torch.double, device=self.device)
+    
+        # Tokenize the text, explicitly requesting attention_mask
+        inputs = self.tokenizer(
+            text=[text],  # Process text as a list
+            padding="max_length",
+            max_length=64,  # Explicitly set max length
+            truncation=True,
+            return_tensors="pt",
+            return_attention_mask=True,  # Ensure attention_mask is returned
+        ).to(self.device)
+    
+        # Check if attention_mask was returned (for robustness)
+        if 'attention_mask' not in inputs:
+            print(f"Warning: 'attention_mask' not found in tokenizer output for text: '{text}'")
+            raise KeyError(f"Tokenizer did not return 'attention_mask' for text: '{text}'. Inputs received: {inputs.keys()}")
+    
+        # Generate text features using the model
+        embedding = self.model.get_text_features(
+            input_ids=inputs['input_ids'],
+            attention_mask=inputs['attention_mask']
+        )
+        embedding = embedding.detach().double()
+    
+        if self.normalize:
+            embedding = embedding / torch.norm(embedding, p=2, dim=-1, keepdim=True)
+    
+        return embedding.view(1, -1)  # Ensure [1, dim] shape
+
+    @torch.no_grad()
+    def embed_image(self, image: PILImage) -> torch.Tensor:
+        """Embed an image using SigLIP 2."""
+        inputs = self.processor(
+            images=image,
+            return_tensors="pt"
+        ).to(self.device)
+
+        embedding = self.model.get_image_features(
+            pixel_values=inputs['pixel_values']
+        )
+        embedding = embedding.detach().double()
+
+        if self.normalize:
+            embedding = embedding / torch.norm(embedding, p=2, dim=-1, keepdim=True)
+
+        return embedding.view(1, -1) # Ensure [1, dim] shape
+
+    def get_embedding_dim(self) -> int:
+        """Return the embedding dimension for SigLIP 2."""
+        # SigLIP 2 embedding dimension is usually in the config
+        """Return the embedding dimension for SigLIP 2."""
+        config = self.model.config
+        dim = None
+
+        # Strongly prioritize projection_dim as it's the final embedding size
+        if hasattr(config, 'projection_dim') and config.projection_dim:
+            dim = config.projection_dim
+        elif isinstance(config, dict) and 'projection_dim' in config and config['projection_dim']:
+            dim = config['projection_dim']
+
+        # Fallback to hidden_size ONLY if projection_dim was not found
+        if dim is None:
+            if hasattr(config, 'hidden_size') and config.hidden_size:
+                print("Warning: projection_dim not found in config, falling back to hidden_size.")
+                dim = config.hidden_size
+            elif isinstance(config, dict) and 'hidden_size' in config and config['hidden_size']:
+                print("Warning: projection_dim not found in config (dict), falling back to hidden_size.")
+                dim = config['hidden_size']
+
+        # Final fallback if neither is found
+        if dim is None:
+            # Determine fallback based on model name heuristics if possible, else default
+            model_name_lower = self.model_id.lower()
+            # More specific heuristic for siglip2 models based on observed behavior
+            if 'siglip2' in model_name_lower:
+                if 'large' in model_name_lower:
+                    fallback_dim = 1024 # Observed dimension for siglip2-large
+                elif 'base' in model_name_lower:
+                    fallback_dim = 768
+                elif 'giant' in model_name_lower:
+                    fallback_dim = 1536 # Example, verify if used
+                elif 'so400m' in model_name_lower:
+                    fallback_dim = 1152
+                else:
+                    fallback_dim = 1024 # Default fallback for unknown siglip2
+            else:
+                # Fallback for non-siglip2 models (less likely in this class)
+                fallback_dim = 1152 # Generic fallback
+
+            print(f"Warning: Could not reliably determine embedding dimension (projection_dim or hidden_size) from SigLIP 2 model config. Assuming {fallback_dim} based on model name '{self.model_id}'.")
+            dim = fallback_dim
+
+        return dim
 
 
 # --- Factory Function ---

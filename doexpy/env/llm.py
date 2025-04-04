@@ -3,8 +3,8 @@ from doexpy.env.discrete_env import DiscreteEnv
 from typing import List, Tuple, Union
 import torch
 from torch import nn
-# Import the base embedder class for type hinting
-from experiments.llm.components.embedder import BaseEmbedder
+# Import the base embedder class and specific implementations for type hinting/checking
+from experiments.llm.components.embedder import BaseEmbedder, CLIPEmbedder
 # Import PIL Image type hint
 from PIL.Image import Image as PILImage
 import os
@@ -425,11 +425,18 @@ def get_scorer_model(model_name: str, env: LLMGrid, embedder: BaseEmbedder) -> V
         return DotProductModel(embedder, weight_vector).eval()
 
     elif model_name == 'aesthetics':
-        # Load pre-computed aesthetics weights (CLIP ViT-L/14 specific!)
-        print("Warning: Using 'aesthetics' scorer assumes a CLIP ViT-L/14 compatible embedder.")
+        # Aesthetics scorer relies on weights trained specifically for CLIP ViT-L/14
+        if not isinstance(embedder, CLIPEmbedder) or 'vit-large-patch14' not in embedder.model_id.lower():
+             raise ValueError(f"The 'aesthetics' scorer requires a CLIP ViT-L/14 embedder, but got {embedder.__class__.__name__} with model ID '{embedder.model_id}'.")
+
+        print("Using 'aesthetics' scorer (requires CLIP ViT-L/14 compatible embedder).")
         try:
             # Pass device from embedder
             aes_weight = load_aesthetics_embedding(device=embedder.device)
+            # Check dimension compatibility explicitly
+            expected_dim = embedder.get_embedding_dim()
+            if aes_weight.shape[1] != expected_dim:
+                raise ValueError(f"Aesthetics weight dimension ({aes_weight.shape[1]}) does not match embedder dimension ({expected_dim}). Ensure you are using the correct CLIP model (ViT-L/14).")
             # Bias is typically not used or is 0 for these models
             return DotProductModel(embedder, aes_weight, bias=None).eval()
         except FileNotFoundError as e:
