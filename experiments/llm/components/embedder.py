@@ -181,6 +181,7 @@ class SigLIP2Embedder(BaseEmbedder):
                 self.model_id,
                 tokenizer=self._tokenizer, # Pass the loaded tokenizer
                 cache_dir=self.cache_dir,
+                use_fast=True,
                 trust_remote_code=True # Keep for processor-specific code if any
             )
             print(f"Successfully loaded processor: {self._processor.__class__.__name__}")

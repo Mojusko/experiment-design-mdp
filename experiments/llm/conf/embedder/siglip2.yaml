@@ -1,0 +1,7 @@
+# Configuration for SigLIP 2 Embedder (Large, Patch 16, 512px)
+_target_: experiments.llm.components.embedder.SigLIP2Embedder
+model_id: "google/siglip2-large-patch16-512"
+normalize: true # Or false, depending on whether SigLIP benefits from external normalization
+# Inherit cache_dir from the main config's cache_dir variable
+cache_dir: ${cache_dir}
+# device will be determined automatically unless overridden here
