@@ -13,8 +13,9 @@ def generate_test_sequence(rng, word_lists, horizon):
 class BaseTester(ABC):
     """Base class for all testers with simplified interface."""
     
-    def __init__(self, scorer_model=None, params=None):
+    def __init__(self, scorer_model=None, embedder=None, params=None): # Added embedder argument
         self.scorer_model = scorer_model
+        self.embedder = embedder # Store embedder instance
         self.params = params or {}
     
     @abstractmethod
@@ -77,8 +78,9 @@ class PreferenceTester(BaseTester):
         return {"preference_error": error}
 
 class CosineTester(BaseTester):
-    def __init__(self, scorer_model=None, params=None):
-        super().__init__(scorer_model, params)
+    # Updated __init__ to accept embedder and pass it to super()
+    def __init__(self, scorer_model=None, embedder=None, params=None):
+        super().__init__(scorer_model, embedder, params) # Pass embedder to base class
         print(f"Initialized {self.__class__.__name__} with {self.params}")
     
     @staticmethod

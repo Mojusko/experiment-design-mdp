@@ -1,8 +1,12 @@
 from doexpy.env.discrete_env import DiscreteEnv
-from transformers import CLIPModel, CLIPProcessor, CLIPTokenizer
+# Removed direct CLIP imports, will use embedder object
 from typing import List, Tuple, Union
 import torch
 from torch import nn
+# Import the base embedder class for type hinting
+from experiments.llm.components.embedder import BaseEmbedder
+# Import PIL Image type hint
+from PIL.Image import Image as PILImage
 import os
 import hashlib
 import pickle
@@ -14,11 +18,7 @@ class LLMGrid(DiscreteEnv):
     def __init__(
         self,
         list_of_text_tokens: List[str],
-        model: CLIPModel,
-        processor: CLIPProcessor,
-        tokenizer: CLIPTokenizer,
-        cache_dir: str,
-        normalize_embedder: bool,
+        embedder: BaseEmbedder, # Accept an embedder instance
         base_prompt: str = '',
         verbose: bool = False,
         include_base_prompt_in_first_tokens: bool = True,
@@ -27,15 +27,13 @@ class LLMGrid(DiscreteEnv):
         self.constrained = False
         super().__init__(init_state=0)
 
-        self.device = next(model.parameters()).device
-        self.embedder = CLIPEmbedder(tokenizer, model, normalize=normalize_embedder)
-        self._processor = processor
-        self._tokenizer = tokenizer
-
-        self.cache_dir = cache_dir
+        self.embedder = embedder # Store the embedder instance
+        self.device = self.embedder.device # Get device from embedder
+        # No need for separate processor/tokenizer storage if accessed via embedder
+        # self.cache_dir = self.embedder.cache_dir # Can get from embedder if needed
 
         self.include_base_prompt_in_first_tokens = include_base_prompt_in_first_tokens
-        self.base_prompt = base_prompt  # Always store the actual base_prompt
+        self.base_prompt = base_prompt # Always store the actual base_prompt
 
         # Process token lists based on configuration
         if include_base_prompt_in_first_tokens and base_prompt:
@@ -68,13 +66,15 @@ class LLMGrid(DiscreteEnv):
         self.action_space_pre_embedding = torch.arange(self.actions_num, dtype=torch.float64).to(self.device).reshape(-1, 1)
         self.emiss_num = self.actions_num
         self.transition_matrix = None
-        self.emissions = generate_emissions(self.unique_elements, self.embedder, self.cache_dir, self.verbose)
+        # Pass the embedder instance to generate_emissions
+        self.emissions = generate_emissions(self.unique_elements, self.embedder, self.verbose)
         self.action_space = self.emissions
         self.visitations = torch.zeros(self.states_num, self.actions_num, dtype=torch.float64).to(self.device)
 
 
     def get_dim(self):
-        return 768
+        # Get dimension from the embedder
+        return self.embedder.get_embedding_dim()
 
     def get_states_num(self):
         return self.states_num
@@ -129,112 +129,92 @@ class LLMGrid(DiscreteEnv):
         self.state = self.init_state
         self.h = 0
 
-
-class CLIPEmbedder:
-    """Embed text using CLIP model
-
-    Args:
-        text: Text to embed
-        normalize: Whether to L2 normalize the embedding
-
-    Returns:
-        Text embedding
-    """
-    def __init__(self, tokenizer, model, normalize: bool = True):
-        self.tokenizer = tokenizer
-        self.model = model
-        self.device = next(model.parameters()).device  # Track model device
-        self.normalize = normalize
-
-    def embed_text(self, text: str) -> torch.Tensor:
-        text_input = self.tokenizer(
-            text,
-            padding="max_length",
-            max_length=self.tokenizer.model_max_length,
-            truncation=True,
-            return_tensors="pt",
-        )
-        text_input = {k: v.to(self.device) for k, v in text_input.items()}
-        embedding = self.model.get_text_features(**text_input).detach().double()
-
-        if self.normalize:
-            embedding = embedding / torch.norm(embedding, p=2)
-
-        return embedding.view(1, -1)
+# Removed CLIPEmbedder class definition (moved to components/embedder.py)
 
 
-class CLIPScorer(nn.Module):
-    """Base class for CLIP-based scoring models"""
-    def __init__(self, embedder):
+class VisionLanguageScorer(nn.Module):
+    """Base class for Vision-Language scoring models"""
+    def __init__(self, embedder: BaseEmbedder):
         super().__init__()
-        self.embedder = embedder
+        self.embedder = embedder # Store the embedder instance
 
-    def score_prompt(self, x):
+    def score_prompt(self, x: str) -> Tuple[torch.Tensor, torch.Tensor]:
+        """Scores a text prompt. Returns score and embedding."""
+        raise NotImplementedError
+
+    def score_embedding(self, x_embedding: torch.Tensor) -> torch.Tensor:
+        """Scores a pre-computed embedding."""
         raise NotImplementedError
 
 
-class DotProductModel(CLIPScorer):
-    def __init__(self, embedder, weight, bias=None):
+class DotProductModel(VisionLanguageScorer):
+    """Scores prompts based on the dot product of their embedding with a weight vector."""
+    def __init__(self, embedder: BaseEmbedder, weight: torch.Tensor, bias: torch.Tensor = None):
         super().__init__(embedder)
-        # Standardize weight to always be a 2D tensor with shape [1, embedding_dim]
+        expected_dim = self.embedder.get_embedding_dim()
+
+        # Validate and standardize weight shape
         if weight.dim() == 1:
-            self.weight = weight.view(1, -1).to(embedder.device)
-        else:
-            # If it's already 2D, ensure it's [1, embedding_dim] or [embedding_dim, 1]
-            if weight.shape[0] == 1 or weight.shape[1] == 1:
-                # Make sure it's [1, embedding_dim]
-                if weight.shape[1] == 1:
-                    self.weight = weight.T.to(embedder.device)
-                else:
-                    self.weight = weight.to(embedder.device)
-            else:
-                raise ValueError(f"Weight must be 1D or have one dimension of size 1, got shape {weight.shape}")
+            weight = weight.view(1, -1) # Convert 1D to [1, dim]
+        elif weight.shape[0] != 1 and weight.shape[1] == 1:
+            weight = weight.T # Convert [dim, 1] to [1, dim]
+        elif weight.shape[0] != 1:
+             raise ValueError(f"Weight must be 1D or have one dimension of size 1, got shape {weight.shape}")
 
-        self.bias = bias.to(embedder.device) if bias is not None else None
+        if weight.shape[1] != expected_dim:
+            raise ValueError(f"Weight dimension ({weight.shape[1]}) does not match embedder dimension ({expected_dim})")
 
-    def score_embedding(self, x_clip_embedding):
-        """Score a CLIP embedding directly"""
+        self.weight = weight.to(self.embedder.device).double() # Ensure correct device and dtype
+        self.bias = bias.to(self.embedder.device).double() if bias is not None else None
+        # Removed erroneous else block here
+    def score_embedding(self, x_embedding: torch.Tensor) -> torch.Tensor:
+        """Score a pre-computed embedding directly."""
         # Ensure input has correct shape [batch_size, embedding_dim]
-        if x_clip_embedding.dim() == 1:
-            x_clip_embedding = x_clip_embedding.view(1, -1)
+        if x_embedding.dim() == 1:
+            x_embedding = x_embedding.view(1, -1)
 
-        # Verify shapes are compatible
-        if x_clip_embedding.shape[1] != self.weight.shape[1]:
-            raise ValueError(f"Embedding dimension {x_clip_embedding.shape[1]} doesn't match weight dimension {self.weight.shape[1]}")
+        # Verify shapes are compatible (already checked in __init__, but good practice)
+        if x_embedding.shape[1] != self.weight.shape[1]:
+            raise ValueError(f"Input embedding dimension ({x_embedding.shape[1]}) doesn't match weight dimension ({self.weight.shape[1]})")
+
+        # Ensure correct device and dtype
+        x_embedding = x_embedding.to(self.embedder.device).double()
 
         # Simple dot product
-        score = torch.mm(x_clip_embedding, self.weight.T)
+        score = torch.mm(x_embedding, self.weight.T)
 
         if self.bias is not None:
             score += self.bias
 
         return score
 
-    def score_prompt(self, x):
-        """Score a text prompt by first embedding then scoring"""
-        x_clip_embedding = self.embedder.embed_text(x)
-        score = self.score_embedding(x_clip_embedding)
-        return score, x_clip_embedding
+    def score_prompt(self, x: str) -> Tuple[torch.Tensor, torch.Tensor]:
+        """Score a text prompt by first embedding then scoring."""
+        x_embedding = self.embedder.embed_text(x)
+        score = self.score_embedding(x_embedding)
+        return score, x_embedding
 
 
-def generate_emissions(unique_elements, embedder, cache_dir, verbose=True):
-    """Generate emissions for a list of unique elements
+def generate_emissions(unique_elements: List[str], embedder: BaseEmbedder, verbose: bool = True) -> torch.Tensor:
+    """Generate emissions (embeddings) for a list of unique elements using the provided embedder.
 
     Args:
-        unique_elements: List of text tokens to generate emissions for
-        embedder: CLIPEmbedder instance with normalize attribute
-        cache_dir: Directory for caching emissions
-        verbose: Whether to print progress messages
+        unique_elements: List of text tokens to generate emissions for.
+        embedder: An instance of BaseEmbedder (e.g., CLIPEmbedder).
+        verbose: Whether to print progress messages.
 
     Returns:
-        torch.Tensor: Matrix of emissions
+        torch.Tensor: Matrix of emissions [num_elements, embedding_dim].
     """
+    cache_dir = embedder.cache_dir # Get cache dir from embedder
     os.makedirs(cache_dir, exist_ok=True)
 
-    # Include normalization in cache key
+    # Generate a cache key based on elements and embedder configuration
     hasher = hashlib.sha256()
     hasher.update(str(len(unique_elements)).encode())
-    hasher.update(str(getattr(embedder, 'normalize', False)).encode())
+    hasher.update(embedder.get_config_hash().encode()) # Use embedder's config hash
+    # Consider adding base_prompt if it influences token text (already handled in LLMGrid init?)
+    # hasher.update(base_prompt.encode())
     for elem in unique_elements:
         hasher.update(elem.encode())
     cache_id = hasher.hexdigest()
@@ -259,12 +239,15 @@ def generate_emissions(unique_elements, embedder, cache_dir, verbose=True):
     for i, text in enumerate(unique_elements):
         embed_text = text  # Always embed the text as is
         if verbose:
-            print(f"Embedding text: {embed_text}") # Keep verbose detail if needed
+            # Verbose printing can be helpful for debugging token content
+            if verbose:
+                print(f"Embedding text: {text}")
 
-        feat = embedder.embed_text(embed_text)
+        # Use the embedder's method
+        feat = embedder.embed_text(text)
         emissions.append(feat)
 
-        # Print progress every `print_interval` iterations or on the last iteration
+        # Print progress
         if verbose and ((i + 1) % print_interval == 0 or (i + 1) == total_elements):
             print(f"Generated emission {i + 1}/{total_elements}")
 
@@ -281,33 +264,61 @@ def generate_emissions(unique_elements, embedder, cache_dir, verbose=True):
     return emissions
 
 
-def load_aesthetics_embedding(weights_path='vit_14_weights.pth'):
-    """Load aesthetics model weights and bias
+def load_aesthetics_embedding(weights_path='vit_14_weights.pth', device=None):
+    """Load aesthetics model weights.
+
+    Note: These weights are specific to CLIP ViT-L/14. Using them with other
+          embedders (like SigLIP or different CLIP models) will likely yield
+          meaningless results due to dimension and embedding space mismatch.
 
     Args:
-        weights_path: Path to aesthetics weights file
+        weights_path: Path to aesthetics weights file (e.g., vit_l_14_weights.pth).
+        device: Target device ('cuda', 'cpu', or None for auto-detect).
 
     Returns:
-        tuple: (weight tensor, bias tensor) both on appropriate device
+        torch.Tensor: Weight tensor on the specified device.
     """
-    device = 'cuda' if torch.cuda.is_available() else 'cpu'
+    target_device = device or ('cuda' if torch.cuda.is_available() else 'cpu')
+
+    if not os.path.exists(weights_path):
+         # Try common locations if just filename is given
+         potential_paths = [
+             weights_path,
+             os.path.join(os.path.dirname(__file__), weights_path), # Relative to this file
+             os.path.join(os.path.expanduser("~/.cache"), weights_path) # A common cache spot
+         ]
+         found = False
+         for p in potential_paths:
+             if os.path.exists(p):
+                 weights_path = p
+                 found = True
+                 break
+         if not found:
+            raise FileNotFoundError(f"Could not find aesthetics weights file: {weights_path} in likely locations.")
 
     try:
-        state = torch.load(weights_path, map_location=device)
-        weight = state['weight'].to(device).double()
-        return weight, None
-    except FileNotFoundError:
-        raise FileNotFoundError(f"Could not find weights file: {weights_path}")
+        # Aesthetics models usually don't have a bias term saved this way
+        state = torch.load(weights_path, map_location=target_device)
+        # Check common keys for the weight tensor
+        if 'weight' in state:
+            weight = state['weight']
+        elif 'linear.weight' in state: # Another common pattern
+            weight = state['linear.weight']
+        else:
+            # If it's just a tensor saved directly
+            if isinstance(state, torch.Tensor):
+                 weight = state
+            else:
+                 raise KeyError("Could not find weight tensor in the aesthetics state dictionary.")
+
+        # Bias is typically not included or handled differently for aesthetics scores
+        return weight.to(target_device).double() # Return only weight, ensure dtype
+    except Exception as e:
+        print(f"Error loading aesthetics weights from {weights_path}: {e}")
+        raise
 
 
-def setup_clip_model(cache_dir):
-    """Initialize shared CLIP model"""
-    model_id = "openai/clip-vit-large-patch14"
-    device = 'cuda' if torch.cuda.is_available() else 'cpu'
-    tokenizer = CLIPTokenizer.from_pretrained(model_id, cache_dir=cache_dir)
-    processor = CLIPProcessor.from_pretrained(model_id, cache_dir=cache_dir)
-    model = CLIPModel.from_pretrained(model_id, cache_dir=cache_dir).to(device)
-    return model, processor, tokenizer
+# Removed setup_clip_model function (handled by embedder factory)
 
 
 def create_prompt_from_tokens(tokens: List[str], base_prompt: str = '') -> str:
@@ -334,106 +345,163 @@ def create_prompt_from_tokens(tokens: List[str], base_prompt: str = '') -> str:
         return ", ".join(valid_tokens)
 
 
-def create_prompt(actions: List[int], env) -> str:
-    """Create prompt from action sequence
+def create_prompt(actions: List[int], env: LLMGrid) -> str:
+    """Create prompt string from a sequence of action indices.
 
     Args:
-        actions: List of action indices
-        env: Environment with unique_elements, base_prompt, and include_base_prompt_in_first_tokens attributes
+        actions: List of action indices.
+        env: The LLMGrid environment instance.
 
     Returns:
-        Formatted prompt string with hashtags
+        Formatted prompt string.
     """
-    tokens = [env.unique_elements[int(action)] for action in actions]
+    # Get token strings corresponding to action indices
+    # Handle potential index errors if action is out of bounds
+    tokens = []
+    for action in actions:
+        action_idx = int(action)
+        if 0 <= action_idx < len(env.unique_elements):
+            tokens.append(env.unique_elements[action_idx])
+        else:
+            print(f"Warning: Action index {action_idx} out of bounds for unique_elements (size {len(env.unique_elements)}). Skipping.")
+            # Decide how to handle invalid actions: skip, raise error, use placeholder?
+            # tokens.append("[INVALID_ACTION]") # Option: Placeholder
+
+    # Base prompt handling depends on env configuration
     if env.include_base_prompt_in_first_tokens:
-        # Base prompt is already included in the first token, so don't add it again
-        return create_prompt_from_tokens(tokens, base_prompt='')
+        # The base prompt is assumed to be part of the first token(s) already
+        # (as handled in LLMGrid.__init__). We just join the retrieved tokens.
+        # We need to filter out the placeholder ' ' token if it's the first action.
+        if tokens and tokens[0] == ' ':
+             # If the first action is the space placeholder, don't add extra commas
+             effective_tokens = tokens[1:]
+             # The first real token might already contain the base prompt.
+             return create_prompt_from_tokens(effective_tokens, base_prompt='')
+        else:
+             return create_prompt_from_tokens(tokens, base_prompt='')
     else:
+        # Prepend the base prompt if it's not included in the tokens
         return create_prompt_from_tokens(tokens, base_prompt=env.base_prompt)
 
 
-def get_scorer_model(model_name: str, env, clip_model, clip_processor, cache_dir):
-    """Initialize embedder and scoring model
+def get_scorer_model(model_name: str, env: LLMGrid, embedder: BaseEmbedder) -> VisionLanguageScorer:
+    """Initialize the scoring model based on the specified type.
 
     Args:
-        model_name: Scorer type ('japanese-text', 'japanese-image', 'aesthetics', 'random_combination')
-        env: Environment object
-        clip_model: CLIP model, required for image-based scorers
-        clip_processor: CLIP processor, required for aesthetics-image
-        cache_dir: Cache directory for image scorers
+        model_name: Scorer type ('japanese-text', 'japanese-image',
+                    'aesthetics', 'random_combination').
+        env: The LLMGrid environment instance (used for emissions).
+        embedder: The embedder instance (used for embedding prompts/images
+                  and determining dimensions/device).
 
     Returns:
-        Scoring model instance
+        An instance of VisionLanguageScorer (e.g., DotProductModel).
     """
-    emissions_env = env.emissions
-    scorer_embedder = env.embedder
+    emissions_env = env.emissions # Embeddings of the unique elements/actions
 
     if model_name == 'japanese-text':
-        # Use a specific text prompt for the scorer weight
-        prompt = f"An image with clear observable japanese influence, japanese history, japanese traditions or japanese symbols"
-        embedding = scorer_embedder.embed_text(prompt)
-        return DotProductModel(scorer_embedder, embedding).eval()
+        # Use the embedder to get the weight vector from text
+        prompt = "An image with clear observable japanese influence, japanese history, japanese traditions or japanese symbols"
+        weight_vector = embedder.embed_text(prompt)
+        return DotProductModel(embedder, weight_vector).eval()
 
     elif model_name == 'japanese-image':
-        # Load and embed the japan.jpg image using CLIP
+        # Use the embedder to get the weight vector from an image
         from PIL import Image
         import os
-    
-        # Load the image from the llm directory
-        image_path = 'japan.jpg'
-        if not os.path.exists(image_path):
-            raise FileNotFoundError(f"Image file not found: {image_path}")
-    
-        image = Image.open(image_path)
-    
-        # Process image with CLIP
-        inputs = clip_processor(
-            images=image, 
-            return_tensors="pt"
-        ).to(env.embedder.device)
-    
-        # Get CLIP image features
-        with torch.no_grad():
-            image_embedding = clip_model.get_image_features(**inputs).detach().double()
-            # L2 normalize the embedding
-            image_embedding = image_embedding / torch.norm(image_embedding, p=2)
-            # Make sure it's a 2D tensor with shape [1, embedding_dim]
-            if image_embedding.dim() == 1:
-                image_embedding = image_embedding.view(1, -1)
-    
-        return DotProductModel(scorer_embedder, image_embedding).eval()
 
-    if model_name == 'aesthetics':
-        aes_weight, aes_bias = load_aesthetics_embedding()
-        return DotProductModel(scorer_embedder, aes_weight, bias=aes_bias).eval()
+        image_path = 'japan.jpg' # Assumed relative to execution or in PYTHONPATH
+        potential_paths = [image_path, os.path.join(os.path.dirname(__file__), image_path)]
+        found_path = None
+        for p in potential_paths:
+            if os.path.exists(p):
+                found_path = p
+                break
+        if not found_path:
+             raise FileNotFoundError(f"Image file not found: {image_path} in likely locations.")
 
-    if model_name == 'random_combination':
+        image = Image.open(found_path).convert("RGB") # Ensure RGB
+        weight_vector = embedder.embed_image(image)
+        return DotProductModel(embedder, weight_vector).eval()
+
+    elif model_name == 'aesthetics':
+        # Load pre-computed aesthetics weights (CLIP ViT-L/14 specific!)
+        print("Warning: Using 'aesthetics' scorer assumes a CLIP ViT-L/14 compatible embedder.")
+        try:
+            # Pass device from embedder
+            aes_weight = load_aesthetics_embedding(device=embedder.device)
+            # Bias is typically not used or is 0 for these models
+            return DotProductModel(embedder, aes_weight, bias=None).eval()
+        except FileNotFoundError as e:
+            print(f"Error: {e}. Aesthetics scorer requires weights file.")
+            raise
+        except ValueError as e:
+             # Catch dimension mismatch if DotProductModel raises it
+             print(f"Error initializing aesthetics scorer: {e}")
+             print("Ensure the embedder's dimension matches the aesthetics weights.")
+             raise
+
+    elif model_name == 'random_combination':
+        # Create a weight vector as a random combination of action embeddings
         rng = np.random.RandomState(42)
-        device = emissions_env.device
-        dtype = emissions_env.dtype
+        device = embedder.device
+        dtype = emissions_env.dtype # Use dtype from existing emissions
 
-        k = 25
-        selected_indices = rng.choice(emissions_env.shape[0], k, replace=False)
+        num_actions = emissions_env.shape[0]
+        k = min(25, num_actions) # Ensure k is not larger than the number of actions
+        if k == 0:
+             raise ValueError("Cannot create random combination scorer with zero actions/emissions.")
 
-        random_coeffs = torch.zeros(emissions_env.shape[0], device=device, dtype=dtype)
-        selected_coeffs = 2 * rng.rand(k) - 1  # Uniform in [-1, 1]
-        random_coeffs[selected_indices] = torch.tensor(selected_coeffs, device=device, dtype=dtype)
+        selected_indices = rng.choice(num_actions, k, replace=False)
 
-        random_combination_vec = torch.mm(random_coeffs.view(1, -1), emissions_env)
-        return DotProductModel(scorer_embedder, random_combination_vec).eval()
+        # Create coefficients on the correct device and dtype
+        random_coeffs = torch.zeros(num_actions, device=device, dtype=dtype)
+        selected_coeffs = 2 * torch.rand(k, device=device, dtype=dtype) - 1 # Uniform in [-1, 1]
+        random_coeffs[selected_indices] = selected_coeffs
 
-    raise ValueError(f"Unknown model_name: {model_name}")
+        # Calculate the weighted combination of emissions
+        # random_coeffs shape: [num_actions]
+        # emissions_env shape: [num_actions, embedding_dim]
+        # Result shape: [embedding_dim] -> view as [1, embedding_dim]
+        weight_vector = torch.matmul(random_coeffs.unsqueeze(0), emissions_env) # [1, num_actions] @ [num_actions, dim] -> [1, dim]
+
+        return DotProductModel(embedder, weight_vector).eval()
+
+    raise ValueError(f"Unknown scorer model name: {model_name}")
 
 
-def make_theta_star(env, scorer_model, verbose=False):
-    def theta_star(actions: List[int]) -> Union[torch.Tensor, Tuple[torch.Tensor, torch.Tensor]]:
-        assert len(actions) > 0
+def make_theta_star(env: LLMGrid, scorer_model: VisionLanguageScorer, verbose: bool = False):
+    """
+    Creates the ground truth scoring function theta_star.
+
+    Args:
+        env: The LLMGrid environment instance.
+        scorer_model: The initialized scoring model (e.g., DotProductModel).
+        verbose: If True, print the generated prompt before scoring.
+
+    Returns:
+        A function `theta_star(actions)` that takes a list of action indices
+        and returns the score and the corresponding embedding.
+    """
+    def theta_star(actions: List[int]) -> Tuple[torch.Tensor, torch.Tensor]:
+        """The ground truth scoring function."""
+        if not actions:
+            # Handle empty action list if necessary, maybe return zero score and zero embedding?
+            print("Warning: theta_star called with empty action list.")
+            emb_dim = env.get_dim()
+            zero_score = torch.tensor([[0.0]], device=env.device, dtype=torch.double)
+            zero_embedding = torch.zeros((1, emb_dim), device=env.device, dtype=torch.double)
+            return zero_score, zero_embedding
+            # Alternatively, raise ValueError("Action list cannot be empty.")
+
+        # Create the full prompt string from actions
         prompt = create_prompt(actions, env)
 
         if verbose:
-            print(prompt)
+            print(f"Theta* scoring prompt: '{prompt}'")
 
-        score, clip_embedding = scorer_model.score_prompt(prompt)
-        return score, clip_embedding
+        # Use the scorer model's method to get score and embedding
+        score, embedding = scorer_model.score_prompt(prompt)
+        return score, embedding
 
     return theta_star

@@ -139,7 +139,7 @@ class FeedbackFactory:
     Decides which feedback type to build + design + estimator for numerical or multinomial.
     """
     @staticmethod
-    def create(cfg, env, scorer_model):
+    def create(cfg, env, scorer_model, embedder): # Added embedder argument
         """
         Creates feedback components.
 
@@ -147,8 +147,10 @@ class FeedbackFactory:
             cfg: Configuration object.
             env: Environment object (LLMGrid).
             scorer_model: The ground truth scorer model instance.
+            embedder: The embedder instance. # Added embedder to docstring
         """
-        m = 768
+        # Use embedder's dimension instead of hardcoding
+        m = embedder.get_embedding_dim()
         embedding = CustomEmbedding(m, lambda x: x, m)
 
         # Determine lambda_reg based on the configuration strategy

@@ -210,7 +210,7 @@ class ImageGenerationSaver(BaseSaver):
             os.makedirs(images_dir, exist_ok=True)
 
         # Import generator classes and seed function locally to avoid circular import
-        from experiments.llm.image_generator import StableDiffusionGenerator, DoubleGuidanceStableDiffusionGenerator, _get_seed_from_prompt
+        from experiments.llm.image_generator import StableDiffusionGenerator, _get_seed_from_prompt
 
         # Initialize image generator with debug settings if needed
         generator = StableDiffusionGenerator(

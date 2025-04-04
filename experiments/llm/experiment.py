@@ -5,18 +5,17 @@ import datetime
 import sys
 
 import hydra
-from omegaconf import DictConfig
+from omegaconf import DictConfig, OmegaConf # Added OmegaConf
 
-from stpy.helpers.helper import cartesian  # We'll use in _make_token_lists
+from stpy.helpers.helper import cartesian
+# Updated imports from doexpy.env.llm
 from doexpy.env.llm import (
-    LLMGrid, setup_clip_model, get_scorer_model, make_theta_star, CLIPEmbedder, generate_emissions
+    LLMGrid, get_scorer_model, make_theta_star, generate_emissions, create_prompt # Added create_prompt
 )
-from doexpy.env.llm import (
-    LLMGrid, setup_clip_model, get_scorer_model, make_theta_star, CLIPEmbedder, generate_emissions
-)
-# Removed image generator imports, now handled in LLMGrid
+# Import embedder components
+from components.embedder import BaseEmbedder, create_embedder
 from components.feedback import FeedbackFactory
-from components.solver  import SolverFactory
+from components.solver import SolverFactory
 from components.tester  import BaseTester, ImageGenerationTester
 from components.saver   import BaseSaver
 
@@ -41,14 +40,23 @@ class LLMExperiment:
         self.results_dir = f"{cfg.results_dir}-{timestamp}"
         os.makedirs(self.results_dir, exist_ok=True)
 
-        #self.training_words, self.testing_words, self.model_words = self._load_data_legacy()
+        # --- Initialize Embedder ---
+        # The create_embedder factory reads cfg.embedder config group
+        self.embedder: BaseEmbedder = create_embedder(cfg.embedder)
+        print(f"Initialized Embedder: {self.embedder.__class__.__name__} with model {self.embedder.model_id}")
+
+        # --- Load Data & Initialize Environment ---
         self.training_words, self.testing_words, self.model_words = self._load_data()
-        self.env = self._init_env() # This initializes self._scorer_model
-        self.env._scorer_vector = self._scorer_model.weight # Keep this for potential other uses
-        self.feedback, self.design, self.estimator = FeedbackFactory.create(cfg, self.env, self._scorer_model) # Pass scorer_model
+        # _init_env now uses self.embedder
+        self.env = self._init_env() # This initializes self._scorer_model and self._theta_star
+
+        # --- Initialize Core Components ---
+        # Pass the embedder instance where needed (e.g., FeedbackFactory might need it)
+        # Pass the scorer model as before
+        self.feedback, self.design, self.estimator = FeedbackFactory.create(cfg, self.env, self._scorer_model, self.embedder)
         self.explorer = SolverFactory.create(cfg, self.env, self.design, self.feedback)
 
-        # For test-only mode, initialize estimator to None, will be loaded later
+        # For test-only mode, initialize estimator to None, will be loaded later (remains same)
         self.estimator = None
         
         # Build experiment_id with prefix if available
@@ -68,17 +76,20 @@ class LLMExperiment:
                     experiment_id = f"{self.cfg.experiment.id_prefix}-{algorithm_code}-{feedback_code}"
         
         self.experiment_id = experiment_id
-        
+
         # Initialize testers and savers with results_dir and experiment_id
-        self.testers = [hydra.utils.instantiate(t, scorer_model=self._scorer_model) for t in self.cfg.tester]
-        
+        # Pass embedder to testers/savers that might need it (e.g., ImageGenerationTester/Saver)
+        self.testers = [hydra.utils.instantiate(t, scorer_model=self._scorer_model, embedder=self.embedder) for t in self.cfg.tester]
+
         # Initialize the savers with appropriate parameters
         self.savers = []
         for s in self.cfg.savers:
             # Pass standard parameters to all savers
+            # Pass embedder to savers that might need it
             saver = hydra.utils.instantiate(
                 s,
                 scorer_model=self._scorer_model,
+                embedder=self.embedder, # Pass embedder
                 results_dir=self.results_dir,
                 experiment_id=self.experiment_id
             )
@@ -146,15 +157,10 @@ class LLMExperiment:
         
     def _init_env(self):
         """
-        Builds token lists (if 'optim' do cartesian, else repeated),
-        sets up LLMGrid, plus a ground-truth scoring model.
+        Builds token lists, sets up LLMGrid using the configured embedder,
+        and initializes the ground-truth scoring model and theta_star.
         """
-        # Setup CLIP
-        self._clip_model, self._clip_processor, self._clip_tokenizer = setup_clip_model(self.cfg.cache_dir)
-
-        # Generate separate emissions for ground truth model using model_words
-        clip_embedder = CLIPEmbedder(self._clip_tokenizer, self._clip_model)
-        #model_emissions = generate_emissions(self.model_words, clip_embedder, self.cfg.cache_dir) if self.model_words else None
+        # Embedder is already initialized in self.embedder
 
         # Create token_lists for training environment
         horizon = self.cfg.horizon
@@ -171,28 +177,26 @@ class LLMExperiment:
             token_lists = self.training_words
 
 
-        # Build environment
+        # Build environment, passing the initialized embedder
         env = LLMGrid(
-            token_lists,
-            self._clip_model,
-            self._clip_processor,
-            self._clip_tokenizer,
-            self.cfg.cache_dir,
-            self.cfg.normalize_CLIP,
+            list_of_text_tokens=token_lists, # Corrected keyword argument
+            embedder=self.embedder, # Pass the embedder instance
             base_prompt=self.cfg.base_prompt,
             include_base_prompt_in_first_tokens=self.cfg.include_base_prompt_in_first_tokens,
             verbose=self.cfg.verbose
         )
+        # Store scorer vector if needed (optional, depends on usage)
+        # self.env._scorer_vector = self._scorer_model.weight
 
-        # Build scorer using model emissions with non-normalized embedder
+        # Build scorer model using the environment and the embedder
         self._scorer_model = get_scorer_model(
-            self.cfg.experiment.scorer_model,
-            env,
-            self._clip_model,
-            self._clip_processor,
-            self.cfg.cache_dir,
+            model_name=self.cfg.experiment.scorer_model,
+            env=env,
+            embedder=self.embedder # Pass embedder
         )
-        self._theta_star = make_theta_star(env, self._scorer_model)
+
+        # Create the ground truth function using the scorer model
+        self._theta_star = make_theta_star(env, self._scorer_model, verbose=self.cfg.verbose)
 
 
 
@@ -215,15 +219,11 @@ class LLMExperiment:
                 
             # Load the theta tensor
             theta = torch.load(estimator_path)
-            
-            # Ensure theta is on the right device
-            if hasattr(self.env, 'device'):
-                device = self.env.device
-            else:
-                device = torch.device('cuda' if torch.cuda.is_available() else 'cpu')
-            
+
+            # Ensure theta is on the right device (use embedder's device)
+            device = self.embedder.device
             theta = theta.to(device)
-            
+
             # Setup feedback components with the loaded theta
             self.feedback.fit_estimator(preloaded_theta=theta)
             self.estimator = self.feedback.estimator
@@ -303,12 +303,15 @@ class LLMExperiment:
         results.add_metadata('horizon', self.cfg.horizon)
         results.add_metadata('algorithm', self.cfg.algorithm)
         results.add_metadata('base_prompt', self.cfg.base_prompt)
-        
+        # Add embedder info to metadata
+        results.add_metadata('embedder_class', self.embedder.__class__.__name__)
+        results.add_metadata('embedder_model_id', self.embedder.model_id)
+        results.add_metadata('embedder_normalize', self.embedder.normalize)
+
         # Add the resolved config as a plain dictionary for the ConfSaver
-        from omegaconf import OmegaConf
         config_dict = OmegaConf.to_container(self.cfg, resolve=True)
         results.add_metadata('config_dict', config_dict)
-        
+
         # Run all testers and collect metrics
         for tester in self.testers:
             tester_results = tester.run_test(

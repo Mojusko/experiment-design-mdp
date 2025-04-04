@@ -1,15 +1,17 @@
 defaults:
   - experiment: feedback_comparison
   - feedback: numerical
+  - embedder: clip # Add default embedder configuration
+  - _self_ # Ensure this config's values override defaults if needed
 
 seed: 12
 verbose: false
 base_prompt: 'A man walking alone'
 #base_prompt: ''
-normalize_CLIP: true
+# normalize_CLIP: true # Removed, now part of embedder config
 include_base_prompt_in_first_tokens: true
 algorithm: "design"
-cache_dir: "${oc.env:HOME}/.cache/huggingface/hub"
+cache_dir: "${oc.env:HOME}/.cache/huggingface/hub" # Default cache dir
 horizon: 3
 accuracy: 1e-14
 dense_feedback: true
@@ -33,7 +35,11 @@ tester:
   #  - _target_: components.tester.ImageGenerationTester
   #    params:
   #      take_best_worst_N: 4
-  #      use_estimator: true
+  #      use_estimator: true # Controls if ImageGenerationTester uses learned weights
+
+# Embedder configuration is loaded via defaults list above.
+# Specific embedder settings (like model_id, cache_dir) are in conf/embedder/*.yaml
+
 
 # Default savers configuration
 savers:

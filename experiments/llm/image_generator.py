@@ -8,9 +8,13 @@ from typing import List, Tuple, Union
 import numpy as np
 import torch
 from diffusers import AutoencoderKL, LMSDiscreteScheduler, UNet2DConditionModel
-from transformers import CLIPTextModel, CLIPTokenizer, CLIPModel, CLIPProcessor
+from transformers import CLIPTextModel, CLIPTokenizer # Keep these for SD text encoding
+# Removed CLIPModel, CLIPProcessor imports for image embedding here
+# Import BaseEmbedder for type hinting and PIL Image
+from components.embedder import BaseEmbedder, create_embedder # Added create_embedder for main block
+from PIL.Image import Image as PILImage
 
-import hashlib # Added for seed generation
+import hashlib
 
 logger = logging.getLogger(__name__)
 
@@ -20,7 +24,6 @@ def _get_seed_from_prompt(prompt: str) -> int:
     # Convert the hex digest to an integer and constrain it to 32 bits
     return int(hash_digest, 16) % (2**32)
 
-### Original Class: StableDiffusionGenerator
 class StableDiffusionGenerator():
     def __init__(
         self,
@@ -45,18 +48,14 @@ class StableDiffusionGenerator():
         self.device = 'cuda' if torch.cuda.is_available() else 'cpu'
         self.num_inference_steps = num_inference_steps
         self.guidance_scale = guidance_scale
+        self.MODELS_CACHE_DIR = MODELS_CACHE_DIR # Store cache dir
 
-        # Add CLIP model for image embeddings
-        self._clip_model = CLIPModel.from_pretrained(
-            "openai/clip-vit-large-patch14",
-            cache_dir=MODELS_CACHE_DIR
-        ).to(self.device)
-        self._clip_processor = CLIPProcessor.from_pretrained(
-            "openai/clip-vit-large-patch14",
-            cache_dir=MODELS_CACHE_DIR
-        )
+        # Remove internal CLIP loading for image embedding
+        # self._clip_model = ...
+        # self._clip_processor = ...
 
-        # Load tokenizer and text encoder from the SD model
+        # Load tokenizer and text encoder *specifically for Stable Diffusion's text conditioning*
+        # This is separate from the embedder used for scoring/analysis.
         self._tokenizer = CLIPTokenizer.from_pretrained(
             stable_diffusion_id,
             subfolder="tokenizer",
@@ -97,12 +96,12 @@ class StableDiffusionGenerator():
         self.latents = None
 
     def seed_generator(self) -> None:
-        # Setup random generator
+        # Setup random generator for SD noise
         if self.seed:
             self._generator = torch.Generator(device=self.device).manual_seed(self.seed)
         else:
             self._generator = torch.Generator(device=self.device)
-            self._generator.seed()  # Ensure random initialization even without specific seed
+            self._generator.seed()
 
     @torch.no_grad()
     def resample_random(self) -> None:
@@ -116,17 +115,20 @@ class StableDiffusionGenerator():
         )
 
     @torch.no_grad()
-    def sample(self, prompt: str, raw: bool = False) -> Union[np.ndarray, Tuple[np.ndarray, torch.Tensor]]:
-        """Generates an image from a text prompt.
+    def sample(self, prompt: str, embedder: BaseEmbedder, raw: bool = False) -> Union[np.ndarray, Tuple[np.ndarray, torch.Tensor]]:
+        """Generates an image from a text prompt and embeds it using the provided embedder.
 
         Args:
             prompt (str): The text prompt to generate an image from.
-            raw (bool): If True, returns both processed and raw image tensors.
+            embedder (BaseEmbedder): The embedder instance to use for image embedding.
+            raw (bool): If True, returns raw image tensor alongside processed numpy array.
 
         Returns:
-            Union[np.ndarray, Tuple[np.ndarray, torch.Tensor]]: Generated image(s) and text embeddings
+            Union[np.ndarray, Tuple[np.ndarray, torch.Tensor]]:
+                - If raw=False: (numpy image array [H, W, C], image embedding tensor [1, D])
+                - If raw=True: (numpy image array [H, W, C], raw image tensor, image embedding tensor [1, D])
         """
-        # Set seed based on the prompt for deterministic generation
+        # Set SD seed based on the prompt for deterministic generation
         self.seed = _get_seed_from_prompt(prompt)
         self.seed_generator()
 
@@ -191,18 +193,18 @@ class StableDiffusionGenerator():
         image = image.detach().cpu().permute(0, 2, 3, 1).numpy()
         image = (image * 255).round().astype("uint8")[0]
 
-        # Convert to PIL Image and get CLIP embedding
-        pil_image = Image.fromarray(image)
-        inputs = self._clip_processor(
-            images=pil_image, 
-            return_tensors="pt"
-        ).to(self.device)
-        image_embedding = self._clip_model.get_image_features(**inputs)
-        image_embedding = image_embedding.detach().cpu()[0]  # Convert to numpy array
+        # Convert to PIL Image and get embedding using the provided embedder
+        pil_image = PILImage.fromarray(image)
+        # Ensure embedder is on the same device potentially? Or handle internally.
+        # Assuming embedder handles device placement.
+        image_embedding = embedder.embed_image(pil_image) # Use the passed embedder
+        # Keep embedding as a tensor [1, D] on its original device
 
         if raw:
-            return image, image_raw, image_embedding
-        return image, image_embedding
+            # Return numpy image, raw tensor, embedding tensor
+            return image, image_raw.detach().cpu(), image_embedding.detach()
+        # Return numpy image, embedding tensor
+        return image, image_embedding.detach()
 
     @property
     def image_size(self) -> Tuple[int, int, int]:
@@ -211,190 +213,6 @@ class StableDiffusionGenerator():
         Returns:
             Tuple[int, int, int]: (height, width, channels)
         """
-        return (self._image_size, self._image_size, 3)
-
-
-### New Class: DoubleGuidanceStableDiffusionGenerator
-class DoubleGuidanceStableDiffusionGenerator():
-    def __init__(
-        self,
-        stable_diffusion_id: str,
-        num_inference_steps: int = 100,
-        guidance_base: float = 8.0,      # Guidance for base prompt
-        guidance_tokens: float = 4.0,    # Guidance for full prompt
-        image_size: int = 512,
-        seed: int = 0,
-        MODELS_CACHE_DIR: str = os.path.expanduser("~/.cache/huggingface/hub")
-    ) -> None:
-        """An implementation of Stable Diffusion's text-to-image generator with separate guidance for base and full prompts.
-
-        Args:
-            stable_diffusion_id (str): The Stable Diffusion model identifier.
-            num_inference_steps (int): Number of denoising steps.
-            guidance_base (float): Guidance scale for the base prompt.
-            guidance_tokens (float): Guidance scale for the full prompt.
-            image_size (int): Size of generated images.
-            seed (int): Random seed for reproducibility.
-            MODELS_CACHE_DIR (str): Directory to cache downloaded models.
-        """
-        self.seed = seed
-        self.device = 'cuda' if torch.cuda.is_available() else 'cpu'
-        self.num_inference_steps = num_inference_steps
-        self.guidance_base = guidance_base
-        self.guidance_tokens = guidance_tokens
-        self._clip_model = CLIPModel.from_pretrained(
-            "openai/clip-vit-large-patch14",
-            cache_dir=MODELS_CACHE_DIR
-        ).to(self.device)
-        self._clip_processor = CLIPProcessor.from_pretrained(
-            "openai/clip-vit-large-patch14",
-            cache_dir=MODELS_CACHE_DIR
-        )
-        # Load tokenizer and text encoder
-        self._tokenizer = CLIPTokenizer.from_pretrained(
-            stable_diffusion_id, subfolder="tokenizer", cache_dir=MODELS_CACHE_DIR
-        )
-        self._text_encoder = CLIPTextModel.from_pretrained(
-            stable_diffusion_id, subfolder="text_encoder", cache_dir=MODELS_CACHE_DIR
-        ).to(self.device)
-
-        # Load UNet and VAE
-        self._unet = UNet2DConditionModel.from_pretrained(
-            stable_diffusion_id, subfolder="unet", cache_dir=MODELS_CACHE_DIR
-        ).to(self.device)
-        self._vae = AutoencoderKL.from_pretrained(
-            stable_diffusion_id, subfolder="vae", cache_dir=MODELS_CACHE_DIR
-        ).to(self.device)
-
-        # Setup scheduler
-        self._scheduler = LMSDiscreteScheduler(
-            beta_start=0.00085, beta_end=0.012, beta_schedule="scaled_linear", num_train_timesteps=1000
-        )
-
-        # Setup random generator
-        self._generator = torch.Generator(device=self.device)
-        if self.seed:
-            self._generator.manual_seed(self.seed)
-        else:
-            self._generator.seed()
-
-        self._image_size = image_size
-        self.latents = None
-
-    @torch.no_grad()
-    def seed_generator(self) -> None:
-        # Setup random generator
-        if self.seed:
-            self._generator = torch.Generator(device=self.device).manual_seed(self.seed)
-        else:
-            self._generator = torch.Generator(device=self.device)
-            self._generator.seed()  # Ensure random initialization even without specific seed
-
-    @torch.no_grad()
-    def resample_random(self) -> None:
-        """Generates new random latents for image generation."""
-        latents_height = self._image_size // 8
-        latents_width = self._image_size // 8
-        self.latents = torch.randn(
-            (1, self._unet.in_channels, latents_height, latents_width),
-            generator=self._generator, device=self.device
-        )
-
-    @torch.no_grad()
-    def sample(self, base_prompt: str, full_prompt: str, raw: bool = False) -> Union[np.ndarray, Tuple[np.ndarray, torch.Tensor]]:
-        """Generates an image using separate guidance for base prompt and full prompt.
-
-        Args:
-            base_prompt (str): The base prompt (e.g., "A man walking in paris").
-            full_prompt (str): The full prompt (e.g., "A man walking in paris #photorealistic #cute").
-            raw (bool): If True, returns both processed and raw image tensors.
-
-        Returns:
-            Union[np.ndarray, Tuple[np.ndarray, torch.Tensor]]: Generated image(s) and text embeddings.
-        """
-        # Set seed based on the full prompt for deterministic generation
-        self.seed = _get_seed_from_prompt(full_prompt)
-        self.seed_generator()
-        if self.latents is None:
-            self.resample_random()
-
-        # Encode unconditioned prompt
-        uncond_input = self._tokenizer(
-            [""], padding="max_length", max_length=self._tokenizer.model_max_length,
-            truncation=True, return_tensors="pt"
-        )
-        uncond_embeddings = self._text_encoder(uncond_input.input_ids.to(self.device))[0]
-
-        # Encode base prompt
-        base_input = self._tokenizer(
-            [base_prompt], padding="max_length", max_length=self._tokenizer.model_max_length,
-            truncation=True, return_tensors="pt"
-        )
-        base_embeddings = self._text_encoder(base_input.input_ids.to(self.device))[0]
-
-        # Encode full prompt
-        full_input = self._tokenizer(
-            [full_prompt], padding="max_length", max_length=self._tokenizer.model_max_length,
-            truncation=True, return_tensors="pt"
-        )
-        full_embeddings = self._text_encoder(full_input.input_ids.to(self.device))[0]
-
-        # Concatenate embeddings for three-way guidance
-        text_embeddings = torch.cat([uncond_embeddings, base_embeddings, full_embeddings])
-
-        # Prepare latents
-        latents = self.latents.to(self.device)
-        self._scheduler.set_timesteps(self.num_inference_steps)
-        latents = latents * self._scheduler.init_noise_sigma
-
-        # Denoising loop
-        for t in self._scheduler.timesteps:
-            # Expand latents for three predictions
-            latent_model_input = torch.cat([latents] * 3)
-            latent_model_input = self._scheduler.scale_model_input(latent_model_input, timestep=t)
-
-            # Predict noise
-            noise_pred = self._unet(
-                latent_model_input, t, encoder_hidden_states=text_embeddings
-            ).sample
-
-            # Split into three predictions
-            noise_pred_uncond, noise_pred_base, noise_pred_full = noise_pred.chunk(3)
-
-            # Combine with separate guidance scales
-            noise_pred = (noise_pred_uncond +
-                          self.guidance_base * (noise_pred_base - noise_pred_uncond) +
-                          self.guidance_tokens * (noise_pred_full - noise_pred_base))
-
-            # Step to previous sample
-            latents = self._scheduler.step(noise_pred, t, latents).prev_sample
-
-        # Decode latents to image
-        latents = latents / 0.18215
-        image = self._vae.decode(latents).sample
-        image_raw = image.clone()
-
-        # Process image for output
-        image = (image / 2 + 0.5).clamp(0, 1)
-        image = image.detach().cpu().permute(0, 2, 3, 1).numpy()
-        image = (image * 255).round().astype("uint8")[0]
-
-        # Convert to PIL Image and get CLIP embedding
-        pil_image = Image.fromarray(image)
-        inputs = self._clip_processor(
-            images=pil_image, 
-            return_tensors="pt"
-        ).to(self.device)
-        image_embedding = self._clip_model.get_image_features(**inputs)
-        image_embedding = image_embedding.detach().cpu()[0]  # Convert to numpy array
-
-        if raw:
-            return image, image_raw, image_embedding
-        return image, image_embedding
-
-    @property
-    def image_size(self) -> Tuple[int, int, int]:
-        """Returns the output image dimensions."""
         return (self._image_size, self._image_size, 3)
 
 # Default configuration for image generation
@@ -418,12 +236,30 @@ if __name__ == "__main__":
     parser.add_argument("--seed", type=int, default=DEFAULT_CONFIG["seed"], help=f"Random seed for reproducibility (default: {DEFAULT_CONFIG['seed']})")
     parser.add_argument("--image_size", type=int, default=DEFAULT_CONFIG["image_size"], help=f"Size of the generated image (default: {DEFAULT_CONFIG['image_size']})")
     parser.add_argument("--num_inference_steps", type=int, default=DEFAULT_CONFIG["num_inference_steps"], help=f"Number of inference steps (default: {DEFAULT_CONFIG['num_inference_steps']})")
-    parser.add_argument("--guidance_base", type=float, default=DEFAULT_CONFIG["guidance_base"], help=f"Guidance scale for base prompt (default: {DEFAULT_CONFIG['guidance_base']})")
-    #parser.add_argument("--guidance_tokens", type=float, default=DEFAULT_CONFIG["guidance_tokens"], help=f"Guidance scale for full prompt tokens (default: {DEFAULT_CONFIG['guidance_tokens']})")
+    parser.add_argument("--guidance_base", type=float, default=DEFAULT_CONFIG["guidance_base"], help=f"Guidance scale for prompt (default: {DEFAULT_CONFIG['guidance_base']})")
+    # Removed guidance_tokens argument as we are using the single-guidance generator for now
+    # parser.add_argument("--guidance_tokens", type=float, default=DEFAULT_CONFIG["guidance_tokens"], help=f"Guidance scale for full prompt tokens (default: {DEFAULT_CONFIG['guidance_tokens']})")
+    parser.add_argument("--embedder_model_id", type=str, default="openai/clip-vit-large-patch14", help="Model ID for the embedder (e.g., CLIP or SigLIP)")
+    parser.add_argument("--embedder_normalize", type=bool, default=True, help="Whether the embedder should normalize features")
+
 
     args = parser.parse_args()
 
-    # Print the configuration being used
+    # --- Setup Embedder ---
+    # Create a dummy config for the embedder based on args
+    from omegaconf import OmegaConf
+    embedder_cfg = OmegaConf.create({
+        # Assuming CLIPEmbedder for now, adjust if needed or make configurable
+        "_target_": "experiments.llm.components.embedder.CLIPEmbedder",
+        "model_id": args.embedder_model_id,
+        "normalize": args.embedder_normalize,
+        "cache_dir": DEFAULT_CONFIG["MODELS_CACHE_DIR"]
+    })
+    embedder = create_embedder(embedder_cfg)
+    print(f"Initialized Embedder: {embedder.__class__.__name__} with model {embedder.model_id}")
+
+
+    # --- Print Configuration ---
     print("Using configuration:")
     print(f"  base_prompt: '{args.base_prompt}'")
     print(f"  full_prompt: '{args.full_prompt}'")
@@ -431,24 +267,32 @@ if __name__ == "__main__":
     print(f"  num_inference_steps: {args.num_inference_steps}")
     print(f"  guidance_scale: {args.guidance_base}")
     print(f"  image_size: {args.image_size}")
-    print(f"  seed: {args.seed}")
+    print(f"  seed: {args.seed}") # Note: Seed is now derived from prompt internally
     print(f"  output_dir: {args.output_dir}")
-    
-    # Initialize the generator with provided parameters
+    print(f"  embedder_model_id: {args.embedder_model_id}")
+    print(f"  embedder_normalize: {args.embedder_normalize}")
+
+    # Initialize the SD generator (using single guidance version for simplicity here)
     generator = StableDiffusionGenerator(
-        DEFAULT_CONFIG["stable_diffusion_id"],
+        stable_diffusion_id=DEFAULT_CONFIG["stable_diffusion_id"],
         num_inference_steps=args.num_inference_steps,
         guidance_scale=args.guidance_base,
         image_size=args.image_size,
         # Seed is now derived from the prompt internally by the generator
+        # Seed is derived from prompt internally
         MODELS_CACHE_DIR=DEFAULT_CONFIG["MODELS_CACHE_DIR"]
     )
 
-    # Generate the image (temporarily using only StableDiffusionGenerator with full_prompt)
-    image, _ = generator.sample(args.full_prompt)
-    
-    # NOTE: We're temporarily using StableDiffusionGenerator instead of DoubleGuidanceStableDiffusionGenerator
-    # The base_prompt and guidance_tokens parameters are accepted but not used in this version
+    # Generate the image using the full prompt and the created embedder
+    # The base_prompt arg is ignored by StableDiffusionGenerator.sample
+    # We get back the numpy image and the embedding tensor
+    image_np, image_embedding = generator.sample(args.full_prompt, embedder=embedder)
+
+    # NOTE: This example uses StableDiffusionGenerator. If using DoubleGuidanceStableDiffusionGenerator,
+    # you would call:
+    # image_np, image_embedding = generator.sample(args.base_prompt, args.full_prompt, embedder=embedder)
+
+    print(f"Generated image embedding shape: {image_embedding.shape}, dtype: {image_embedding.dtype}, device: {image_embedding.device}")
 
     # Create the output directory if it doesn’t exist
     os.makedirs(args.output_dir, exist_ok=True)
@@ -456,11 +300,18 @@ if __name__ == "__main__":
     # Create a filename that includes prompt and parameters
     # Sanitize the prompt for filename use
     sanitized_prompt = args.full_prompt.replace(' ', '_').replace('/', '_').replace('\\', '_')
-    sanitized_prompt = ''.join(c for c in sanitized_prompt if c.isalnum() or c in '_-#')[:50]  # Limit length
-    
-    filename = f"{sanitized_prompt}_guidance{args.guidance_base}_tokens{args.guidance_tokens}_steps{args.num_inference_steps}.png"
-    
+    sanitized_prompt = ''.join(c for c in sanitized_prompt if c.isalnum() or c in '_-#')[:50] # Limit length
+
+    # Update filename to reflect embedder used (optional)
+    embedder_name_short = embedder.__class__.__name__.replace("Embedder","").lower()
+    filename = f"{sanitized_prompt}_guidance{args.guidance_base}_steps{args.num_inference_steps}_emb-{embedder_name_short}.png"
+
     # Save the image with the descriptive filename
     image_path = os.path.join(args.output_dir, filename)
-    Image.fromarray(image).save(image_path)
+    PILImage.fromarray(image_np).save(image_path) # Save the numpy image
     print(f"Image saved to {image_path}")
+
+    # Optionally save the embedding too
+    embedding_path = os.path.splitext(image_path)[0] + ".pt"
+    torch.save(image_embedding, embedding_path)
+    print(f"Image embedding saved to {embedding_path}")
