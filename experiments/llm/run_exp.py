@@ -1,4 +1,5 @@
 import hydra
+import torch # Added torch import
 from experiment import LLMExperiment
 import sys
 import os
@@ -9,6 +10,16 @@ def main(cfg: DictConfig):
     print("\n=== Configuration ===")
     print(OmegaConf.to_yaml(cfg, resolve=True))
     print("===================\n")
+
+    # --- Print CUDA Availability ---
+    cuda_available = torch.cuda.is_available()
+    print(f"CUDA Available: {cuda_available}")
+    if cuda_available:
+        print(f"CUDA Device Count: {torch.cuda.device_count()}")
+        print(f"Current CUDA Device: {torch.cuda.current_device()}")
+        print(f"CUDA Device Name: {torch.cuda.get_device_name(torch.cuda.current_device())}")
+    print("===================\n")
+    # -----------------------------
 
     experiment = LLMExperiment(cfg)
     
