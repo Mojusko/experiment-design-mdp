@@ -7,18 +7,18 @@ from omegaconf import OmegaConf, DictConfig
 
 @hydra.main(config_path="conf", config_name="config", version_base=None)
 def main(cfg: DictConfig):
-    print("\n=== Configuration ===")
-    print(OmegaConf.to_yaml(cfg, resolve=True))
-    print("===================\n")
+    print("\n=== Configuration ===", flush=True)
+    print(OmegaConf.to_yaml(cfg, resolve=True), flush=True)
+    print("===================\n", flush=True)
 
     # --- Print CUDA Availability ---
     cuda_available = torch.cuda.is_available()
-    print(f"CUDA Available: {cuda_available}")
+    print(f"CUDA Available: {cuda_available}", flush=True)
     if cuda_available:
-        print(f"CUDA Device Count: {torch.cuda.device_count()}")
-        print(f"Current CUDA Device: {torch.cuda.current_device()}")
-        print(f"CUDA Device Name: {torch.cuda.get_device_name(torch.cuda.current_device())}")
-    print("===================\n")
+        print(f"CUDA Device Count: {torch.cuda.device_count()}", flush=True)
+        print(f"Current CUDA Device: {torch.cuda.current_device()}", flush=True)
+        print(f"CUDA Device Name: {torch.cuda.get_device_name(torch.cuda.current_device())}", flush=True)
+    print("===================\n", flush=True)
     # -----------------------------
 
     experiment = LLMExperiment(cfg)
