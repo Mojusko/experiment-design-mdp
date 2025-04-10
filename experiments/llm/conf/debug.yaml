@@ -1,7 +1,7 @@
 defaults:
   - config
   - override feedback: multinomial
-  - override embedder: siglip2 
+  - override embedder: clip 
   - _self_ # Ensure debug-specific values override defaults correctly
 feedback:
   num_rounds: 2

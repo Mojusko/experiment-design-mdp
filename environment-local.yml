@@ -1,0 +1,61 @@
+name: doexpy-local # Use a different name to avoid conflicts
+channels:
+  - pytorch   # Highest priority for PyTorch packages
+  - nvidia    # Still useful for other potential packages
+  - conda-forge # For other community packages
+  - defaults  # Base conda packages
+dependencies:
+  # --- Core ---
+  - python=3.10
+  - pip
+  - wheel
+
+  # --- PyTorch Stack (Let Conda choose best for local OS) ---
+  - pytorch
+  - torchvision
+  - torchaudio
+  # - pytorch-cuda=11.8  # REMOVED/COMMENTED OUT FOR LOCAL
+
+  # --- Numerics / Data Science ---
+  - numpy
+  - scipy
+  - pandas
+  - scikit-learn
+
+  # --- Plotting / Image ---
+  - matplotlib
+  - pillow
+
+  # --- Other Conda Dependencies (Optional but often useful) ---
+  - intel-openmp # Often linked by numpy/scipy/pytorch
+  - requests     # Common utility
+
+  # --- Pip Dependencies ---
+  # Packages listed here will be installed via pip AFTER conda packages
+  - pip:
+    # Hydra Config Management
+    - hydra-core==1.3.2
+    - omegaconf==2.3.0
+    # LLM / Vision Libraries
+    - transformers==4.50.3
+    - accelerate==1.6.0
+    - diffusers==0.31.0
+    - huggingface-hub==0.26.2
+    # Optimization Libraries (from requirements_clean.txt)
+    - cvxpy==1.6.0
+    - cvxpylayers==0.1.8
+    - pymanopt==2.2.1
+    - Mosek==10.2.10
+    - clarabel==0.9.0
+    - osqp==0.6.7.post3
+    - qdldl==0.1.7.post4
+    - scs==3.2.7
+    - quadprog==0.1.13
+    - diffcp==1.1.3
+    - pytorch-minimize==0.0.2
+    - autograd==1.7.0
+    - autograd-minimize==0.3.0
+    # Other
+    - moviepy==1.0.3
+    # Add any other direct pip dependencies your project has
+    # - some-other-pip-package==X.Y.Z

@@ -1,7 +1,7 @@
 defaults:
   - experiment: feedback_comparison
   - feedback: numerical
-  - embedder: siglip2 # Add default embedder configuration
+  - embedder: clip # Add default embedder configuration
   - _self_ # Ensure this config's values override defaults if needed
 
 seed: 12
