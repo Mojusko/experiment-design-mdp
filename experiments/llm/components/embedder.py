@@ -85,7 +85,8 @@ class CLIPEmbedder(BaseEmbedder):
     def _load_model(self):
         """Load CLIP model, processor, and tokenizer."""
         self._tokenizer = AutoTokenizer.from_pretrained(self.model_id, cache_dir=self.cache_dir)
-        self._processor = AutoProcessor.from_pretrained(self.model_id, cache_dir=self.cache_dir)
+        # Explicitly request the fast processor if available
+        self._processor = AutoProcessor.from_pretrained(self.model_id, cache_dir=self.cache_dir, use_fast=True)
         self._model = AutoModel.from_pretrained(self.model_id, cache_dir=self.cache_dir).to(self.device)
         self._model.eval() # Set model to evaluation mode
 

@@ -220,8 +220,16 @@ class FeedbackFactory:
                     V += V_h
             
             # Determine the initial C vector. Currently using GT scorer weights directly.
-            initial_C = scorer_model.weight.data # Use passed scorer_model
+            # initial_C = scorer_model.weight.data # Use passed scorer_model - REMOVED FOR HARDCODED C
             # initial_C = env.get_prior_vector() # Uncomment to use the generated prior vector instead
+
+            # --- Hardcoded C vectors ---
+            c_vectors = [
+                embedder.embed_text("japanese"),
+                embedder.embed_text("traditions"),
+                embedder.embed_text("culture")
+            ]
+            # -------------------------
 
             if cfg.feedback.adaptive_design_frequency > 0:
                 # Pass initial_C and estimation frequency to the adaptive design constructor
@@ -229,17 +237,26 @@ class FeedbackFactory:
                 #    env=env,
                 #    lambd=lambda_reg, # Use determined lambda_reg
                 #    dim=1,
-                #    C=initial_C,
+                #    C=initial_C, # Needs modification if used
                 #    adaptive_estimation_frequency=cfg.feedback.adaptive_estimation_frequency # Pass frequency
                 #)
-                design = AdaptiveOrigDesignA(env=env, lambd=lambda_reg, dim=1, V=V) # Use determined lambda_reg
+                # design = AdaptiveOrigDesignA(env=env, lambd=lambda_reg, dim=1, V=V) # Use determined lambda_reg - COMMENTED OUT
                 #design = AdaptiveOrigDesignD(env=env, lambd=lambda_reg, dim=1) # Use determined lambda_reg
+                # --- Activate Adaptive C Design with hardcoded vectors ---
+                design = AdaptiveOrigDesignC(
+                    env=env,
+                    lambd=lambda_reg, # Use determined lambda_reg
+                    dim=1,
+                    C=c_vectors, # Use hardcoded list
+                    adaptive_estimation_frequency=cfg.feedback.adaptive_estimation_frequency # Pass frequency
+                )
             else:
                 # Static designs
-                design = MultiPolicyOrigDesignA(env=env, lambd=lambda_reg, dim=1,V=V) # Use determined lambda_reg
+                # design = MultiPolicyOrigDesignA(env=env, lambd=lambda_reg, dim=1,V=V) # Use determined lambda_reg - COMMENTED OUT
                 #design = MultiPolicyOrigDesignD(env=env, lambd=lambda_reg, dim=1) # Use determined lambda_reg
                 # The MultiPolicyOrigDesignC constructor will raise ValueError if initial_C is None.
-                #design = MultiPolicyOrigDesignC(env=env, lambd=lambda_reg, dim=1, C=initial_C) # Use determined lambda_reg
+                # --- Activate Static C Design with hardcoded vectors ---
+                design = MultiPolicyOrigDesignC(env=env, lambd=lambda_reg, dim=1, C=c_vectors) # Use determined lambda_reg and hardcoded list
 
             likelihood = MultinomialLikelihood()
             regularizer = L2Regularizer(lam=lambda_reg) # Use determined lambda_reg
