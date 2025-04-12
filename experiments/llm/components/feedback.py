@@ -237,26 +237,27 @@ class FeedbackFactory:
                 #    env=env,
                 #    lambd=lambda_reg, # Use determined lambda_reg
                 #    dim=1,
-                #    C=initial_C, # Needs modification if used
+                #    C=initial_C, # Needs modification if used - Keep commented
                 #    adaptive_estimation_frequency=cfg.feedback.adaptive_estimation_frequency # Pass frequency
                 #)
-                # design = AdaptiveOrigDesignA(env=env, lambd=lambda_reg, dim=1, V=V) # Use determined lambda_reg - COMMENTED OUT
-                #design = AdaptiveOrigDesignD(env=env, lambd=lambda_reg, dim=1) # Use determined lambda_reg
-                # --- Activate Adaptive C Design with hardcoded vectors ---
-                design = AdaptiveOrigDesignC(
-                    env=env,
-                    lambd=lambda_reg, # Use determined lambda_reg
-                    dim=1,
-                    C=c_vectors, # Use hardcoded list
-                    adaptive_estimation_frequency=cfg.feedback.adaptive_estimation_frequency # Pass frequency
-                )
+                # --- Revert Adaptive block: Use Adaptive A-Design (or D) instead of C ---
+                design = AdaptiveOrigDesignA(env=env, lambd=lambda_reg, dim=1, V=V) # Use determined lambda_reg - REACTIVATED
+                # design = AdaptiveOrigDesignD(env=env, lambd=lambda_reg, dim=1) # Use determined lambda_reg - Alternative
+                # --- Deactivate Adaptive C Design ---
+                # design = AdaptiveOrigDesignC(
+                #     env=env,
+                #     lambd=lambda_reg, # Use determined lambda_reg
+                #     dim=1,
+                #     C=c_vectors, # Use hardcoded list
+                #     adaptive_estimation_frequency=cfg.feedback.adaptive_estimation_frequency # Pass frequency
+                # ) # COMMENTED OUT
             else:
                 # Static designs
-                # design = MultiPolicyOrigDesignA(env=env, lambd=lambda_reg, dim=1,V=V) # Use determined lambda_reg - COMMENTED OUT
-                #design = MultiPolicyOrigDesignD(env=env, lambd=lambda_reg, dim=1) # Use determined lambda_reg
+                # design = MultiPolicyOrigDesignA(env=env, lambd=lambda_reg, dim=1,V=V) # Use determined lambda_reg - Keep commented out
+                # design = MultiPolicyOrigDesignD(env=env, lambd=lambda_reg, dim=1) # Use determined lambda_reg - Keep commented out
                 # The MultiPolicyOrigDesignC constructor will raise ValueError if initial_C is None.
-                # --- Activate Static C Design with hardcoded vectors ---
-                design = MultiPolicyOrigDesignC(env=env, lambd=lambda_reg, dim=1, C=c_vectors) # Use determined lambda_reg and hardcoded list
+                # --- Ensure Static C Design with hardcoded vectors is active ---
+                design = MultiPolicyOrigDesignC(env=env, lambd=lambda_reg, dim=1, C=c_vectors) # Use determined lambda_reg and hardcoded list - REMAINS ACTIVE
 
             likelihood = MultinomialLikelihood()
             regularizer = L2Regularizer(lam=lambda_reg) # Use determined lambda_reg
