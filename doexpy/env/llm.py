@@ -70,10 +70,6 @@ class LLMGrid(DiscreteEnv):
         emissions_raw = generate_emissions(self.unique_elements, self.embedder, self.verbose)
         # Explicitly ensure emissions are on the correct device after loading/generation
         self.emissions = emissions_raw.to(self.device) 
-        if self.verbose and emissions_raw.device != self.emissions.device:
-             print(f"Moved emissions from {emissions_raw.device} to {self.emissions.device}")
-        elif self.verbose:
-             print(f"Emissions are on device: {self.emissions.device}")
              
         self.action_space = self.emissions
         self.visitations = torch.zeros(self.states_num, self.actions_num, dtype=torch.float64).to(self.device)

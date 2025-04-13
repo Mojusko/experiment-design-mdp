@@ -316,9 +316,6 @@ def create_embedder(embedder_cfg: DictConfig) -> BaseEmbedder:
     # Simple factory: directly instantiate using Hydra's mechanism
     # This assumes embedder_cfg has a _target_ key pointing to the class
     # and the class __init__ matches the parameters in the config.
-    print(f"--- Debug: Instantiating embedder with config ---")
-    print(embedder_cfg)
-    print(f"--- End Debug ---")
     try:
         # Use hydra.utils.instantiate if available, otherwise manual
         import hydra
