@@ -384,18 +384,28 @@ class MultiPolicyOrigDesignC(MultiPolicyOrigDesignD):
              # This case should ideally not be reached due to checks in __init__ and update_estimator
              raise ValueError("C is None during C-optimal value computation. This should not happen.")
 
+        if logger.isEnabledFor(logging.DEBUG): # Check level before printing
+            c_device_str = f"list of {len(self.C)} tensors on {[c.device for c in self.C]}" if isinstance(self.C, list) else str(self.C.device)
+            # Use print with flush=True for immediate output, especially useful in Slurm/logging contexts
+            print(f"DEBUG: MultiPolicyOrigDesignC._compute_c_optimal_value: inv_z_reg device={target_device}, C device(s)={c_device_str}", flush=True)
+
         # Handle C being a list of vectors
         if isinstance(self.C, list):
             # Assume each C_item is a (1, d) tensor
-            traces = [
-                torch.trace(torch.linalg.inv(C_item.to(target_device) @ inv_z_reg @ C_item.to(target_device).T))
-                for C_item in self.C
-            ]
+            # Move each C_item to the target device before computation
+            traces = []
+            for i, C_item in enumerate(self.C):
+                C_item_dev = C_item.to(target_device)
+                if logger.isEnabledFor(logging.DEBUG):
+                    print(f"DEBUG: MultiPolicyOrigDesignC._compute_c_optimal_value: Processing C[{i}] on device {C_item_dev.device}", flush=True)
+                traces.append(torch.trace(torch.linalg.inv(C_item_dev @ inv_z_reg @ C_item_dev.T)))
             return torch.max(torch.stack(traces))
 
         # Handle C being a single vector
         # Assume self.C is a (1, d) tensor
         C_dev = self.C.to(target_device) # Move self.C to the target device
+        if logger.isEnabledFor(logging.DEBUG):
+            print(f"DEBUG: MultiPolicyOrigDesignC._compute_c_optimal_value: Processing single C on device {C_dev.device}", flush=True)
         return torch.trace(torch.linalg.inv(C_dev @ inv_z_reg @ C_dev.T))
 
     def eval(self, emissions, distributions, episodes):
@@ -421,7 +431,13 @@ class MultiPolicyOrigDesignC(MultiPolicyOrigDesignD):
         
         # Compute the inverse of the regularized z
         inv_z_reg = torch.linalg.inv(z_reg)
-        
+
+        # Log the device of C before computing the optimal value
+        if logger.isEnabledFor(logging.DEBUG):
+            c_device_str = f"list of {len(self.C)} tensors on {[c.device for c in self.C]}" if isinstance(self.C, list) else str(self.C.device)
+            # Use print with flush=True
+            print(f"DEBUG: MultiPolicyOrigDesignC.eval: Before _compute_c_optimal_value - z device={z.device}, C device(s)={c_device_str}", flush=True)
+            
         return self._compute_c_optimal_value(inv_z_reg)
 
     def eval_full(self, emissions, distributions, episodes):

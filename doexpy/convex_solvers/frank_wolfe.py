@@ -246,8 +246,14 @@ class FrankWolfe(ConvexSolverBase):
             self.stop_optimization = False
             
             try:
+                # Determine the target device from emissions
+                target_device = emissions.device
+                if self.verbosity > 1:
+                    print(f"FW Optimize: Target device determined from emissions: {target_device}", flush=True)
+
                 if self.num_summarized_policies == 1:
-                    return self._optimize_single(emissions, visitations, episodes)
+                    # Ensure single optimization also respects device if needed (though less critical usually)
+                    return self._optimize_single(emissions.to(target_device), visitations, episodes)
                 
                 gap = -10e10 if self.accuracy is None else self.accuracy
             
@@ -275,31 +281,60 @@ class FrankWolfe(ConvexSolverBase):
                                     self.weights[i], 
                                     self.densities[i], 
                                     self.stationary
-                                ).double()
-                                density = density.to(emissions.device)
+                                ) # Keep on original device for now
+                                # Ensure density is double and on the target device
+                                density = density.double().to(target_device)
                                 if self.env.type == 'discrete':
                                     density.requires_grad_(True)
                                 densities.append(density)
                                 
-                            # Get gradients for all policies
-                            rewards = self._reward_fn_gradient(densities, emissions, visitations, episodes)
+                            if self.verbosity > 1:
+                                print(f"FW Optimize: Devices of densities before gradient: {[d.device for d in densities]}", flush=True)
+                                
+                            # Get gradients for all policies (ensure emissions is also on target device)
+                            rewards = self._reward_fn_gradient(densities, emissions.to(target_device), visitations, episodes)
                             
                             # Only update the current policy
-                            new_policy = self._planning_oracle(rewards[policy_idx])
+                            # Ensure reward is on the correct device for planning oracle if needed (depends on oracle implementation)
+                            current_reward = rewards[policy_idx].to(target_device) if isinstance(rewards[policy_idx], torch.Tensor) else rewards[policy_idx]
+                            new_policy = self._planning_oracle(current_reward)
                             self.policies[policy_idx].append(new_policy)
-                            new_density = self.density_estimator.density_oracle_single(new_policy)
-                            new_density = new_density.to(emissions.device) 
                             
+                            # Calculate new density and move to target device
+                            new_density = self.density_estimator.density_oracle_single(new_policy)
+                            new_density = new_density.double().to(target_device) 
+                            if self.verbosity > 1:
+                                print(f"FW Optimize: Device of new_density: {new_density.device}", flush=True)
+                                
                             # Compute step size for current policy
                             if self.step == "line-search":
+                                if self.verbosity > 1:
+                                    print(f"FW Optimize: Starting line search for policy {policy_idx}", flush=True)
                                 def compute_loss(h):
                                     temp_densities = densities.copy()
                                     one = torch.tensor(1.0, device=h.device, dtype=h.dtype)
+                                    # Ensure tensors inside compute_loss are on the correct device
+                                    temp_densities = [d.clone() for d in densities] # Use clone to avoid modifying original list
+                                    one = torch.tensor(1.0, device=target_device, dtype=h.dtype)
+                                    # Ensure operations happen on the target device
                                     temp_densities[policy_idx] = densities[policy_idx] * (one - h) + h * new_density
+                                    
+                                    if self.verbosity > 2: # More verbose print for inside line search
+                                        print(f"  Line Search Eval: h={h.item():.4f}, devices={[d.device for d in temp_densities]}", flush=True)
+                                        
                                     if self.objective.get_type() == "adaptive":
-                                        return -self.objective.eval(emissions, temp_densities, visitations, episodes)
-                                    return -self.objective.eval(emissions, temp_densities, episodes)
-                                step_size = self._gradient_line_search_lbfgs(compute_loss, emissions.device)                       
+                                        # Ensure emissions is on target device for eval
+                                        loss = -self.objective.eval(emissions.to(target_device), temp_densities, visitations, episodes)
+                                    else:
+                                        loss = -self.objective.eval(emissions.to(target_device), temp_densities, episodes)
+                                    if self.verbosity > 2:
+                                         print(f"  Line Search Eval Result: loss={loss.item()}", flush=True)
+                                    return loss
+                                    
+                                # Pass the target_device to the line search function
+                                step_size = self._gradient_line_search_lbfgs(compute_loss, target_device) 
+                                if self.verbosity > 1:
+                                    print(f"FW Optimize: Line search finished. Step size: {step_size:.4f}", flush=True)                      
                             elif self.step is not None and isinstance(self.step, float):
                                 step_size = self.step
                             else:
@@ -316,10 +351,11 @@ class FrankWolfe(ConvexSolverBase):
                             self.weights[policy_idx] = [(1 - step_size) * w for w in self.weights[policy_idx]] + [step_size]
                             
                             if self.verbosity > 0 and policy_counters[policy_idx] % 5 == 0:
+                                # Ensure tensors are on the correct device for the final objective calculation print
                                 if self.objective.get_type() == "adaptive":
-                                    objective = self.objective.eval(emissions, densities, visitations, episodes)
+                                    objective = self.objective.eval(emissions.to(target_device), densities, visitations, episodes)
                                 else:
-                                    objective = self.objective.eval(emissions, densities, episodes)
+                                    objective = self.objective.eval(emissions.to(target_device), densities, episodes)
                                 
                                 if self.env.type == 'discrete':
                                     total_grad_norm = sum(la.norm(r) for r in rewards)
@@ -348,19 +384,37 @@ class FrankWolfe(ConvexSolverBase):
                 signal.signal(signal.SIGINT, original_handler)
 
     def _gradient_line_search_lbfgs(self, compute_loss, device, init=0.25, lr=0.05, max_iter=30):
-        # Initialize h as a one-element tensor with gradient tracking.
+        # Initialize h as a one-element tensor with gradient tracking on the specified device.
         h = torch.tensor([init], dtype=torch.float64, device=device, requires_grad=True)
+        # Use Adam optimizer which is generally robust
         optimizer = torch.optim.Adam([h], lr=lr)
-        for _ in range(max_iter):  # Iterate manually
+        if self.verbosity > 1:
+            print(f"  LBFGS Line Search Start: init={init}, lr={lr}, max_iter={max_iter}, device={device}", flush=True)
+            
+        for i in range(max_iter):
             optimizer.zero_grad()
-            loss = compute_loss(h)  # Your objective function
+            loss = compute_loss(h)
+            if not torch.isfinite(loss):
+                 print(f"  LBFGS Warning: Non-finite loss ({loss.item()}) at iter {i}, h={h.item()}. Stopping search.", flush=True)
+                 # Return a safe default or previous value if loss becomes non-finite
+                 # For simplicity, returning the current h might be okay, or a small step like 1e-5
+                 return h.clamp(1e-5, 1. - 1e-5).item() 
             loss.backward()
+            if h.grad is None:
+                 print(f"  LBFGS Warning: Gradient is None at iter {i}, h={h.item()}. Stopping search.", flush=True)
+                 return h.clamp(1e-5, 1. - 1e-5).item()
+                 
+            if self.verbosity > 2:
+                 print(f"  LBFGS Iter {i}: h={h.item():.6f}, loss={loss.item():.6f}, grad={h.grad.item():.6f}", flush=True)
             optimizer.step()
-        # LBFGS requires a closure to recompute the loss and gradients.
-        # Ensure h remains within the bounds.
-        with torch.no_grad():
-            h.clamp_(1e-5, 1. - 1e-5)
-        return h.item()
+            # Ensure h remains within bounds after step
+            with torch.no_grad():
+                h.clamp_(1e-5, 1. - 1e-5)
+
+        final_h = h.item()
+        if self.verbosity > 1:
+             print(f"  LBFGS Line Search End: final_h={final_h:.6f}", flush=True)
+        return final_h
 
     def summarize(self) -> None:
         def create_policy(policies, weights, densities, empirical=None):
