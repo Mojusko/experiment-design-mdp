@@ -67,7 +67,14 @@ class LLMGrid(DiscreteEnv):
         self.emiss_num = self.actions_num
         self.transition_matrix = None
         # Pass the embedder instance to generate_emissions
-        self.emissions = generate_emissions(self.unique_elements, self.embedder, self.verbose)
+        emissions_raw = generate_emissions(self.unique_elements, self.embedder, self.verbose)
+        # Explicitly ensure emissions are on the correct device after loading/generation
+        self.emissions = emissions_raw.to(self.device) 
+        if self.verbose and emissions_raw.device != self.emissions.device:
+             print(f"Moved emissions from {emissions_raw.device} to {self.emissions.device}")
+        elif self.verbose:
+             print(f"Emissions are on device: {self.emissions.device}")
+             
         self.action_space = self.emissions
         self.visitations = torch.zeros(self.states_num, self.actions_num, dtype=torch.float64).to(self.device)
 
@@ -218,20 +225,36 @@ def generate_emissions(unique_elements: List[str], embedder: BaseEmbedder, verbo
     for elem in unique_elements:
         hasher.update(elem.encode())
     cache_id = hasher.hexdigest()
-    cache_path = os.path.join(cache_dir, f"emissions_{cache_id}.pkl")
+    # Use .pt extension for torch tensors
+    cache_path = os.path.join(cache_dir, f"emissions_{cache_id}.pt") 
+
+    target_device = embedder.device # Get target device from embedder
 
     if os.path.exists(cache_path):
         if verbose:
-            print("Loading emissions from cache")
+            print(f"Loading emissions from cache: {cache_path}")
         try:
-            with open(cache_path, 'rb') as f:
-                return pickle.load(f)
-        except (pickle.UnpicklingError, EOFError, RuntimeError):
+            # Use torch.load with map_location
+            emissions = torch.load(cache_path, map_location=target_device)
             if verbose:
-                print("Cache file corrupted, regenerating")
-            os.remove(cache_path)
+                print(f"Loaded emissions tensor with shape {emissions.shape} to device {emissions.device}")
+            # Basic check if loaded tensor seems valid (e.g., correct dtype, shape if known)
+            if not isinstance(emissions, torch.Tensor):
+                 raise TypeError("Cached file did not contain a torch.Tensor")
+            # Ensure correct dtype after loading (optional but good practice)
+            return emissions.double() 
+        except Exception as e: # Catch broader exceptions during load/validation
+            if verbose:
+                print(f"Cache file corrupted or invalid ({e}), regenerating")
+            # Attempt to remove corrupted cache file
+            try:
+                os.remove(cache_path)
+            except OSError as remove_err:
+                if verbose:
+                    print(f"Warning: Could not remove corrupted cache file {cache_path}: {remove_err}")
 
-    print("PREPROCESS: Generating emissions...")
+    if verbose: # Print generating message only if not loaded from cache
+        print("PREPROCESS: Generating emissions...")
     emissions = []
     total_elements = len(unique_elements)
     print_interval = 10  # Print progress every 10 iterations
@@ -251,17 +274,24 @@ def generate_emissions(unique_elements: List[str], embedder: BaseEmbedder, verbo
         if verbose and ((i + 1) % print_interval == 0 or (i + 1) == total_elements):
             print(f"Generated emission {i + 1}/{total_elements}")
 
-    print("Done generating emissions.")
+    if verbose: # Print done message only if generating
+        print("Done generating emissions.")
     emissions = torch.vstack(emissions)
 
+    # Ensure the generated tensor is on the correct device before saving
+    emissions = emissions.to(target_device) 
+
     try:
-        with open(cache_path, 'wb') as f:
-            pickle.dump(emissions, f)
+        # Use torch.save to preserve tensor properties including device (implicitly)
+        torch.save(emissions, cache_path)
+        if verbose:
+            print(f"Saved emissions cache to: {cache_path}")
     except Exception as e:
         if verbose:
             print(f"Failed to cache emissions: {e}")
 
-    return emissions
+    # Ensure correct dtype before returning
+    return emissions.double()
 
 
 def load_aesthetics_embedding(weights_path='vit_14_weights.pth', device=None):
