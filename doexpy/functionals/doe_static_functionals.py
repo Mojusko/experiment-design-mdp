@@ -336,37 +336,39 @@ class MultiPolicyOrigDesignC(MultiPolicyOrigDesignD):
         """
         Update the estimator and set C based on the estimator's parameters.
         
+        NOTE: This method is currently commented out. The intention is to use
+        the C vector(s) provided during initialization (a priori) and not
+        update them based on the fitted estimator during the experiment run.
+        If adaptive C-optimality based on the estimator is desired, this
+        method needs to be uncommented and potentially revised.
+
         Parameters:
         - estimator: A RegularizedMultinomialEstimator with theta_fit property
         - emissions: The emissions tensor
         """
-        # Log previous C state
-        if self.C is not None:
-            old_c_norm_l2 = torch.linalg.norm(self.C).item()
-            old_c_norm_l1 = torch.linalg.norm(self.C, ord=1).item()
-            logger.info(f"Updating C vector. Previous C: L2 norm={old_c_norm_l2:.4f}, L1 norm={old_c_norm_l1:.4f}")
-        else:
-            logger.info("Updating C vector. Previous C was None.")
-
-        # Call parent's update_estimator method (if applicable, though not strictly needed here as we override C logic)
-        super().update_estimator(estimator, emissions)
-
-        # Get the fitted parameter vector
-        theta_fit = estimator.theta_fit
-
-        # Normalize the parameter vector before using it as C
-        norm = torch.linalg.norm(theta_fit)
-        if norm > 1e-9: # Avoid division by zero or near-zero
-            # Assume theta_fit is a 1D vector or (d, 1) or (1, d). Normalize and reshape to (1, d).
-            new_C = (theta_fit / norm).view(1, -1)
-            new_c_norm_l2 = torch.linalg.norm(new_C).item() # Should be ~1.0
-            new_c_norm_l1 = torch.linalg.norm(new_C, ord=1).item()
-            logger.info(f"New C vector set from estimator {type(estimator).__name__} (reshaped to {new_C.shape}): L2 norm={new_c_norm_l2:.4f}, L1 norm={new_c_norm_l1:.4f}")
-            self.C = new_C
-        else:
-            # Handle zero vector case - raise error as C cannot be None or zero for C-optimality trace calculation
-            logger.error("Estimator theta_fit has near-zero norm. Cannot compute C-optimal design. Raising ValueError.")
-            raise ValueError("Estimator theta_fit has near-zero norm, cannot set C for C-optimal design.")
+        # # Log update intention
+        # logger.info(f"Updating C vector in {type(self).__name__}.")
+        #
+        # # Call parent's update_estimator method (if applicable, though not strictly needed here as we override C logic)
+        # super().update_estimator(estimator, emissions)
+        #
+        # # Get the fitted parameter vector
+        # theta_fit = estimator.theta_fit
+        #
+        # # Normalize the parameter vector before using it as C
+        # norm = torch.linalg.norm(theta_fit)
+        # if norm > 1e-9: # Avoid division by zero or near-zero
+        #     # Assume theta_fit is a 1D vector or (d, 1) or (1, d). Normalize and reshape to (1, d).
+        #     new_C = (theta_fit / norm).view(1, -1)
+        #     new_c_norm_l2 = torch.linalg.norm(new_C).item() # Should be ~1.0
+        #     new_c_norm_l1 = torch.linalg.norm(new_C, ord=1).item()
+        #     logger.info(f"New C vector set from estimator {type(estimator).__name__} (reshaped to {new_C.shape}): L2 norm={new_c_norm_l2:.4f}, L1 norm={new_c_norm_l1:.4f}")
+        #     self.C = new_C
+        # else:
+        #     # Handle zero vector case - raise error as C cannot be None or zero for C-optimality trace calculation
+        #     logger.error("Estimator theta_fit has near-zero norm. Cannot compute C-optimal design. Raising ValueError.")
+        #     raise ValueError("Estimator theta_fit has near-zero norm, cannot set C for C-optimal design.")
+        pass # Method is disabled
 
     def _compute_c_optimal_value(self, inv_z_reg):
         """
