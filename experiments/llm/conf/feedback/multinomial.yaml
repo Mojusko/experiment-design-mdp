@@ -1,7 +1,7 @@
 name: "multinomial"
 num_policies: 4
 num_components: 3
-num_rounds: 10 #static
+num_rounds: 8 #static
 #num_rounds: 6 #adaptive
 lambda_reg: 100 # Default lambda, used if use_model_specific_lambda is false
 use_model_specific_lambda: true # Set to false to use the lambda_reg above
