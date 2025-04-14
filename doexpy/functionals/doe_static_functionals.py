@@ -231,60 +231,97 @@ class MultiPolicyOrigDesignD(RewardFunctional):
         else:
             self.C = theta_fit
 
-    def _compute_diagonal_terms(self, emissions, prob_matrix, d1_h, d2_h):
-        """Compute diagonal terms of the Fisher."""
-        d2_h_or_unif = torch.ones_like(d2_h) / d2_h.shape[0] if d2_h.sum() == 0 else d2_h
-        d1_h_or_unif = torch.ones_like(d1_h) / d1_h.shape[0] if d1_h.sum() == 0 else d1_h
-        p_q1 = torch.mm(prob_matrix, d2_h_or_unif.view(-1,1))
-        p_q2 = torch.mm(prob_matrix, d1_h_or_unif.view(-1,1))
-
-        term1 = emissions.T @ torch.diag(p_q1.squeeze()) @ torch.diag(d1_h) @ emissions       
-        term2 = emissions.T @ torch.diag(p_q2.squeeze()) @ torch.diag(d2_h) @ emissions       
-        
-        return term1 + term2
-
-    def _compute_cross_terms(self, emissions, prob_matrix, d1_h, d2_h):
-        # Since prob_matrix is always 0.5, prob * (1 - prob) is always 0.25
-        probs = 0.25
-        d1d2 = d1_h.unsqueeze(1) @ d2_h.unsqueeze(0)  # [n_states, n_states]
-        d2d1 = d2_h.unsqueeze(1) @ d1_h.unsqueeze(0)  # [n_states, n_states]
-        
-        term1 = emissions.T @ (probs * d1d2) @ emissions
-        term2 = emissions.T @ (probs * d2d1) @ emissions
-
-        return term1 + term2
+    # def _compute_diagonal_terms(self, emissions, prob_matrix, d1_h, d2_h):
+    #     """Compute diagonal terms of the Fisher."""
+    #     d2_h_or_unif = torch.ones_like(d2_h) / d2_h.shape[0] if d2_h.sum() == 0 else d2_h
+    #     d1_h_or_unif = torch.ones_like(d1_h) / d1_h.shape[0] if d1_h.sum() == 0 else d1_h
+    #     p_q1 = torch.mm(prob_matrix, d2_h_or_unif.view(-1,1))
+    #     p_q2 = torch.mm(prob_matrix, d1_h_or_unif.view(-1,1))
+    #
+    #     term1 = emissions.T @ torch.diag(p_q1.squeeze()) @ torch.diag(d1_h) @ emissions
+    #     term2 = emissions.T @ torch.diag(p_q2.squeeze()) @ torch.diag(d2_h) @ emissions
+    #
+    #     return term1 + term2
+    #
+    # def _compute_cross_terms(self, emissions, prob_matrix, d1_h, d2_h):
+    #     # Since prob_matrix is always 0.5, prob * (1 - prob) is always 0.25
+    #     probs = 0.25
+    #     d1d2 = d1_h.unsqueeze(1) @ d2_h.unsqueeze(0)  # [n_states, n_states]
+    #     d2d1 = d2_h.unsqueeze(1) @ d1_h.unsqueeze(0)  # [n_states, n_states]
+    #
+    #     term1 = emissions.T @ (probs * d1d2) @ emissions
+    #     term2 = emissions.T @ (probs * d2d1) @ emissions
+    #
+    #     return term1 + term2
 
     def _calculate_z(self, emissions, distributions, episodes):
         distributions = [d.to(emissions.device) for d in distributions]
-        emissions = emissions.type(distributions[0].dtype)
-        # Assume emissions has shape (n_actions, d_features)
-        z = torch.zeros((emissions.shape[1], emissions.shape[1]),
+        emissions = emissions.type(distributions[0].dtype) # Shape: (n_elements, d_features) where n_elements depends on self.dim
+        feature_dim = emissions.shape[1]
+        z = torch.zeros((feature_dim, feature_dim),
                         dtype=distributions[0].dtype, device=emissions.device)
+
         if distributions[0].ndim == 2:
             # If input is 2D (S, A), add a singleton horizon dimension -> (1, S, A)
             distributions = [dist.unsqueeze(0) for dist in distributions]
 
         H = distributions[0].shape[0]
         assert H == 1, f"This functional only supports stationary policies (horizon H=1). Got H={H}."
+        K = len(distributions) # Number of policies
 
         # Since H=1, we only consider the first time step (index 0)
         h = 0
-        if self.dim == 0: # Sum over actions
-            d1_h = torch.sum(distributions[0][h], dim=1)
-            d2_h = torch.sum(distributions[1][h], dim=1)
-        elif self.dim == 1: # Sum over states
-            d1_h = torch.sum(distributions[0][h], dim=0)
-            d2_h = torch.sum(distributions[1][h], dim=0)
+        d_h = [] # List to store marginal distributions for each policy at step h
+        for q in range(K):
+            if self.dim == 0: # Sum over actions -> marginal state distribution d(s)
+                # distributions[q][h] has shape (S, A)
+                # emissions should have shape (S, d_features) - assuming state features
+                d_h_q = torch.sum(distributions[q][h], dim=1) # Shape (S,)
+            elif self.dim == 1: # Sum over states -> marginal action distribution d(a)
+                # distributions[q][h] has shape (S, A)
+                # emissions should have shape (A, d_features) - assuming action features
+                d_h_q = torch.sum(distributions[q][h], dim=0) # Shape (A,)
+            else:
+                raise ValueError(f"Unsupported dim value: {self.dim}. Must be 0 or 1.")
+            d_h.append(d_h_q)
 
-        # Create the 0.5 probability matrix directly
-        n_actions = emissions.shape[0] # Assuming emissions are (n_actions, d_features)
-        prob_matrix = 0.5 * torch.ones((n_actions, n_actions), device=emissions.device, dtype=d1_h.dtype)
+        # Check if emissions shape matches the marginal distribution dimension
+        if emissions.shape[0] != d_h[0].shape[0]:
+             raise ValueError(f"Dimension mismatch: emissions first dimension ({emissions.shape[0]}) "
+                              f"does not match the marginal distribution dimension ({d_h[0].shape[0]}) "
+                              f"based on self.dim={self.dim}.")
 
-        diag_terms = self._compute_diagonal_terms(emissions, prob_matrix, d1_h, d2_h)
-        cross_terms = self._compute_cross_terms(emissions, prob_matrix, d1_h, d2_h)
+        # Calculate the approximate Fisher Information Matrix I_approx
+        # I_approx = (1/K^2) * [ (K-1) * sum_q (E_q[phi phi^T]) - sum_{q!=q'} (E_q[phi])(E_{q'}[phi^T]) ]
 
-        # No time weighting needed as H=1
-        z = diag_terms - cross_terms
+        # Term 1: (K-1) * sum_q E_q[phi phi^T]
+        # E_q[phi phi^T] = sum_s d_h_q(s) phi(s) phi(s)^T = emissions.T @ diag(d_h_q) @ emissions
+        term1 = torch.zeros_like(z)
+        for q in range(K):
+            # Ensure d_h[q] is treated as weights for the diagonal
+            term1 += emissions.T @ torch.diag(d_h[q]) @ emissions
+
+        term1 *= (K - 1)
+
+        # Term 2: sum_{q!=q'} (E_q[phi])(E_{q'}[phi^T])
+        # E_q[phi] = sum_s d_h_q(s) phi(s) = emissions.T @ d_h_q
+        # E_{q'}[phi^T] = sum_{s'} d_h_{q'}(s') phi(s')^T = d_h_{q'}.T @ emissions
+        term2 = torch.zeros_like(z)
+        expected_phis = [] # Store E_q[phi] for each q
+        for q in range(K):
+            # d_h[q] has shape (N,), emissions has shape (N, d)
+            # emissions.T @ d_h[q] gives shape (d,)
+            expected_phis.append(emissions.T @ d_h[q]) # Shape (d,)
+
+        for q in range(K):
+            for q_prime in range(K):
+                if q != q_prime:
+                    # expected_phis[q] is (d,), expected_phis[q_prime] is (d,)
+                    # We need outer product: (d,) x (d,) -> (d, d)
+                    term2 += torch.outer(expected_phis[q], expected_phis[q_prime])
+
+        # Combine terms and scale
+        z = (term1 - term2) / (K**2)
 
         return z
 

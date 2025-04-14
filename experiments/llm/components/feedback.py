@@ -84,7 +84,6 @@ class MultinomialFeedback(BaseFeedback):
         prefix_range = range(1, horizon+1) if cfg.dense_feedback else range(horizon, horizon+1)
         num_samples = num_episodes * (horizon if cfg.dense_feedback else 1)
 
-        prob_products = []
 
         trajectory_indices = torch.zeros((num_samples, horizon, num_policies), dtype=torch.long)
         labels = torch.zeros((num_samples, num_policies))
@@ -104,8 +103,6 @@ class MultinomialFeedback(BaseFeedback):
                 labels[sample_idx, label_idx] = 1
                 sample_idx += 1
 
-                if num_policies == 2:
-                    prob_products.append((probs[0] * probs[1]).item())
 
         self._collected_data.append((trajectory_indices, labels))
 
