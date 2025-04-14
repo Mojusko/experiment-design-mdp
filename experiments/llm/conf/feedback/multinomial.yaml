@@ -1,5 +1,5 @@
 name: "multinomial"
-num_policies: 2
+num_policies: 4
 num_components: 3
 num_rounds: 10 #static
 #num_rounds: 6 #adaptive
