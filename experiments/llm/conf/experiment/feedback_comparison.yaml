@@ -3,9 +3,7 @@ id_prefix: "feedback"  # Used for filename prefixes
 episodes: 20
 vocab_size: 2000
 vocabulary: 
-  #- 'vocabulary/mediums.txt'
-  #- 'vocabulary/movements.txt'
-  #- 'vocabulary/emotions.txt'
+  - 'vocabulary2/bases.txt'
   - 'vocabulary2/mediums.txt'
   - 'vocabulary2/movements.txt'
   - 'vocabulary2/emotions.txt'

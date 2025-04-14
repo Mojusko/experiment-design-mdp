@@ -17,7 +17,8 @@ model_specific_params:
   japanese-text:
     lambda_reg: 200 
   ancient-text:
-    lambda_reg: 200 
+    #lambda_reg: 200 num_policies=2
+    lambda_reg: 50 #num_policies=4 
   japanese-image:
     lambda_reg: 100
   aesthetics:
