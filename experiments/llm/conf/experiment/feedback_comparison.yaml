@@ -9,7 +9,8 @@ vocabulary:
   - 'vocabulary2/mediums.txt'
   - 'vocabulary2/movements.txt'
   - 'vocabulary2/emotions.txt'
-#scorer_model: 'japanese-image' # Changed from 'japanese'
-scorer_model: 'japanese-text'
+#scorer_model: 'japanese-image'
+#scorer_model: 'japanese-text'
+scorer_model: 'ancient-text'
 #scorer_model: 'aesthetics'
 

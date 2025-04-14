@@ -6,7 +6,7 @@ defaults:
 
 seed: 12
 verbose: false
-base_prompt: 'A man walking alone'
+base_prompt: 'A man drinking tea while sitting'
 #base_prompt: ''
 # normalize_CLIP: true # Removed, now part of embedder config
 include_base_prompt_in_first_tokens: true

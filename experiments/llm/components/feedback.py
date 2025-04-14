@@ -221,10 +221,15 @@ class FeedbackFactory:
             # initial_C = env.get_prior_vector() # Uncomment to use the generated prior vector instead
 
             # --- Hardcoded C vectors ---
+            # c_vectors = [
+            #     embedder.embed_text("japanese"),
+            #     embedder.embed_text("traditions"),
+            #     embedder.embed_text("culture")
+            # ]
             c_vectors = [
-                embedder.embed_text("japanese"),
-                embedder.embed_text("traditions"),
-                embedder.embed_text("culture")
+                embedder.embed_text("stone"),
+                embedder.embed_text("myth"),
+                embedder.embed_text("ritual")
             ]
             # -------------------------
 
