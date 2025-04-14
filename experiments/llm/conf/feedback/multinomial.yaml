@@ -9,7 +9,8 @@ adaptive_estimation_frequency: 0
 adaptive_estimation_start: 0
 #adaptive_design_frequency: 100 
 adaptive_design_frequency: 0 
-pass_V: true
+#pass_V: true
+pass_V: false
 
 # Model-specific parameters (moved from experiment config)
 model_specific_params:
