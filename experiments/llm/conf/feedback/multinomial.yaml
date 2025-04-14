@@ -1,5 +1,5 @@
 name: "multinomial"
-num_policies: 2
+num_policies: 4
 num_components: 3
 num_rounds: 10 #static
 #num_rounds: 6 #adaptive
@@ -10,7 +10,7 @@ adaptive_estimation_start: 0
 #adaptive_design_frequency: 100 
 adaptive_design_frequency: 0 
 #pass_V: true
-pass_V: false
+pass_V: true
 
 # Model-specific parameters (moved from experiment config)
 model_specific_params:
