@@ -227,9 +227,10 @@ class FeedbackFactory:
             #     embedder.embed_text("culture")
             # ]
             c_vectors = [
-                embedder.embed_text("stone"),
-                embedder.embed_text("myth"),
-                embedder.embed_text("ritual")
+                embedder.embed_text("old"),
+                embedder.embed_text("classic"),
+                embedder.embed_text("traditional")
+                embedder.embed_text("eternal")
             ]
             # -------------------------
 
@@ -255,11 +256,11 @@ class FeedbackFactory:
                 # ) # COMMENTED OUT
             else:
                 # Static designs
-                 design = MultiPolicyOrigDesignA(env=env, lambd=lambda_reg, dim=1,V=V) # Use determined lambda_reg - Keep commented out
+                # design = MultiPolicyOrigDesignA(env=env, lambd=lambda_reg, dim=1,V=V) # Use determined lambda_reg - Keep commented out
                 # design = MultiPolicyOrigDesignD(env=env, lambd=lambda_reg, dim=1) # Use determined lambda_reg - Keep commented out
                 # The MultiPolicyOrigDesignC constructor will raise ValueError if initial_C is None.
                 # --- Ensure Static C Design with hardcoded vectors is active ---
-            #design = MultiPolicyOrigDesignC(env=env, lambd=lambda_reg, dim=1, C=c_vectors) # Use determined lambda_reg and hardcoded list - REMAINS ACTIVE
+                design = MultiPolicyOrigDesignC(env=env, lambd=lambda_reg, dim=1, C=c_vectors) # Use determined lambda_reg and hardcoded list - REMAINS ACTIVE
 
             likelihood = MultinomialLikelihood()
             regularizer = L2Regularizer(lam=lambda_reg) # Use determined lambda_reg
