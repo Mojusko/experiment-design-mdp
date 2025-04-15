@@ -47,7 +47,7 @@ class LLMGrid(DiscreteEnv):
         # Setup tokens dictionary
         self.tokens = {}
         index = 1
-        self.tokens[' '] = [i for i in range(self.max_episode_length)]
+        self.tokens[' '] = [i for i in range(1,self.max_episode_length)]
         self.unique_elements = [' ']
         for order, list in enumerate(list_of_text_tokens):
             for token in list:
@@ -90,7 +90,9 @@ class LLMGrid(DiscreteEnv):
 
     def available_actions(self, state):
         actions = []
-        actions.append(0)
+        # Only add actions if they are valid for the current state
+        if self.is_valid_action(0, state):
+             actions.append(0)
         for i in range(1, self.actions_num):
             if self.is_valid_action(i, state):
                 actions.append(i)

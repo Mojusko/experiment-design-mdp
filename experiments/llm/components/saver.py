@@ -39,14 +39,26 @@ def _convert_to_serializable(obj):
 class BaseSaver(ABC):
     """Base class for all savers with simplified interface."""
 
-    def __init__(self, cfg: DictConfig = None, **kwargs):
-        # Store cfg if passed directly or via kwargs
-        self.cfg = cfg if cfg is not None else kwargs.get('cfg')
-        self.params = kwargs.get('params', {})
-        self.scorer_model = kwargs.get('scorer_model')
-        self.results_dir = kwargs.get('results_dir')
-        self.experiment_id = kwargs.get('experiment_id')
-        self.skip_existing = kwargs.get('skip_existing', False)
+    # Use only named arguments, remove **kwargs to be explicit
+    # Removed cfg argument
+    def __init__(self,
+                 env=None,
+                 embedder=None,
+                 params: DictConfig = None, # Hydra populates this from config
+                 scorer_model=None,
+                 results_dir=None,
+                 experiment_id=None,
+                 skip_existing: bool = False):
+        # Store core objects and config if provided
+        # Dummy args (horizon, dense_feedback, verbose) removed - Python ignores extra args passed during instantiation
+        self.env = env
+        self.embedder = embedder
+        # self.cfg is removed
+        self.params = params if params is not None else {} # Use the passed params DictConfig
+        self.scorer_model = scorer_model
+        self.results_dir = results_dir
+        self.experiment_id = experiment_id
+        self.skip_existing = skip_existing
 
     def get_output_path(self, filename=None):
         """Get the output path with experiment_id if provided."""
@@ -381,7 +393,22 @@ class LearnedEstimatorSaver(BaseSaver):
 
 class VisitsSaver(BaseSaver):
     """Saves exploration visits to a file."""
-    
+    # Match BaseSaver's explicit arguments, remove **kwargs
+    # Removed cfg argument
+    def __init__(self,
+                 env=None,
+                 embedder=None,
+                 params: DictConfig = None,
+                 scorer_model=None,
+                 results_dir=None,
+                 experiment_id=None,
+                 skip_existing: bool = False):
+        # Pass arguments explicitly to BaseSaver (without cfg)
+        # Dummy args (horizon, dense_feedback, verbose) removed - Python ignores extra args passed during instantiation
+        super().__init__(env=env, embedder=embedder, params=params,
+                         scorer_model=scorer_model, results_dir=results_dir,
+                         experiment_id=experiment_id, skip_existing=skip_existing)
+
     def save_result(self, results):
         file_path = self.get_output_path(self.params.get('filename', 'visits.pkl'))
         
@@ -434,19 +461,46 @@ class ConfSaver(BaseSaver):
 class VisitsImageSaver(BaseSaver):
     """Saves images generated from visited trajectories for human feedback."""
 
-    def __init__(self, env=None, embedder=None, **kwargs):
-        super().__init__(**kwargs)
-        self.env = env
-        self.embedder = embedder
+    # Match BaseSaver's explicit arguments, remove **kwargs
+    # Removed cfg argument, added specific config values needed
+    def __init__(self,
+                 env=None,
+                 embedder=None,
+                 params: DictConfig = None,
+                 scorer_model=None,
+                 results_dir=None,
+                 experiment_id=None,
+                 skip_existing: bool = False,
+                 # Specific config values passed from LLMExperiment
+                 horizon: int = None,
+                 dense_feedback: bool = False,
+                 verbose: bool = False):
+        # Pass arguments explicitly to BaseSaver (without cfg)
+        # BaseSaver no longer has dummy args for horizon, dense_feedback, verbose
+        super().__init__(env=env, embedder=embedder, params=params,
+                         scorer_model=scorer_model, results_dir=results_dir,
+                         experiment_id=experiment_id, skip_existing=skip_existing)
 
-        # Imports moved to top level
+        # Store the specific config values needed by this saver
+        self.horizon = horizon
+        self.dense_feedback = dense_feedback
+        self.verbose = verbose
 
+        # --- Validate required objects (self.env should now be set correctly by BaseSaver) ---
         if self.env is None:
-            raise ValueError("VisitsImageSaver requires the 'env' object during initialization.")
+            # Add more context to the error
+            raise ValueError("VisitsImageSaver requires the 'env' object. Ensure it's passed during instantiation and not overridden to null by config.")
         if self.embedder is None:
-            raise ValueError("VisitsImageSaver requires the 'embedder' object during initialization.")
+            raise ValueError("VisitsImageSaver requires the 'embedder' object. Ensure it's passed during instantiation.")
+        # Removed cfg check as it's no longer passed/stored
+        # if self.cfg is None:
+        #      raise ValueError("VisitsImageSaver requires the 'cfg' object. Ensure it's passed during instantiation.")
+        if self.horizon is None: # Add check for horizon as it's critical
+             raise ValueError("VisitsImageSaver requires the 'horizon' value. Ensure it's passed during instantiation.")
 
-        # --- Configuration for Image Generation (using DEFAULT_CONFIG) ---
+
+        # --- Configuration for Image Generation (using DEFAULT_CONFIG and self.params) ---
+        # self.params is now directly passed and stored by BaseSaver
         self.image_size = self.params.get('image_size', DEFAULT_CONFIG['image_size'])
         self.num_inference_steps = self.params.get('num_inference_steps', DEFAULT_CONFIG['num_inference_steps'])
         self.guidance_scale = self.params.get('guidance_scale', DEFAULT_CONFIG['guidance_scale'])
@@ -464,7 +518,6 @@ class VisitsImageSaver(BaseSaver):
         Otherwise, generates images only for the full horizon H.
         """
         visits = results.visits
-        print(visits[0]) # Optional: uncomment for debugging visits structure
         if visits is None or not visits or not visits[0]:
             print("VisitsImageSaver: No visits data found in results. Skipping image generation.")
             return
@@ -486,21 +539,12 @@ class VisitsImageSaver(BaseSaver):
             print("Expected structure: List[List[Tuple[states, actions]]]")
             return
 
-        # --- Get Horizon and Dense Feedback Flag ---
-        if self.cfg is None:
-            print("VisitsImageSaver: Error - Configuration (cfg) not available. Cannot determine horizon or dense_feedback. Skipping.")
-            return
-        try:
-            # Access horizon and dense_feedback from the main config (self.cfg)
-            horizon = self.cfg.horizon
-            dense_feedback = self.cfg.get('dense_feedback', False) # Default to False if not present
-            print(f"VisitsImageSaver: Horizon={horizon}, Dense Feedback={dense_feedback}")
-        except AttributeError as e:
-            print(f"VisitsImageSaver: Error accessing config attributes (horizon/dense_feedback): {e}. Skipping.")
-            return
-        except Exception as e: # Catch other potential errors accessing config
-             print(f"VisitsImageSaver: Unexpected error accessing config: {e}. Skipping.")
-             return
+        # --- Use Horizon, Dense Feedback Flag, and Verbose Flag stored in self ---
+        # These values are guaranteed to exist due to checks in __init__
+        horizon = self.horizon
+        dense_feedback = self.dense_feedback
+        verbose = self.verbose
+        print(f"VisitsImageSaver: Horizon={horizon}, Dense Feedback={dense_feedback}, Verbose={verbose}")
 
 
         # --- Setup Output Directory ---
@@ -582,9 +626,8 @@ class VisitsImageSaver(BaseSaver):
                         timestep_images.append(PIL.Image.new('RGB', (self.image_size, self.image_size), color = 'red')) # Error placeholder
                         timestep_prompts.append(f"Error: {e}")
 
-                # --- Print Prompts if Verbose ---
-                # Access verbose flag from the main config stored in self.cfg
-                if self.cfg and self.cfg.get('verbose', False):
+                # --- Print Prompts if Verbose (using flag stored in self.verbose) ---
+                if self.verbose: # Use self.verbose directly
                     print(f"    Timestep h={h} Prompts:")
                     for p_idx, p_text in enumerate(timestep_prompts):
                         print(f"      Policy {p_idx+1}: {p_text}")

@@ -86,18 +86,40 @@ class LLMExperiment:
 
         # Initialize the savers with appropriate parameters
         self.savers = []
-        for s in self.cfg.savers:
-            # Pass standard parameters to all savers
-            # Pass embedder and env to savers that might need it
-            saver = hydra.utils.instantiate(
-                s,
-                scorer_model=self._scorer_model,
-                embedder=self.embedder, # Pass embedder
-                env=self.env,           # Pass env
-                results_dir=self.results_dir,
-                experiment_id=self.experiment_id
-            )
-            self.savers.append(saver)
+        for s_conf in self.cfg.savers: # Renamed loop variable for clarity
+            try:
+                # Instantiate the saver, passing necessary objects and the main config
+                # BaseSaver and its children now expect explicit named arguments.
+                # Hydra automatically handles arguments defined within s_conf (like 'params').
+                # We explicitly pass the arguments NOT defined in the saver's YAML config,
+                # only passing arguments relevant to the specific saver type.
+
+                # Base arguments common to most savers
+                init_args = {
+                    'env': self.env,
+                    'embedder': self.embedder,
+                    'scorer_model': self._scorer_model,
+                    'results_dir': self.results_dir,
+                    'experiment_id': self.experiment_id
+                    # 'params' and other config-specific args are handled by Hydra via s_conf
+                }
+
+                # Add arguments specific to VisitsImageSaver if it's the target
+                if s_conf.get('_target_') == 'components.saver.VisitsImageSaver':
+                    init_args['horizon'] = self.cfg.horizon
+                    init_args['dense_feedback'] = self.cfg.get('dense_feedback', False)
+                    init_args['verbose'] = self.cfg.get('verbose', False)
+
+                # Instantiate the saver using the configuration and the constructed arguments
+                saver = hydra.utils.instantiate(
+                    s_conf, # The saver's specific config (contains _target_, params, etc.)
+                    **init_args # Pass the dynamically built dictionary of arguments
+                )
+                self.savers.append(saver)
+                print(f"Successfully initialized saver: {s_conf._target_}")
+            except Exception as e:
+                print(f"Failed to initialize saver {s_conf._target_}: {e}")
+                raise  # Re-raise to stop execution as this is a critical component
         self.visits = [] if self.cfg.feedback.num_policies == 1 else [[] for _ in range(self.cfg.feedback.num_policies)]
 
         # --- Validate configuration for explore_only mode ---

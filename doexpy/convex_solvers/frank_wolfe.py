@@ -265,6 +265,7 @@ class FrankWolfe(ConvexSolverBase):
                 for round_idx in range(self.num_rounds):
                     # For each round, optimize each policy in turn
                     for policy_idx in range(self.num_summarized_policies):
+
                         empirical_gap = torch.tensor([1e10], dtype=torch.float64, device=emissions.device)
                         
                         # Each round allows up to (round_idx+1)*self.num_components updates
