@@ -3,10 +3,14 @@ import json
 import os
 import torch
 import matplotlib.pyplot as plt
-from PIL import Image
+# Import PIL module only (no direct Image import)
+import PIL
 import yaml
 from abc import ABC, abstractmethod
 from omegaconf import OmegaConf, DictConfig
+# Import necessary components for VisitsImageSaver at the top level
+from doexpy.env.llm import create_prompt
+from experiments.llm.image_generator import StableDiffusionGenerator, _get_seed_from_prompt, DEFAULT_CONFIG
 # Removed top-level import causing circular dependency
 # from experiments.llm.image_generator import StableDiffusionGenerator, DoubleGuidanceStableDiffusionGenerator, _get_seed_from_prompt
 # Removed unused import causing circular dependency
@@ -36,7 +40,8 @@ class BaseSaver(ABC):
     """Base class for all savers with simplified interface."""
 
     def __init__(self, cfg: DictConfig = None, **kwargs):
-        self.cfg = cfg # Store the full config if provided
+        # Store cfg if passed directly or via kwargs
+        self.cfg = cfg if cfg is not None else kwargs.get('cfg')
         self.params = kwargs.get('params', {})
         self.scorer_model = kwargs.get('scorer_model')
         self.results_dir = kwargs.get('results_dir')
@@ -261,7 +266,7 @@ class ImageGenerationSaver(BaseSaver):
             if image_score is not None:
                 score_text += f"_image_{image_score:.4f}"
             img_path = os.path.join(images_dir, f"best_{i+1}_{score_text}.png")
-            Image.fromarray(image).save(img_path)
+            PIL.Image.fromarray(image).save(img_path)
             
             best_generated_images.append(image)
         
@@ -295,7 +300,7 @@ class ImageGenerationSaver(BaseSaver):
             if image_score is not None:
                 score_text += f"_image_{image_score:.4f}"
             img_path = os.path.join(images_dir, f"worst_{i+1}_{score_text}.png")
-            Image.fromarray(image).save(img_path)
+            PIL.Image.fromarray(image).save(img_path)
             
             worst_generated_images.append(image)
         
@@ -434,11 +439,7 @@ class VisitsImageSaver(BaseSaver):
         self.env = env
         self.embedder = embedder
 
-        # --- Local Imports first to get DEFAULT_CONFIG ---
-        # Moved imports up to ensure DEFAULT_CONFIG is available
-        global create_prompt, StableDiffusionGenerator, _get_seed_from_prompt, DEFAULT_CONFIG
-        from doexpy.env.llm import create_prompt
-        from experiments.llm.image_generator import StableDiffusionGenerator, _get_seed_from_prompt, DEFAULT_CONFIG
+        # Imports moved to top level
 
         if self.env is None:
             raise ValueError("VisitsImageSaver requires the 'env' object during initialization.")
@@ -456,12 +457,14 @@ class VisitsImageSaver(BaseSaver):
         self.stable_diffusion_id = self.params.get('stable_diffusion_id', DEFAULT_CONFIG['stable_diffusion_id'])
         self.models_cache_dir = self.params.get('models_cache_dir', DEFAULT_CONFIG['MODELS_CACHE_DIR'])
 
-        # --- Local Imports are now above ---
-
-
     def save_result(self, results):
-        """Generates and saves images based on the visited trajectories."""
+        """
+        Generates and saves images based on visited trajectories.
+        If dense_feedback is True in the config, generates images for each timestep h=1..H.
+        Otherwise, generates images only for the full horizon H.
+        """
         visits = results.visits
+        print(visits[0]) # Optional: uncomment for debugging visits structure
         if visits is None or not visits or not visits[0]:
             print("VisitsImageSaver: No visits data found in results. Skipping image generation.")
             return
@@ -482,6 +485,23 @@ class VisitsImageSaver(BaseSaver):
             print(f"VisitsImageSaver: Invalid visits structure: {e}. Skipping image generation.")
             print("Expected structure: List[List[Tuple[states, actions]]]")
             return
+
+        # --- Get Horizon and Dense Feedback Flag ---
+        if self.cfg is None:
+            print("VisitsImageSaver: Error - Configuration (cfg) not available. Cannot determine horizon or dense_feedback. Skipping.")
+            return
+        try:
+            # Access horizon and dense_feedback from the main config (self.cfg)
+            horizon = self.cfg.horizon
+            dense_feedback = self.cfg.get('dense_feedback', False) # Default to False if not present
+            print(f"VisitsImageSaver: Horizon={horizon}, Dense Feedback={dense_feedback}")
+        except AttributeError as e:
+            print(f"VisitsImageSaver: Error accessing config attributes (horizon/dense_feedback): {e}. Skipping.")
+            return
+        except Exception as e: # Catch other potential errors accessing config
+             print(f"VisitsImageSaver: Unexpected error accessing config: {e}. Skipping.")
+             return
+
 
         # --- Setup Output Directory ---
         # We create a specific subdirectory for these images
@@ -505,84 +525,108 @@ class VisitsImageSaver(BaseSaver):
             print(f"VisitsImageSaver: Failed to initialize StableDiffusionGenerator: {e}. Skipping.")
             return
 
-        # --- Generate and Save Images Per Episode ---
+        # --- Determine Timestep Range ---
+        h_range = range(1, horizon + 1) if dense_feedback else range(horizon, horizon + 1)
+
+        # --- Generate and Save Images Per Episode and Timestep ---
         for ep_idx in range(num_episodes):
-            episode_images = []
-            episode_prompts = []
             print(f"VisitsImageSaver: Processing episode {ep_idx + 1}/{num_episodes}")
 
-            for policy_idx in range(num_policies):
+            for h in h_range:
+                print(f"  Processing timestep h={h}/{horizon}")
+                timestep_images = []
+                timestep_prompts = []
+
+                for policy_idx in range(num_policies):
+                    try:
+                        # Extract actions for this policy and episode
+                        # visits[policy_idx][ep_idx] should be (states, actions)
+                        full_actions = visits[policy_idx][ep_idx][1]
+                        if isinstance(full_actions, torch.Tensor):
+                            full_actions = full_actions.cpu().numpy() # Ensure numpy array or list
+                        full_actions = list(map(int, full_actions)) # Ensure list of ints
+
+                        # --- Get Partial Actions for timestep h ---
+                        partial_actions = full_actions[:h]
+
+                        # Generate prompt from partial actions
+                        prompt = create_prompt(partial_actions, self.env)
+                        timestep_prompts.append(prompt)
+
+                        # Set seed for this specific image generation if needed
+                        if self.seed_per_prompt:
+                                generator.seed = _get_seed_from_prompt(prompt)
+                                generator.seed_generator()
+                            # else: use the generator's current seed state (potentially incrementing)
+
+                        # Generate image
+                        # Adjust printing to show full prompt if short, or indicate if empty
+                        prompt_display = prompt if prompt else "[Empty Prompt]"
+                        if len(prompt_display) > 80:
+                            prompt_display = prompt_display[:80] + "..."
+                        print(f"    Generating image for policy {policy_idx + 1}/{num_policies} (Prompt: '{prompt_display}')")
+
+                        # Pass the embedder instance to the sample method
+                        image_np, _ = generator.sample(prompt, embedder=self.embedder)
+                        # Explicitly use PIL.Image to avoid potential name shadowing
+                        timestep_images.append(PIL.Image.fromarray(image_np))
+
+                    except IndexError:
+                        print(f"    Warning: Missing visit data for episode {ep_idx}, policy {policy_idx}. Skipping.")
+                        # Explicitly use PIL.Image
+                        timestep_images.append(PIL.Image.new('RGB', (self.image_size, self.image_size), color = 'grey')) # Placeholder
+                        timestep_prompts.append("Error: Missing Data")
+                    except Exception as e:
+                        print(f"    Error generating image for episode {ep_idx}, policy {policy_idx}, h={h}: {e}")
+                        # Explicitly use PIL.Image
+                        timestep_images.append(PIL.Image.new('RGB', (self.image_size, self.image_size), color = 'red')) # Error placeholder
+                        timestep_prompts.append(f"Error: {e}")
+
+                # --- Print Prompts if Verbose ---
+                # Access verbose flag from the main config stored in self.cfg
+                if self.cfg and self.cfg.get('verbose', False):
+                    print(f"    Timestep h={h} Prompts:")
+                    for p_idx, p_text in enumerate(timestep_prompts):
+                        print(f"      Policy {p_idx+1}: {p_text}")
+
+                # --- Create and Save Grid Image for the Episode and Timestep ---
+                if not timestep_images:
+                    print(f"    No images generated for episode {ep_idx}, timestep {h}. Skipping grid.")
+                    continue
+
                 try:
-                    # Extract actions for this policy and episode
-                    # visits[policy_idx][ep_idx] should be (states, actions)
-                    actions = visits[policy_idx][ep_idx][1]
-                    if isinstance(actions, torch.Tensor):
-                        actions = actions.cpu().numpy() # Ensure numpy array or list
-                    actions = list(map(int, actions)) # Ensure list of ints
+                    n_cols = num_policies
+                    n_rows = 1
+                    fig, axes = plt.subplots(n_rows, n_cols, figsize=(4 * n_cols, 5 * n_rows), squeeze=False)
 
-                    # Generate prompt
-                    prompt = create_prompt(actions, self.env)
-                    episode_prompts.append(prompt)
+                    for i, (img, prompt) in enumerate(zip(timestep_images, timestep_prompts)):
+                        ax = axes[0, i]
+                        ax.imshow(img)
+                        # Wrap prompt text for display below the image
+                        wrapped_prompt = '\n'.join(prompt[j:j+60] for j in range(0, len(prompt), 60)) # Adjust wrap length if needed
+                        ax.set_title(f"Policy {i+1}", fontsize=10)
+                        ax.set_xlabel(wrapped_prompt, fontsize=8, labelpad=10) # Add padding
+                        ax.set_xticks([])
+                        ax.set_yticks([])
 
-                    # Set seed for this specific image generation if needed
-                    if self.seed_per_prompt:
-                        generator.seed = _get_seed_from_prompt(prompt)
-                        generator.seed_generator()
-                    # else: use the generator's current seed state (potentially incrementing)
+                    # Hide unused axes if any (shouldn't happen with n_rows=1)
+                    for i in range(len(timestep_images), n_cols):
+                        axes[0, i].axis('off')
 
-                    # Generate image
-                    print(f"  Generating image for policy {policy_idx + 1}/{num_policies} (Prompt: '{prompt[:80]}...')")
-                    # Pass the embedder instance to the sample method
-                    image_np, _ = generator.sample(prompt, embedder=self.embedder)
-                    episode_images.append(Image.fromarray(image_np))
+                    plt.suptitle(f"Episode {ep_idx} - Timestep {h}", fontsize=14)
+                    # Adjust subplot parameters for more bottom space for x-labels (prompts)
+                    plt.subplots_adjust(bottom=0.2, hspace=0.3) # Increase bottom margin and horizontal space
 
-                except IndexError:
-                    print(f"  Warning: Missing visit data for episode {ep_idx}, policy {policy_idx}. Skipping.")
-                    episode_images.append(Image.new('RGB', (self.image_size, self.image_size), color = 'grey')) # Placeholder
-                    episode_prompts.append("Error: Missing Data")
+                    # Construct filename including timestep h
+                    filename = f"episode_{ep_idx:03d}_timestep_{h:02d}.png"
+                    output_path = os.path.join(output_dir_path, filename)
+
+                    plt.savefig(output_path)
+                    plt.close(fig)
+                    print(f"    Saved grid image: {output_path}")
+
                 except Exception as e:
-                    print(f"  Error generating image for episode {ep_idx}, policy {policy_idx}: {e}")
-                    episode_images.append(Image.new('RGB', (self.image_size, self.image_size), color = 'red')) # Error placeholder
-                    episode_prompts.append(f"Error: {e}")
-
-            # --- Create and Save Grid Image for the Episode ---
-            if not episode_images:
-                print(f"  No images generated for episode {ep_idx}. Skipping grid.")
-                continue
-
-            try:
-                n_cols = num_policies
-                n_rows = 1
-                fig, axes = plt.subplots(n_rows, n_cols, figsize=(4 * n_cols, 5 * n_rows), squeeze=False)
-
-                for i, (img, prompt) in enumerate(zip(episode_images, episode_prompts)):
-                    ax = axes[0, i]
-                    ax.imshow(img)
-                    # Wrap prompt text for display below the image
-                    wrapped_prompt = '\n'.join(prompt[j:j+60] for j in range(0, len(prompt), 60)) # Adjust wrap length if needed
-                    ax.set_title(f"Policy {i+1}", fontsize=10)
-                    ax.set_xlabel(wrapped_prompt, fontsize=8, labelpad=10) # Add padding
-                    ax.set_xticks([])
-                    ax.set_yticks([])
-
-                # Hide unused axes if any (shouldn't happen with n_rows=1)
-                for i in range(len(episode_images), n_cols):
-                    axes[0, i].axis('off')
-
-                plt.suptitle(f"Episode {ep_idx}", fontsize=14)
-                # Adjust subplot parameters for more bottom space for x-labels (prompts)
-                plt.subplots_adjust(bottom=0.2, hspace=0.3) # Increase bottom margin and horizontal space
-
-                # Construct filename: use experiment_id if available
-                filename = f"episode_{ep_idx:03d}.png"
-                output_path = os.path.join(output_dir_path, filename)
-
-                plt.savefig(output_path)
-                plt.close(fig)
-                print(f"  Saved grid image: {output_path}")
-
-            except Exception as e:
-                print(f"  Error creating/saving grid image for episode {ep_idx}: {e}")
-                # Ensure plot is closed even if saving fails
-                if 'fig' in locals() and plt.fignum_exists(fig.number):
-                     plt.close(fig)
+                    print(f"    Error creating/saving grid image for episode {ep_idx}, timestep {h}: {e}")
+                    # Ensure plot is closed even if saving fails
+                    if 'fig' in locals() and plt.fignum_exists(fig.number):
+                         plt.close(fig)

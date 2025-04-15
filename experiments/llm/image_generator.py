@@ -1,8 +1,7 @@
 import logging
 import argparse
 import os
-from PIL import Image
-from PIL import Image
+import PIL.Image
 from typing import List, Tuple, Union
 
 import numpy as np
@@ -10,9 +9,10 @@ import torch
 from diffusers import AutoencoderKL, LMSDiscreteScheduler, UNet2DConditionModel
 from transformers import CLIPTextModel, CLIPTokenizer # Keep these for SD text encoding
 # Removed CLIPModel, CLIPProcessor imports for image embedding here
-# Import BaseEmbedder for type hinting and PIL Image
+# Import BaseEmbedder for type hinting
 from components.embedder import BaseEmbedder, create_embedder # Added create_embedder for main block
-from PIL.Image import Image as PILImage
+# Define PILImage type for type hinting
+PILImage = PIL.Image.Image
 
 import hashlib
 
@@ -108,8 +108,10 @@ class StableDiffusionGenerator():
         """Generates new random latents for image generation."""
         latents_height = self._image_size // 8
         latents_width = self._image_size // 8
+        # Access in_channels via config to avoid FutureWarning
+        in_channels = self._unet.config.in_channels
         self.latents = torch.randn(
-            (1, self._unet.in_channels, latents_height, latents_width),
+            (1, in_channels, latents_height, latents_width),
             generator=self._generator,
             device=self.device
         )
@@ -194,7 +196,7 @@ class StableDiffusionGenerator():
         image = (image * 255).round().astype("uint8")[0]
 
         # Convert to PIL Image and get embedding using the provided embedder
-        pil_image = PILImage.fromarray(image)
+        pil_image = PIL.Image.fromarray(image)
         # Ensure embedder is on the same device potentially? Or handle internally.
         # Assuming embedder handles device placement.
         image_embedding = embedder.embed_image(pil_image) # Use the passed embedder

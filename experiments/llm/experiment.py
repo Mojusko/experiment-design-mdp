@@ -80,8 +80,9 @@ class LLMExperiment:
 
         # Initialize testers and savers with results_dir and experiment_id
         # Pass embedder to testers/savers that might need it (e.g., ImageGenerationTester/Saver)
-        # Use .get for safety in case 'tester' key is missing in config
-        self.testers = [hydra.utils.instantiate(t, scorer_model=self._scorer_model, embedder=self.embedder) for t in self.cfg.get('tester', [])]
+        # Handle case where cfg.tester is None (e.g., set to null in YAML)
+        testers_config = self.cfg.get('tester') # Get the config value (could be list or None)
+        self.testers = [hydra.utils.instantiate(t, scorer_model=self._scorer_model, embedder=self.embedder) for t in testers_config] if testers_config else []
 
         # Initialize the savers with appropriate parameters
         self.savers = []
@@ -179,7 +180,9 @@ class LLMExperiment:
             return_visitations=True,
             update_callback=None # No intermediate estimation
         )
-        self.visits = results
+        # Extract the actual visits (third element of the tuple)
+        # The solver returns (objective_values, final_objective, visits)
+        self.visits = results[2]
         self.estimator = None # Ensure estimator is None
 
         print("Exploration complete. Saving results...")
