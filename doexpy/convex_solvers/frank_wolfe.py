@@ -269,7 +269,7 @@ class FrankWolfe(ConvexSolverBase):
                         
                         # Each round allows up to (round_idx+1)*self.num_components updates
                         while (policy_counters[policy_idx] < (round_idx + 1) * self.num_components and 
-                               torch.abs(empirical_gap) > gap):
+                               empirical_gap > gap):
                             
                             # Get current density for all policies
                             densities = []

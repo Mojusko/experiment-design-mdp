@@ -17,7 +17,8 @@ from components.embedder import BaseEmbedder, create_embedder
 from components.feedback import FeedbackFactory
 from components.solver import SolverFactory
 from components.tester  import BaseTester, ImageGenerationTester
-from components.saver   import BaseSaver
+# Import specific saver types needed for validation
+from components.saver   import BaseSaver, VisitsSaver, VisitsImageSaver, ConfSaver
 
 
 
@@ -74,27 +75,39 @@ class LLMExperiment:
                     experiment_id = f"{self.cfg.experiment.id_prefix}-{algorithm_code}-{feedback_code}-{experiment_id}"
                 else:
                     experiment_id = f"{self.cfg.experiment.id_prefix}-{algorithm_code}-{feedback_code}"
-        
+
         self.experiment_id = experiment_id
 
         # Initialize testers and savers with results_dir and experiment_id
         # Pass embedder to testers/savers that might need it (e.g., ImageGenerationTester/Saver)
-        self.testers = [hydra.utils.instantiate(t, scorer_model=self._scorer_model, embedder=self.embedder) for t in self.cfg.tester]
+        # Use .get for safety in case 'tester' key is missing in config
+        self.testers = [hydra.utils.instantiate(t, scorer_model=self._scorer_model, embedder=self.embedder) for t in self.cfg.get('tester', [])]
 
         # Initialize the savers with appropriate parameters
         self.savers = []
         for s in self.cfg.savers:
             # Pass standard parameters to all savers
-            # Pass embedder to savers that might need it
+            # Pass embedder and env to savers that might need it
             saver = hydra.utils.instantiate(
                 s,
                 scorer_model=self._scorer_model,
                 embedder=self.embedder, # Pass embedder
+                env=self.env,           # Pass env
                 results_dir=self.results_dir,
                 experiment_id=self.experiment_id
             )
             self.savers.append(saver)
         self.visits = [] if self.cfg.feedback.num_policies == 1 else [[] for _ in range(self.cfg.feedback.num_policies)]
+
+        # --- Validate configuration for explore_only mode ---
+        if self.cfg.get('explore_only', False):
+            if self.testers:
+                raise ValueError("Testers are not allowed in explore_only mode.")
+            allowed_savers = (VisitsSaver, VisitsImageSaver, ConfSaver) # Allow ConfSaver too
+            for saver in self.savers:
+                if not isinstance(saver, allowed_savers):
+                    raise ValueError(f"Saver type '{type(saver).__name__}' is not allowed in explore_only mode. "
+                                     f"Only {', '.join(s.__name__ for s in allowed_savers)} are permitted.")
 
     def calculate_cosine_error(self, est_weight, gt_weight):
         """Calculate cosine error between two weight vectors"""
@@ -154,7 +167,60 @@ class LLMExperiment:
         gt_weight = self._scorer_model.weight
         error = self.calculate_cosine_error(est_weight, gt_weight)
         print(f"Final estimation after all {total_episodes} episodes complete. Cosine error: {error:.4f}")
-        
+
+    def run_explore_only(self):
+        """Runs only the exploration phase and saves visits/images."""
+        total_episodes = self.cfg.experiment.episodes
+        print(f"Running exploration for {total_episodes} episodes...")
+
+        # Run exploration without estimation callback
+        results = self.explorer.run(
+            episodes=total_episodes,
+            return_visitations=True,
+            update_callback=None # No intermediate estimation
+        )
+        self.visits = results
+        self.estimator = None # Ensure estimator is None
+
+        print("Exploration complete. Saving results...")
+        self.save_results_explore_only()
+
+    def save_results_explore_only(self):
+        """Saves results specifically for explore_only mode (visits, images, config)."""
+        from components.results import ExperimentResults
+        from components.saver import VisitsSaver, VisitsImageSaver, ConfSaver # Import allowed savers
+
+        results = ExperimentResults()
+        results.set_visits(self.visits)
+        results.set_estimator(None) # Explicitly set estimator to None
+
+        # Ensure savers have the correct results_dir (might change in test_only)
+        for saver in self.savers:
+            if saver.results_dir != self.results_dir:
+                print(f"Updating saver {type(saver).__name__} results_dir from {saver.results_dir} to {self.results_dir}")
+                saver.results_dir = self.results_dir
+
+        # Add essential metadata
+        results.add_metadata('mode', 'explore_only')
+        results.add_metadata('horizon', self.cfg.horizon)
+        results.add_metadata('algorithm', self.cfg.algorithm)
+        results.add_metadata('base_prompt', self.cfg.base_prompt)
+        results.add_metadata('embedder_class', self.embedder.__class__.__name__)
+        results.add_metadata('embedder_model_id', self.embedder.model_id)
+        results.add_metadata('embedder_normalize', self.embedder.normalize)
+        config_dict = OmegaConf.to_container(self.cfg, resolve=True)
+        results.add_metadata('config_dict', config_dict)
+
+        # Run only the allowed savers
+        allowed_savers = (VisitsSaver, VisitsImageSaver, ConfSaver)
+        for saver in self.savers:
+            if isinstance(saver, allowed_savers):
+                print(f"Running saver: {type(saver).__name__}")
+                saver.save_result(results)
+            else:
+                # This check is redundant due to __init__ validation, but safe
+                print(f"Skipping disallowed saver: {type(saver).__name__}")
+
     def _init_env(self):
         """
         Builds token lists, sets up LLMGrid using the configured embedder,
@@ -312,19 +378,38 @@ class LLMExperiment:
         config_dict = OmegaConf.to_container(self.cfg, resolve=True)
         results.add_metadata('config_dict', config_dict)
 
-        # Run all testers and collect metrics
-        for tester in self.testers:
-            tester_results = tester.run_test(
-                cfg=self.cfg,
-                env=self.env,
-                estimator=self.estimator,
-                theta_star=self._theta_star,
-                training_words_list=self.training_words,
-                testing_words_list=self.testing_words
-            )
-            
-            # Add metrics to results container
-            results.add_metrics(tester_results)
+        # Run all testers and collect metrics (only if estimator exists)
+        if self.estimator is None:
+            print("Skipping testers as estimator is None (likely explore_only or failed estimation).")
+        else:
+            print("Running testers...")
+            for tester in self.testers:
+                # Check if tester requires an estimator (most do)
+                # Simple check for now: assume all testers need it unless specified otherwise
+                requires_estimator = True # Default assumption
+                # Example of how to add exceptions later:
+                # if isinstance(tester, SomeTesterThatDoesNotNeedEstimator):
+                #     requires_estimator = False
+
+                if requires_estimator and self.estimator is None:
+                     print(f"Skipping tester {type(tester).__name__} because estimator is missing.")
+                     continue
+
+                print(f"Running tester: {type(tester).__name__}")
+                tester_results = tester.run_test(
+                    cfg=self.cfg,
+                    env=self.env,
+                    estimator=self.estimator,
+                    theta_star=self._theta_star,
+                    training_words_list=self.training_words,
+                    testing_words_list=self.testing_words
+                )
+                # Add metrics to results container
+                results.add_metrics(tester_results)
+
+        # Use all savers to save the results (savers should handle None estimator if needed)
+        print("Running savers...")
+        # Removed duplicated lines causing IndentationError here
         
         # Use all savers to save the results
         for saver in self.savers:

@@ -168,16 +168,14 @@ class FeedbackFactory:
 
         # Decide which feedback type
         if cfg.feedback.name == 'numerical':
-            #design = DesignA(env=env, lambd=lambda_reg, dim=1) # Use determined lambda_reg
+            # Numerical feedback uses DesignD (A-optimal is similar, D is often preferred)
             design = DesignD(env=env, lambd=lambda_reg, dim=1) # Use determined lambda_reg
             estimator = KernelizedFeatures(embedding, m)
             fb = NumericalFeedback(env, design, estimator)
         else: # Multinomial feedback
-
-            #design = MultiPolicyOrigDesignD(env=env, lambd=lambda_reg, dim=1) # Use determined lambda_reg
             V = None
             if cfg.feedback.pass_V:
-                # Calculate V by summing state-specific V_h matrices
+                # Calculate V by summing state-specific V_h matrices (used for A-optimal)
                 # V_h considers differences only between actions valid for state h
                 embedding_dim = env.get_dim()
                 V = torch.zeros((embedding_dim, embedding_dim), 
@@ -215,52 +213,34 @@ class FeedbackFactory:
                     
                     # Add to the total V
                     V += V_h
-            
-            # Determine the initial C vector. Currently using GT scorer weights directly.
-            # initial_C = scorer_model.weight.data # Use passed scorer_model - REMOVED FOR HARDCODED C
-            # initial_C = env.get_prior_vector() # Uncomment to use the generated prior vector instead
 
-            # --- Hardcoded C vectors ---
-            # c_vectors = [
-            #     embedder.embed_text("japanese"),
-            #     embedder.embed_text("traditions"),
-            #     embedder.embed_text("culture")
-            # ]
-            c_vectors = [
-                embedder.embed_text("old"),
-                embedder.embed_text("classic"),
-                embedder.embed_text("traditional")
-                embedder.embed_text("eternal")
-            ]
-            # -------------------------
-
-            if cfg.feedback.adaptive_design_frequency > 0:
-                # Pass initial_C and estimation frequency to the adaptive design constructor
-                #design = AdaptiveOrigDesignC(
-                #    env=env,
-                #    lambd=lambda_reg, # Use determined lambda_reg
-                #    dim=1,
-                #    C=initial_C, # Needs modification if used - Keep commented
-                #    adaptive_estimation_frequency=cfg.feedback.adaptive_estimation_frequency # Pass frequency
-                #)
-                # --- Revert Adaptive block: Use Adaptive A-Design (or D) instead of C ---
-                design = AdaptiveOrigDesignA(env=env, lambd=lambda_reg, dim=1, V=V) # Use determined lambda_reg - REACTIVATED
-                # design = AdaptiveOrigDesignD(env=env, lambd=lambda_reg, dim=1) # Use determined lambda_reg - Alternative
-                # --- Deactivate Adaptive C Design ---
-                # design = AdaptiveOrigDesignC(
-                #     env=env,
-                #     lambd=lambda_reg, # Use determined lambda_reg
-                #     dim=1,
-                #     C=c_vectors, # Use hardcoded list
-                #     adaptive_estimation_frequency=cfg.feedback.adaptive_estimation_frequency # Pass frequency
-                # ) # COMMENTED OUT
+            # --- Determine Design based on C_design_keywords ---
+            c_vectors = None
+            if cfg.feedback.get('C_design_keywords') and len(cfg.feedback.C_design_keywords) > 0:
+                print(f"Using C-optimal design with keywords: {cfg.feedback.C_design_keywords}")
+                c_vectors = [embedder.embed_text(kw) for kw in cfg.feedback.C_design_keywords]
             else:
-                # Static designs
-                # design = MultiPolicyOrigDesignA(env=env, lambd=lambda_reg, dim=1,V=V) # Use determined lambda_reg - Keep commented out
-                # design = MultiPolicyOrigDesignD(env=env, lambd=lambda_reg, dim=1) # Use determined lambda_reg - Keep commented out
-                # The MultiPolicyOrigDesignC constructor will raise ValueError if initial_C is None.
-                # --- Ensure Static C Design with hardcoded vectors is active ---
-                design = MultiPolicyOrigDesignC(env=env, lambd=lambda_reg, dim=1, C=c_vectors) # Use determined lambda_reg and hardcoded list - REMAINS ACTIVE
+                print("Using A-optimal design (C_design_keywords not provided or empty).")
+
+            # --- Select Adaptive or Static Design ---
+            if cfg.feedback.adaptive_design_frequency > 0:
+                # Adaptive Designs
+                if c_vectors:
+                    design = AdaptiveOrigDesignC(
+                        env=env,
+                        lambd=lambda_reg,
+                        dim=1,
+                        C=c_vectors, # Use embedded keywords
+                        adaptive_estimation_frequency=cfg.feedback.adaptive_estimation_frequency
+                    )
+                else: # Use Adaptive A-optimal
+                    design = AdaptiveOrigDesignA(env=env, lambd=lambda_reg, dim=1, V=V)
+            else:
+                # Static Designs
+                if c_vectors:
+                    design = MultiPolicyOrigDesignC(env=env, lambd=lambda_reg, dim=1, C=c_vectors)
+                else: # Use Static A-optimal
+                    design = MultiPolicyOrigDesignA(env=env, lambd=lambda_reg, dim=1, V=V)
 
             likelihood = MultinomialLikelihood()
             regularizer = L2Regularizer(lam=lambda_reg) # Use determined lambda_reg

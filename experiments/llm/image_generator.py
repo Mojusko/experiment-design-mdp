@@ -219,10 +219,9 @@ class StableDiffusionGenerator():
 DEFAULT_CONFIG = {
     "stable_diffusion_id": "CompVis/stable-diffusion-v1-4",
     "num_inference_steps": 100,
-    "guidance_base": 8.0,
-#    "guidance_tokens": 4.0,
+    "guidance_scale": 8.0, # Renamed from guidance_base
     "image_size": 512,
-    "seed": 0,
+    "seed": 0, # Default base seed
     "MODELS_CACHE_DIR": os.path.expanduser("~/.cache/huggingface/hub"),
     "output_dir": "generated_images"
 }
@@ -236,7 +235,7 @@ if __name__ == "__main__":
     parser.add_argument("--seed", type=int, default=DEFAULT_CONFIG["seed"], help=f"Random seed for reproducibility (default: {DEFAULT_CONFIG['seed']})")
     parser.add_argument("--image_size", type=int, default=DEFAULT_CONFIG["image_size"], help=f"Size of the generated image (default: {DEFAULT_CONFIG['image_size']})")
     parser.add_argument("--num_inference_steps", type=int, default=DEFAULT_CONFIG["num_inference_steps"], help=f"Number of inference steps (default: {DEFAULT_CONFIG['num_inference_steps']})")
-    parser.add_argument("--guidance_base", type=float, default=DEFAULT_CONFIG["guidance_base"], help=f"Guidance scale for prompt (default: {DEFAULT_CONFIG['guidance_base']})")
+    parser.add_argument("--guidance_scale", type=float, default=DEFAULT_CONFIG["guidance_scale"], help=f"Guidance scale for prompt (default: {DEFAULT_CONFIG['guidance_scale']})") # Updated arg name
     # Removed guidance_tokens argument as we are using the single-guidance generator for now
     # parser.add_argument("--guidance_tokens", type=float, default=DEFAULT_CONFIG["guidance_tokens"], help=f"Guidance scale for full prompt tokens (default: {DEFAULT_CONFIG['guidance_tokens']})")
     parser.add_argument("--embedder_model_id", type=str, default="openai/clip-vit-large-patch14", help="Model ID for the embedder (e.g., CLIP or SigLIP)")
@@ -265,7 +264,7 @@ if __name__ == "__main__":
     print(f"  full_prompt: '{args.full_prompt}'")
     print(f"  stable_diffusion_id: {DEFAULT_CONFIG['stable_diffusion_id']}")
     print(f"  num_inference_steps: {args.num_inference_steps}")
-    print(f"  guidance_scale: {args.guidance_base}")
+    print(f"  guidance_scale: {args.guidance_scale}") # Updated arg name
     print(f"  image_size: {args.image_size}")
     print(f"  seed: {args.seed}") # Note: Seed is now derived from prompt internally
     print(f"  output_dir: {args.output_dir}")
@@ -276,9 +275,8 @@ if __name__ == "__main__":
     generator = StableDiffusionGenerator(
         stable_diffusion_id=DEFAULT_CONFIG["stable_diffusion_id"],
         num_inference_steps=args.num_inference_steps,
-        guidance_scale=args.guidance_base,
+        guidance_scale=args.guidance_scale, # Updated arg name
         image_size=args.image_size,
-        # Seed is now derived from the prompt internally by the generator
         # Seed is derived from prompt internally
         MODELS_CACHE_DIR=DEFAULT_CONFIG["MODELS_CACHE_DIR"]
     )
@@ -304,7 +302,7 @@ if __name__ == "__main__":
 
     # Update filename to reflect embedder used (optional)
     embedder_name_short = embedder.__class__.__name__.replace("Embedder","").lower()
-    filename = f"{sanitized_prompt}_guidance{args.guidance_base}_steps{args.num_inference_steps}_emb-{embedder_name_short}.png"
+    filename = f"{sanitized_prompt}_guidance{args.guidance_scale}_steps{args.num_inference_steps}_emb-{embedder_name_short}.png" # Updated arg name
 
     # Save the image with the descriptive filename
     image_path = os.path.join(args.output_dir, filename)

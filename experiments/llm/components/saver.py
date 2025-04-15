@@ -119,11 +119,15 @@ class ImageGenerationSaver(BaseSaver):
     
     def __init__(self, **kwargs):
         super().__init__(**kwargs)
+        # Import DEFAULT_CONFIG here if needed for defaults, or rely on _generate_images
+        from experiments.llm.image_generator import DEFAULT_CONFIG
+
         self.take_best_worst_N = self.params.get('take_best_worst_N', 8)
-        self.seed = self.params.get('seed', 12)
+        # Seed logic is specific here (_get_seed_from_prompt(base_prompt)), not using default directly
         self.debug_mode = self.params.get('debug_mode', False)
-        self.image_size = self.params.get('image_size', 512)
-        self.num_inference_steps = self.params.get('num_inference_steps', 100)
+        # Get image_size and num_inference_steps from params or DEFAULT_CONFIG
+        self.image_size = self.params.get('image_size', DEFAULT_CONFIG['image_size'])
+        self.num_inference_steps = self.params.get('num_inference_steps', DEFAULT_CONFIG['num_inference_steps'])
         self.base_prompt = self.params.get('base_prompt', '')  # Extract base_prompt, default to empty string
         self.add_image_score = self.params.get('add_image_score', False)  # Whether to add image scores
         self.metrics_filename = self.params.get('metrics_filename', 'image_metrics.json')
@@ -209,18 +213,18 @@ class ImageGenerationSaver(BaseSaver):
             images_dir = os.path.join(images_dir, self.experiment_id)
             os.makedirs(images_dir, exist_ok=True)
 
-        # Import generator classes and seed function locally to avoid circular import
-        from experiments.llm.image_generator import StableDiffusionGenerator, _get_seed_from_prompt
+        # Import generator classes, seed function, and DEFAULT_CONFIG locally
+        from experiments.llm.image_generator import StableDiffusionGenerator, _get_seed_from_prompt, DEFAULT_CONFIG
 
-        # Initialize image generator with debug settings if needed
+        # Initialize image generator using self attributes (derived from params/DEFAULT_CONFIG)
+        # and specific seed logic for this saver.
         generator = StableDiffusionGenerator(
-        #generator = DoubleGuidanceStableDiffusionGenerator(
-            "CompVis/stable-diffusion-v1-4",
-            MODELS_CACHE_DIR=os.path.expanduser("~/.cache/huggingface/hub"),
-            image_size=self.image_size,
-            num_inference_steps=self.num_inference_steps,
-            #seed=self.seed
-            seed=_get_seed_from_prompt(self.base_prompt),
+            stable_diffusion_id=DEFAULT_CONFIG['stable_diffusion_id'], # Use default model ID
+            MODELS_CACHE_DIR=DEFAULT_CONFIG['MODELS_CACHE_DIR'], # Use default cache dir
+            image_size=self.image_size, # Use size from __init__ (params or default)
+            num_inference_steps=self.num_inference_steps, # Use steps from __init__ (params or default)
+            guidance_scale=DEFAULT_CONFIG['guidance_scale'], # Use default guidance
+            seed=_get_seed_from_prompt(self.base_prompt), # Specific seed logic for this saver
         )
         
         # Generate images for the best prompts
@@ -351,7 +355,6 @@ class ImageGenerationSaver(BaseSaver):
                 image_score = worst_image_scores[i] if i < len(worst_image_scores) else "N/A"
                 f.write(f"{i+1}\t{prompt_score:.6f}\t{image_score}\t{prompt}\n")
 
-
 class LearnedEstimatorSaver(BaseSaver):
     """Saves the learned estimator theta vector to a file."""
     
@@ -421,3 +424,165 @@ class ConfSaver(BaseSaver):
             print(f"Saved configuration to {file_path}")
         except Exception as e:
             print(f"Error saving configuration: {e}")
+
+
+class VisitsImageSaver(BaseSaver):
+    """Saves images generated from visited trajectories for human feedback."""
+
+    def __init__(self, env=None, embedder=None, **kwargs):
+        super().__init__(**kwargs)
+        self.env = env
+        self.embedder = embedder
+
+        # --- Local Imports first to get DEFAULT_CONFIG ---
+        # Moved imports up to ensure DEFAULT_CONFIG is available
+        global create_prompt, StableDiffusionGenerator, _get_seed_from_prompt, DEFAULT_CONFIG
+        from doexpy.env.llm import create_prompt
+        from experiments.llm.image_generator import StableDiffusionGenerator, _get_seed_from_prompt, DEFAULT_CONFIG
+
+        if self.env is None:
+            raise ValueError("VisitsImageSaver requires the 'env' object during initialization.")
+        if self.embedder is None:
+            raise ValueError("VisitsImageSaver requires the 'embedder' object during initialization.")
+
+        # --- Configuration for Image Generation (using DEFAULT_CONFIG) ---
+        self.image_size = self.params.get('image_size', DEFAULT_CONFIG['image_size'])
+        self.num_inference_steps = self.params.get('num_inference_steps', DEFAULT_CONFIG['num_inference_steps'])
+        self.guidance_scale = self.params.get('guidance_scale', DEFAULT_CONFIG['guidance_scale'])
+        # Default to using prompt-specific seeds for reproducibility per prompt
+        self.seed_per_prompt = self.params.get('seed_per_prompt', True)
+        self.base_seed = self.params.get('seed', DEFAULT_CONFIG['seed']) # Base seed if not using seed_per_prompt
+        self.output_subdir = self.params.get('output_subdir', 'visit_images') # Specific to this saver
+        self.stable_diffusion_id = self.params.get('stable_diffusion_id', DEFAULT_CONFIG['stable_diffusion_id'])
+        self.models_cache_dir = self.params.get('models_cache_dir', DEFAULT_CONFIG['MODELS_CACHE_DIR'])
+
+        # --- Local Imports are now above ---
+
+
+    def save_result(self, results):
+        """Generates and saves images based on the visited trajectories."""
+        visits = results.visits
+        if visits is None or not visits or not visits[0]:
+            print("VisitsImageSaver: No visits data found in results. Skipping image generation.")
+            return
+
+        # Determine structure: visits[policy_idx][episode_idx] = (states, actions)
+        try:
+            num_policies = len(visits)
+            num_episodes = len(visits[0])
+            if num_policies == 0 or num_episodes == 0:
+                 print("VisitsImageSaver: Visits data is empty. Skipping.")
+                 return
+            # Check structure of the first element
+            first_visit = visits[0][0]
+            if not isinstance(first_visit, tuple) or len(first_visit) != 2:
+                 raise TypeError("Expected visits[p][e] to be a tuple (states, actions)")
+            _ = first_visit[1] # Try accessing actions
+        except (TypeError, IndexError, AttributeError) as e:
+            print(f"VisitsImageSaver: Invalid visits structure: {e}. Skipping image generation.")
+            print("Expected structure: List[List[Tuple[states, actions]]]")
+            return
+
+        # --- Setup Output Directory ---
+        # We create a specific subdirectory for these images
+        output_dir_path = os.path.join(self.results_dir, self.output_subdir)
+        if self.experiment_id:
+            output_dir_path = os.path.join(output_dir_path, self.experiment_id)
+        os.makedirs(output_dir_path, exist_ok=True)
+        print(f"VisitsImageSaver: Saving visit images to {output_dir_path}")
+
+        # --- Initialize Image Generator ---
+        try:
+            generator = StableDiffusionGenerator(
+                stable_diffusion_id=self.stable_diffusion_id,
+                MODELS_CACHE_DIR=self.models_cache_dir,
+                image_size=self.image_size,
+                num_inference_steps=self.num_inference_steps,
+                guidance_scale=self.guidance_scale,
+                seed=self.base_seed # Initial seed
+            )
+        except Exception as e:
+            print(f"VisitsImageSaver: Failed to initialize StableDiffusionGenerator: {e}. Skipping.")
+            return
+
+        # --- Generate and Save Images Per Episode ---
+        for ep_idx in range(num_episodes):
+            episode_images = []
+            episode_prompts = []
+            print(f"VisitsImageSaver: Processing episode {ep_idx + 1}/{num_episodes}")
+
+            for policy_idx in range(num_policies):
+                try:
+                    # Extract actions for this policy and episode
+                    # visits[policy_idx][ep_idx] should be (states, actions)
+                    actions = visits[policy_idx][ep_idx][1]
+                    if isinstance(actions, torch.Tensor):
+                        actions = actions.cpu().numpy() # Ensure numpy array or list
+                    actions = list(map(int, actions)) # Ensure list of ints
+
+                    # Generate prompt
+                    prompt = create_prompt(actions, self.env)
+                    episode_prompts.append(prompt)
+
+                    # Set seed for this specific image generation if needed
+                    if self.seed_per_prompt:
+                        generator.seed = _get_seed_from_prompt(prompt)
+                        generator.seed_generator()
+                    # else: use the generator's current seed state (potentially incrementing)
+
+                    # Generate image
+                    print(f"  Generating image for policy {policy_idx + 1}/{num_policies} (Prompt: '{prompt[:80]}...')")
+                    # Pass the embedder instance to the sample method
+                    image_np, _ = generator.sample(prompt, embedder=self.embedder)
+                    episode_images.append(Image.fromarray(image_np))
+
+                except IndexError:
+                    print(f"  Warning: Missing visit data for episode {ep_idx}, policy {policy_idx}. Skipping.")
+                    episode_images.append(Image.new('RGB', (self.image_size, self.image_size), color = 'grey')) # Placeholder
+                    episode_prompts.append("Error: Missing Data")
+                except Exception as e:
+                    print(f"  Error generating image for episode {ep_idx}, policy {policy_idx}: {e}")
+                    episode_images.append(Image.new('RGB', (self.image_size, self.image_size), color = 'red')) # Error placeholder
+                    episode_prompts.append(f"Error: {e}")
+
+            # --- Create and Save Grid Image for the Episode ---
+            if not episode_images:
+                print(f"  No images generated for episode {ep_idx}. Skipping grid.")
+                continue
+
+            try:
+                n_cols = num_policies
+                n_rows = 1
+                fig, axes = plt.subplots(n_rows, n_cols, figsize=(4 * n_cols, 5 * n_rows), squeeze=False)
+
+                for i, (img, prompt) in enumerate(zip(episode_images, episode_prompts)):
+                    ax = axes[0, i]
+                    ax.imshow(img)
+                    # Wrap prompt text for display below the image
+                    wrapped_prompt = '\n'.join(prompt[j:j+60] for j in range(0, len(prompt), 60)) # Adjust wrap length if needed
+                    ax.set_title(f"Policy {i+1}", fontsize=10)
+                    ax.set_xlabel(wrapped_prompt, fontsize=8, labelpad=10) # Add padding
+                    ax.set_xticks([])
+                    ax.set_yticks([])
+
+                # Hide unused axes if any (shouldn't happen with n_rows=1)
+                for i in range(len(episode_images), n_cols):
+                    axes[0, i].axis('off')
+
+                plt.suptitle(f"Episode {ep_idx}", fontsize=14)
+                # Adjust subplot parameters for more bottom space for x-labels (prompts)
+                plt.subplots_adjust(bottom=0.2, hspace=0.3) # Increase bottom margin and horizontal space
+
+                # Construct filename: use experiment_id if available
+                filename = f"episode_{ep_idx:03d}.png"
+                output_path = os.path.join(output_dir_path, filename)
+
+                plt.savefig(output_path)
+                plt.close(fig)
+                print(f"  Saved grid image: {output_path}")
+
+            except Exception as e:
+                print(f"  Error creating/saving grid image for episode {ep_idx}: {e}")
+                # Ensure plot is closed even if saving fails
+                if 'fig' in locals() and plt.fignum_exists(fig.number):
+                     plt.close(fig)

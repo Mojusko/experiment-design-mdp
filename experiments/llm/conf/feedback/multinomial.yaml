@@ -11,6 +11,10 @@ adaptive_design_frequency: 0
 #pass_V: true
 pass_V: false
 
+# Keywords for C-optimal design. If null or empty, A-optimal design will be used.
+# Example: ["old", "classic", "traditional", "eternal"]
+C_design_keywords: ["old", "classic", "traditional", "eternal"]
+
 # Model-specific parameters (moved from experiment config)
 model_specific_params:
   japanese-text:

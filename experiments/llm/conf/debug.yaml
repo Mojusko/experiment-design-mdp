@@ -16,9 +16,12 @@ experiment:
 results_dir: "results/debug"
 algorithm: "design"
 
-# Test-only mode configuration
-test_only: false  # Set to true to run test-only mode
-estimator_path: null  # Path to saved estimator file
+# Special Modes
+test_only: false
+explore_only: false # Explicitly set for debug, defaults to false anyway
+
+# Test-only mode specific configuration
+estimator_path: null
 
 tester:
   #- _target_: components.tester.PreferenceTester
@@ -47,6 +50,13 @@ savers:
   - _target_: components.saver.ConfSaver
     params:
       filename: "config_resolved.yaml"
+
+  - _target_: components.saver.VisitsImageSaver
+    params:
+      output_subdir: "visit_images_debug" # Specific subdir for debug images
+      image_size: 64 # Smaller image size for speed
+      num_inference_steps: 20 # Fewer inference steps for speed
+      seed_per_prompt: true # Keep deterministic generation per prompt
 
   #  - _target_: components.saver.ImageGenerationSaver
   #    params:
