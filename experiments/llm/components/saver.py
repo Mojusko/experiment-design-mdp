@@ -8,6 +8,7 @@ import PIL
 import yaml
 from abc import ABC, abstractmethod
 from omegaconf import OmegaConf, DictConfig
+from hydra.utils import to_absolute_path # Import Hydra path utility
 # Import necessary components for VisitsImageSaver at the top level
 from doexpy.env.llm import create_prompt
 from experiments.llm.image_generator import StableDiffusionGenerator, _get_seed_from_prompt, DEFAULT_CONFIG
@@ -699,16 +700,20 @@ class ReadableVisitsSaver(BaseSaver):
         # If not available in results, try loading from path specified in params
         elif self.params.get('visits_path'):
             visits_path = self.params['visits_path']
-            print(f"Attempting to load visits from path in params: {visits_path}")
-            if visits_path and os.path.exists(visits_path):
+            # Resolve to absolute path before checking existence
+            absolute_visits_path = to_absolute_path(visits_path) if visits_path else None
+            print(f"Attempting to load visits from absolute path in params: {absolute_visits_path}")
+
+            if absolute_visits_path and os.path.exists(absolute_visits_path):
                 try:
-                    loaded_visits = torch.load(visits_path)
-                    print(f"Successfully loaded visits from {visits_path}")
+                    loaded_visits = torch.load(absolute_visits_path)
+                    print(f"Successfully loaded visits from {absolute_visits_path}")
                 except Exception as e:
-                    print(f"Error loading visits from {visits_path}: {e}. Skipping saver.")
+                    print(f"Error loading visits from {absolute_visits_path}: {e}. Skipping saver.")
                     return # Stop execution for this saver
             elif visits_path:
-                print(f"Warning: Visits path specified in params but not found: {visits_path}. Skipping saver.")
+                # Print the absolute path tried
+                print(f"Warning: Visits path specified in params but not found: {absolute_visits_path}. Skipping saver.")
                 return
             else:
                  print("Warning: visits_path specified in params is null or empty. Skipping saver.")

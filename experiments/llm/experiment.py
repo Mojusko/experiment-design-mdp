@@ -6,6 +6,7 @@ import sys
 
 import hydra
 from omegaconf import DictConfig, OmegaConf # Added OmegaConf
+from hydra.utils import to_absolute_path # Import Hydra path utility
 
 from stpy.helpers.helper import cartesian
 # Updated imports from doexpy.env.llm
@@ -365,13 +366,18 @@ class LLMExperiment:
              input_path = self.cfg.get('visits_path')
              mode = "inspect" # Use 'inspect' prefix if using visits_path
 
-        if not input_path or not os.path.exists(input_path):
-             print(f"Error: Input path ('{input_path}') not found or not provided for {mode} mode.")
+        # Resolve to absolute path for checking existence
+        absolute_input_path = to_absolute_path(input_path) if input_path else None
+
+        if not absolute_input_path or not os.path.exists(absolute_input_path):
+             # Print the absolute path tried for clarity
+             print(f"Error: Input path ('{absolute_input_path}') not found or not provided for {mode} mode.")
              return False
 
-        # Setup results directory based on the input_path, unless overridden
+        # Setup results directory based on the absolute_input_path, unless overridden
         if not self.cfg.get('override_results_dir', False):
-            original_dir = os.path.dirname(input_path)
+            # Use absolute path for dirname
+            original_dir = os.path.dirname(absolute_input_path)
             if os.path.exists(original_dir):
                 timestamp = os.environ.get('TIMESTAMP', datetime.datetime.now().strftime("%Y-%m-%d-%H-%M"))
                 # Try to infer algorithm/feedback from filename if possible, otherwise use defaults
