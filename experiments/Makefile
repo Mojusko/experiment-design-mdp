@@ -438,7 +438,7 @@ llm-find-rounds: $(JOBS_LLM_ROUNDS)
 
 # Lambda-finding
 # We'll run each lambda_reg value for REPEATS_LLM seeds
-LAMBDA_VALUES_MUL := 10 25 50 100 200 400
+LAMBDA_VALUES_MUL :=  0.1 1 10 25 50 100 200
 LAMBDA_VALUES_NUM := 0.0001 0.001 0.01 0.1 1 10
 
 # Generate job names for each (lambda, seed) pair for both types
@@ -512,6 +512,11 @@ $(foreach episodes,$(EPISODES_DESIGN_FREQ), \
 
 # Target to run all design frequency finding jobs
 llm-find-design-frequency: $(JOBS_LLM_DESIGN_FREQUENCY)
+
+# Target for inspecting visits
+llm-inspect-visits:
+	$(if $(VISITS_PATH),,$(error VISITS_PATH is required, e.g., make llm-inspect-visits VISITS_PATH=results/.../visits.pkl))
+	cd llm && TIMESTAMP=$(TIMESTAMP) OMP_NUM_THREADS=1 MKL_NUM_THREADS=1 $(PYTHONPATH) run_exp.py test_only=true visits_path="$(VISITS_PATH)" estimator_path=null $(if $(RESULTS_DIR),results_dir="$(RESULTS_DIR)" override_results_dir=true,) experiment_id="inspect-$(shell basename $(VISITS_PATH) .pkl)" seed=1
 
 
 PLOTS:

@@ -79,10 +79,29 @@ class LLMExperiment:
         self.experiment_id = experiment_id
 
         # Initialize testers and savers with results_dir and experiment_id
-        # Pass embedder to testers/savers that might need it (e.g., ImageGenerationTester/Saver)
-        # Handle case where cfg.tester is None (e.g., set to null in YAML)
+        # Pass embedder and env to testers/savers that might need it
         testers_config = self.cfg.get('tester') # Get the config value (could be list or None)
-        self.testers = [hydra.utils.instantiate(t, scorer_model=self._scorer_model, embedder=self.embedder) for t in testers_config] if testers_config else []
+        self.testers = []
+        if testers_config:
+             for t_conf in testers_config:
+                 try:
+                     # Pass env and embedder explicitly if needed by the tester
+                     # Hydra handles args defined in t_conf (like 'params')
+                     init_args = {
+                         'scorer_model': self._scorer_model,
+                         'embedder': self.embedder,
+                         'env': self.env # Pass env, needed by VisitsTester
+                         # 'params' is handled by Hydra via t_conf
+                     }
+                     tester = hydra.utils.instantiate(
+                         t_conf, # The tester's specific config
+                         **init_args # Pass the dynamically built dictionary
+                     )
+                     self.testers.append(tester)
+                     print(f"Successfully initialized tester: {t_conf._target_}")
+                 except Exception as e:
+                     print(f"Failed to initialize tester {t_conf._target_}: {e}")
+                     raise
 
         # Initialize the savers with appropriate parameters
         self.savers = []
@@ -363,17 +382,53 @@ class LLMExperiment:
         
         if not self.load_estimator(estimator_path):
             return False
-            
+
         print("Running tests with pre-loaded estimator (skipping optimization)")
-        
-        # Empty visits if needed
+
+        # Empty visits if needed (will be passed to testers)
         if not hasattr(self, 'visits') or self.visits is None:
             self.visits = [] if self.cfg.feedback.num_policies == 1 else [[] for _ in range(self.cfg.feedback.num_policies)]
-            
+
         # Run tests and save results
         self.test_and_save()
         return True
-    
+
+    def run_visits_only(self, visits_path):
+        """Loads visits and runs only the testing and saving parts."""
+        print(f"--- Running in Visits-Only Inspection Mode ---")
+        print(f"Loading visits from: {visits_path}")
+        if not os.path.exists(visits_path):
+            print(f"Error: Visits file not found at {visits_path}")
+            return False
+        try:
+            # Load visits - they will be passed to testers via test_and_save
+            self.visits = torch.load(visits_path)
+            print(f"Successfully loaded visits.")
+            # Ensure estimator is None for this mode
+            self.estimator = None
+            # Use original results directory logic if not overridden
+            if not self.cfg.get('override_results_dir', False):
+                original_dir = os.path.dirname(visits_path)
+                if os.path.exists(original_dir):
+                    timestamp = os.environ.get('TIMESTAMP', datetime.datetime.now().strftime("%Y-%m-%d-%H-%M"))
+                    algorithm = self._get_algorithm_code() # Might need adjustment based on filename
+                    feedback_type = self._get_feedback_code() # Might need adjustment
+                    experiment_id = self.experiment_id or "inspect"
+                    tests_base_dir = os.path.join(original_dir, "additional_tests")
+                    self.results_dir = os.path.join(tests_base_dir, f"inspect-{algorithm}-{feedback_type}-{timestamp}")
+                    print(f"Using original results directory: {original_dir}")
+                    print(f"Saving inspection results to: {self.results_dir}")
+                    os.makedirs(self.results_dir, exist_ok=True)
+                    for saver in self.savers:
+                        saver.results_dir = self.results_dir
+                        print(f"Updated saver {type(saver).__name__} to use results_dir: {self.results_dir}")
+
+            # Run testers (like VisitsTester) and savers
+            self.test_and_save()
+            return True
+        except Exception as e:
+            print(f"Error loading or processing visits: {e}")
+            return False
     def test_and_save(self):
         """Final estimation, testing and saving of results"""
         # Create a container for all results
@@ -424,13 +479,15 @@ class LLMExperiment:
                 tester_results = tester.run_test(
                     cfg=self.cfg,
                     env=self.env,
-                    estimator=self.estimator,
+                    estimator=self.estimator, # Can be None
                     theta_star=self._theta_star,
                     training_words_list=self.training_words,
-                    testing_words_list=self.testing_words
+                    testing_words_list=self.testing_words,
+                    visits=self.visits # Pass the visits data
                 )
                 # Add metrics to results container
-                results.add_metrics(tester_results)
+                if tester_results: # Ensure tester returned something
+                    results.add_metrics(tester_results)
 
         # Use all savers to save the results (savers should handle None estimator if needed)
         print("Running savers...")

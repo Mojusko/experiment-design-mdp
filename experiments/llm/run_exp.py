@@ -42,6 +42,16 @@ def main(cfg: DictConfig):
         if not success:
             return 1 # Exit if test_only failed
 
+    # Check for visits-only inspection mode
+    elif cfg.get('test_only', False) and cfg.get('visits_path') and not cfg.get('estimator_path'):
+        print("--- Running in Visits-Only Inspection Mode ---")
+        if not os.path.exists(cfg.visits_path):
+             print(f"Error: Visits file not found at {cfg.visits_path}")
+             return 1
+        success = experiment.run_visits_only(cfg.visits_path)
+        if not success:
+             return 1 # Exit if visits-only failed
+
     # Check if we're in explore-only mode
     elif cfg.get('explore_only', False):
         print("--- Running in Explore-Only Mode ---")

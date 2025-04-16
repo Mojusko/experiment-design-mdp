@@ -21,12 +21,13 @@ experiment_id: ""
 
 
 # --- Special Modes ---
-test_only: false  # Set to true to run test-only mode (load estimator, test, save)
+test_only: false  # Set to true to run test-only mode (load estimator or visits, test, save)
 explore_only: false # Set to true to run explore-only mode (explore, save visits/images)
 
-# --- Test-only mode specific configuration ---
+# --- Test-only / Inspection mode specific configuration ---
 estimator_path: null  # Path to saved estimator file for test_only mode
-override_results_dir: false  # If true in test_only mode, use results_dir instead of deriving from estimator_path
+visits_path: null     # Path to saved visits file for inspection mode (test_only=true, estimator_path=null)
+override_results_dir: false  # If true in test_only/inspection mode, use results_dir instead of deriving from path
 tester:
   - _target_: components.tester.PreferenceTester
     params:
@@ -38,6 +39,9 @@ tester:
   #    params:
   #      take_best_worst_N: 4
   #      use_estimator: true # Controls if ImageGenerationTester uses learned weights
+  - _target_: components.tester.VisitsTester
+    params:
+      output_filename: "visits_prompts.txt" # Optional: file to save prompts
 
 # Embedder configuration is loaded via defaults list above.
 # Specific embedder settings (like model_id, cache_dir) are in conf/embedder/*.yaml
