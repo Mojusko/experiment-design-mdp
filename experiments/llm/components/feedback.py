@@ -238,7 +238,8 @@ class FeedbackFactory:
             else:
                 # Static Designs
                 if c_vectors:
-                    design = MultiPolicyOrigDesignC(env=env, lambd=lambda_reg, dim=1, C=c_vectors)
+                    #design = MultiPolicyOrigDesignC(env=env, lambd=lambda_reg, dim=1, C=c_vectors)
+                    design = MultiPolicyOrigDesignC(env=env, lambd=1.0, dim=1, C=c_vectors)
                 else: # Use Static A-optimal
                     design = MultiPolicyOrigDesignA(env=env, lambd=lambda_reg, dim=1, V=V)
 
