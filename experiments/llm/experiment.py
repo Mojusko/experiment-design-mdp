@@ -355,44 +355,75 @@ class LLMExperiment:
             estimator_path: Path to the saved estimator file
             
         Returns:
-            True if successful, False otherwise
+            True if the test/save process was executed, False otherwise (e.g., input path missing).
         """
-        # Use original results directory if not explicitly specified
+        # Determine the input path for deriving the results directory
+        # Prioritize estimator_path, fallback to visits_path if estimator_path is null
+        input_path = estimator_path
+        mode = "test" # Default mode prefix for directory name
+        if not input_path:
+             input_path = self.cfg.get('visits_path')
+             mode = "inspect" # Use 'inspect' prefix if using visits_path
+
+        if not input_path or not os.path.exists(input_path):
+             print(f"Error: Input path ('{input_path}') not found or not provided for {mode} mode.")
+             return False
+
+        # Setup results directory based on the input_path, unless overridden
         if not self.cfg.get('override_results_dir', False):
-            # Extract original results directory from estimator path
-            original_dir = os.path.dirname(estimator_path)
+            original_dir = os.path.dirname(input_path)
             if os.path.exists(original_dir):
-                # Create a timestamp-based subdirectory under additional_tests
                 timestamp = os.environ.get('TIMESTAMP', datetime.datetime.now().strftime("%Y-%m-%d-%H-%M"))
-            
-                # Get algorithm and feedback type for directory name
-                algorithm = self._get_algorithm_code()
-                feedback_type = self._get_feedback_code()
-                experiment_id = self.experiment_id or "test"
-            
-                # Create directory structure: original_dir/additional_tests/test-algorithm-feedback-timestamp
+                # Try to infer algorithm/feedback from filename if possible, otherwise use defaults
+                # This part might need refinement based on actual filename conventions
+                try:
+                    algorithm = self._get_algorithm_code()
+                    feedback_type = self._get_feedback_code()
+                except ValueError: # Handle cases where cfg might not have algorithm/feedback
+                    algorithm = "unknown_alg"
+                    feedback_type = "unknown_fb"
+                    print("Warning: Could not determine algorithm/feedback from config, using defaults for directory name.")
+
+                # Use the determined mode ('test' or 'inspect') in the directory name
+                experiment_id_suffix = self.experiment_id or mode # Use existing ID or mode name
                 tests_base_dir = os.path.join(original_dir, "additional_tests")
-                self.results_dir = os.path.join(tests_base_dir, f"test-{algorithm}-{feedback_type}-{timestamp}")
-            
-                print(f"Using original results directory: {original_dir}")
-                print(f"Saving test results to: {self.results_dir}")
+                # Example: test-dsn-mult-2025-04-16-10-00 or inspect-dsn-mult-2025-04-16-10-00
+                self.results_dir = os.path.join(tests_base_dir, f"{mode}-{algorithm}-{feedback_type}-{timestamp}")
+
+                print(f"Using original results directory parent: {original_dir}")
+                print(f"Saving {mode} results to: {self.results_dir}")
                 os.makedirs(self.results_dir, exist_ok=True)
-            
+
                 # Update results_dir for all savers
                 for saver in self.savers:
                     saver.results_dir = self.results_dir
                     print(f"Updated saver {type(saver).__name__} to use results_dir: {self.results_dir}")
-        
-        if not self.load_estimator(estimator_path):
-            return False
+            else:
+                 print(f"Warning: Could not find original directory '{original_dir}'. Using default results_dir '{self.results_dir}'.")
 
-        print("Running tests with pre-loaded estimator (skipping optimization)")
+        # Attempt to load estimator only if estimator_path is provided
+        if estimator_path:
+            print(f"Attempting to load estimator from: {estimator_path}")
+            if not self.load_estimator(estimator_path):
+                 print("Warning: Failed to load estimator, proceeding without it.")
+                 self.estimator = None # Ensure estimator is None if loading failed
+            else:
+                 print("Successfully loaded estimator.")
+        else:
+             print("No estimator path provided, proceeding without loading estimator (inspection mode).")
+             self.estimator = None # Ensure estimator is None
 
-        # Empty visits if needed (will be passed to testers)
+        # Ensure visits attribute exists for savers, even if empty
         if not hasattr(self, 'visits') or self.visits is None:
-            self.visits = [] if self.cfg.feedback.num_policies == 1 else [[] for _ in range(self.cfg.feedback.num_policies)]
+             # Check if visits were loaded by ReadableVisitsSaver (though it happens later)
+             # For simplicity, just initialize empty visits here. Savers will handle loading if needed.
+             print("Initializing empty visits list for test/save phase.")
+             self.visits = [] if self.cfg.feedback.num_policies == 1 else [[] for _ in range(self.cfg.feedback.num_policies)]
 
-        # Run tests and save results
+        # Always proceed to test and save
+        print(f"Proceeding to test_and_save in {mode} mode (estimator is {'loaded' if self.estimator else 'None'}).")
+        self.test_and_save()
+        return True # Indicate test/save process was executed
     def test_and_save(self):
         """Final estimation, testing and saving of results"""
         # Create a container for all results
