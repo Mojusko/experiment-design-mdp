@@ -681,13 +681,38 @@ class ReadableVisitsSaver(BaseSaver):
     Saves visit trajectories in a human-readable format (actions and prompts).
     Can load visits from a file specified in params['visits_path'] if not available
     in the results object.
+    Respects dense_feedback setting to show prompts for prefixes.
+    Saves output per policy.
     """
-    def __init__(self, **kwargs):
-        super().__init__(**kwargs)
-        # Ensure env is provided, as it's needed for prompt creation
+    # Updated __init__ to accept horizon and dense_feedback
+    def __init__(self,
+                 env=None,
+                 embedder=None,
+                 params: DictConfig = None,
+                 scorer_model=None,
+                 results_dir=None,
+                 experiment_id=None,
+                 skip_existing: bool = False,
+                 # Specific config values passed from LLMExperiment
+                 horizon: int = None,
+                 dense_feedback: bool = False):
+        # Pass common arguments to BaseSaver
+        super().__init__(env=env, embedder=embedder, params=params,
+                         scorer_model=scorer_model, results_dir=results_dir,
+                         experiment_id=experiment_id, skip_existing=skip_existing)
+
+        # Store specific config values needed by this saver
+        self.horizon = horizon
+        self.dense_feedback = dense_feedback
+
+        # --- Validate required objects and config ---
         if self.env is None:
-             raise ValueError(f"{self.__class__.__name__} requires the 'env' object for prompt creation.")
-        print(f"Initialized {self.__class__.__name__} with params: {self.params}")
+             raise ValueError(f"{self.__class__.__name__} requires the 'env' object.")
+        if self.horizon is None:
+             raise ValueError(f"{self.__class__.__name__} requires the 'horizon' value.")
+
+        print(f"Initialized {self.__class__.__name__} with params: {self.params}, "
+              f"horizon: {self.horizon}, dense_feedback: {self.dense_feedback}")
 
     def save_result(self, results):
         print(f"Running {self.__class__.__name__}")
@@ -740,57 +765,84 @@ class ReadableVisitsSaver(BaseSaver):
             # Determine structure: visits[policy_idx][episode_idx] = (states, actions)
             # Use actual_visits for processing
             num_policies = len(actual_visits)
+            num_policies = len(actual_visits)
             num_episodes = len(actual_visits[0])
             print(f"Processing {num_policies} policies and {num_episodes} episodes.")
-            output_lines.append(f"--- Readable Visits ---")
-            output_lines.append(f"Number of Policies: {num_policies}")
-            output_lines.append(f"Number of Episodes: {num_episodes}")
-            output_lines.append("-" * 25)
 
+            # Determine the range of horizons to generate prompts for
+            h_range = range(1, self.horizon + 1) if self.dense_feedback else range(self.horizon, self.horizon + 1)
+
+            # Iterate through each policy and save to a separate file
             for p_idx in range(num_policies):
-                output_lines.append(f"\nPolicy {p_idx + 1}:")
+                policy_output_lines = []
+                policy_output_lines.append(f"--- Readable Visits: Policy {p_idx + 1} ---")
+                policy_output_lines.append(f"Number of Episodes: {num_episodes}")
+                policy_output_lines.append(f"Dense Feedback Mode: {self.dense_feedback}")
+                policy_output_lines.append("-" * 25)
+
                 for ep_idx in range(num_episodes):
+                    policy_output_lines.append(f"\n  Episode {ep_idx + 1}:")
                     try:
                         # visits[policy_idx][ep_idx] = (states, actions)
-                        # Use actual_visits for accessing data
-                        actions = actual_visits[p_idx][ep_idx][1]
-                        if isinstance(actions, torch.Tensor):
-                            actions = actions.cpu().numpy()
-                        actions = list(map(int, actions)) # Ensure list of ints
+                        full_actions = actual_visits[p_idx][ep_idx][1]
+                        if isinstance(full_actions, torch.Tensor):
+                            full_actions = full_actions.cpu().numpy()
+                        full_actions = list(map(int, full_actions)) # Ensure list of ints
 
-                        # Use the env stored during init
-                        prompt = create_prompt(actions, self.env)
+                        policy_output_lines.append(f"    Full Actions: {full_actions}")
 
-                        output_lines.append(f"  Episode {ep_idx + 1}:")
-                        output_lines.append(f"    Actions: {actions}")
-                        output_lines.append(f"    Prompt : '{prompt}'")
+                        # Generate prompts for relevant horizons (prefix lengths)
+                        for h in h_range:
+                            if h > len(full_actions): # Should not happen if horizon matches data
+                                policy_output_lines.append(f"      h={h}: Error - Horizon exceeds action length")
+                                continue
+
+                            truncated_actions = full_actions[:h]
+                            prompt = create_prompt(truncated_actions, self.env)
+                            policy_output_lines.append(f"      h={h}:")
+                            policy_output_lines.append(f"        Actions: {truncated_actions}")
+                            policy_output_lines.append(f"        Prompt : '{prompt}'")
 
                     except IndexError:
-                        output_lines.append(f"  Episode {ep_idx + 1}: Error - Missing data")
+                        policy_output_lines.append(f"    Error - Missing data for this episode")
                     except Exception as e:
-                         output_lines.append(f"  Episode {ep_idx + 1}: Error - Processing failed: {e}")
+                         policy_output_lines.append(f"    Error - Processing failed for this episode: {e}")
+
+                # --- Save Policy-Specific File ---
+                base_filename = self.params.get('output_filename', 'readable_visits.txt')
+                name, ext = os.path.splitext(base_filename)
+                policy_filename = f"{name}_policy_{p_idx+1}{ext}"
+                output_path = self.get_output_path(filename=policy_filename)
+
+                if output_path is None: # Skip if file exists and skip_existing is True
+                     print(f"Skipping save for {policy_filename} as it already exists and skip_existing is True.")
+                     continue
+
+                # Print last few lines to console for confirmation
+                print(f"\nPolicy {p_idx+1} - Last few lines:")
+                print("\n".join(policy_output_lines[-5:]))
+
+                try:
+                    with open(output_path, 'w') as f:
+                        f.write("\n".join(policy_output_lines))
+                    print(f"Saved readable visits for policy {p_idx+1} to: {output_path}")
+                except Exception as e:
+                    print(f"Error saving readable visits for policy {p_idx+1} to {output_path}: {e}")
 
         except Exception as e:
+            # Catch errors during the main processing loop (e.g., determining num_policies)
             print(f"Error processing visits: {e}")
-            output_lines.append(f"\nError during processing: {e}")
-            # Continue to save what was processed, including the error message
-
-        # --- Save to File ---
-        output_filename = self.params.get('output_filename', 'readable_visits.txt')
-        output_path = self.get_output_path(filename=output_filename)
-
-        if output_path is None: # Check if get_output_path returned None (due to skip_existing)
-             print(f"Skipping save for {output_filename} as it already exists and skip_existing is True.")
-             return
-
-        # Print final lines to console as well
-        print("\n".join(output_lines[-5:])) # Print last few lines for confirmation
-
-        try:
-            with open(output_path, 'w') as f:
-                f.write("\n".join(output_lines))
-            print(f"Saved readable visits to: {output_path}")
-        except Exception as e:
-            print(f"Error saving readable visits to {output_path}: {e}")
+            # Optionally save a general error file if needed
+            error_filename = self.params.get('output_filename', 'readable_visits.txt') + ".error"
+            error_path = self.get_output_path(filename=error_filename)
+            if error_path:
+                 try:
+                     with open(error_path, 'w') as f:
+                         f.write(f"Error during visit processing:\n{e}\n")
+                         f.write(f"Loaded visits type: {type(loaded_visits)}\n")
+                         if isinstance(loaded_visits, tuple):
+                             f.write(f"Tuple lengths: {[len(el) if hasattr(el, '__len__') else 'N/A' for el in loaded_visits]}\n")
+                 except Exception as e2:
+                     print(f"Could not save error file: {e2}")
 
         # No return value needed for savers

@@ -130,8 +130,13 @@ class LLMExperiment:
                 # Add arguments specific to VisitsImageSaver if it's the target
                 if s_conf.get('_target_') == 'components.saver.VisitsImageSaver':
                     init_args['horizon'] = self.cfg.horizon
+                    init_args['horizon'] = self.cfg.horizon
                     init_args['dense_feedback'] = self.cfg.get('dense_feedback', False)
                     init_args['verbose'] = self.cfg.get('verbose', False)
+                # Add arguments specific to ReadableVisitsSaver
+                elif s_conf.get('_target_') == 'components.saver.ReadableVisitsSaver':
+                    init_args['horizon'] = self.cfg.horizon
+                    init_args['dense_feedback'] = self.cfg.get('dense_feedback', False)
 
                 # Instantiate the saver using the configuration and the constructed arguments
                 saver = hydra.utils.instantiate(
