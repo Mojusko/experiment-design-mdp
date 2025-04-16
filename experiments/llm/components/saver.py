@@ -673,3 +673,109 @@ class VisitsImageSaver(BaseSaver):
                     # Ensure plot is closed even if saving fails
                     if 'fig' in locals() and plt.fignum_exists(fig.number):
                          plt.close(fig)
+
+
+class ReadableVisitsSaver(BaseSaver):
+    """
+    Saves visit trajectories in a human-readable format (actions and prompts).
+    Can load visits from a file specified in params['visits_path'] if not available
+    in the results object.
+    """
+    def __init__(self, **kwargs):
+        super().__init__(**kwargs)
+        # Ensure env is provided, as it's needed for prompt creation
+        if self.env is None:
+             raise ValueError(f"{self.__class__.__name__} requires the 'env' object for prompt creation.")
+        print(f"Initialized {self.__class__.__name__} with params: {self.params}")
+
+    def save_result(self, results):
+        print(f"Running {self.__class__.__name__}")
+
+        loaded_visits = None
+        # Prioritize visits from the results object
+        if results.visits and results.visits[0]: # Check if visits exist and are not empty
+            print("Using visits provided by the experiment results.")
+            loaded_visits = results.visits
+        # If not available in results, try loading from path specified in params
+        elif self.params.get('visits_path'):
+            visits_path = self.params['visits_path']
+            print(f"Attempting to load visits from path in params: {visits_path}")
+            if visits_path and os.path.exists(visits_path):
+                try:
+                    loaded_visits = torch.load(visits_path)
+                    print(f"Successfully loaded visits from {visits_path}")
+                except Exception as e:
+                    print(f"Error loading visits from {visits_path}: {e}. Skipping saver.")
+                    return # Stop execution for this saver
+            elif visits_path:
+                print(f"Warning: Visits path specified in params but not found: {visits_path}. Skipping saver.")
+                return
+            else:
+                 print("Warning: visits_path specified in params is null or empty. Skipping saver.")
+                 return
+        else:
+            print("Warning: No visits available in results and no visits_path specified in params. Skipping saver.")
+            return
+
+        if not loaded_visits or not loaded_visits[0]:
+             print("Error: Visits data is empty or failed to load. Skipping saver.")
+             return
+
+        # --- Process and Prepare Output ---
+        output_lines = []
+        try:
+            # Determine structure: visits[policy_idx][episode_idx] = (states, actions)
+            num_policies = len(loaded_visits)
+            num_episodes = len(loaded_visits[0])
+            print(f"Processing {num_policies} policies and {num_episodes} episodes.")
+            output_lines.append(f"--- Readable Visits ---")
+            output_lines.append(f"Number of Policies: {num_policies}")
+            output_lines.append(f"Number of Episodes: {num_episodes}")
+            output_lines.append("-" * 25)
+
+            for p_idx in range(num_policies):
+                output_lines.append(f"\nPolicy {p_idx + 1}:")
+                for ep_idx in range(num_episodes):
+                    try:
+                        # visits[policy_idx][ep_idx] = (states, actions)
+                        actions = loaded_visits[p_idx][ep_idx][1]
+                        if isinstance(actions, torch.Tensor):
+                            actions = actions.cpu().numpy()
+                        actions = list(map(int, actions)) # Ensure list of ints
+
+                        # Use the env stored during init
+                        prompt = create_prompt(actions, self.env)
+
+                        output_lines.append(f"  Episode {ep_idx + 1}:")
+                        output_lines.append(f"    Actions: {actions}")
+                        output_lines.append(f"    Prompt : '{prompt}'")
+
+                    except IndexError:
+                        output_lines.append(f"  Episode {ep_idx + 1}: Error - Missing data")
+                    except Exception as e:
+                         output_lines.append(f"  Episode {ep_idx + 1}: Error - Processing failed: {e}")
+
+        except Exception as e:
+            print(f"Error processing visits: {e}")
+            output_lines.append(f"\nError during processing: {e}")
+            # Continue to save what was processed, including the error message
+
+        # --- Save to File ---
+        output_filename = self.params.get('output_filename', 'readable_visits.txt')
+        output_path = self.get_output_path(filename=output_filename)
+
+        if output_path is None: # Check if get_output_path returned None (due to skip_existing)
+             print(f"Skipping save for {output_filename} as it already exists and skip_existing is True.")
+             return
+
+        # Print final lines to console as well
+        print("\n".join(output_lines[-5:])) # Print last few lines for confirmation
+
+        try:
+            with open(output_path, 'w') as f:
+                f.write("\n".join(output_lines))
+            print(f"Saved readable visits to: {output_path}")
+        except Exception as e:
+            print(f"Error saving readable visits to {output_path}: {e}")
+
+        # No return value needed for savers

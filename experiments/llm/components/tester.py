@@ -147,13 +147,14 @@ def create_dot_product_model_from_estimator(estimator, embedder):
         raise ValueError(f"Failed to create DotProductModel from estimator: {e}")
 
 class ImageGenerationTester(BaseTester):
-    def __init__(self, scorer_model, params=None):
+    # Updated __init__ to accept embedder and pass it to super()
+    def __init__(self, scorer_model=None, embedder=None, params=None):
         self.params = params or {}
-        self.scorer_model = scorer_model
+        # scorer_model and embedder are passed to super() which stores them
         self.take_best_worst_N = self.params.get('take_best_worst_N', 8) if self.params else 8
         self.use_estimator = self.params.get('use_estimator', False) if self.params else False
-        # Pass scorer_model to the base class constructor
-        super().__init__(scorer_model=scorer_model, params=params)
+        # Pass scorer_model and embedder to the base class constructor
+        super().__init__(scorer_model=scorer_model, embedder=embedder, params=params)
         print(f"Initialized {self.__class__.__name__} with take_best_worst_N={self.take_best_worst_N}, "
               f"use_estimator={self.use_estimator}")
 
@@ -188,10 +189,17 @@ class ImageGenerationTester(BaseTester):
         # Use the scoring model from the parent method
         try:
             if self.use_estimator:
-                scoring_model = create_dot_product_model_from_estimator(self.estimator, env.embedder)
+                if self.estimator is None:
+                    raise ValueError("Cannot use estimator model when estimator is None.")
+                if self.embedder is None:
+                     raise ValueError("Cannot create estimator model without an embedder instance.")
+                # Use self.embedder (from BaseTester) instead of env.embedder
+                scoring_model = create_dot_product_model_from_estimator(self.estimator, self.embedder)
             else:
+                if self.scorer_model is None:
+                     raise ValueError("Cannot use ground truth model when scorer_model is None.")
                 scoring_model = self.scorer_model
-                
+
             print(f"Running greedy test with horizon {horizon}")
             # Start with empty sequence
             best_sequence = []
@@ -266,8 +274,8 @@ class ImageGenerationTester(BaseTester):
                 "worst_image_score": 0,
                 "avg_top_image_score": 0,
                 "error": str(e)
-            }
-        
+            } # Added missing closing brace
+
         # For the final position, get the top N best and worst completions
         if horizon > 0:
             print(f"Getting top {self.take_best_worst_N} best and worst completions for the final position")
@@ -343,125 +351,5 @@ class ImageGenerationTester(BaseTester):
             "best_image_score": best_scores[0] if best_scores else 0,
             "worst_image_score": worst_scores[0] if worst_scores else 0,
             "avg_top_image_score": sum(best_scores) / len(best_scores) if best_scores else 0
-        }
-
-
-class VisitsTester(BaseTester):
-    """
-    Inspects visit trajectories by printing actions and converting them to prompts.
-    Can load visits from a file if not provided directly.
-    """
-    def __init__(self, scorer_model=None, embedder=None, params=None, env=None): # Added env
-        super().__init__(scorer_model, embedder, params)
-        self.env = env # Store env for create_prompt
-        self.output_filename = self.params.get('output_filename', None) # Optional output file
-        print(f"Initialized {self.__class__.__name__} with params: {self.params}")
-        if self.env is None:
-             # This tester absolutely needs the env to create prompts
-             raise ValueError(f"{self.__class__.__name__} requires the 'env' object for prompt creation.")
-
-    def run_test(self, cfg, env, estimator, theta_star, training_words_list, testing_words_list, visits=None):
-        print(f"Running {self.__class__.__name__}")
-
-        loaded_visits = None
-        # Prioritize visits passed directly
-        if visits:
-            print("Using visits provided by the experiment run.")
-            loaded_visits = visits
-        # If not passed, try loading from path specified in main config
-        elif cfg.get('visits_path'):
-            visits_path = cfg.visits_path
-            print(f"Attempting to load visits from: {visits_path}")
-            if os.path.exists(visits_path):
-                try:
-                    loaded_visits = torch.load(visits_path)
-                    print(f"Successfully loaded visits from {visits_path}")
-                except Exception as e:
-                    print(f"Error loading visits from {visits_path}: {e}")
-                    return {"visits_tester_error": f"Failed to load {visits_path}"}
-            else:
-                print(f"Warning: Visits path specified but not found: {visits_path}")
-                return {"visits_tester_error": f"Visits file not found: {visits_path}"}
-        else:
-            print("Warning: No visits provided directly or via visits_path.")
-            return {"visits_tester_warning": "No visits data available"}
-
-        if not loaded_visits:
-             print("Error: Visits data is empty or failed to load.")
-             return {"visits_tester_error": "Visits data is empty or failed to load"}
-
-        # --- Process and Print Visits/Prompts ---
-        output_lines = []
-        try:
-            num_policies = len(loaded_visits)
-            num_episodes = len(loaded_visits[0]) if num_policies > 0 else 0
-            print(f"Processing {num_policies} policies and {num_episodes} episodes.")
-            output_lines.append(f"--- Visits Inspection ---")
-            output_lines.append(f"Number of Policies: {num_policies}")
-            output_lines.append(f"Number of Episodes: {num_episodes}")
-            output_lines.append("-" * 25)
-
-            for p_idx in range(num_policies):
-                output_lines.append(f"\nPolicy {p_idx + 1}:")
-                for ep_idx in range(num_episodes):
-                    try:
-                        # visits[policy_idx][ep_idx] = (states, actions)
-                        actions = loaded_visits[p_idx][ep_idx][1]
-                        if isinstance(actions, torch.Tensor):
-                            actions = actions.cpu().numpy()
-                        actions = list(map(int, actions)) # Ensure list of ints
-
-                        # Use the env stored during init
-                        prompt = create_prompt(actions, self.env)
-
-                        output_lines.append(f"  Episode {ep_idx + 1}:")
-                        output_lines.append(f"    Actions: {actions}")
-                        output_lines.append(f"    Prompt : '{prompt}'")
-
-                    except IndexError:
-                        output_lines.append(f"  Episode {ep_idx + 1}: Error - Missing data")
-                    except Exception as e:
-                         output_lines.append(f"  Episode {ep_idx + 1}: Error - Processing failed: {e}")
-
-        except Exception as e:
-            print(f"Error processing visits: {e}")
-            output_lines.append(f"\nError during processing: {e}")
-            return {"visits_tester_error": f"Processing failed: {e}"}
-
-        # Print to console
-        print("\n".join(output_lines))
-
-        # Save to file if filename is provided
-        if self.output_filename:
-            # Construct path using BaseSaver's logic (needs results_dir, experiment_id)
-            # We need results_dir and experiment_id from the main experiment context
-            # Let's assume they are available in cfg for now, or pass them?
-            # For simplicity, let's just save relative to the current run's results_dir
-            # We need a way to get results_dir here. Let's pass it via cfg for now.
-            # This assumes the tester is instantiated within the experiment context.
-            # A cleaner way might be needed if used standalone.
-
-            # We need results_dir and experiment_id. Let's try getting them from cfg.
-            results_dir = cfg.get("results_dir", ".") # Default to current dir if not found
-            experiment_id = cfg.get("experiment_id", None)
-
-            # Build filename with experiment_id if provided
-            name, ext = os.path.splitext(self.output_filename)
-            if experiment_id:
-                 filename = f"{name}-{experiment_id}{ext}"
-            else:
-                 filename = self.output_filename
-
-            output_path = os.path.join(results_dir, filename)
-            os.makedirs(os.path.dirname(output_path), exist_ok=True) # Ensure dir exists
-
-            try:
-                with open(output_path, 'w') as f:
-                    f.write("\n".join(output_lines))
-                print(f"Saved visit prompts to: {output_path}")
-            except Exception as e:
-                print(f"Error saving visit prompts to {output_path}: {e}")
-                return {"visits_tester_error": f"Failed to save prompts file: {e}"}
-
-        return {} # Return empty metrics dict as this is for inspection
+        } # Added missing closing brace for the main return dictionary
 

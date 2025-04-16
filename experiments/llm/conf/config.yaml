@@ -39,9 +39,7 @@ tester:
   #    params:
   #      take_best_worst_N: 4
   #      use_estimator: true # Controls if ImageGenerationTester uses learned weights
-  - _target_: components.tester.VisitsTester
-    params:
-      output_filename: "visits_prompts.txt" # Optional: file to save prompts
+  # VisitsTester removed
 
 # Embedder configuration is loaded via defaults list above.
 # Specific embedder settings (like model_id, cache_dir) are in conf/embedder/*.yaml
@@ -71,4 +69,7 @@ savers:
   #    image_size: 512
   #    num_inference_steps: 100
   #    add_image_score: true
-  
+  - _target_: components.saver.ReadableVisitsSaver
+    params:
+      output_filename: "readable_visits.txt"
+      visits_path: ${visits_path} # Inherit top-level visits_path if set

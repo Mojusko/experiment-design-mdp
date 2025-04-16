@@ -296,7 +296,7 @@ llm-generate-image:
 	ifndef FULL_PROMPT
 	    $(error FULL_PROMPT is not set)
 	endif
-	cd llm && TIMESTAMP=$(TIMESTAMP) OMP_NUM_THREADS=1 MKL_NUM_THREADS=1 $(PYTHONPATH) image_generator.py --base_prompt '$(BASE_PROMPT)' --full_prompt '$(FULL_PROMPT)' $(if $(OUTPUT_DIR),--output_dir "$(OUTPUT_DIR)",) $(if $(SEED),--seed $(SEED),) $(if $(IMAGE_SIZE),--image_size $(IMAGE_SIZE),) $(if $(NUM_STEPS),--num_inference_steps $(NUM_STEPS),) $(if $(GUIDANCE_BASE),--guidance_base $(GUIDANCE_BASE),) $(if $(GUIDANCE_TOKENS),--guidance_tokens $(GUIDANCE_TOKENS),)
+	cd llm && TIMESTAMP=$(TIMESTAMP) OMP_NUM_THREADS=1 MKL_NUM_THREADS=1 $(PYTHONPATH) image_generator.py --base_prompt "$(BASE_PROMPT)" --full_prompt "$(FULL_PROMPT)" $(if $(OUTPUT_DIR),--output_dir "$(OUTPUT_DIR)",) $(if $(SEED),--seed $(SEED),) $(if $(IMAGE_SIZE),--image_size $(IMAGE_SIZE),) $(if $(NUM_STEPS),--num_inference_steps $(NUM_STEPS),) $(if $(GUIDANCE_BASE),--guidance_base $(GUIDANCE_BASE),) $(if $(GUIDANCE_TOKENS),--guidance_tokens $(GUIDANCE_TOKENS),)
 
 ########################### LLMS
 REPEATS_LLM=7
@@ -513,7 +513,8 @@ $(foreach episodes,$(EPISODES_DESIGN_FREQ), \
 # Target to run all design frequency finding jobs
 llm-find-design-frequency: $(JOBS_LLM_DESIGN_FREQUENCY)
 
-# Target for inspecting visits
+# Target for inspecting visits using ReadableVisitsSaver
+# Runs in test_only mode. ReadableVisitsSaver will load from visits_path if configured.
 llm-inspect-visits:
 	$(if $(VISITS_PATH),,$(error VISITS_PATH is required, e.g., make llm-inspect-visits VISITS_PATH=results/.../visits.pkl))
 	cd llm && TIMESTAMP=$(TIMESTAMP) OMP_NUM_THREADS=1 MKL_NUM_THREADS=1 $(PYTHONPATH) run_exp.py test_only=true visits_path="$(VISITS_PATH)" estimator_path=null $(if $(RESULTS_DIR),results_dir="$(RESULTS_DIR)" override_results_dir=true,) experiment_id="inspect-$(shell basename $(VISITS_PATH) .pkl)" seed=1
