@@ -197,7 +197,9 @@ class LLMExperiment:
             return_visitations=True,
             update_callback=update_callback
         )
-        self.visits = results
+        # Extract only the visitations (third element) from the results tuple
+        # MdpExploreMultiPolicy.run returns (objective_values, opt, visitations_per_policy)
+        self.visits = results[2] if isinstance(results, tuple) and len(results) == 3 else results
 
         if any(len(buf) > 0 for buf in recent_visits_buffer):
             self.feedback.collect_labels(self.cfg, recent_visits_buffer, self._theta_star)

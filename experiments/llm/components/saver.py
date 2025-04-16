@@ -722,16 +722,25 @@ class ReadableVisitsSaver(BaseSaver):
             print("Warning: No visits available in results and no visits_path specified in params. Skipping saver.")
             return
 
-        if not loaded_visits or not loaded_visits[0]:
-             print("Error: Visits data is empty or failed to load. Skipping saver.")
-             return
+        # Handle potential tuple format from older saved files before checking emptiness
+        actual_visits = loaded_visits
+        if isinstance(loaded_visits, tuple) and len(loaded_visits) == 3:
+             print("ReadableVisitsSaver: Loaded data appears to be a tuple, extracting visits (element 2).")
+             actual_visits = loaded_visits[2] # Visits are the third element
+
+        # Check if the extracted visits list is empty or if its first element is empty
+        # Use explicit checks instead of relying on truthiness of arrays/lists
+        if actual_visits is None or len(actual_visits) == 0 or len(actual_visits[0]) == 0:
+              print("Error: Visits data is empty or failed to load after potential extraction. Skipping saver.")
+              return
 
         # --- Process and Prepare Output ---
         output_lines = []
         try:
             # Determine structure: visits[policy_idx][episode_idx] = (states, actions)
-            num_policies = len(loaded_visits)
-            num_episodes = len(loaded_visits[0])
+            # Use actual_visits for processing
+            num_policies = len(actual_visits)
+            num_episodes = len(actual_visits[0])
             print(f"Processing {num_policies} policies and {num_episodes} episodes.")
             output_lines.append(f"--- Readable Visits ---")
             output_lines.append(f"Number of Policies: {num_policies}")
@@ -743,7 +752,8 @@ class ReadableVisitsSaver(BaseSaver):
                 for ep_idx in range(num_episodes):
                     try:
                         # visits[policy_idx][ep_idx] = (states, actions)
-                        actions = loaded_visits[p_idx][ep_idx][1]
+                        # Use actual_visits for accessing data
+                        actions = actual_visits[p_idx][ep_idx][1]
                         if isinstance(actions, torch.Tensor):
                             actions = actions.cpu().numpy()
                         actions = list(map(int, actions)) # Ensure list of ints
