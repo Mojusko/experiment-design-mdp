@@ -28,19 +28,16 @@ def main(cfg: DictConfig):
         print("Error: Cannot set both test_only and explore_only to true.")
         return 1
 
-    # Check if we're in test-only mode
+    # Check if we're in test-only mode (which includes inspection mode)
     if cfg.get('test_only', False):
-        print("--- Running in Test-Only Mode ---")
-        if not cfg.get('estimator_path'):
-            print("Error: test_only mode requires estimator_path to be set in the config.")
-            return 1
-            
-        if not os.path.exists(cfg.estimator_path):
-            print(f"Error: Estimator file not found at {cfg.estimator_path}")
-            return 1
-        success = experiment.run_test_only(cfg.estimator_path)
+        print("--- Running in Test-Only / Inspection Mode ---")
+        # The logic inside run_test_only now handles checking for estimator_path or visits_path
+        # and setting the correct mode. We just need to pass the estimator_path (which might be None).
+        success = experiment.run_test_only(cfg.get('estimator_path')) # Pass estimator_path (can be None)
         if not success:
-            return 1 # Exit if test_only failed
+            # run_test_only returns False if the required input path (estimator or visits) is missing/invalid
+            print("Exiting due to error during test_only/inspection execution.")
+            return 1 # Exit if test_only/inspection failed
 
     # Check if we're in explore-only mode
     elif cfg.get('explore_only', False):

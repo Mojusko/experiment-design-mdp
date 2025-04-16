@@ -517,7 +517,7 @@ llm-find-design-frequency: $(JOBS_LLM_DESIGN_FREQUENCY)
 # Runs in test_only mode. ReadableVisitsSaver will load from visits_path if configured.
 llm-inspect-visits:
 	$(if $(VISITS_PATH),,$(error VISITS_PATH is required, e.g., make llm-inspect-visits VISITS_PATH=results/.../visits.pkl))
-	cd llm && TIMESTAMP=$(TIMESTAMP) OMP_NUM_THREADS=1 MKL_NUM_THREADS=1 $(PYTHONPATH) run_exp.py test_only=true visits_path="$(VISITS_PATH)" estimator_path=null $(if $(RESULTS_DIR),results_dir="$(RESULTS_DIR)" override_results_dir=true,) experiment_id="inspect-$(shell basename $(VISITS_PATH) .pkl)" seed=1
+	cd llm && TIMESTAMP=$(TIMESTAMP) OMP_NUM_THREADS=1 MKL_NUM_THREADS=1 $(PYTHONPATH) run_exp.py feedback=multinomial test_only=true visits_path="$(VISITS_PATH)" estimator_path=null $(if $(RESULTS_DIR),results_dir="$(RESULTS_DIR)" override_results_dir=true,) experiment_id="inspect-$(shell basename $(VISITS_PATH) .pkl)" seed=1
 
 
 PLOTS:
