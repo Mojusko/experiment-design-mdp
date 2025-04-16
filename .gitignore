@@ -132,7 +132,7 @@ dmypy.json
 wandb/
 
 # misc mojmir
-*/results
+# */results TEMP COMMENT BY GUY 16.4.2025
 */figs
 figs
 *.txt
@@ -145,7 +145,7 @@ settings.json
 
 
 *data/
-*results/
+# *results/ # TEMP COMMENT BY AI 2025-04-16
 *.cache
 *.sh
 *.txt
