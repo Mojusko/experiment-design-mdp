@@ -747,26 +747,22 @@ class ReadableVisitsSaver(BaseSaver):
             print("Warning: No visits available in results and no visits_path specified in params. Skipping saver.")
             return
 
-        # Handle potential tuple format from older saved files before checking emptiness
-        actual_visits = loaded_visits
-        if isinstance(loaded_visits, tuple) and len(loaded_visits) == 3:
-             print("ReadableVisitsSaver: Loaded data appears to be a tuple, extracting visits (element 2).")
-             actual_visits = loaded_visits[2] # Visits are the third element
+        # Assume loaded_visits is the correct list structure [policy][episode](states, actions)
+        # Remove the check for the old 3-tuple format.
 
-        # Check if the extracted visits list is empty or if its first element is empty
+        # Check if the loaded visits list is empty or if its first element is empty
         # Use explicit checks instead of relying on truthiness of arrays/lists
-        if actual_visits is None or len(actual_visits) == 0 or len(actual_visits[0]) == 0:
-              print("Error: Visits data is empty or failed to load after potential extraction. Skipping saver.")
+        if loaded_visits is None or len(loaded_visits) == 0 or len(loaded_visits[0]) == 0:
+              print("Error: Visits data is empty or failed to load. Skipping saver.")
               return
 
         # --- Process and Prepare Output ---
         output_lines = []
         try:
             # Determine structure: visits[policy_idx][episode_idx] = (states, actions)
-            # Use actual_visits for processing
-            num_policies = len(actual_visits)
-            num_policies = len(actual_visits)
-            num_episodes = len(actual_visits[0])
+            # Use loaded_visits directly for processing
+            num_policies = len(loaded_visits)
+            num_episodes = len(loaded_visits[0])
             print(f"Processing {num_policies} policies and {num_episodes} episodes.")
 
             # Determine the range of horizons to generate prompts for
@@ -784,7 +780,8 @@ class ReadableVisitsSaver(BaseSaver):
                     policy_output_lines.append(f"\n  Episode {ep_idx + 1}:")
                     try:
                         # visits[policy_idx][ep_idx] = (states, actions)
-                        full_actions = actual_visits[p_idx][ep_idx][1]
+                        # Use loaded_visits directly for accessing data
+                        full_actions = loaded_visits[p_idx][ep_idx][1]
                         if isinstance(full_actions, torch.Tensor):
                             full_actions = full_actions.cpu().numpy()
                         full_actions = list(map(int, full_actions)) # Ensure list of ints
