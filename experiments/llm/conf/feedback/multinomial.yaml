@@ -24,8 +24,8 @@ model_specific_params:
     lambda_dsn: 0.1 # Example value
     lambda_est: 200
   ancient-text:
-    lambda_dsn: 0.01 # Example value
-    lambda_est: 100 #num_policies=4
+    lambda_dsn: 0.1 # Example value
+    lambda_est: 1000 #num_policies=4
   japanese-image:
     lambda_dsn: 0.1 # Example value
     lambda_est: 100
