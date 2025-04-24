@@ -437,9 +437,9 @@ $(foreach rounds,$(ROUNDS_VALUES), \
 llm-find-rounds: $(JOBS_LLM_ROUNDS)
 
 # Lambda-finding
-# We'll run each (lambda_dsn, lambda_est) combination for REPEATS_LLM seeds
-LAMBDA_DSN_VALUES := 0.001 0.01 0.1
-LAMBDA_EST_VALUES :=  250 1000 2000
+# Define the ranges for the two lambdas
+LAMBDA_DSN_VALUES := 0.01 0.1 1 10 # Design lambda range
+LAMBDA_EST_VALUES := 1 10 100 500 1000 # Estimation lambda range (wider, larger values)
 LAMBDA_VALUES_NUM := 0.0001 0.001 0.01 0.1 1 10 # Keep numerical separate for now
 
 # Generate job names for each (lambda_dsn, lambda_est, seed) triplet for multinomial
@@ -477,7 +477,7 @@ job-llm-lambda-num-$(1)-$(2):
 	  feedback=numerical \
 	  algorithm=design \
 	  feedback.lambda_dsn=$(1) \
-	  feedback.lambda_est=100 \
+	  feedback.lambda_est=1000 \
 	  feedback.use_model_specific_lambda=false \
 	  seed=$(2) \
 	  results_dir="results/lambda-finding" \

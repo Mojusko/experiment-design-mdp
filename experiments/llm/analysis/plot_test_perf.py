@@ -12,16 +12,22 @@ def parse_filename(filename):
     if "withV" in base or "noV" in base:
         v_type = "With V" if "withV" in base else "No V"
         return ("v_comparison", v_type)
-    # Match new lambda pair format: metrics-mul-dsn0.001-est100-1.json
-    elif match := re.search(r"dsn([\d.]+)-est([\d.]+)-(\d+)\.json$", base):
-        lambda_dsn = float(match.group(1))
-        lambda_est = float(match.group(2))
-        # seed = int(match.group(3)) # Seed not used for grouping key
-        return ("lambda_pair", (lambda_dsn, lambda_est))
-    # Match old single lambda format: metrics-mul-lambda-0.1-1.json (kept for compatibility)
-    elif "lambda" in base and "dsn" not in base:
-        parts = base.split('-')
-        lambda_val = float(parts[-2])
+    # Match old single lambda format: metrics-mul-lambda-0.1-1.json or metrics-mul-0.1-1.json
+    elif "lambda" in base or re.search(r"mul-([\d.]+)-(\d+)\.json$", base) or re.search(r"num-([\d.]+)-(\d+)\.json$", base):
+        # Extract lambda value robustly
+        match_lambda = re.search(r"lambda-([\d.]+)", base)
+        match_mul = re.search(r"mul-([\d.]+)-(\d+)\.json$", base)
+        match_num = re.search(r"num-([\d.]+)-(\d+)\.json$", base)
+        if match_lambda:
+            lambda_val = float(match_lambda.group(1))
+        elif match_mul:
+            lambda_val = float(match_mul.group(1))
+        elif match_num:
+            lambda_val = float(match_num.group(1))
+        else:
+             # Fallback if pattern is unexpected, might need adjustment
+             parts = base.split('-')
+             lambda_val = float(parts[-2]) # Less robust fallback
         return ("lambda", lambda_val)
     # Match design frequency filenames like metrics-design-freq-dsn-mult-ep25-df10-1.json
     elif match := re.search(r"ep(\d+)-df(\d+)-(\d+)\.json$", base):
@@ -80,27 +86,20 @@ def plot_results_with_type(results, plot_type):
 
     # Check if data is numeric or dictionary-based
     if all(isinstance(v, (int, float)) for k in valid_keys for v in valid_data[k]):
-        means = [np.mean(valid_data[k]) for k in valid_keys]
-        # Sort keys: For tuples (lambda_pair), sort by dsn then est. Otherwise, sort normally.
-        if plot_type == "lambda_pair":
-            valid_keys.sort(key=lambda k: (k[0], k[1]))
-            x_labels = [f"dsn={k[0]}, est={k[1]}" for k in valid_keys]
-        else:
-            valid_keys.sort()
-            x_labels = [str(x) for x in valid_keys]
+        # Sort keys numerically
+        valid_keys.sort()
+        x_labels = [str(x) for x in valid_keys]
 
         means = [np.mean(valid_data[k]) for k in valid_keys]
         stds = [np.std(valid_data[k]) if len(valid_data[k]) > 1 else 0 for k in valid_keys]
 
-        plt.figure(figsize=(12, 7)) # Adjusted size for potentially longer labels
+        plt.figure(figsize=(10, 6))
         plt.bar(x_labels, means, yerr=stds, capsize=5)
 
         if plot_type == "lambda":
-            plt.xlabel("Lambda Value (Old Format)")
-        elif plot_type == "lambda_pair":
-            plt.xlabel("Lambda Design / Lambda Estimation Pair")
+            plt.xlabel("Lambda Value")
         elif plot_type == "frequency":
-            plt.xlabel("Estimation Frequency (Old Format)")
+            plt.xlabel("Estimation Frequency")
         elif plot_type == "rounds":
             plt.xlabel("Number of Rounds")
         elif plot_type == "v_comparison":
@@ -212,10 +211,9 @@ def plot_results(directory):
 
     # Dictionaries for different experiment types based on filename parsing
     results_by_type = {
-        "lambda": {},           # Old single lambda format
-        "lambda_pair": {},      # New dsn/est lambda format
+        "lambda": {},
         "v_comparison": {},
-        "frequency": {},        # Old frequency key, might be unused now
+        "frequency": {}, # Old frequency key, might be unused now
         "rounds": {},
         "design_frequency": {}, # New key for design frequency results
         "feedback": {}          # For feedback comparison experiments (dsn-mult vs rand-mult etc.)
