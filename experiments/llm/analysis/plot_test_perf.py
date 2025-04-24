@@ -12,7 +12,14 @@ def parse_filename(filename):
     if "withV" in base or "noV" in base:
         v_type = "With V" if "withV" in base else "No V"
         return ("v_comparison", v_type)
-    elif "lambda" in base:
+    # Match new lambda pair format: metrics-mul-dsn0.001-est100-1.json
+    elif match := re.search(r"dsn([\d.]+)-est([\d.]+)-(\d+)\.json$", base):
+        lambda_dsn = float(match.group(1))
+        lambda_est = float(match.group(2))
+        # seed = int(match.group(3)) # Seed not used for grouping key
+        return ("lambda_pair", (lambda_dsn, lambda_est))
+    # Match old single lambda format: metrics-mul-lambda-0.1-1.json (kept for compatibility)
+    elif "lambda" in base and "dsn" not in base:
         parts = base.split('-')
         lambda_val = float(parts[-2])
         return ("lambda", lambda_val)
@@ -74,15 +81,26 @@ def plot_results_with_type(results, plot_type):
     # Check if data is numeric or dictionary-based
     if all(isinstance(v, (int, float)) for k in valid_keys for v in valid_data[k]):
         means = [np.mean(valid_data[k]) for k in valid_keys]
+        # Sort keys: For tuples (lambda_pair), sort by dsn then est. Otherwise, sort normally.
+        if plot_type == "lambda_pair":
+            valid_keys.sort(key=lambda k: (k[0], k[1]))
+            x_labels = [f"dsn={k[0]}, est={k[1]}" for k in valid_keys]
+        else:
+            valid_keys.sort()
+            x_labels = [str(x) for x in valid_keys]
+
+        means = [np.mean(valid_data[k]) for k in valid_keys]
         stds = [np.std(valid_data[k]) if len(valid_data[k]) > 1 else 0 for k in valid_keys]
 
-        plt.figure(figsize=(10, 6))
-        plt.bar([str(x) for x in valid_keys], means, yerr=stds, capsize=5)
+        plt.figure(figsize=(12, 7)) # Adjusted size for potentially longer labels
+        plt.bar(x_labels, means, yerr=stds, capsize=5)
 
         if plot_type == "lambda":
-            plt.xlabel("Lambda Value")
+            plt.xlabel("Lambda Value (Old Format)")
+        elif plot_type == "lambda_pair":
+            plt.xlabel("Lambda Design / Lambda Estimation Pair")
         elif plot_type == "frequency":
-            plt.xlabel("Estimation Frequency")
+            plt.xlabel("Estimation Frequency (Old Format)")
         elif plot_type == "rounds":
             plt.xlabel("Number of Rounds")
         elif plot_type == "v_comparison":
@@ -192,15 +210,65 @@ def plot_results(directory):
     pattern = os.path.join(directory, "*.json")
     files = glob.glob(pattern)
 
-    # Dictionaries for non-feedback experiments
+    # Dictionaries for different experiment types based on filename parsing
     results_by_type = {
-        "lambda": {},
+        "lambda": {},           # Old single lambda format
+        "lambda_pair": {},      # New dsn/est lambda format
         "v_comparison": {},
-        "frequency": {}, # Old frequency key, might be unused now
+        "frequency": {},        # Old frequency key, might be unused now
         "rounds": {},
-        "design_frequency": {} # New key for design frequency results
+        "design_frequency": {}, # New key for design frequency results
+        "feedback": {}          # For feedback comparison experiments (dsn-mult vs rand-mult etc.)
     }
-    # For feedback experiments
+    # Note: feedback_results dictionary is merged into results_by_type["feedback"] now
+
+    for f in files:
+        try:
+            exp_type, key = parse_filename(f)
+        except Exception as e:
+            print(f"Warning: Could not parse filename {os.path.basename(f)}: {e}")
+            continue # Skip this file
+
+        val = safe_load_data(f)
+
+        if exp_type == "feedback":
+            alg_key = key[0] # alg_type from tuple (e.g., 'dsn', 'rand')
+            alg_map = {"dsn": "Design", "rand": "Random"}
+            alg_name = alg_map.get(alg_key, alg_key) # Use mapped name or original key
+
+            # Initialize if first time seeing this algorithm
+            if alg_name not in results_by_type["feedback"]:
+                results_by_type["feedback"][alg_name] = {"preference_error": [], "cosine_error": []}
+
+            # Append data if valid
+            if val is not None and isinstance(val, dict):
+                if "preference_error" in val:
+                    results_by_type["feedback"][alg_name]["preference_error"].append(val["preference_error"])
+                if "cosine_error" in val:
+                    results_by_type["feedback"][alg_name]["cosine_error"].append(val["cosine_error"])
+        elif exp_type in results_by_type: # Handle all other types
+            if key not in results_by_type[exp_type]:
+                results_by_type[exp_type][key] = []
+            if val is not None:
+                results_by_type[exp_type][key].append(val)
+        else:
+            print(f"Warning: Unrecognized experiment type '{exp_type}' for file {os.path.basename(f)}")
+
+
+    # Plot non-feedback experiments (excluding design_frequency and feedback)
+    for exp_type in results_by_type:
+        if exp_type not in ["design_frequency", "feedback"] and results_by_type[exp_type]:
+            plot_results_with_type(results_by_type[exp_type], exp_type)
+
+    # Plot design frequency results separately
+    if results_by_type["design_frequency"]:
+        plot_design_frequency_results(results_by_type["design_frequency"])
+
+    # Plot feedback results
+    if results_by_type["feedback"]:
+        plot_feedback_results(results_by_type["feedback"])
+
+    plt.show()
     feedback_results = {}
 
     for f in files:
