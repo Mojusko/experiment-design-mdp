@@ -24,7 +24,7 @@ class SolverFactory:
             random_solver = None
 
         optimized_solver = FrankWolfe(
-            step='line-search',
+            #step='line-search',
             env=env, objective=design,
             num_components=cfg.feedback.num_components if cfg.algorithm != 'random' else 1,
             num_summarized_policies=num_policies, initial_policy=cfg.algorithm=='random', solver=DP,
