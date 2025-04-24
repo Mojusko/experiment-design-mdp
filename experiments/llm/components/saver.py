@@ -708,52 +708,42 @@ class ReadableVisitsSaver(BaseSaver):
     def save_result(self, results):
         print(f"Running {self.__class__.__name__}")
 
-        loaded_visits = None
-        # Prioritize visits from the results object
-        if results.visits and results.visits[0]: # Check if visits exist and are not empty
-            print("Using visits provided by the experiment results.")
-            loaded_visits = results.visits
-        # If not available in results, try loading from path specified in params
-        elif self.params.get('visits_path'):
-            visits_path = self.params['visits_path']
-            # Resolve to absolute path before checking existence
-            absolute_visits_path = to_absolute_path(visits_path) if visits_path else None
-            print(f"Attempting to load visits from absolute path in params: {absolute_visits_path}")
+        # Visits should now be loaded into results.visits by LLMExperiment.run_test_only if needed.
+        # This saver now relies solely on results.visits.
+        visits_to_process = results.visits
 
-            if absolute_visits_path and os.path.exists(absolute_visits_path):
-                try:
-                    loaded_visits = torch.load(absolute_visits_path)
-                    print(f"Successfully loaded visits from {absolute_visits_path}")
-                except Exception as e:
-                    print(f"Error loading visits from {absolute_visits_path}: {e}. Skipping saver.")
-                    return # Stop execution for this saver
-            elif visits_path:
-                # Print the absolute path tried
-                print(f"Warning: Visits path specified in params but not found: {absolute_visits_path}. Skipping saver.")
-                return
-            else:
-                 print("Warning: visits_path specified in params is null or empty. Skipping saver.")
-                 return
-        else:
-            print("Warning: No visits available in results and no visits_path specified in params. Skipping saver.")
-            return
-
-        # Assume loaded_visits is the correct list structure [policy][episode](states, actions)
-        # Remove the check for the old 3-tuple format.
-
-        # Check if the loaded visits list is empty or if its first element is empty
+        # Check if visits are available and valid
         # Use explicit checks instead of relying on truthiness of arrays/lists
-        if loaded_visits is None or len(loaded_visits) == 0 or len(loaded_visits[0]) == 0:
-              print("Error: Visits data is empty or failed to load. Skipping saver.")
-              return
+        if visits_to_process is None:
+            print(f"Error: No visits data available in results object for {self.__class__.__name__}. Skipping.")
+            return
+        if not isinstance(visits_to_process, list):
+             print(f"Error: Expected visits to be a list, but got {type(visits_to_process).__name__}. Skipping.")
+             return
+        if len(visits_to_process) == 0:
+             print(f"Error: Visits list is empty. Skipping.")
+             return
+        if len(visits_to_process[0]) == 0:
+             print(f"Error: Visits list for the first policy is empty. Skipping.")
+             return
+        # Add a check for the expected tuple structure (states, actions)
+        try:
+             first_visit_data = visits_to_process[0][0]
+             if not isinstance(first_visit_data, tuple) or len(first_visit_data) != 2:
+                  raise TypeError("Expected (states, actions) tuple")
+             _ = first_visit_data[1] # Check actions access
+        except (TypeError, IndexError) as e:
+             print(f"Error: Invalid visit data structure: {e}. Expected List[List[Tuple(states, actions)]]. Skipping.")
+             return
+
 
         # --- Process and Prepare Output ---
         output_lines = []
         try:
             # Determine structure: visits[policy_idx][episode_idx] = (states, actions)
-            # Use loaded_visits directly for processing
-            num_policies = len(loaded_visits)
-            num_episodes = len(loaded_visits[0])
+            # Use visits_to_process directly
+            num_policies = len(visits_to_process)
+            num_episodes = len(visits_to_process[0])
             print(f"Processing {num_policies} policies and {num_episodes} episodes.")
 
             # Determine the range of horizons to generate prompts for
@@ -771,8 +761,8 @@ class ReadableVisitsSaver(BaseSaver):
                     policy_output_lines.append(f"\n  Episode {ep_idx + 1}:")
                     try:
                         # visits[policy_idx][ep_idx] = (states, actions)
-                        # Use loaded_visits directly for accessing data
-                        full_actions = loaded_visits[p_idx][ep_idx][1]
+                        # Use visits_to_process directly for accessing data
+                        full_actions = visits_to_process[p_idx][ep_idx][1]
                         if isinstance(full_actions, torch.Tensor):
                             full_actions = full_actions.cpu().numpy()
                         full_actions = list(map(int, full_actions)) # Ensure list of ints
@@ -827,9 +817,10 @@ class ReadableVisitsSaver(BaseSaver):
                  try:
                      with open(error_path, 'w') as f:
                          f.write(f"Error during visit processing:\n{e}\n")
-                         f.write(f"Loaded visits type: {type(loaded_visits)}\n")
-                         if isinstance(loaded_visits, tuple):
-                             f.write(f"Tuple lengths: {[len(el) if hasattr(el, '__len__') else 'N/A' for el in loaded_visits]}\n")
+                         # Use visits_to_process for error reporting
+                         f.write(f"Processed visits type: {type(visits_to_process)}\n")
+                         if isinstance(visits_to_process, tuple):
+                             f.write(f"Tuple lengths: {[len(el) if hasattr(el, '__len__') else 'N/A' for el in visits_to_process]}\n")
                  except Exception as e2:
                      print(f"Could not save error file: {e2}")
 

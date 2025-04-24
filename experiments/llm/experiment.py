@@ -426,15 +426,35 @@ class LLMExperiment:
              print("No estimator path provided, proceeding without loading estimator (inspection mode).")
              self.estimator = None # Ensure estimator is None
 
-        # Ensure visits attribute exists for savers, even if empty
-        if not hasattr(self, 'visits') or self.visits is None:
-             # Check if visits were loaded by ReadableVisitsSaver (though it happens later)
-             # For simplicity, just initialize empty visits here. Savers will handle loading if needed.
-             print("Initializing empty visits list for test/save phase.")
+             # --- Load Visits if in Inspection Mode ---
+             if mode == "inspect" and absolute_input_path:
+                 print(f"Attempting to load visits from: {absolute_input_path}")
+                 try:
+                     # Load visits directly into self.visits
+                     self.visits = torch.load(absolute_input_path)
+                     # Basic validation after loading
+                     if not isinstance(self.visits, list) or not self.visits or not self.visits[0]:
+                          print(f"Warning: Loaded visits from {absolute_input_path} appear empty or invalid.")
+                          # Decide whether to proceed with empty visits or fail
+                          # For now, let the validation in test_and_save handle it.
+                     else:
+                          print(f"Successfully loaded visits for inspection.")
+                 except FileNotFoundError:
+                      print(f"Error: Visits file not found at {absolute_input_path} during loading attempt.")
+                      self.visits = None # Ensure visits is None if loading fails
+                      return False # Stop execution if visits file is mandatory and not found
+                 except Exception as e:
+                      print(f"Error loading visits from {absolute_input_path}: {e}")
+                      self.visits = None # Ensure visits is None if loading fails
+                      return False # Stop execution on other loading errors
+
+        # Ensure visits attribute exists, even if loading failed or wasn't attempted
+        if not hasattr(self, 'visits'):
+             print("Initializing empty visits list as it wasn't loaded or generated.")
              self.visits = [] if self.cfg.feedback.num_policies == 1 else [[] for _ in range(self.cfg.feedback.num_policies)]
 
-        # Always proceed to test and save
-        print(f"Proceeding to test_and_save in {mode} mode (estimator is {'loaded' if self.estimator else 'None'}).")
+        # Always proceed to test and save (unless loading failed above)
+        print(f"Proceeding to test_and_save in {mode} mode (estimator is {'loaded' if self.estimator else 'None'}, visits are {'loaded' if self.visits and self.visits[0] else 'not loaded/empty'}).")
         self.test_and_save()
         return True # Indicate test/save process was executed
     def test_and_save(self):
@@ -482,8 +502,22 @@ class LLMExperiment:
                 if not estimator_available:
                     raise ValueError(f"Saver '{saver_name}' requires an estimator, but it was not loaded or available.")
             elif isinstance(saver, (VisitsSaver, VisitsImageSaver, ReadableVisitsSaver)):
+                # More detailed check for visits availability
                 if not visits_available:
-                    raise ValueError(f"Saver '{saver_name}' requires visit data, but it was not loaded or is empty.")
+                    error_reason = "Visit data is required but not available"
+                    if self.visits is None:
+                        error_reason = "Visit data was not loaded or generated (check visits_path or experiment run)"
+                    elif not isinstance(self.visits, list):
+                        error_reason = f"Visit data has unexpected type: {type(self.visits).__name__}"
+                    elif not self.visits: # Check if the outer list is empty
+                        error_reason = "Visit data list is empty"
+                    elif not self.visits[0]: # Check if the first policy's list is empty
+                         error_reason = "Visit data for the first policy is empty"
+                    # Add context about the source path if inspection mode failed
+                    if self.cfg.get('test_only', False) and not estimator_available and self.cfg.get('visits_path'):
+                         error_reason += f". Attempted load from: {self.cfg.visits_path}"
+
+                    raise ValueError(f"Saver '{saver_name}' requires visit data. Reason: {error_reason}.")
             # VisitsImageSaver and ReadableVisitsSaver also need env, checked in their __init__
             # ImageGenerationSaver needs results populated by ImageGenerationTester, implicitly checked by tester validation
 
