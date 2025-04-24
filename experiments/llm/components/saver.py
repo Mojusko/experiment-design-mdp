@@ -6,6 +6,7 @@ import matplotlib.pyplot as plt
 # Import PIL module only (no direct Image import)
 import PIL
 import yaml
+import textwrap # Import textwrap
 from abc import ABC, abstractmethod
 from omegaconf import OmegaConf, DictConfig
 from hydra.utils import to_absolute_path # Import Hydra path utility
@@ -594,6 +595,9 @@ class VisitsImageSaver(BaseSaver):
 
         # --- Generate and Save Images Per Episode and Timestep ---
         # Modify the loop to use the calculated range
+        # --- Add explicit logging for the calculated range ---
+        print(f"VisitsImageSaver: Calculated episode range for seed {self.seed}: {start_ep_idx} (inclusive) to {end_ep_idx} (exclusive)", flush=True)
+        # ----------------------------------------------------
         for ep_idx in range(start_ep_idx, end_ep_idx):
             # Add flush=True to ensure progress is visible
             # Log the absolute episode index (ep_idx + 1) relative to the total number of episodes
@@ -669,8 +673,8 @@ class VisitsImageSaver(BaseSaver):
                     for i, (img, prompt) in enumerate(zip(timestep_images, timestep_prompts)):
                         ax = axes[0, i]
                         ax.imshow(img)
-                        # Wrap prompt text for display below the image
-                        wrapped_prompt = '\n'.join(prompt[j:j+60] for j in range(0, len(prompt), 60)) # Adjust wrap length if needed
+                        # Wrap prompt text using textwrap for better readability
+                        wrapped_prompt = textwrap.fill(prompt, width=40) # Wrap at 40 characters
                         ax.set_title(f"Policy {i+1}", fontsize=10)
                         ax.set_xlabel(wrapped_prompt, fontsize=8, labelpad=10) # Add padding
                         ax.set_xticks([])
@@ -681,9 +685,9 @@ class VisitsImageSaver(BaseSaver):
                         axes[0, i].axis('off')
 
                     plt.suptitle(f"Episode {ep_idx} - Timestep {h}", fontsize=14)
-                    # Adjust subplot parameters for more bottom space and horizontal spacing
-                    # Increased bottom margin, added wspace for horizontal gap
-                    plt.subplots_adjust(bottom=0.25, hspace=0.4, wspace=0.3)
+                    # Adjust subplot parameters for more bottom space and increased horizontal spacing
+                    # Increased bottom margin, increased wspace for horizontal gap
+                    plt.subplots_adjust(bottom=0.25, hspace=0.4, wspace=0.5) # Increased wspace from 0.3 to 0.5
 
                     # Construct filename including timestep h
                     # Use the absolute episode index ep_idx in the filename
