@@ -14,7 +14,7 @@ pass_V: true
 
 # Keywords for C-optimal design. If null or empty, A-optimal design will be used.
 # Example: ["old", "classic", "traditional", "eternal"]
-#C_design_keywords: ["beautiful", "interesting", "complex", "simple", "colorful", "monochrome", "vibrant", "muted", "dynamic", "static", "natural", "urban", "detailed", "minimalist", "bright", "dark", "warm", "cool", "textured", "smooth"]
+C_design_keywords: ["beautiful", "interesting", "complex", "simple", "colorful", "monochrome", "vibrant", "muted", "dynamic", "static", "natural", "urban", "detailed", "minimalist", "bright", "dark", "warm", "cool", "textured", "smooth"]
 C_design_keywords: null
 
 # Model-specific parameters (moved from experiment config)
