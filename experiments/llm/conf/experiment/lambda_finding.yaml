@@ -7,8 +7,4 @@ vocabulary:
   - 'vocabulary2/mediums.txt'
   - 'vocabulary2/movements.txt'
   - 'vocabulary2/emotions.txt'
-# scorer_model: 'ancient-text' # Removed - not needed for lambda sweep and interferes with model-specific logic
-# Add default lambdas here, they will be overridden by Makefile for the sweep
-feedback:
-  lambda_dsn: 0.1
-  lambda_est: 100
+scorer_model: 'ancient-text' 
