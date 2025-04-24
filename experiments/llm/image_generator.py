@@ -24,31 +24,44 @@ def _get_seed_from_prompt(prompt: str) -> int:
     # Convert the hex digest to an integer and constrain it to 32 bits
     return int(hash_digest, 16) % (2**32)
 
+# Default configuration for image generation
+DEFAULT_CONFIG = {
+    "stable_diffusion_id": "CompVis/stable-diffusion-v1-4",
+    "num_inference_steps": 100,
+    "guidance_scale": 8.0, # Renamed from guidance_base
+    "image_size": 512,
+    "seed": 0, # Default base seed
+    "MODELS_CACHE_DIR": os.path.expanduser("~/.cache/huggingface/hub"),
+    "output_dir": "generated_images"
+}
+
 class StableDiffusionGenerator():
     def __init__(
         self,
-        stable_diffusion_id: str,
-        num_inference_steps: int = 100, 
-        guidance_scale: float = 10,
-        image_size: int = 512, 
-        seed: int = 0,
-        MODELS_CACHE_DIR: str = '/tmp/models_cache_dir/'
+        # Make stable_diffusion_id a keyword argument with default from DEFAULT_CONFIG
+        stable_diffusion_id: str = DEFAULT_CONFIG['stable_diffusion_id'],
+        num_inference_steps: int = DEFAULT_CONFIG['num_inference_steps'],
+        guidance_scale: float = DEFAULT_CONFIG['guidance_scale'],
+        image_size: int = DEFAULT_CONFIG['image_size'],
+        seed: int = DEFAULT_CONFIG['seed'],
+        MODELS_CACHE_DIR: str = DEFAULT_CONFIG['MODELS_CACHE_DIR']
     ) -> None:
         """An implementation of stable diffusion's text2image generator.
-        
+
         Args:
-            stable_diffusion_id (str): The stable diffusion's model identifier.
-            num_inference_steps (int): The number of denoising steps.
-            guidance_scale (float): The guidance scale for classifier-free guidance.
+            stable_diffusion_id (str): The stable diffusion's model identifier. Defaults to DEFAULT_CONFIG.
+            num_inference_steps (int): The number of denoising steps. Defaults to DEFAULT_CONFIG.
+            guidance_scale (float): The guidance scale for classifier-free guidance. Defaults to DEFAULT_CONFIG.
             image_size (int): Size of generated images.
-            seed (int): Random seed for reproducibility.
-            MODELS_CACHE_DIR (str): Directory to cache the downloaded models.
+            seed (int): Random seed for reproducibility. Defaults to DEFAULT_CONFIG.
+            MODELS_CACHE_DIR (str): Directory to cache the downloaded models. Defaults to DEFAULT_CONFIG.
         """
         self.seed = seed
         self.device = 'cuda' if torch.cuda.is_available() else 'cpu'
         self.num_inference_steps = num_inference_steps
         self.guidance_scale = guidance_scale
         self.MODELS_CACHE_DIR = MODELS_CACHE_DIR # Store cache dir
+        self._image_size = image_size # Store image size
 
         # Remove internal CLIP loading for image embedding
         # self._clip_model = ...
@@ -91,8 +104,6 @@ class StableDiffusionGenerator():
         )
         
         self.seed_generator()
-
-        self._image_size = image_size
         self.latents = None
 
     def seed_generator(self) -> None:
@@ -217,16 +228,6 @@ class StableDiffusionGenerator():
         """
         return (self._image_size, self._image_size, 3)
 
-# Default configuration for image generation
-DEFAULT_CONFIG = {
-    "stable_diffusion_id": "CompVis/stable-diffusion-v1-4",
-    "num_inference_steps": 100,
-    "guidance_scale": 8.0, # Renamed from guidance_base
-    "image_size": 512,
-    "seed": 0, # Default base seed
-    "MODELS_CACHE_DIR": os.path.expanduser("~/.cache/huggingface/hub"),
-    "output_dir": "generated_images"
-}
 
 if __name__ == "__main__":
     # Set up argument parser
