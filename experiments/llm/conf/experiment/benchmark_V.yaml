@@ -3,6 +3,7 @@ id_prefix: "v-comp"  # Used for filename prefixes
 episodes: 200
 vocab_size: 2000
 vocabulary:
+  - 'vocabulary2/bases.txt'
   - 'vocabulary2/mediums.txt'
   - 'vocabulary2/movements.txt'
   - 'vocabulary2/emotions.txt'
