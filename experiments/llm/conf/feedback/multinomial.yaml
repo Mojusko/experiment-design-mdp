@@ -1,7 +1,7 @@
 name: "multinomial"
 num_policies: 4
-num_components: 2
-num_rounds: 10 #static
+num_components: 3
+num_rounds: 8 #static
 lambda_dsn: 0.1 # Default design lambda, used if use_model_specific_lambda is false
 lambda_est: 1000 # Default estimation lambda, used if use_model_specific_lambda is false (Set higher based on previous findings)
 use_model_specific_lambda: true # Set to false to use the defaults above
@@ -13,8 +13,20 @@ pass_V: true
 #pass_V: false
 
 # Keywords for C-optimal design. If null or empty, A-optimal design will be used.
-# Example: ["old", "classic", "traditional", "eternal"]
-C_design_keywords: ["beautiful", "interesting", "complex", "simple", "colorful", "monochrome", "vibrant", "muted", "dynamic", "static", "natural", "urban", "detailed", "minimalist", "bright", "dark", "warm", "cool", "textured", "smooth"]
+# Keywords must be provided in pairs of opposites (e.g., ["hot", "cold", "fast", "slow"]).
+# The code will compute the normalized difference vector for each pair.
+C_design_keywords: [
+  "modern", "ancient",        # 1
+  "colorful", "monochromatic", # 2
+  "complex", "simple",         # 3
+  "vibrant", "muted",          # 4
+  "dynamic", "static",         # 5
+  "natural", "urban",          # 6
+  "detailed", "minimalist",    # 7
+  "bright", "dark",            # 8
+  "warm", "cool",              # 9
+  "abstract", "realistic"      # 10
+]
 #C_design_keywords: null
 
 # Model-specific parameters (moved from experiment config)
@@ -24,8 +36,8 @@ model_specific_params:
     lambda_dsn: 0.1 # Example value
     lambda_est: 200
   ancient-text:
-    lambda_dsn: 0.1 # Example value
-    lambda_est: 1000 #num_policies=4 (Kept high based on previous findings)
+    lambda_dsn: 1 # Example value
+    lambda_est: 500 #num_policies=4 (Kept high based on previous findings)
   japanese-image:
     lambda_dsn: 0.1 # Example value
     lambda_est: 100

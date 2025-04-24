@@ -12,6 +12,12 @@ def parse_filename(filename):
     if "withV" in base or "noV" in base:
         v_type = "With V" if "withV" in base else "No V"
         return ("v_comparison", v_type)
+    # Match new lambda format with dsn and est: metrics-lambda-dsn-mult-mul-dsn0.1-est1000-6.json
+    elif match := re.search(r"dsn([\d.]+)-est([\d.]+)-(\d+)\.json$", base):
+        dsn_val = float(match.group(1))
+        est_val = float(match.group(2))
+        # seed = int(match.group(3)) # Seed not used for grouping key
+        return ("lambda_dsn_est", (dsn_val, est_val))
     # Match old single lambda format: metrics-mul-lambda-0.1-1.json or metrics-mul-0.1-1.json
     elif "lambda" in base or re.search(r"mul-([\d.]+)-(\d+)\.json$", base) or re.search(r"num-([\d.]+)-(\d+)\.json$", base):
         # Extract lambda value robustly
@@ -25,9 +31,14 @@ def parse_filename(filename):
         elif match_num:
             lambda_val = float(match_num.group(1))
         else:
-             # Fallback if pattern is unexpected, might need adjustment
+             # Fallback if pattern is unexpected, try finding the last number before the seed
              parts = base.split('-')
-             lambda_val = float(parts[-2]) # Less robust fallback
+             try:
+                 # Assume format like *-<lambda>-<seed>.json
+                 lambda_val = float(parts[-2])
+             except (ValueError, IndexError):
+                 print(f"Warning: Could not extract lambda from fallback pattern in {base}. Skipping.")
+                 return ("unknown", base) # Return an identifiable unknown type
         return ("lambda", lambda_val)
     # Match design frequency filenames like metrics-design-freq-dsn-mult-ep25-df10-1.json
     elif match := re.search(r"ep(\d+)-df(\d+)-(\d+)\.json$", base):
@@ -183,6 +194,47 @@ def plot_design_frequency_results(design_freq_results):
     plt.tight_layout()
 
 
+def plot_lambda_dsn_est_results(lambda_results):
+    # Create a single grouped bar chart comparing metrics for each (dsn, est) pair.
+    
+    # Sort keys first by dsn, then by est
+    sorted_keys = sorted(lambda_results.keys(), key=lambda x: (x[0], x[1]))
+    
+    labels = [f"Dsn={dsn}, Est={est}" for dsn, est in sorted_keys]
+    
+    preference_means = []
+    preference_stds = []
+    cosine_means = []
+    cosine_stds = []
+
+    for key in sorted_keys:
+        data_list = lambda_results[key]
+        pref_errors = [d["preference_error"] for d in data_list if isinstance(d, dict) and "preference_error" in d]
+        cos_errors = [d["cosine_error"] for d in data_list if isinstance(d, dict) and "cosine_error" in d]
+        
+        preference_means.append(np.mean(pref_errors) if pref_errors else 0)
+        preference_stds.append(np.std(pref_errors) if len(pref_errors) > 1 else 0)
+        cosine_means.append(np.mean(cos_errors) if cos_errors else 0)
+        cosine_stds.append(np.std(cos_errors) if len(cos_errors) > 1 else 0)
+
+    x = np.arange(len(labels))
+    width = 0.35
+
+    # Adjust figure size based on the number of bars
+    fig_width = max(12, len(labels) * 0.8) # Ensure minimum width, scale with number of labels
+    plt.figure(figsize=(fig_width, 7)) 
+    
+    plt.bar(x - width/2, preference_means, width, yerr=preference_stds, capsize=5, label="Preference Error")
+    plt.bar(x + width/2, cosine_means, width, yerr=cosine_stds, capsize=5, label="Cosine Error")
+
+    plt.xlabel("Lambda Configuration (Design, Estimation)")
+    plt.ylabel("Error")
+    plt.xticks(x, labels, rotation=45, ha="right") # Rotate labels for better readability
+    plt.title("Error vs Lambda Configuration (Design & Estimation)")
+    plt.legend()
+    plt.tight_layout() # Adjust layout to prevent labels overlapping
+
+
 def plot_feedback_results(feedback_results):
     # Create a grouped bar chart comparing both metrics for each algorithm.
     labels = list(feedback_results.keys())
@@ -216,9 +268,9 @@ def plot_results(directory):
         "frequency": {}, # Old frequency key, might be unused now
         "rounds": {},
         "design_frequency": {}, # New key for design frequency results
+        "lambda_dsn_est": {},   # New key for dsn/est lambda experiments
         "feedback": {}          # For feedback comparison experiments (dsn-mult vs rand-mult etc.)
     }
-    # Note: feedback_results dictionary is merged into results_by_type["feedback"] now
 
     for f in files:
         try:
@@ -252,56 +304,23 @@ def plot_results(directory):
         else:
             print(f"Warning: Unrecognized experiment type '{exp_type}' for file {os.path.basename(f)}")
 
-
-    # Plot non-feedback experiments (excluding design_frequency and feedback)
+ 
+    # Plot non-feedback experiments (excluding design_frequency, feedback, and lambda_dsn_est)
     for exp_type in results_by_type:
-        if exp_type not in ["design_frequency", "feedback"] and results_by_type[exp_type]:
+        if exp_type not in ["design_frequency", "feedback", "lambda_dsn_est"] and results_by_type[exp_type]:
             plot_results_with_type(results_by_type[exp_type], exp_type)
-
+ 
     # Plot design frequency results separately
     if results_by_type["design_frequency"]:
         plot_design_frequency_results(results_by_type["design_frequency"])
 
+    # Plot lambda_dsn_est results separately
+    if results_by_type["lambda_dsn_est"]:
+        plot_lambda_dsn_est_results(results_by_type["lambda_dsn_est"])
+ 
     # Plot feedback results
     if results_by_type["feedback"]:
         plot_feedback_results(results_by_type["feedback"])
-
-    plt.show()
-    feedback_results = {}
-
-    for f in files:
-        exp_type, key = parse_filename(f)
-        val = safe_load_data(f)
-
-        if exp_type == "feedback":
-            alg = key[0]  # alg_type from tuple
-            alg_map = {"dsn": "Design", "rand": "Random"}
-            alg_name = alg_map.get(alg, alg)
-            if alg_name not in feedback_results:
-                feedback_results[alg_name] = {"preference_error": [], "cosine_error": []}
-            if val is not None and isinstance(val, dict):
-                if "preference_error" in val:
-                    feedback_results[alg_name]["preference_error"].append(val["preference_error"])
-                if "cosine_error" in val:
-                    feedback_results[alg_name]["cosine_error"].append(val["cosine_error"])
-        else:
-            if key not in results_by_type[exp_type]:
-                results_by_type[exp_type][key] = []
-            if val is not None:
-                results_by_type[exp_type][key].append(val)
-
-    # Plot non-feedback experiments (excluding design_frequency)
-    for exp_type in results_by_type:
-        if exp_type != "design_frequency" and results_by_type[exp_type]:
-            plot_results_with_type(results_by_type[exp_type], exp_type)
-
-    # Plot design frequency results separately
-    if results_by_type["design_frequency"]:
-        plot_design_frequency_results(results_by_type["design_frequency"])
-
-    # Plot feedback results
-    if feedback_results:
-        plot_feedback_results(feedback_results)
 
     plt.show()
 
