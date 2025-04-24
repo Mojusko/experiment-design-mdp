@@ -1,10 +1,10 @@
 name: "benchmark_V"
 id_prefix: "v-comp"  # Used for filename prefixes
-episodes: 100
+episodes: 200
 vocab_size: 2000
 vocabulary:
   - 'vocabulary2/mediums.txt'
   - 'vocabulary2/movements.txt'
   - 'vocabulary2/emotions.txt'
-scorer_model: 'japanese-text'
+scorer_model: 'ancient-text'
 
