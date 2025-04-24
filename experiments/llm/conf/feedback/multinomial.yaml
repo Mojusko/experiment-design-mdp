@@ -13,8 +13,8 @@ pass_V: true
 #pass_V: false
 
 # Keywords for C-optimal design. If null or empty, A-optimal design will be used.
-# Keywords must be provided in pairs of opposites (e.g., ["hot", "cold", "fast", "slow"]).
-# The code will compute the normalized difference vector for each pair.
+# The code will embed each keyword and use the resulting vectors for C-optimal design.
+# Example: ["old", "classic", "traditional", "eternal"]
 C_design_keywords: [
   "modern", "ancient",        # 1
   "colorful", "monochromatic", # 2
