@@ -249,7 +249,8 @@ class FeedbackFactory:
                 if c_vectors:
                     design = MultiPolicyOrigDesignC(env=env, lambd=lambda_dsn, dim=1, C=c_vectors) # Use lambda_dsn
                 else: # Use Static A-optimal
-                    design = MultiPolicyOrigDesignA(env=env, lambd=lambda_dsn, dim=1, V=V) # Use lambda_dsn
+                    #design = MultiPolicyOrigDesignA(env=env, lambd=lambda_dsn, dim=1, V=V) # Use lambda_dsn
+                    design = MultiPolicyOrigDesignD(env=env, lambd=lambda_dsn, dim=1) # Use lambda_dsn
 
             likelihood = MultinomialLikelihood()
             regularizer = L2Regularizer(lam=lambda_est) # Use lambda_est for estimation regularization
