@@ -438,8 +438,8 @@ llm-find-rounds: $(JOBS_LLM_ROUNDS)
 
 # Lambda-finding
 # We'll run each (lambda_dsn, lambda_est) combination for REPEATS_LLM seeds
-LAMBDA_DSN_VALUES := 0.001 0.01 0.1
-LAMBDA_EST_VALUES :=  500 1000 2000
+LAMBDA_DSN_VALUES := 0.0001 0.001 0.01 0.1
+LAMBDA_EST_VALUES :=  250 500 1000 
 LAMBDA_VALUES_NUM := 0.0001 0.001 0.01 0.1 1 10 # Keep numerical separate for now
 
 # Generate job names for each (lambda_dsn, lambda_est, seed) triplet for multinomial
