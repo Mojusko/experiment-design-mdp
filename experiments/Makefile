@@ -299,7 +299,7 @@ llm-generate-image:
 	cd llm && TIMESTAMP=$(TIMESTAMP) OMP_NUM_THREADS=1 MKL_NUM_THREADS=1 $(PYTHONPATH) image_generator.py --base_prompt "$(BASE_PROMPT)" --full_prompt "$(FULL_PROMPT)" $(if $(OUTPUT_DIR),--output_dir "$(OUTPUT_DIR)",) $(if $(SEED),--seed $(SEED),) $(if $(IMAGE_SIZE),--image_size $(IMAGE_SIZE),) $(if $(NUM_STEPS),--num_inference_steps $(NUM_STEPS),) $(if $(GUIDANCE_BASE),--guidance_base $(GUIDANCE_BASE),) $(if $(GUIDANCE_TOKENS),--guidance_tokens $(GUIDANCE_TOKENS),)
 
 ########################### LLMS
-REPEATS_LLM=10
+REPEATS_LLM=7
 NUMBERS_LLM := $(shell seq 1 ${REPEATS_LLM})
 
 # Jobs for V comparison (non-adaptive design)
@@ -438,8 +438,8 @@ llm-find-rounds: $(JOBS_LLM_ROUNDS)
 
 # Lambda-finding
 # We'll run each (lambda_dsn, lambda_est) combination for REPEATS_LLM seeds
-LAMBDA_DSN_VALUES := 0.0001 0.001 0.01 0.1
-LAMBDA_EST_VALUES :=  250 500 1000 
+LAMBDA_DSN_VALUES := 0.1
+LAMBDA_EST_VALUES :=  50 100 200 500 1000 2000
 LAMBDA_VALUES_NUM := 0.0001 0.001 0.01 0.1 1 10 # Keep numerical separate for now
 
 # Generate job names for each (lambda_dsn, lambda_est, seed) triplet for multinomial
