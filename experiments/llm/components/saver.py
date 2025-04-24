@@ -475,7 +475,9 @@ class VisitsImageSaver(BaseSaver):
                  # Specific config values passed from LLMExperiment
                  horizon: int = None,
                  dense_feedback: bool = False,
-                 verbose: bool = False):
+                 verbose: bool = False,
+                 seed: int = None, # Added seed
+                 total_repeats: int = 1): # Added total_repeats
         # Pass arguments explicitly to BaseSaver (without cfg)
         # BaseSaver no longer has dummy args for horizon, dense_feedback, verbose
         super().__init__(env=env, embedder=embedder, params=params,
@@ -486,6 +488,8 @@ class VisitsImageSaver(BaseSaver):
         self.horizon = horizon
         self.dense_feedback = dense_feedback
         self.verbose = verbose
+        self.seed = seed # Store the current seed
+        self.total_repeats = total_repeats # Store total number of repeats/seeds
 
         # --- Validate required objects (self.env should now be set correctly by BaseSaver) ---
         if self.env is None:
@@ -498,6 +502,12 @@ class VisitsImageSaver(BaseSaver):
         #      raise ValueError("VisitsImageSaver requires the 'cfg' object. Ensure it's passed during instantiation.")
         if self.horizon is None: # Add check for horizon as it's critical
              raise ValueError("VisitsImageSaver requires the 'horizon' value. Ensure it's passed during instantiation.")
+        # Add validation for seed and total_repeats
+        if self.seed is None: # Add check for seed
+             print("Warning: VisitsImageSaver initialized without a seed. Episode splitting will be disabled.")
+        if self.total_repeats is None or self.total_repeats < 1: # Add check for total_repeats
+             print(f"Warning: VisitsImageSaver initialized with invalid total_repeats ({self.total_repeats}). Defaulting to 1, episode splitting disabled.")
+             self.total_repeats = 1
 
 
         # --- Configuration for Image Generation (using self.params for saver-specific settings) ---
@@ -564,12 +574,34 @@ class VisitsImageSaver(BaseSaver):
         # --- Determine Timestep Range ---
         h_range = range(1, horizon + 1) if dense_feedback else range(horizon, horizon + 1)
 
+        # --- Calculate Episode Range for this Seed ---
+        start_ep_idx = 0
+        end_ep_idx = num_episodes
+        # Apply splitting only if seed and total_repeats are valid for distribution
+        if self.seed is not None and self.total_repeats is not None and self.total_repeats > 1:
+            # Ensure seed is 1-based for calculation
+            current_seed_index = self.seed - 1 # Convert 1-based seed to 0-based index
+            if current_seed_index < 0 or current_seed_index >= self.total_repeats:
+                print(f"Warning: Invalid seed ({self.seed}) for total repeats ({self.total_repeats}). Processing all episodes.")
+            else:
+                # Ceiling division: (numerator + denominator - 1) // denominator
+                episodes_per_seed = (num_episodes + self.total_repeats - 1) // self.total_repeats
+                start_ep_idx = current_seed_index * episodes_per_seed
+                end_ep_idx = min(start_ep_idx + episodes_per_seed, num_episodes)
+                print(f"VisitsImageSaver (Seed {self.seed}/{self.total_repeats}): Processing episodes {start_ep_idx} to {end_ep_idx - 1} (Total: {num_episodes})")
+        else:
+            print(f"VisitsImageSaver: Processing all episodes {start_ep_idx} to {end_ep_idx - 1} (Seed/Repeats info not used for splitting).")
+
         # --- Generate and Save Images Per Episode and Timestep ---
-        for ep_idx in range(num_episodes):
-            print(f"VisitsImageSaver: Processing episode {ep_idx + 1}/{num_episodes}")
+        # Modify the loop to use the calculated range
+        for ep_idx in range(start_ep_idx, end_ep_idx):
+            # Add flush=True to ensure progress is visible
+            # Log the absolute episode index (ep_idx + 1) relative to the total number of episodes
+            print(f"VisitsImageSaver: Processing episode {ep_idx + 1}/{num_episodes}", flush=True)
 
             for h in h_range:
-                print(f"  Processing timestep h={h}/{horizon}")
+                # Add flush=True here too for timestep progress
+                print(f"  Processing timestep h={h}/{horizon}", flush=True)
                 timestep_images = []
                 timestep_prompts = []
 
@@ -649,10 +681,12 @@ class VisitsImageSaver(BaseSaver):
                         axes[0, i].axis('off')
 
                     plt.suptitle(f"Episode {ep_idx} - Timestep {h}", fontsize=14)
-                    # Adjust subplot parameters for more bottom space for x-labels (prompts)
-                    plt.subplots_adjust(bottom=0.2, hspace=0.3) # Increase bottom margin and horizontal space
+                    # Adjust subplot parameters for more bottom space and horizontal spacing
+                    # Increased bottom margin, added wspace for horizontal gap
+                    plt.subplots_adjust(bottom=0.25, hspace=0.4, wspace=0.3)
 
                     # Construct filename including timestep h
+                    # Use the absolute episode index ep_idx in the filename
                     filename = f"episode_{ep_idx:03d}_timestep_{h:02d}.png"
                     output_path = os.path.join(output_dir_path, filename)
 
