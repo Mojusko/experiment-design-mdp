@@ -545,6 +545,7 @@ class LLMExperiment:
 
         # Run all testers and collect metrics (validation ensures requirements are met)
         print("Running testers...")
+        tester_results = {} # Initialize before the loop
         for tester in self.testers:
             print(f"Running tester: {type(tester).__name__}")
             # Pass visits=self.visits if needed by any tester in the future
