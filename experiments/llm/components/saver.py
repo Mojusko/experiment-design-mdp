@@ -500,17 +500,13 @@ class VisitsImageSaver(BaseSaver):
              raise ValueError("VisitsImageSaver requires the 'horizon' value. Ensure it's passed during instantiation.")
 
 
-        # --- Configuration for Image Generation (using DEFAULT_CONFIG and self.params) ---
+        # --- Configuration for Image Generation (using self.params for saver-specific settings) ---
         # self.params is now directly passed and stored by BaseSaver
-        self.image_size = self.params.get('image_size', DEFAULT_CONFIG['image_size'])
-        self.num_inference_steps = self.params.get('num_inference_steps', DEFAULT_CONFIG['num_inference_steps'])
-        self.guidance_scale = self.params.get('guidance_scale', DEFAULT_CONFIG['guidance_scale'])
         # Default to using prompt-specific seeds for reproducibility per prompt
         self.seed_per_prompt = self.params.get('seed_per_prompt', True)
-        self.base_seed = self.params.get('seed', DEFAULT_CONFIG['seed']) # Base seed if not using seed_per_prompt
         self.output_subdir = self.params.get('output_subdir', 'visit_images') # Specific to this saver
-        self.stable_diffusion_id = self.params.get('stable_diffusion_id', DEFAULT_CONFIG['stable_diffusion_id'])
-        self.models_cache_dir = self.params.get('models_cache_dir', DEFAULT_CONFIG['MODELS_CACHE_DIR'])
+        # image_size, num_inference_steps, guidance_scale, stable_diffusion_id, models_cache_dir, base_seed
+        # are now taken directly from image_generator.DEFAULT_CONFIG when the generator is instantiated.
 
     def save_result(self, results):
         """
@@ -557,17 +553,12 @@ class VisitsImageSaver(BaseSaver):
         print(f"VisitsImageSaver: Saving visit images to {output_dir_path}")
 
         # --- Initialize Image Generator ---
+        # The generator will use defaults from image_generator.DEFAULT_CONFIG
+        # for model_id, cache_dir, image_size, steps, guidance, seed etc.
         try:
-            generator = StableDiffusionGenerator(
-                stable_diffusion_id=self.stable_diffusion_id,
-                MODELS_CACHE_DIR=self.models_cache_dir,
-                image_size=self.image_size,
-                num_inference_steps=self.num_inference_steps,
-                guidance_scale=self.guidance_scale,
-                seed=self.base_seed # Initial seed
-            )
+            generator = StableDiffusionGenerator()
         except Exception as e:
-            print(f"VisitsImageSaver: Failed to initialize StableDiffusionGenerator: {e}. Skipping.")
+            print(f"VisitsImageSaver: Failed to initialize StableDiffusionGenerator with defaults: {e}. Skipping.")
             return
 
         # --- Determine Timestep Range ---
@@ -618,13 +609,13 @@ class VisitsImageSaver(BaseSaver):
 
                     except IndexError:
                         print(f"    Warning: Missing visit data for episode {ep_idx}, policy {policy_idx}. Skipping.")
-                        # Explicitly use PIL.Image
-                        timestep_images.append(PIL.Image.new('RGB', (self.image_size, self.image_size), color = 'grey')) # Placeholder
+                        # Explicitly use PIL.Image. Use generator's image size.
+                        timestep_images.append(PIL.Image.new('RGB', (generator.image_size[0], generator.image_size[1]), color = 'grey')) # Placeholder
                         timestep_prompts.append("Error: Missing Data")
                     except Exception as e:
                         print(f"    Error generating image for episode {ep_idx}, policy {policy_idx}, h={h}: {e}")
-                        # Explicitly use PIL.Image
-                        timestep_images.append(PIL.Image.new('RGB', (self.image_size, self.image_size), color = 'red')) # Error placeholder
+                        # Explicitly use PIL.Image. Use generator's image size.
+                        timestep_images.append(PIL.Image.new('RGB', (generator.image_size[0], generator.image_size[1]), color = 'red')) # Error placeholder
                         timestep_prompts.append(f"Error: {e}")
 
                 # --- Print Prompts if Verbose (using flag stored in self.verbose) ---

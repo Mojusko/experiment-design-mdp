@@ -445,8 +445,51 @@ class LLMExperiment:
         
         # Set the estimator and visits
         results.set_estimator(self.estimator)
-        results.set_visits(self.visits)
-        
+        # Ensure visits are valid before setting
+        valid_visits = self.visits and isinstance(self.visits, list) and self.visits[0]
+        results.set_visits(self.visits if valid_visits else None) # Set to None if invalid/empty
+
+        # --- Pre-run Validation ---
+        print("Validating requirements for configured testers and savers...")
+        estimator_available = self.estimator is not None
+        # Check if visits list exists, is not empty, and its first element is not empty
+        visits_available = bool(self.visits and isinstance(self.visits, list) and self.visits[0])
+
+        # Import tester/saver classes for isinstance checks
+        from components.tester import PreferenceTester, CosineTester, ImageGenerationTester
+        from components.saver import LearnedEstimatorSaver, VisitsSaver, VisitsImageSaver, ReadableVisitsSaver
+
+        # Validate Testers
+        for tester in self.testers:
+            tester_name = type(tester).__name__
+            if isinstance(tester, (PreferenceTester, CosineTester)):
+                if not estimator_available:
+                    raise ValueError(f"Tester '{tester_name}' requires an estimator, but it was not loaded or available.")
+            elif isinstance(tester, ImageGenerationTester):
+                 # ImageGenerationTester needs scorer_model OR estimator if use_estimator=True
+                 if tester.use_estimator and not estimator_available:
+                     raise ValueError(f"Tester '{tester_name}' is configured with use_estimator=True, but the estimator is not available.")
+                 if not tester.use_estimator and self.scorer_model is None:
+                      raise ValueError(f"Tester '{tester_name}' is configured to use the scorer_model, but it's not available.")
+                 if self.embedder is None: # Also needs embedder
+                      raise ValueError(f"Tester '{tester_name}' requires an embedder, but it's not available.")
+            # Add checks for other testers if they have specific requirements
+
+        # Validate Savers
+        for saver in self.savers:
+            saver_name = type(saver).__name__
+            if isinstance(saver, LearnedEstimatorSaver):
+                if not estimator_available:
+                    raise ValueError(f"Saver '{saver_name}' requires an estimator, but it was not loaded or available.")
+            elif isinstance(saver, (VisitsSaver, VisitsImageSaver, ReadableVisitsSaver)):
+                if not visits_available:
+                    raise ValueError(f"Saver '{saver_name}' requires visit data, but it was not loaded or is empty.")
+            # VisitsImageSaver and ReadableVisitsSaver also need env, checked in their __init__
+            # ImageGenerationSaver needs results populated by ImageGenerationTester, implicitly checked by tester validation
+
+        print("Validation successful.")
+        # --- End Validation ---
+
         # Ensure all savers have the correct results_dir
         for saver in self.savers:
             if saver.results_dir != self.results_dir:
@@ -466,43 +509,32 @@ class LLMExperiment:
         config_dict = OmegaConf.to_container(self.cfg, resolve=True)
         results.add_metadata('config_dict', config_dict)
 
-        # Run all testers and collect metrics (only if estimator exists)
-        if self.estimator is None:
-            print("Skipping testers as estimator is None (likely explore_only or failed estimation).")
-        else:
-            print("Running testers...")
-            for tester in self.testers:
-                # Check if tester requires an estimator (most do)
-                # Simple check for now: assume all testers need it unless specified otherwise
-                requires_estimator = True # Default assumption
-                # Example of how to add exceptions later:
-                # if isinstance(tester, SomeTesterThatDoesNotNeedEstimator):
-                #     requires_estimator = False
+        # Run all testers and collect metrics (validation ensures requirements are met)
+        print("Running testers...")
+        for tester in self.testers:
+            print(f"Running tester: {type(tester).__name__}")
+            # Pass visits=self.visits if needed by any tester in the future
+            tester_results = tester.run_test(
+                cfg=self.cfg,
+                env=self.env,
+                estimator=self.estimator, # Can be None if tester doesn't need it (but validation would have caught it if it did)
+                theta_star=self._theta_star,
+                training_words_list=self.training_words,
+                testing_words_list=self.testing_words
+                # visits=self.visits # Pass visits if any tester needs them
+        )
+        # Add metrics to results container
+        if tester_results: # Ensure tester returned something
+            results.add_metrics(tester_results)
 
-                if requires_estimator and self.estimator is None:
-                     print(f"Skipping tester {type(tester).__name__} because estimator is missing.")
-                     continue
-
-                print(f"Running tester: {type(tester).__name__}")
-                tester_results = tester.run_test(
-                    cfg=self.cfg,
-                    env=self.env,
-                    estimator=self.estimator, # Can be None
-                    theta_star=self._theta_star,
-                    training_words_list=self.training_words,
-                    testing_words_list=self.testing_words
-                    # visits=self.visits # No longer passing visits to testers
-                )
-                # Add metrics to results container
-                if tester_results: # Ensure tester returned something
-                    results.add_metrics(tester_results)
-
-        # Use all savers to save the results (savers should handle None estimator if needed)
+        # Use all savers to save the results (validation ensures requirements are met)
         print("Running savers...")
         # Removed duplicated lines causing IndentationError here
         
         # Use all savers to save the results
         for saver in self.savers:
+            # Pass the results object containing potentially loaded estimator/visits
+            print(f"Running saver: {type(saver).__name__}")
             saver.save_result(results)
 
     def _get_algorithm_code(self):

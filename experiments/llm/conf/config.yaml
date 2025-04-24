@@ -28,15 +28,15 @@ explore_only: false # Set to true to run explore-only mode (explore, save visits
 estimator_path: null  # Path to saved estimator file for test_only mode
 visits_path: null     # Path to saved visits file for inspection mode (test_only=true, estimator_path=null)
 override_results_dir: false  # If true in test_only/inspection mode, use results_dir instead of deriving from path
-tester:
-  - _target_: components.tester.PreferenceTester
-    params:
-      N_test_prompts: 1000
-      N_pairs_eval: 5000
-  - _target_: components.tester.CosineTester
-    params: null
-  #  - _target_: components.tester.ImageGenerationTester
-  #    params:
+tester: null # Disable all testers
+  # - _target_: components.tester.PreferenceTester
+  #   params:
+  #     N_test_prompts: 1000
+  #     N_pairs_eval: 5000
+  # - _target_: components.tester.CosineTester
+  #   params: null
+  # - _target_: components.tester.ImageGenerationTester
+  #   params:
   #      take_best_worst_N: 4
   #      use_estimator: true # Controls if ImageGenerationTester uses learned weights
   # VisitsTester removed
@@ -47,29 +47,46 @@ tester:
 
 # Default savers configuration
 savers:
-  - _target_: components.saver.MetricsSaver
+#  - _target_: components.saver.MetricsSaver
+#    params:
+#      filename: "metrics.json"
+#      metrics_keys: ["preference_error", "cosine_error"]
+#  #  - _target_: components.saver.LearnedEstimatorSaver
+#  #    params:
+#  #      filename: "estimator.pt"
+#  - _target_: components.saver.VisitsSaver
+#    params:
+#      filename: "visits.pkl"
+#  - _target_: components.saver.ConfSaver
+#    params:
+#      filename: "config_resolved.yaml"
+#  #- _target_: components.saver.ImageGenerationSaver
+#  #  params:
+#  #    seed: "${seed}"
+#  #    base_prompt: "${base_prompt}"  
+#  #    take_best_worst_N: 4
+#  #    debug_mode: false
+#  #    image_size: 512
+#  #    num_inference_steps: 100
+#  #    add_image_score: true
+#  # - _target_: components.saver.ReadableVisitsSaver
+#  #   params:
+#  #     output_filename: "readable_visits.txt"
+#  #     visits_path: ${visits_path} # Inherit top-level visits_path if set
+#
+#  # --- Original VisitsImageSaver (now commented out) ---
+#  - _target_: components.saver.VisitsImageSaver
+#    _convert_: "partial" # Only convert direct parameters, not nested ones
+#    params:
+#      output_subdir: "visit_images" # Default subdir for images
+#      image_size: 512 # Default image size
+#      num_inference_steps: 100 # Default inference steps
+#      seed_per_prompt: true # Use deterministic generation per prompt
+
+  # --- Enable ONLY VisitsImageSaver for inspection ---
+  - _target_: components.saver.VisitsImageSaver
+    _convert_: "partial" # Only convert direct parameters, not nested ones
     params:
-      filename: "metrics.json"
-      metrics_keys: ["preference_error", "cosine_error"]
-  #  - _target_: components.saver.LearnedEstimatorSaver
-  #    params:
-  #      filename: "estimator.pt"
-  - _target_: components.saver.VisitsSaver
-    params:
-      filename: "visits.pkl"
-  - _target_: components.saver.ConfSaver
-    params:
-      filename: "config_resolved.yaml"
-  #- _target_: components.saver.ImageGenerationSaver
-  #  params:
-  #    seed: "${seed}"
-  #    base_prompt: "${base_prompt}"  
-  #    take_best_worst_N: 4
-  #    debug_mode: false
-  #    image_size: 512
-  #    num_inference_steps: 100
-  #    add_image_score: true
-  - _target_: components.saver.ReadableVisitsSaver
-    params:
-      output_filename: "readable_visits.txt"
-      visits_path: ${visits_path} # Inherit top-level visits_path if set
+      output_subdir: "visit_images_inspect" # Specific subdir for inspection images
+      # image_size and num_inference_steps are now taken from image_generator defaults
+      seed_per_prompt: true # Use deterministic generation per prompt

@@ -46,8 +46,7 @@ savers:
     _convert_: "partial" # Only convert direct parameters, not nested ones
     params:
       output_subdir: "visit_images_debug" # Specific subdir for debug images
-      image_size: 32 # Smaller image size for speed
-      num_inference_steps: 20 # Fewer inference steps for speed
+      # image_size and num_inference_steps are now taken from image_generator defaults
       seed_per_prompt: true # Keep deterministic generation per prompt
 
   #  - _target_: components.saver.ImageGenerationSaver
