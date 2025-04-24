@@ -2,9 +2,10 @@ name: "multinomial"
 num_policies: 4
 num_components: 3
 num_rounds: 10 #static
-lambda_reg: 100 # Default lambda, used if use_model_specific_lambda is false
-use_model_specific_lambda: true # Set to false to use the lambda_reg above
-adaptive_estimation_frequency: 0 
+lambda_dsn: 0.1 # Default design lambda, used if use_model_specific_lambda is false
+lambda_est: 100 # Default estimation lambda, used if use_model_specific_lambda is false
+use_model_specific_lambda: true # Set to false to use the defaults above
+adaptive_estimation_frequency: 0
 adaptive_estimation_start: 0
 #adaptive_design_frequency: 100 
 adaptive_design_frequency: 0 
@@ -17,15 +18,20 @@ pass_V: false
 C_design_keywords: null
 
 # Model-specific parameters (moved from experiment config)
+# These are used only if use_model_specific_lambda is true
 model_specific_params:
   japanese-text:
-    lambda_reg: 200 
+    lambda_dsn: 0.1 # Example value
+    lambda_est: 200
   ancient-text:
-    #lambda_reg: 200 num_policies=2
-    lambda_reg: 50 #num_policies=4 
+    lambda_dsn: 0.1 # Example value
+    lambda_est: 50 #num_policies=4
   japanese-image:
-    lambda_reg: 100
+    lambda_dsn: 0.1 # Example value
+    lambda_est: 100
   aesthetics:
-    lambda_reg: 10
+    lambda_dsn: 0.1 # Example value
+    lambda_est: 10
   random_combination:
-     lambda_reg: 10
+    lambda_dsn: 0.1 # Example value
+    lambda_est: 10

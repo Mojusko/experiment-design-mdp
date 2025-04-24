@@ -299,7 +299,7 @@ llm-generate-image:
 	cd llm && TIMESTAMP=$(TIMESTAMP) OMP_NUM_THREADS=1 MKL_NUM_THREADS=1 $(PYTHONPATH) image_generator.py --base_prompt "$(BASE_PROMPT)" --full_prompt "$(FULL_PROMPT)" $(if $(OUTPUT_DIR),--output_dir "$(OUTPUT_DIR)",) $(if $(SEED),--seed $(SEED),) $(if $(IMAGE_SIZE),--image_size $(IMAGE_SIZE),) $(if $(NUM_STEPS),--num_inference_steps $(NUM_STEPS),) $(if $(GUIDANCE_BASE),--guidance_base $(GUIDANCE_BASE),) $(if $(GUIDANCE_TOKENS),--guidance_tokens $(GUIDANCE_TOKENS),)
 
 ########################### LLMS
-REPEATS_LLM=7
+REPEATS_LLM=6
 NUMBERS_LLM := $(shell seq 1 ${REPEATS_LLM})
 
 # Jobs for V comparison (non-adaptive design)
@@ -437,16 +437,19 @@ $(foreach rounds,$(ROUNDS_VALUES), \
 llm-find-rounds: $(JOBS_LLM_ROUNDS)
 
 # Lambda-finding
-# We'll run each lambda_reg value for REPEATS_LLM seeds
-LAMBDA_VALUES_MUL :=  0.001 0.01 0.1 1 5 10 50 100 
-LAMBDA_VALUES_NUM := 0.0001 0.001 0.01 0.1 1 10
+# We'll run each (lambda_dsn, lambda_est) combination for REPEATS_LLM seeds
+LAMBDA_DSN_VALUES := 0.0001 0.001 0.01 
+LAMBDA_EST_VALUES := 50 100 200 500
+LAMBDA_VALUES_NUM := 0.0001 0.001 0.01 0.1 1 10 # Keep numerical separate for now
 
-# Generate job names for each (lambda, seed) pair for both types
-JOBS_LLM_LAMBDA_MUL := \
-  $(foreach lambda,$(LAMBDA_VALUES_MUL), \
-    $(foreach n,$(NUMBERS_LLM), \
-      job-llm-lambda-mul-$(lambda)-$(n)))
+# Generate job names for each (lambda_dsn, lambda_est, seed) triplet for multinomial
+JOBS_LLM_LAMBDAS_MUL := \
+  $(foreach lambda_dsn,$(LAMBDA_DSN_VALUES), \
+    $(foreach lambda_est,$(LAMBDA_EST_VALUES), \
+      $(foreach n,$(NUMBERS_LLM), \
+        job-llm-lambda-mul-dsn$(lambda_dsn)-est$(lambda_est)-$(n))))
 
+# Generate job names for numerical (using lambda_dsn only for now, assuming estimator lambda isn't tuned here)
 JOBS_LLM_LAMBDA_NUM := \
   $(foreach lambda,$(LAMBDA_VALUES_NUM), \
     $(foreach n,$(NUMBERS_LLM), \
@@ -454,28 +457,47 @@ JOBS_LLM_LAMBDA_NUM := \
 
 # Macros to define each job type
 define lambda_job_template_mul
-job-llm-lambda-mul-$(1)-$(2):
-	cd llm && TIMESTAMP=$(TIMESTAMP) OMP_NUM_THREADS=1 MKL_NUM_THREADS=1 $(PYTHONPATH) run_exp.py experiment=lambda_finding feedback=multinomial algorithm=design feedback.lambda_reg=$(1) feedback.use_model_specific_lambda=false seed=$(2) results_dir="results/lambda-finding" experiment_id="mul-$(1)-$(2)"
+job-llm-lambda-mul-dsn$(1)-est$(2)-$(3):
+	cd llm && TIMESTAMP=$(TIMESTAMP) OMP_NUM_THREADS=1 MKL_NUM_THREADS=1 $(PYTHONPATH) run_exp.py \
+	  experiment=lambda_finding \
+	  feedback=multinomial \
+	  algorithm=design \
+	  feedback.lambda_dsn=$(1) \
+	  feedback.lambda_est=$(2) \
+	  feedback.use_model_specific_lambda=false \
+	  seed=$(3) \
+	  results_dir="results/lambda-finding" \
+	  experiment_id="mul-dsn$(1)-est$(2)-$(3)"
 endef
 
 define lambda_job_template_num
 job-llm-lambda-num-$(1)-$(2):
-	cd llm && TIMESTAMP=$(TIMESTAMP) OMP_NUM_THREADS=1 MKL_NUM_THREADS=1 $(PYTHONPATH) run_exp.py experiment=lambda_finding feedback=numerical algorithm=design feedback.lambda_reg=$(1) seed=$(2) results_dir="results/lambda-finding" experiment_id="num-$(1)-$(2)"
+	cd llm && TIMESTAMP=$(TIMESTAMP) OMP_NUM_THREADS=1 MKL_NUM_THREADS=1 $(PYTHONPATH) run_exp.py \
+	  experiment=lambda_finding \
+	  feedback=numerical \
+	  algorithm=design \
+	  feedback.lambda_dsn=$(1) \
+	  feedback.lambda_est=100 \
+	  feedback.use_model_specific_lambda=false \
+	  seed=$(2) \
+	  results_dir="results/lambda-finding" \
+	  experiment_id="num-$(1)-$(2)"
 endef
 
 # Instantiate all jobs from the macros
-$(foreach lambda,$(LAMBDA_VALUES_MUL), \
-  $(foreach n,$(NUMBERS_LLM), \
-    $(eval $(call lambda_job_template_mul,$(lambda),$(n)))))
+$(foreach lambda_dsn,$(LAMBDA_DSN_VALUES), \
+  $(foreach lambda_est,$(LAMBDA_EST_VALUES), \
+    $(foreach n,$(NUMBERS_LLM), \
+      $(eval $(call lambda_job_template_mul,$(lambda_dsn),$(lambda_est),$(n))))))
 
 $(foreach lambda,$(LAMBDA_VALUES_NUM), \
   $(foreach n,$(NUMBERS_LLM), \
     $(eval $(call lambda_job_template_num,$(lambda),$(n)))))
 
 # Split targets to run multinomial and numerical separately
-llm-find-lambda-mul: $(JOBS_LLM_LAMBDA_MUL)
-llm-find-lambda-num: $(JOBS_LLM_LAMBDA_NUM)
-llm-find-lambda: llm-find-lambda-mul llm-find-lambda-num
+llm-find-lambdas-mul: $(JOBS_LLM_LAMBDAS_MUL)
+llm-find-lambda-num: $(JOBS_LLM_LAMBDA_NUM) # Keep numerical target name consistent for now
+llm-find-lambda: llm-find-lambdas-mul llm-find-lambda-num
 
 # Design Frequency Finding (using lambda_finding base config)
 # Iterates over episodes and adaptive_design_frequency
