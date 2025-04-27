@@ -301,9 +301,9 @@ class MultiPolicyOrigDesignD(RewardFunctional):
             # Ensure d_h[q] is treated as weights for the diagonal
             term1 += emissions.T @ torch.diag(d_h[q]) @ emissions
 
-        term1 *= (K - 1)
+        term1 *= K
 
-        # Term 2: sum_{q!=q'} (E_q[phi])(E_{q'}[phi^T])
+        # Term 2: sum_{q,q'} (E_q[phi])(E_{q'}[phi^T])
         # E_q[phi] = sum_s d_h_q(s) phi(s) = emissions.T @ d_h_q
         # E_{q'}[phi^T] = sum_{s'} d_h_{q'}(s') phi(s')^T = d_h_{q'}.T @ emissions
         term2 = torch.zeros_like(z)
@@ -315,12 +315,20 @@ class MultiPolicyOrigDesignD(RewardFunctional):
 
         for q in range(K):
             for q_prime in range(K):
-                if q != q_prime:
-                    # expected_phis[q] is (d,), expected_phis[q_prime] is (d,)
-                    # We need outer product: (d,) x (d,) -> (d, d)
-                    term2 += torch.outer(expected_phis[q], expected_phis[q_prime])
+                # expected_phis[q] is (d,), expected_phis[q_prime] is (d,)
+                # We need outer product: (d,) x (d,) -> (d, d)
+                term2 += torch.outer(expected_phis[q], expected_phis[q_prime])
 
+        # Term 3: 0.5 * sum_{q,q'} (E_q[phi] - E_{q'}[phi])(E_q[phi] - E_{q'}[phi])^T
+        # This term encourages diversity among the expected feature vectors of the policies.
+        #term3 = torch.zeros_like(z)
+        #for q in range(K):
+        #    for q_prime in range(K):
+        #        # expected_phis[q] is (d,), expected_phis[q_prime] is (d,)
+        #        # We need outer product: (d,) x (d,) -> (d, d)
+        #        term3 += 0.5*torch.outer(expected_phis[q]-expected_phis[q_prime], expected_phis[q]-expected_phis[q_prime])
         # Combine terms and scale
+        #z = (term1 - term2 + term3) / (K**2)
         z = (term1 - term2) / (K**2)
 
         return z

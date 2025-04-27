@@ -1,0 +1,50 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Image Feedback Tool</title>
+    <link rel="stylesheet" href="css/style.css">
+</head>
+<body>
+    <h1>Image Feedback</h1>
+
+    <div id="image-container">
+        <h2 id="image-info">Loading...</h2>
+        <img id="current-image" src="" alt="Current experiment image">
+    </div>
+
+    <div id="feedback-container">
+        <h3>Which image is the closest to your style?</h3>
+        <form id="feedback-form">
+            <label>
+                <input type="radio" name="policy_preference" value="1"> Policy 1 (Top-Left/Leftmost)
+            </label>
+            <label>
+                <input type="radio" name="policy_preference" value="2"> Policy 2
+            </label>
+            <label>
+                <input type="radio" name="policy_preference" value="3"> Policy 3
+            </label>
+            <label>
+                <input type="radio" name="policy_preference" value="4"> Policy 4 (Bottom-Right/Rightmost)
+            </label>
+        </form>
+    </div>
+
+    <div id="navigation-container">
+        <button id="prev-button">Previous</button>
+        <span id="progress"></span>
+        <button id="next-button">Next</button>
+    </div>
+
+    <div id="save-container">
+        <button id="save-button">Save Feedback</button>
+    </div>
+
+    <!-- Load the list of images first -->
+    <script src="js/imageList.js"></script>
+    <!-- Then load the main script -->
+    <script src="js/script.js"></script>
+</body>
+</html>

@@ -151,7 +151,7 @@ settings.json
 *.txt
 *.png
 *.np
-*.html
+#*.html
 .ipynb_checkpoints
 *.csv
 *.pyc

@@ -1,0 +1,56 @@
+body {
+    font-family: sans-serif;
+    display: flex;
+    flex-direction: column;
+    align-items: center;
+    padding: 20px;
+}
+
+#image-container {
+    margin-bottom: 20px;
+    text-align: center;
+}
+
+#current-image {
+    max-width: 90%;
+    max-height: 60vh; /* Limit image height */
+    border: 1px solid #ccc;
+}
+
+#feedback-container {
+    margin-bottom: 20px;
+    border: 1px solid #eee;
+    padding: 15px;
+    border-radius: 5px;
+}
+
+#feedback-container h3 {
+    margin-top: 0;
+}
+
+#feedback-form label {
+    display: block;
+    margin-bottom: 8px;
+    cursor: pointer;
+}
+
+#navigation-container {
+    margin-bottom: 20px;
+    display: flex;
+    align-items: center;
+    gap: 15px; /* Space between buttons and progress text */
+}
+
+#progress {
+    font-weight: bold;
+}
+
+button {
+    padding: 10px 15px;
+    font-size: 1em;
+    cursor: pointer;
+}
+
+#save-container {
+    margin-top: 20px;
+}
