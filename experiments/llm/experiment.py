@@ -549,11 +549,11 @@ class LLMExperiment:
 
         # Run all testers and collect metrics (validation ensures requirements are met)
         print("Running testers...")
-        tester_results = {} # Initialize before the loop
+        all_tester_results = {} # Initialize dictionary to accumulate results
         for tester in self.testers:
             print(f"Running tester: {type(tester).__name__}")
             # Pass visits=self.visits if needed by any tester in the future
-            tester_results = tester.run_test(
+            tester_results = tester.run_test( # Get results from the current tester
                 cfg=self.cfg,
                 env=self.env,
                 estimator=self.estimator, # Can be None if tester doesn't need it (but validation would have caught it if it did)
@@ -561,10 +561,14 @@ class LLMExperiment:
                 training_words_list=self.training_words,
                 testing_words_list=self.testing_words
                 # visits=self.visits # Pass visits if any tester needs them
-        )
-        # Add metrics to results container
-        if tester_results: # Ensure tester returned something
-            results.add_metrics(tester_results)
+            )
+            # Update the accumulated results dictionary
+            if tester_results: # Ensure tester returned something
+                all_tester_results.update(tester_results)
+
+        # Add all accumulated metrics to the results container
+        if all_tester_results:
+            results.add_metrics(all_tester_results)
 
         # Use all savers to save the results (validation ensures requirements are met)
         print("Running savers...")

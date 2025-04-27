@@ -307,7 +307,7 @@ llm-generate-image:
 		$(if $(GUIDANCE_TOKENS),--guidance_tokens $(GUIDANCE_TOKENS),)
 
 ########################### LLMS
-REPEATS_LLM=15
+REPEATS_LLM=5
 NUMBERS_LLM := $(shell seq 1 ${REPEATS_LLM})
 
 # Jobs for V comparison (non-adaptive design)
@@ -447,11 +447,11 @@ llm-find-rounds: $(JOBS_LLM_ROUNDS)
 # Lambda-finding
 # Define the ranges for the two lambdas
 # Design lambda range
-LAMBDA_DSN_VALUES := 0.01 0.1 1 10
+LAMBDA_DSN_VALUES := 0.001 0.01 0.1 1 100 
 # Estimation lambda range (wider, larger values)
-LAMBDA_EST_VALUES := 1 10 100 500 1000
+LAMBDA_EST_VALUES := 1 10 100 500 
 # Numerical lambda values (separate range)
-LAMBDA_VALUES_NUM := 0.0001 0.001 0.01 0.1 1 10
+LAMBDA_VALUES_NUM :=  0.001 0.01 0.1 1 10
 
 # Generate job names for each (lambda_dsn, lambda_est, seed) triplet for multinomial
 JOBS_LLM_LAMBDAS_MUL := \
