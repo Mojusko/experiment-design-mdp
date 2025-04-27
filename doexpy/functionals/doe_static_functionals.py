@@ -321,15 +321,14 @@ class MultiPolicyOrigDesignD(RewardFunctional):
 
         # Term 3: 0.5 * sum_{q,q'} (E_q[phi] - E_{q'}[phi])(E_q[phi] - E_{q'}[phi])^T
         # This term encourages diversity among the expected feature vectors of the policies.
-        #term3 = torch.zeros_like(z)
-        #for q in range(K):
-        #    for q_prime in range(K):
-        #        # expected_phis[q] is (d,), expected_phis[q_prime] is (d,)
-        #        # We need outer product: (d,) x (d,) -> (d, d)
-        #        term3 += 0.5*torch.outer(expected_phis[q]-expected_phis[q_prime], expected_phis[q]-expected_phis[q_prime])
+        term3 = torch.zeros_like(z)
+        for q in range(K):
+            for q_prime in range(K):
+                # expected_phis[q] is (d,), expected_phis[q_prime] is (d,)
+                # We need outer product: (d,) x (d,) -> (d, d)
+                term3 += 0.5*torch.outer(expected_phis[q]-expected_phis[q_prime], expected_phis[q]-expected_phis[q_prime])
         # Combine terms and scale
-        #z = (term1 - term2 + term3) / (K**2)
-        z = (term1 - term2) / (K**2)
+        z = (term1 - term2 + term3) / (K**2)
 
         return z
 
