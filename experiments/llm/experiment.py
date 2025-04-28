@@ -317,18 +317,25 @@ class LLMExperiment:
             include_base_prompt_in_first_tokens=self.cfg.include_base_prompt_in_first_tokens,
             verbose=self.cfg.verbose
         )
-        # Store scorer vector if needed (optional, depends on usage)
-        # self.env._scorer_vector = self._scorer_model.weight
 
-        # Build scorer model using the environment and the embedder
-        self._scorer_model = get_scorer_model(
-            model_name=self.cfg.experiment.scorer_model,
-            env=env,
-            embedder=self.embedder # Pass embedder
-        )
-
-        # Create the ground truth function using the scorer model
-        self._theta_star = make_theta_star(env, self._scorer_model, verbose=self.cfg.verbose)
+        # --- Initialize Scorer Model and Theta Star (only if scorer_model is specified) ---
+        scorer_model_name = self.cfg.experiment.get('scorer_model') # Use .get() for safety
+        if scorer_model_name:
+            print(f"Initializing ground truth scorer model: {scorer_model_name}")
+            # Build scorer model using the environment and the embedder
+            self._scorer_model = get_scorer_model(
+                model_name=scorer_model_name,
+                env=env,
+                embedder=self.embedder # Pass embedder
+            )
+            # Create the ground truth function using the scorer model
+            self._theta_star = make_theta_star(env, self._scorer_model, verbose=self.cfg.verbose)
+            # Store scorer vector if needed (optional, depends on usage)
+            # self.env._scorer_vector = self._scorer_model.weight
+        else:
+            print("Skipping ground truth scorer model initialization (scorer_model not specified or null).")
+            self._scorer_model = None
+            self._theta_star = None
 
 
 

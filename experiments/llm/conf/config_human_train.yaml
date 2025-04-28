@@ -24,7 +24,7 @@ experiment:
     - 'vocabulary2/mediums.txt'
     - 'vocabulary2/movements.txt'
     - 'vocabulary2/emotions.txt'
-  # scorer_model: 'ancient-text' # Removed - Not needed for training from human feedback
+  scorer_model: null # Define key, but set to null as it's not used
 
 # --- Mode Settings ---
 test_only: true # This mode runs within the test_only logic
