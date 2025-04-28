@@ -17,6 +17,10 @@ const nextButton = document.getElementById('next-button');
 const saveButton = document.getElementById('save-button');
 const feedbackForm = document.getElementById('feedback-form');
 const progressElement = document.getElementById('progress');
+// Determine the number of policies dynamically by counting radio buttons
+const policyRadioButtons = feedbackForm.elements['policy_preference'];
+const numPolicies = policyRadioButtons.length;
+console.log(`Detected ${numPolicies} policies.`);
 
 function updateImage() {
     const currentImageFile = imageFiles[currentIndex];
@@ -67,9 +71,12 @@ function loadFeedback() {
     feedbackForm.reset(); // Clears selection
 
     if (savedValue !== undefined && savedValue !== null) {
-        const radioToCheck = feedbackForm.elements['policy_preference'].querySelector(`[value="${savedValue}"]`);
-        if (radioToCheck) {
-            radioToCheck.checked = true;
+        // Iterate through the radio buttons to find the one with the matching value
+        for (const radio of policyRadioButtons) {
+            if (radio.value === String(savedValue)) { // Compare value as string
+                radio.checked = true;
+                break; // Found the button, exit loop
+            }
         }
     }
 }
@@ -125,6 +132,57 @@ saveButton.addEventListener('click', () => {
     URL.revokeObjectURL(url);
     console.log("Feedback saved to feedback.json");
 });
+
+// --- Keyboard Shortcut Listener ---
+document.addEventListener('keydown', (event) => {
+    // Ignore if modifier keys are pressed (e.g., Ctrl+1)
+    if (event.ctrlKey || event.altKey || event.metaKey || event.shiftKey) {
+        return;
+    }
+
+    const key = event.key;
+    // Check if the key is a digit from 1 to numPolicies
+    if (/^[1-9]$/.test(key)) {
+        const selectedPolicy = parseInt(key, 10);
+
+        if (selectedPolicy >= 1 && selectedPolicy <= numPolicies) {
+            // Find the corresponding radio button by iterating
+            let radioToCheck = null;
+            console.log(`Searching for radio button with value: "${String(selectedPolicy)}"`); // Log target value
+            for (const radio of policyRadioButtons) {
+                console.log(`  Checking radio button value: "${radio.value}" (type: ${typeof radio.value})`); // Log current radio value and type
+                if (radio.value === String(selectedPolicy)) {
+                    console.log(`  Match found!`); // Log match
+                    radioToCheck = radio;
+                    break;
+                }
+            }
+
+            if (radioToCheck) {
+                console.log(`Key ${selectedPolicy} pressed, selecting Policy ${selectedPolicy}`);
+                // Select the radio button
+                radioToCheck.checked = true;
+                // Call saveFeedback directly after checking the button
+                saveFeedback();
+
+                // Move to the next image if not the last one
+                if (currentIndex < imageFiles.length - 1) {
+                    console.log("Moving to next image...");
+                    currentIndex++;
+                    updateImage();
+                } else {
+                    console.log("Already at the last image.");
+                }
+                // Prevent default browser action for the number key (e.g., scrolling)
+                event.preventDefault();
+            } else {
+                // Log if no matching radio button was found after the loop
+                console.log(`  No radio button found with value "${String(selectedPolicy)}".`);
+            }
+        }
+    }
+});
+
 
 // --- Initial Load ---
 updateImage();

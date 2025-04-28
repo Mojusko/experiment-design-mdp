@@ -1,2 +1,4 @@
 !*.txt
 !*.json
+# Ignore the automatically generated image list for the HTML tool
+experiment_html/js/imageList.js
