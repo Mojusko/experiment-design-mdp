@@ -670,7 +670,8 @@ class VisitsImageSaver(BaseSaver):
                 try:
                     n_cols = num_policies
                     n_rows = 1
-                    fig, axes = plt.subplots(n_rows, n_cols, figsize=(4 * n_cols, 5 * n_rows), squeeze=False)
+                    # Increase figure size (e.g., width factor 5, height 8)
+                    fig, axes = plt.subplots(n_rows, n_cols, figsize=(5 * n_cols, 8 * n_rows), squeeze=False)
 
                     for i, (img, prompt) in enumerate(zip(timestep_images, timestep_prompts)):
                         ax = axes[0, i]
@@ -686,10 +687,9 @@ class VisitsImageSaver(BaseSaver):
                     for i in range(len(timestep_images), n_cols):
                         axes[0, i].axis('off')
 
-                    plt.suptitle(f"Episode {ep_idx} - Timestep {h}", fontsize=14)
-                    # Adjust subplot parameters for more bottom space and increased horizontal spacing
-                    # Increased bottom margin, increased wspace for horizontal gap
-                    plt.subplots_adjust(bottom=0.25, hspace=0.4, wspace=0.5) # Increased wspace from 0.3 to 0.5
+                    plt.suptitle(f"Episode {ep_idx} - Timestep {h}", fontsize=16) # Slightly larger title
+                    # Adjust subplot parameters: reduce bottom margin slightly, reduce horizontal spacing
+                    plt.subplots_adjust(bottom=0.2, hspace=0.4, wspace=0.2) # Reduced bottom and wspace
 
                     # Construct filename including timestep h
                     # Use the absolute episode index ep_idx in the filename

@@ -12,9 +12,16 @@ body {
 }
 
 #current-image {
-    max-width: 90%;
-    max-height: 60vh; /* Limit image height */
+    /* Remove max constraints */
+    /* max-width: 90%; */
+    /* max-height: 80vh; */
+
+    /* Set width relative to container and let height adjust */
+    width: 80%;
+    height: auto;
     border: 1px solid #ccc;
+    display: block; /* Needed for margin auto centering */
+    margin: 0 auto; /* Center the image horizontally */
 }
 
 #feedback-container {
