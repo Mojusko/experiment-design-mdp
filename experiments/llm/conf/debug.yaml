@@ -4,26 +4,33 @@ defaults:
   - override embedder: clip 
   - _self_ # Ensure debug-specific values override defaults correctly
 feedback:
-  num_rounds: 3
+  num_rounds: 2
   num_components: 3
   adaptive_estimation_frequency: 0
   adaptive_estimation_start: 0
   adaptive_design_frequency: 0
 experiment:
-   episodes: 10
-   vocab_size: 30
+   episodes: 20
+   vocab_size: 200
 # Results directory for debug mode
 results_dir: "results/debug"
 algorithm: "design"
 
 # Special Modes
 test_only: false
-explore_only: true # Enable explore-only mode
+explore_only: false # Enable explore-only mode
 # Test-only mode specific configuration
 estimator_path: null
 
 # Explicitly override testers to be null in explore_only mode
-tester: null
+# Re-enable testers for standard debug runs (not explore_only)
+tester:
+  - _target_: components.tester.PreferenceTester
+    params:
+      N_test_prompts: 100 # Smaller values for debug
+      N_pairs_eval: 500
+  - _target_: components.tester.CosineTester
+    params: null
 
 # Use a list of savers with debug settings
 # Only VisitsSaver, VisitsImageSaver, ConfSaver are allowed in explore_only mode
@@ -42,12 +49,12 @@ savers:
     params:
       filename: "config_resolved.yaml"
 
-  - _target_: components.saver.VisitsImageSaver
-    _convert_: "partial" # Only convert direct parameters, not nested ones
-    params:
-      output_subdir: "visit_images_debug" # Specific subdir for debug images
-      # image_size and num_inference_steps are now taken from image_generator defaults
-      seed_per_prompt: true # Keep deterministic generation per prompt
+  #  - _target_: components.saver.VisitsImageSaver
+  #    _convert_: "partial" # Only convert direct parameters, not nested ones
+  #    params:
+  #      output_subdir: "visit_images_debug" # Specific subdir for debug images
+  #      # image_size and num_inference_steps are now taken from image_generator defaults
+  #      seed_per_prompt: true # Keep deterministic generation per prompt
 
   #  - _target_: components.saver.ImageGenerationSaver
   #    params:

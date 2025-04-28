@@ -82,8 +82,9 @@ class MultinomialFeedback(BaseFeedback):
         num_policies = cfg.feedback.num_policies
         num_episodes = len(new_visits[0])
         prefix_range = range(1, horizon+1) if cfg.dense_feedback else range(horizon, horizon+1)
-        num_samples = num_episodes * (horizon if cfg.dense_feedback else 1)
+        num_samples = num_episodes * len(prefix_range) # Correct calculation based on prefix_range length
         embedding_dim = self.env.get_dim() # Get embedding dimension from env
+        print(f"Collect Labels: num_episodes = {num_episodes}, horizon = {horizon}, dense={cfg.dense_feedback}, expected_samples = {num_samples}") # DEBUG PRINT
 
         # Store collected embeddings and labels directly
         collected_embeddings = []
@@ -110,7 +111,8 @@ class MultinomialFeedback(BaseFeedback):
                 comparison_embeddings_tensor = torch.cat(embeddings, dim=0)
 
                 # Generate multinomial label based on scores
-                probs = F.softmax(vals.detach(), dim=0)
+                # Squeeze vals to make it 1D [num_policies] before softmax
+                probs = F.softmax(vals.squeeze().detach(), dim=0)
                 label_idx = torch.multinomial(probs, 1).item() # Get the index as an integer
 
                 # Create one-hot label tensor
@@ -122,7 +124,12 @@ class MultinomialFeedback(BaseFeedback):
                 collected_labels.append(label_tensor)
 
         # After processing all episodes and prefixes, stack the collected data
+        print(f"Collect Labels: Actual collected samples = {len(collected_embeddings)}") # DEBUG PRINT
         if collected_embeddings and collected_labels:
+            # Check if the number of collected samples matches the expected number
+            if len(collected_embeddings) != num_samples:
+                 print(f"Warning: Mismatch! Expected {num_samples} samples, but collected {len(collected_embeddings)}.")
+
             all_comparison_embeddings = torch.stack(collected_embeddings, dim=0) # Shape [num_samples, num_policies, embedding_dim]
             all_labels = torch.stack(collected_labels, dim=0) # Shape [num_samples, num_policies]
             self._collected_data.append((all_comparison_embeddings, all_labels))

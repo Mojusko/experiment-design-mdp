@@ -469,16 +469,6 @@ class MdpExploreMultiPolicy:
                 # else: # No need to print just the episode number if only logging every 10
                 #     pass
 
-            # If user provided a callback, call it to do partial re-fitting, etc.
-            if update_callback is not None and ep_i > 0:
-                # Now, after evaluating, the new visit is available
-                new_visits = [
-                    self.visitations_per_policy[p_i][-1]
-                    for p_i in range(self.num_policies)
-                ]
-                update_callback(ep_i, new_visits)
-    
-
             # Handle adaptive policy optimization
             if self.objective.get_type() == "adaptive":
                 if ep_i % self.adaptive_design_frequency == 0 or ep_i == start_ep_idx:
@@ -487,9 +477,19 @@ class MdpExploreMultiPolicy:
                     self.env.reset()
                     self.optimize_policies()
     
-            # Evaluate exactly 1 episode for each policy
+            # Evaluate exactly 1 episode for each policy BEFORE calling the callback
             # 'keep=True' means we keep the trajectories for callback processing
             self.evaluate(episodes=1, keep=True)
+
+            # If user provided a callback, call it AFTER evaluating the episode
+            if update_callback is not None:
+                # The new visit from the episode just completed is now available
+                new_visits = [
+                    self.visitations_per_policy[p_i][-1]
+                    for p_i in range(self.num_policies)
+                ]
+                # Pass the episode index (ep_i) and the newly collected visits
+                update_callback(ep_i, new_visits)
 
             # Optionally save trajectory
             if save_trajectory is not None:
