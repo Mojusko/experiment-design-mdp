@@ -24,7 +24,7 @@ from components.saver   import BaseSaver, VisitsSaver, VisitsImageSaver, ConfSav
 from stpy.regression.regularized_dictionary.regularized_multinomial_estimator import RegularizedMultinomialEstimator
 from stpy.probability.multinomial_likelihood import MultinomialLikelihood
 from stpy.regularization.regularizer import L2Regularizer
-from stpy.embeddings.embedding import CustomEmbedding # For dummy embedding
+from stpy.embeddings.polynomial_embedding import CustomEmbedding # Corrected import path
 import json # For loading feedback JSON
 import re # For parsing filenames
 
