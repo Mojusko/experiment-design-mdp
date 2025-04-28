@@ -1,6 +1,7 @@
 # Configuration specifically for training an estimator from human feedback
 defaults:
   - embedder: clip # Inherit default embedder settings
+  - feedback: multinomial # Inherit multinomial feedback defaults
   - _self_
 
 # --- Core Settings (Inherited or Default) ---
@@ -33,13 +34,11 @@ algorithm: "design" # Required for some internal logic/naming, though not used f
 horizon: 4 # Required for env init
 
 # --- Feedback Settings ---
-# Explicitly set feedback to multinomial and configure lambda_est
+# Feedback settings are now inherited from conf/feedback/multinomial.yaml via defaults list.
+# Specific overrides can be added here if needed:
 feedback:
-  _target_: components.feedback.MultinomialFeedbackFactory
-  name: "multinomial"
-  num_policies: 4 # Must match the number of policies used to generate the visits/feedback
-  lambda_est: 1000 # Default regularization for estimator (can be overridden)
-  # Other multinomial settings like adaptive_design_frequency are not relevant here
+  # Ensure we use the default lambda_est from multinomial.yaml, not model-specific ones
+  use_model_specific_lambda: false
 
 # --- Input Paths (Passed via command line) ---
 visits_path: null # Must be provided via command line
