@@ -83,28 +83,49 @@ class MultinomialFeedback(BaseFeedback):
         num_episodes = len(new_visits[0])
         prefix_range = range(1, horizon+1) if cfg.dense_feedback else range(horizon, horizon+1)
         num_samples = num_episodes * (horizon if cfg.dense_feedback else 1)
+        embedding_dim = self.env.get_dim() # Get embedding dimension from env
 
-
-        trajectory_indices = torch.zeros((num_samples, horizon, num_policies), dtype=torch.long)
-        labels = torch.zeros((num_samples, num_policies))
-        sample_idx = 0
+        # Store collected embeddings and labels directly
+        collected_embeddings = []
+        collected_labels = []
 
         for ep in range(num_episodes):
             policy_actions = [visits[ep][1] for visits in new_visits]
             for prefix_len in prefix_range:
-                trunc_actions = [
-                    act[:prefix_len] + [0]*(horizon-prefix_len) for act in policy_actions
-                ]
-                vals = torch.tensor([theta_star(ta)[0] for ta in trunc_actions])
+                # Get truncated actions for the current prefix length
+                trunc_actions = [act[:prefix_len] for act in policy_actions]
+
+                # Get scores AND embeddings for each policy's truncated action sequence
+                scores = []
+                embeddings = []
+                for ta in trunc_actions:
+                    score, embedding = theta_star(ta) # Get both score and embedding
+                    scores.append(score)
+                    # Ensure embedding is on CPU and detached for storage
+                    embeddings.append(embedding.detach().cpu())
+
+                # Stack scores and embeddings for this comparison
+                vals = torch.cat(scores, dim=0) # Shape [num_policies]
+                # Stack embeddings: list of [1, dim] -> [num_policies, dim]
+                comparison_embeddings_tensor = torch.cat(embeddings, dim=0)
+
+                # Generate multinomial label based on scores
                 probs = F.softmax(vals.detach(), dim=0)
-                label_idx = torch.multinomial(probs, 1)
+                label_idx = torch.multinomial(probs, 1).item() # Get the index as an integer
 
-                trajectory_indices[sample_idx, :, :] = torch.tensor(trunc_actions).T
-                labels[sample_idx, label_idx] = 1
-                sample_idx += 1
+                # Create one-hot label tensor
+                label_tensor = torch.zeros(num_policies)
+                label_tensor[label_idx] = 1
 
+                # Store the embeddings tensor and the label tensor for this sample
+                collected_embeddings.append(comparison_embeddings_tensor)
+                collected_labels.append(label_tensor)
 
-        self._collected_data.append((trajectory_indices, labels))
+        # After processing all episodes and prefixes, stack the collected data
+        if collected_embeddings and collected_labels:
+            all_comparison_embeddings = torch.stack(collected_embeddings, dim=0) # Shape [num_samples, num_policies, embedding_dim]
+            all_labels = torch.stack(collected_labels, dim=0) # Shape [num_samples, num_policies]
+            self._collected_data.append((all_comparison_embeddings, all_labels))
 
     def fit_estimator(self, preloaded_theta=None):
         """
@@ -114,22 +135,22 @@ class MultinomialFeedback(BaseFeedback):
             preloaded_theta: Pre-computed theta parameter to use instead of fitting
         """
         if preloaded_theta is not None:
-            # Load emissions first to ensure the estimator has the right dimensions
-            self.estimator.load_data((self.env.emissions.detach().cpu(), torch.zeros(len(self.env.emissions))))
-            # Then use preloaded theta directly
+            # No need to load dummy data anymore, just fit with preloaded theta
             self.estimator.fit(preloaded_theta=preloaded_theta)
             return
-            
+
         if not self._collected_data:
+            print("No data collected for fitting the estimator.")
             return
-            
-        # Combine all trajectory indices and labels
-        all_indices = torch.cat([indices for indices, _ in self._collected_data], dim=0)
+
+        # Combine all collected comparison embeddings and labels
+        all_embeddings = torch.cat([embeddings for embeddings, _ in self._collected_data], dim=0)
         all_labels = torch.cat([labels for _, labels in self._collected_data], dim=0)
 
-        # Load emissions and fit with combined data
-        self.estimator.load_data((self.env.emissions.detach().cpu(), torch.zeros(len(self.env.emissions))))
-        self.estimator.fit(all_indices, all_labels, sum_dim=1)
+        # Fit the estimator directly with the embeddings and labels
+        # No need to load env.emissions or specify sum_dim
+        print(f"Fitting MultinomialFeedback estimator with {all_embeddings.shape[0]} samples.")
+        self.estimator.fit(comparison_embeddings=all_embeddings, labels=all_labels)
 
 class FeedbackFactory:
     """
