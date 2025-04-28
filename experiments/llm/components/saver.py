@@ -589,9 +589,11 @@ class VisitsImageSaver(BaseSaver):
                 episodes_per_seed = (num_episodes + self.total_repeats - 1) // self.total_repeats
                 start_ep_idx = current_seed_index * episodes_per_seed
                 end_ep_idx = min(start_ep_idx + episodes_per_seed, num_episodes)
-                print(f"VisitsImageSaver (Seed {self.seed}/{self.total_repeats}): Processing episodes {start_ep_idx} to {end_ep_idx - 1} (Total: {num_episodes})")
+                # Use inclusive start and exclusive end for clarity
+                print(f"VisitsImageSaver (Seed {self.seed}/{self.total_repeats}): Processing episodes {start_ep_idx} (inclusive) to {end_ep_idx} (exclusive) (Total: {num_episodes})")
         else:
-            print(f"VisitsImageSaver: Processing all episodes {start_ep_idx} to {end_ep_idx - 1} (Seed/Repeats info not used for splitting).")
+            # Use inclusive start and exclusive end for clarity
+            print(f"VisitsImageSaver: Processing all episodes {start_ep_idx} (inclusive) to {end_ep_idx} (exclusive) (Seed/Repeats info not used for splitting).")
 
         # --- Generate and Save Images Per Episode and Timestep ---
         # Modify the loop to use the calculated range

@@ -579,7 +579,8 @@ feedback_code = $(if $(findstring multinomial,$(FEEDBACK)),mult,$(if $(findstrin
 
 $(JOBS_LLM_INSPECT_VISITS): job-llm-inspect-visit-%:
 	@$(if $(VISITS_PATH),,$(error VISITS_PATH is required, e.g., make llm-inspect-visits VISITS_PATH=results/.../visits.pkl))
-	cd llm && TIMESTAMP=$(TIMESTAMP) OMP_NUM_THREADS=1 MKL_NUM_THREADS=1 $(PYTHONPATH) run_exp.py feedback=$(FEEDBACK) algorithm=$(ALGORITHM) test_only=true visits_path="$(VISITS_PATH)" estimator_path=null $(if $(RESULTS_DIR),results_dir="$(RESULTS_DIR)" override_results_dir=true,) experiment_id="inspect-$(algorithm_code)-$(feedback_code)-$*" seed=$* +experiment.repeats=$(REPEATS_LLM)
+	# Use config_name=config_inspect for inspection runs
+	cd llm && TIMESTAMP=$(TIMESTAMP) OMP_NUM_THREADS=1 MKL_NUM_THREADS=1 $(PYTHONPATH) run_exp.py --config-name=config_inspect feedback=$(FEEDBACK) algorithm=$(ALGORITHM) test_only=true visits_path="$(VISITS_PATH)" estimator_path=null $(if $(RESULTS_DIR),results_dir="$(RESULTS_DIR)" override_results_dir=true,) experiment_id="inspect-$(algorithm_code)-$(feedback_code)-$*" seed=$* +experiment.repeats=$(REPEATS_LLM)
 
 # Target for inspecting visits
 llm-inspect-visits: $(JOBS_LLM_INSPECT_VISITS)

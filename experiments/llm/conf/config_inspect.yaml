@@ -28,38 +28,38 @@ explore_only: false # Set to true to run explore-only mode (explore, save visits
 estimator_path: null  # Path to saved estimator file for test_only mode
 visits_path: null     # Path to saved visits file for inspection mode (test_only=true, estimator_path=null)
 override_results_dir: false  # If true in test_only/inspection mode, use results_dir instead of deriving from path
-tester: # Enabled for standard runs
-  - _target_: components.tester.PreferenceTester
-    params:
-      N_test_prompts: 1000
-      N_pairs_eval: 5000
-  - _target_: components.tester.CosineTester
-    params: null
-  # - _target_: components.tester.ImageGenerationTester # Keep commented unless needed for standard runs
-  #   params:
-  #      take_best_worst_N: 4
-  #      use_estimator: true # Controls if ImageGenerationTester uses learned weights
-  # VisitsTester removed
+# tester: # Disabled for inspect mode
+#   - _target_: components.tester.PreferenceTester
+#     params:
+#       N_test_prompts: 1000
+#       N_pairs_eval: 5000
+#   - _target_: components.tester.CosineTester
+#     params: null
+#   # - _target_: components.tester.ImageGenerationTester
+#   #   params:
+#   #      take_best_worst_N: 4
+#   #      use_estimator: true # Controls if ImageGenerationTester uses learned weights
+#   # VisitsTester removed
 
 # Embedder configuration is loaded via defaults list above.
 # Specific embedder settings (like model_id, cache_dir) are in conf/embedder/*.yaml
 
 # Default savers configuration
 savers:
-  - _target_: components.saver.MetricsSaver # Enabled for standard runs
-    params:
-      filename: "metrics.json"
-      metrics_keys: ["preference_error", "cosine_error"]
-  - _target_: components.saver.LearnedEstimatorSaver # Enabled for standard runs
-    params:
-      filename: "estimator.pt"
-  - _target_: components.saver.VisitsSaver # Enabled for standard runs
-    params:
-      filename: "visits.pkl"
+#  - _target_: components.saver.MetricsSaver # Disabled for inspect mode
+#    params:
+#      filename: "metrics.json"
+#      metrics_keys: ["preference_error", "cosine_error"]
+#  - _target_: components.saver.LearnedEstimatorSaver # Disabled for inspect mode
+#    params:
+#      filename: "estimator.pt"
+#  - _target_: components.saver.VisitsSaver # Disabled for inspect mode (visits are loaded)
+#    params:
+#      filename: "visits.pkl"
   - _target_: components.saver.ConfSaver # Keep ConfSaver
     params:
       filename: "config_resolved.yaml"
-#  - _target_: components.saver.ImageGenerationSaver # Keep commented unless needed for standard runs
+#  - _target_: components.saver.ImageGenerationSaver # This is for test results, not visit inspection
 #    params:
 #      seed: "${seed}"
 #      base_prompt: "${base_prompt}"
@@ -68,15 +68,14 @@ savers:
 #      image_size: 512
 #      num_inference_steps: 100
 #      add_image_score: true
-  - _target_: components.saver.ReadableVisitsSaver # Enabled for standard runs
-    params:
-      output_filename: "readable_visits.txt"
-      visits_path: ${visits_path} # Inherit top-level visits_path if set
-
-#  - _target_: components.saver.VisitsImageSaver # Keep commented for standard runs
-#    _convert_: "partial" # Only convert direct parameters, not nested ones
+#  - _target_: components.saver.ReadableVisitsSaver # Disabled for inspect mode
 #    params:
-#      output_subdir: "visit_images" # Standard output dir
-#      # image_size and num_inference_steps are now taken from image_generator defaults
-#      seed_per_prompt: true # Use deterministic generation per prompt
+#      output_filename: "readable_visits.txt"
+#      visits_path: ${visits_path} # Inherit top-level visits_path if set
+
+  - _target_: components.saver.VisitsImageSaver # Enabled for inspect mode
+    _convert_: "partial" # Only convert direct parameters, not nested ones
+    params:
+      output_subdir: "visit_images_inspect" # Specific subdir for inspection images
+      # image_size and num_inference_steps are now taken from image_generator defaults
       seed_per_prompt: true # Use deterministic generation per prompt
