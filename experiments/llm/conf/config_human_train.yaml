@@ -8,6 +8,7 @@ seed: 1 # Default seed for this mode (can be overridden)
 verbose: false
 cache_dir: "${oc.env:HOME}/.cache/huggingface/hub"
 accuracy: 1e-14 # Needed for estimator initialization? Check if required.
+experiment_id: "" # Define top-level key to allow overriding from Makefile
 
 # --- Experiment Settings (Copied from feedback_comparison.yaml) ---
 # Define experiment settings directly here instead of inheriting experiment/feedback_comparison

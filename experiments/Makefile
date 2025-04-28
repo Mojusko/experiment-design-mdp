@@ -552,14 +552,7 @@ llm-find-design-frequency: $(JOBS_LLM_DESIGN_FREQUENCY)
 llm-train-human-feedback:
 	@$(if $(VISITS_PATH),,$(error VISITS_PATH is required))
 	@$(if $(FEEDBACK_PATH),,$(error FEEDBACK_PATH is required))
-	# Use the dedicated config file for human feedback training
-	cd llm && TIMESTAMP=$(TIMESTAMP) OMP_NUM_THREADS=1 MKL_NUM_THREADS=1 $(PYTHONPATH) run_exp.py \
-	  --config-name=config_human_train \
-	  visits_path="$(VISITS_PATH)" \
-	  feedback_path="$(FEEDBACK_PATH)" \
-	  $(if $(RESULTS_DIR),results_dir="$(RESULTS_DIR)" override_results_dir=true,) \
-	  experiment_id="train-human-feedback-$(shell basename $(VISITS_PATH) .pkl)" \
-	  seed=1 # Keep seed override if needed, otherwise remove if default in config is sufficient
+	cd llm && TIMESTAMP=$(TIMESTAMP) OMP_NUM_THREADS=1 MKL_NUM_THREADS=1 $(PYTHONPATH) run_exp.py --config-name=config_human_train visits_path="$(VISITS_PATH)" feedback_path="$(FEEDBACK_PATH)" $(if $(RESULTS_DIR),results_dir="$(RESULTS_DIR)" override_results_dir=true,) experiment_id="train-human-feedback-$(shell basename $(VISITS_PATH) .pkl)" seed=1
 
 # Define jobs for inspecting visits using VisitsImageSaver
 JOBS_LLM_INSPECT_VISITS := $(addprefix job-llm-inspect-visit-,$(NUMBERS_LLM))
