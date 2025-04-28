@@ -447,9 +447,9 @@ llm-find-rounds: $(JOBS_LLM_ROUNDS)
 # Lambda-finding
 # Define the ranges for the two lambdas
 # Design lambda range
-LAMBDA_DSN_VALUES := 0.001 0.01 0.1 1 100 
+LAMBDA_DSN_VALUES := 0.001 0.01 0.1 1 
 # Estimation lambda range (wider, larger values)
-LAMBDA_EST_VALUES := 1 10 100 500 
+LAMBDA_EST_VALUES := 0.001 0.1 1 10 100 500 
 # Numerical lambda values (separate range)
 LAMBDA_VALUES_NUM :=  0.001 0.01 0.1 1 10
 
@@ -545,6 +545,24 @@ $(foreach episodes,$(EPISODES_DESIGN_FREQ), \
 
 # Target to run all design frequency finding jobs
 llm-find-design-frequency: $(JOBS_LLM_DESIGN_FREQUENCY)
+
+# Target for training estimator from human feedback
+# Requires VISITS_PATH and FEEDBACK_PATH
+# Example: make llm-train-human-feedback VISITS_PATH=results/.../visits.pkl FEEDBACK_PATH=results/.../feedback.json
+llm-train-human-feedback:
+	@$(if $(VISITS_PATH),,$(error VISITS_PATH is required))
+	@$(if $(FEEDBACK_PATH),,$(error FEEDBACK_PATH is required))
+	cd llm && TIMESTAMP=$(TIMESTAMP) OMP_NUM_THREADS=1 MKL_NUM_THREADS=1 $(PYTHONPATH) run_exp.py \
+	  test_only=true \
+	  visits_path="$(VISITS_PATH)" \
+	  feedback_path="$(FEEDBACK_PATH)" \
+	  estimator_path=null \
+	  feedback=multinomial \
+	  algorithm=design \
+	  +savers=learned_estimator,conf \
+	  $(if $(RESULTS_DIR),results_dir="$(RESULTS_DIR)" override_results_dir=true,) \
+	  experiment_id="train-human-feedback-$(shell basename $(VISITS_PATH) .pkl)" \
+	  seed=1 # Seed might not be strictly necessary here, but good practice
 
 # Define jobs for inspecting visits using VisitsImageSaver
 JOBS_LLM_INSPECT_VISITS := $(addprefix job-llm-inspect-visit-,$(NUMBERS_LLM))

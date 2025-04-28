@@ -8,8 +8,4 @@ vocabulary:
   - 'vocabulary2/movements.txt'
   - 'vocabulary2/emotions.txt'
 scorer_model: 'ancient-text'
-# Add default lambdas here, they will be overridden by Makefile for the sweep
-# These defaults are less critical now as the sweep defines the values.
-feedback:
-  lambda_dsn: 0.1
-  lambda_est: 1000
+

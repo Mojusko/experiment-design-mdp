@@ -18,8 +18,15 @@ from components.embedder import BaseEmbedder, create_embedder
 from components.feedback import FeedbackFactory
 from components.solver import SolverFactory
 from components.tester  import BaseTester, ImageGenerationTester
-# Import specific saver types needed for validation
-from components.saver   import BaseSaver, VisitsSaver, VisitsImageSaver, ConfSaver
+# Import specific saver types needed for validation and estimator creation
+from components.saver   import BaseSaver, VisitsSaver, VisitsImageSaver, ConfSaver, LearnedEstimatorSaver
+# Import estimator and related components for initialization
+from stpy.regression.regularized_dictionary.regularized_multinomial_estimator import RegularizedMultinomialEstimator
+from stpy.probability.multinomial_likelihood import MultinomialLikelihood
+from stpy.regularization.regularizer import L2Regularizer
+from stpy.embeddings.embedding import CustomEmbedding # For dummy embedding
+import json # For loading feedback JSON
+import re # For parsing filenames
 
 
 
@@ -359,40 +366,183 @@ class LLMExperiment:
         except Exception as e:
             print(f"Error loading estimator: {e}")
             return False
-    
+
+    def _process_human_feedback(self, visits_data, feedback_data):
+        """
+        Processes human feedback JSON and visits data to generate embeddings and labels
+        suitable for training the RegularizedMultinomialEstimator.
+
+        Args:
+            visits_data: Loaded visits structure List[List[Tuple(states, actions)]].
+            feedback_data: Dictionary loaded from feedback.json.
+
+        Returns:
+            Tuple(torch.Tensor, torch.Tensor): (comparison_embeddings, labels)
+                - comparison_embeddings: Shape [num_samples, num_policies, embedding_dim]
+                - labels: Shape [num_samples, num_policies] (one-hot)
+            Returns (None, None) if processing fails or no valid feedback is found.
+        """
+        print("Processing human feedback...")
+        collected_comparison_embeddings = []
+        collected_labels = []
+        num_policies = len(visits_data) # Infer number of policies from visits structure
+
+        if num_policies == 0:
+             print("Error: Cannot process feedback, visits data has zero policies.")
+             return None, None
+
+        # Regex to extract episode and timestep from filename (adjust if format changes)
+        # Example: images/episode_000_timestep_04.png
+        filename_pattern = re.compile(r"episode_(\d+)_timestep_(\d+)\.png$")
+
+        processed_count = 0
+        skipped_count = 0
+        error_count = 0
+
+        for image_filename, preferred_policy_idx_1based in feedback_data.items():
+            match = filename_pattern.search(image_filename)
+            if not match:
+                # print(f"Warning: Skipping feedback entry, could not parse filename: {image_filename}")
+                skipped_count += 1
+                continue
+
+            try:
+                episode_idx = int(match.group(1))
+                timestep_h = int(match.group(2))
+
+                # Validate preferred policy index (must be between 1 and num_policies)
+                if not (1 <= preferred_policy_idx_1based <= num_policies):
+                     print(f"Warning: Skipping feedback for {image_filename}. Invalid preferred_policy_idx: {preferred_policy_idx_1based} (num_policies={num_policies})")
+                     skipped_count += 1
+                     continue
+
+                # Retrieve and truncate actions for all policies
+                embeddings_for_this_comparison = []
+                valid_comparison = True
+                for k in range(num_policies):
+                    try:
+                        # visits_data[k][episode_idx] = (states, actions)
+                        actions_policy_k = visits_data[k][episode_idx][1]
+                        if isinstance(actions_policy_k, torch.Tensor):
+                            actions_policy_k = actions_policy_k.cpu().numpy()
+                        actions_policy_k = list(map(int, actions_policy_k)) # Ensure list of ints
+
+                        # Check if timestep_h is valid for this action sequence length
+                        if timestep_h > len(actions_policy_k):
+                             print(f"Warning: Skipping feedback for {image_filename}, policy {k}. Timestep h={timestep_h} exceeds action length {len(actions_policy_k)}.")
+                             valid_comparison = False
+                             break # Skip this entire comparison if one policy is invalid
+
+                        truncated_actions_policy_k = actions_policy_k[:timestep_h]
+
+                        # Recreate prompt and embed
+                        prompt_k = create_prompt(truncated_actions_policy_k, self.env)
+                        embedding_k = self.embedder.embed_text(prompt_k) # Shape [1, dim]
+                        embeddings_for_this_comparison.append(embedding_k.detach().cpu())
+
+                    except IndexError:
+                        print(f"Warning: Skipping feedback for {image_filename}. Missing visit data for policy {k}, episode {episode_idx}.")
+                        valid_comparison = False
+                        break # Skip this entire comparison
+                    except Exception as e:
+                         print(f"Error processing policy {k} for {image_filename}: {e}")
+                         valid_comparison = False
+                         error_count += 1
+                         break # Skip this entire comparison
+
+                if not valid_comparison:
+                    skipped_count += 1
+                    continue # Move to the next feedback item
+
+                # Stack embeddings for this comparison
+                comparison_tensor = torch.cat(embeddings_for_this_comparison, dim=0) # Shape [num_policies, dim]
+                collected_comparison_embeddings.append(comparison_tensor)
+
+                # Create one-hot label
+                label_tensor = torch.zeros(num_policies)
+                label_tensor[preferred_policy_idx_1based - 1] = 1 # Convert 1-based index to 0-based
+                collected_labels.append(label_tensor)
+                processed_count += 1
+
+            except ValueError as e: # Catch potential int conversion errors
+                print(f"Warning: Skipping feedback entry for {image_filename} due to parsing error: {e}")
+                skipped_count += 1
+            except Exception as e: # Catch other unexpected errors during processing
+                 print(f"Error processing feedback entry for {image_filename}: {e}")
+                 error_count += 1
+                 skipped_count += 1
+
+        print(f"Human feedback processing complete. Processed: {processed_count}, Skipped: {skipped_count}, Errors: {error_count}")
+
+        if not collected_comparison_embeddings or not collected_labels:
+            print("Error: No valid comparison data generated from human feedback.")
+            return None, None
+
+        # Stack final tensors
+        final_comparison_embeddings = torch.stack(collected_comparison_embeddings, dim=0) # [num_samples, num_policies, dim]
+        final_labels = torch.stack(collected_labels, dim=0) # [num_samples, num_policies]
+
+        print(f"Generated training data shapes: Embeddings {final_comparison_embeddings.shape}, Labels {final_labels.shape}")
+        return final_comparison_embeddings, final_labels
+
+
     def run_test_only(self, estimator_path):
-        """Run only the testing and saving parts with a pre-loaded estimator
-        
+        """
+        Run in test-only mode. Behavior depends on provided paths:
+        - estimator_path provided: Load estimator, test, save results.
+        - visits_path provided, estimator_path=None: Load visits, inspect, save results.
+        - visits_path and feedback_path provided, estimator_path=None: Load visits & feedback, train estimator, save estimator & results.
         Args:
             estimator_path: Path to the saved estimator file
             
         Returns:
             True if the test/save process was executed, False otherwise (e.g., input path missing).
+        Args:
+            estimator_path: Path to the saved estimator file (can be None).
+
+        Returns:
+            True if the process was executed successfully, False otherwise.
         """
-        # Determine the input path for deriving the results directory
-        # Prioritize estimator_path, fallback to visits_path if estimator_path is null
-        input_path = estimator_path
-        mode = "test" # Default mode prefix for directory name
-        if not input_path:
-             input_path = self.cfg.get('visits_path')
-             mode = "inspect" # Use 'inspect' prefix if using visits_path
+        # --- Determine Mode based on Inputs ---
+        visits_path = self.cfg.get('visits_path')
+        feedback_path = self.cfg.get('feedback_path') # Get feedback path from config
+        mode = None
+        input_path_for_dir = None # Path used to determine results directory
 
-        # Resolve to absolute path for checking existence
-        absolute_input_path = to_absolute_path(input_path) if input_path else None
+        if estimator_path:
+            mode = "test"
+            input_path_for_dir = estimator_path
+            print(f"--- Running in Test Mode (Loading Estimator: {estimator_path}) ---")
+        elif visits_path and feedback_path:
+            mode = "train_human_feedback"
+            input_path_for_dir = visits_path # Use visits path for dir structure
+            print(f"--- Running in Train Human Feedback Mode (Visits: {visits_path}, Feedback: {feedback_path}) ---")
+        elif visits_path:
+            mode = "inspect"
+            input_path_for_dir = visits_path
+            print(f"--- Running in Inspect Mode (Loading Visits: {visits_path}) ---")
+        else:
+            print("Error: Invalid combination of paths for test_only mode.")
+            print("Provide either 'estimator_path', or 'visits_path', or both 'visits_path' and 'feedback_path'.")
+            return False
 
-        if not absolute_input_path or not os.path.exists(absolute_input_path):
-             # Print the absolute path tried for clarity
-             print(f"Error: Input path ('{absolute_input_path}') not found or not provided for {mode} mode.")
-             return False
+        # --- Validate Input Paths ---
+        absolute_input_path_for_dir = to_absolute_path(input_path_for_dir)
+        if not os.path.exists(absolute_input_path_for_dir):
+            print(f"Error: Input path for directory structure ('{absolute_input_path_for_dir}') not found.")
+            return False
+        # Specific checks for train_human_feedback mode
+        if mode == "train_human_feedback":
+            absolute_feedback_path = to_absolute_path(feedback_path)
+            if not os.path.exists(absolute_feedback_path):
+                 print(f"Error: Feedback path ('{absolute_feedback_path}') not found for train_human_feedback mode.")
+                 return False
 
-        # Setup results directory based on the absolute_input_path, unless overridden
+        # --- Setup Results Directory ---
         if not self.cfg.get('override_results_dir', False):
-            # Use absolute path for dirname
-            original_dir = os.path.dirname(absolute_input_path)
+            original_dir = os.path.dirname(absolute_input_path_for_dir)
             if os.path.exists(original_dir):
                 timestamp = os.environ.get('TIMESTAMP', datetime.datetime.now().strftime("%Y-%m-%d-%H-%M"))
-                # Try to infer algorithm/feedback from filename if possible, otherwise use defaults
-                # This part might need refinement based on actual filename conventions
                 try:
                     algorithm = self._get_algorithm_code()
                     feedback_type = self._get_feedback_code()
@@ -401,10 +551,10 @@ class LLMExperiment:
                     feedback_type = "unknown_fb"
                     print("Warning: Could not determine algorithm/feedback from config, using defaults for directory name.")
 
-                # Use the determined mode ('test' or 'inspect') in the directory name
+                # Use the determined mode ('test', 'inspect', 'train_human_feedback') in the directory name
                 experiment_id_suffix = self.experiment_id or mode # Use existing ID or mode name
                 tests_base_dir = os.path.join(original_dir, "additional_tests")
-                # Example: test-dsn-mult-2025-04-16-10-00 or inspect-dsn-mult-2025-04-16-10-00
+                # Example: test-dsn-mult-..., inspect-dsn-mult-..., train_human_feedback-dsn-mult-...
                 self.results_dir = os.path.join(tests_base_dir, f"{mode}-{algorithm}-{feedback_type}-{timestamp}")
 
                 print(f"Using original results directory parent: {original_dir}")
@@ -426,43 +576,94 @@ class LLMExperiment:
                  self.estimator = None # Ensure estimator is None if loading failed
             else:
                  print("Successfully loaded estimator.")
-        else:
+        # --- Train Estimator from Human Feedback ---
+        elif mode == "train_human_feedback":
+             print("Loading visits and feedback data for training...")
+             try:
+                 # Load visits
+                 loaded_visits = torch.load(absolute_input_path_for_dir) # Load from visits_path
+                 # Load feedback JSON
+                 with open(absolute_feedback_path, 'r') as f:
+                     feedback_json = json.load(f)
+
+                 # Process feedback to get training data
+                 comparison_embeddings, labels = self._process_human_feedback(loaded_visits, feedback_json)
+
+                 if comparison_embeddings is None or labels is None:
+                      print("Error: Failed to generate training data from feedback. Cannot train estimator.")
+                      return False # Stop execution
+
+                 # Initialize Estimator (assuming Multinomial for now)
+                 # TODO: Make estimator type configurable if needed
+                 print("Initializing estimator for training...")
+                 embed_dim = self.embedder.get_embedding_dim()
+                 # Use a dummy identity embedding as fit takes embeddings directly
+                 dummy_embedding = CustomEmbedding(embed_dim, lambda x: x, embed_dim)
+                 likelihood = MultinomialLikelihood()
+                 # Use lambda_est from config, default if not present
+                 lambda_est = self.cfg.feedback.get('lambda_est', 1.0) # Default regularization
+                 regularizer = L2Regularizer(lam=lambda_est)
+                 estimator = RegularizedMultinomialEstimator(dummy_embedding, likelihood, regularizer)
+
+                 # Fit Estimator
+                 print(f"Fitting estimator with {comparison_embeddings.shape[0]} human feedback samples...")
+                 estimator.fit(comparison_embeddings=comparison_embeddings, labels=labels)
+                 self.estimator = estimator # Store the newly fitted estimator
+                 self.visits = loaded_visits # Store loaded visits for potential saving
+                 print("Estimator training complete.")
+
+             except FileNotFoundError as e:
+                  print(f"Error: Required file not found during training setup: {e}")
+                  return False
+             except Exception as e:
+                  print(f"Error during estimator training from human feedback: {e}")
+                  return False
+        # --- Inspection Mode (Load Visits Only) ---
+        elif mode == "inspect":
              print("No estimator path provided, proceeding without loading estimator (inspection mode).")
              self.estimator = None # Ensure estimator is None
-
-             # --- Load Visits if in Inspection Mode ---
-             if mode == "inspect" and absolute_input_path:
-                 print(f"Attempting to load visits from: {absolute_input_path}")
-                 try:
-                     # Load visits directly into self.visits
-                     self.visits = torch.load(absolute_input_path)
-                     # Basic validation after loading
-                     if not isinstance(self.visits, list) or not self.visits or not self.visits[0]:
-                          print(f"Warning: Loaded visits from {absolute_input_path} appear empty or invalid.")
-                          # Decide whether to proceed with empty visits or fail
-                          # For now, let the validation in test_and_save handle it.
-                     else:
-                          print(f"Successfully loaded visits for inspection.")
-                 except FileNotFoundError:
-                      print(f"Error: Visits file not found at {absolute_input_path} during loading attempt.")
-                      self.visits = None # Ensure visits is None if loading fails
-                      return False # Stop execution if visits file is mandatory and not found
-                 except Exception as e:
-                      print(f"Error loading visits from {absolute_input_path}: {e}")
-                      self.visits = None # Ensure visits is None if loading fails
-                      return False # Stop execution on other loading errors
+             print(f"Attempting to load visits from: {absolute_input_path_for_dir}")
+             try:
+                 # Load visits directly into self.visits
+                 self.visits = torch.load(absolute_input_path_for_dir)
+                 # Basic validation after loading
+                 if not isinstance(self.visits, list) or not self.visits or not self.visits[0]:
+                      print(f"Warning: Loaded visits from {absolute_input_path_for_dir} appear empty or invalid.")
+                      # Decide whether to proceed with empty visits or fail
+                      # For now, let the validation in test_and_save handle it.
+                 else:
+                      print(f"Successfully loaded visits for inspection.")
+             # Corrected Indentation for except blocks
+             except FileNotFoundError:
+                  print(f"Error: Visits file not found at {absolute_input_path_for_dir} during loading attempt.")
+                  self.visits = None # Ensure visits is None if loading fails
+                  return False # Stop execution if visits file is mandatory and not found
+             except Exception as e:
+                  print(f"Error loading visits from {absolute_input_path_for_dir}: {e}")
+                  self.visits = None # Ensure visits is None if loading fails
+                  return False # Stop execution on other loading errors
 
         # Ensure visits attribute exists, even if loading failed or wasn't attempted
         if not hasattr(self, 'visits'):
              print("Initializing empty visits list as it wasn't loaded or generated.")
-             self.visits = [] if self.cfg.feedback.num_policies == 1 else [[] for _ in range(self.cfg.feedback.num_policies)]
+             # Infer num_policies from config if possible, else default to 1
+             num_policies = self.cfg.feedback.get('num_policies', 1)
+             self.visits = [] if num_policies == 1 else [[] for _ in range(num_policies)]
 
-        # Always proceed to test and save (unless loading failed above)
-        print(f"Proceeding to test_and_save in {mode} mode (estimator is {'loaded' if self.estimator else 'None'}, visits are {'loaded' if self.visits and self.visits[0] else 'not loaded/empty'}).")
-        self.test_and_save()
+        # Always proceed to test and save (unless loading/training failed above)
+        print(f"Proceeding to test_and_save in {mode} mode (estimator is {'fitted' if mode == 'train_human_feedback' else ('loaded' if self.estimator else 'None')}, visits are {'loaded' if self.visits and self.visits[0] else 'not loaded/empty'}).")
+        self.test_and_save(current_mode=mode) # Pass the mode to test_and_save
         return True # Indicate test/save process was executed
-    def test_and_save(self):
-        """Final estimation, testing and saving of results"""
+
+    def test_and_save(self, current_mode="full_run"): # Add current_mode argument with a default
+        """
+        Final estimation, testing and saving of results.
+
+        Args:
+            current_mode (str): The mode the experiment is running in
+                                ('full_run', 'test', 'inspect', 'train_human_feedback').
+                                Used for mode-specific validation and behavior.
+        """
         # Create a container for all results
         from components.results import ExperimentResults
         results = ExperimentResults()
@@ -481,25 +682,41 @@ class LLMExperiment:
 
         # Import tester/saver classes for isinstance checks
         from components.tester import PreferenceTester, CosineTester, ImageGenerationTester
-        from components.saver import LearnedEstimatorSaver, VisitsSaver, VisitsImageSaver, ReadableVisitsSaver
+        from components.saver import LearnedEstimatorSaver, VisitsSaver, VisitsImageSaver, ReadableVisitsSaver, ConfSaver
 
-        # Validate Testers
-        for tester in self.testers:
-            tester_name = type(tester).__name__
-            if isinstance(tester, (PreferenceTester, CosineTester)):
-                if not estimator_available:
-                    raise ValueError(f"Tester '{tester_name}' requires an estimator, but it was not loaded or available.")
-            elif isinstance(tester, ImageGenerationTester):
-                 # ImageGenerationTester needs scorer_model OR estimator if use_estimator=True
-                 if tester.use_estimator and not estimator_available:
-                     raise ValueError(f"Tester '{tester_name}' is configured with use_estimator=True, but the estimator is not available.")
-                 if not tester.use_estimator and self.scorer_model is None:
-                      raise ValueError(f"Tester '{tester_name}' is configured to use the scorer_model, but it's not available.")
-                 if self.embedder is None: # Also needs embedder
-                      raise ValueError(f"Tester '{tester_name}' requires an embedder, but it's not available.")
-            # Add checks for other testers if they have specific requirements
+        # --- Mode-Specific Validation ---
+        if current_mode == "train_human_feedback":
+            # Ensure LearnedEstimatorSaver is present
+            if not any(isinstance(s, LearnedEstimatorSaver) for s in self.savers):
+                 raise ValueError(f"Mode '{current_mode}' requires LearnedEstimatorSaver to be configured, but it was not found.")
+            # Ensure estimator was actually fitted
+            if not estimator_available:
+                 raise ValueError(f"Mode '{current_mode}' completed but the estimator is not available. Training likely failed.")
+            # Testers are generally skipped in this mode, so no tester validation needed here.
+            print(f"Validation for mode '{current_mode}': LearnedEstimatorSaver found.")
+        # -----------------------------
 
-        # Validate Savers
+        # Validate Testers (Skip if in train_human_feedback mode)
+        if current_mode != "train_human_feedback":
+            for tester in self.testers:
+                tester_name = type(tester).__name__
+                if isinstance(tester, (PreferenceTester, CosineTester)):
+                    if not estimator_available:
+                        raise ValueError(f"Tester '{tester_name}' requires an estimator, but it was not loaded or available.")
+                elif isinstance(tester, ImageGenerationTester):
+                     # ImageGenerationTester needs scorer_model OR estimator if use_estimator=True
+                     if tester.use_estimator and not estimator_available:
+                         raise ValueError(f"Tester '{tester_name}' is configured with use_estimator=True, but the estimator is not available.")
+                     if not tester.use_estimator and self.scorer_model is None:
+                          raise ValueError(f"Tester '{tester_name}' is configured to use the scorer_model, but it's not available.")
+                     if self.embedder is None: # Also needs embedder
+                          raise ValueError(f"Tester '{tester_name}' requires an embedder, but it's not available.")
+                # Add checks for other testers if they have specific requirements
+        else:
+             print("Skipping tester validation in 'train_human_feedback' mode.")
+
+
+        # Validate Savers (Common checks for all modes)
         for saver in self.savers:
             saver_name = type(saver).__name__
             if isinstance(saver, LearnedEstimatorSaver):
@@ -547,24 +764,28 @@ class LLMExperiment:
         config_dict = OmegaConf.to_container(self.cfg, resolve=True)
         results.add_metadata('config_dict', config_dict)
 
-        # Run all testers and collect metrics (validation ensures requirements are met)
-        print("Running testers...")
+        # Run all testers and collect metrics (Skip if in train_human_feedback mode)
         all_tester_results = {} # Initialize dictionary to accumulate results
-        for tester in self.testers:
-            print(f"Running tester: {type(tester).__name__}")
-            # Pass visits=self.visits if needed by any tester in the future
-            tester_results = tester.run_test( # Get results from the current tester
-                cfg=self.cfg,
-                env=self.env,
-                estimator=self.estimator, # Can be None if tester doesn't need it (but validation would have caught it if it did)
-                theta_star=self._theta_star,
-                training_words_list=self.training_words,
-                testing_words_list=self.testing_words
-                # visits=self.visits # Pass visits if any tester needs them
-            )
-            # Update the accumulated results dictionary
-            if tester_results: # Ensure tester returned something
-                all_tester_results.update(tester_results)
+        if current_mode != "train_human_feedback":
+            print("Running testers...")
+            for tester in self.testers:
+                print(f"Running tester: {type(tester).__name__}")
+                # Pass visits=self.visits if needed by any tester in the future
+                tester_results = tester.run_test( # Get results from the current tester
+                    cfg=self.cfg,
+                    env=self.env,
+                    estimator=self.estimator, # Can be None if tester doesn't need it (but validation would have caught it if it did)
+                    theta_star=self._theta_star,
+                    training_words_list=self.training_words,
+                    testing_words_list=self.testing_words
+                    # visits=self.visits # Pass visits if any tester needs them
+                )
+                # Update the accumulated results dictionary
+                if tester_results: # Ensure tester returned something
+                    all_tester_results.update(tester_results)
+        else:
+            print("Skipping testers in 'train_human_feedback' mode.")
+        # --- Removed duplicated code block here ---
 
         # Add all accumulated metrics to the results container
         if all_tester_results:
