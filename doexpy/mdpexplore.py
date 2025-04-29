@@ -263,9 +263,10 @@ class MdpExploreMultiPolicy:
             feedback: Feedback = EmptyFeedback(),
             general_policy: str = 'markovian',
             adaptive_design_frequency: int = 1,
+            same_first_action_in_episode: bool = False, # Add new argument
     ) -> None:
         """Class containing components required to run the maximum entropy exploration algorithm with multiple policies
-        
+
         Args:
             env: environment to be solved with max-ent
             objective: reward functional to generate the reward functions
@@ -275,6 +276,8 @@ class MdpExploreMultiPolicy:
             optimize_repetitions: whether to optimize repetitions
             feedback: feedback mechanism
             general_policy: type of policy ('markovian' or 'non-markovian')
+            adaptive_design_frequency: how often to re-run the design optimization
+            same_first_action_in_episode: if True, force all policies to take the same action at h=0
         """
         self.env = env
         self.objective = objective
@@ -283,7 +286,8 @@ class MdpExploreMultiPolicy:
         self.convex_solver.verbosity = verbosity
         self.feedback = feedback
         self.num_policies = num_policies
-        
+        self.same_first_action_in_episode = same_first_action_in_episode # Store the flag
+
         # Initialize lists to store per-policy information
         self.general_policies = []
         self.objective_values_baseline_per_policy = [[] for _ in range(num_policies)]
@@ -359,40 +363,87 @@ class MdpExploreMultiPolicy:
             episodes: number of episodes to evaluate
             keep: whether to keep existing optimization or reoptimize
         """
-        for _ in range(episodes):
+        # Use autograd numpy for random choice if needed, or standard numpy
+        # import numpy as np # If standard numpy is preferred and not imported
+
+        for ep_idx in range(episodes): # Changed loop variable for clarity
             self._reset(reset_visitations=False)
             self.env.reset()
-            
+
             # Initialize trajectories for all policies with initial state
             for policy_idx in range(self.num_policies):
                 self.trajectory_per_policy[policy_idx].append(self.env.init_state)
                 self.state_visitations_per_policy[policy_idx].append(self.env.init_state)
-            
+
+            first_action_for_episode = None # Action to be used by all policies at h=0 if flag is True
+
+            # --- Optimize policies if needed (before starting the episode steps) ---
+            # This condition seems related to internal policy state, keep it as is
+            # Optimization should only happen if `keep` is False and policies indicate they need optimization (e.g., time == 0)
+            if not keep and all(policy.time == 0 for policy in self.general_policies):
+                 if self.verbosity > 1:
+                     print(f"Episode {ep_idx}: Optimizing policies before starting steps.")
+                 self.optimize_policies()
+
             # Step through episode
             for h in range(self.env.max_episode_length):
-                if all(policy.time == 0 for policy in self.general_policies) and not keep:
-                    self.optimize_policies()
+                # --- Determine the action for h=0 if flag is set ---
+                if h == 0 and self.same_first_action_in_episode:
+                    # Choose one policy randomly to decide the first action
+                    chosen_policy_idx = np.random.randint(self.num_policies)
+                    chosen_policy = self.general_policies[chosen_policy_idx]
+                    # Get action from the chosen policy for the initial state
+                    # Note: self.env.state should be init_state here as env was just reset
+                    first_action_for_episode = chosen_policy.next_action(
+                        self.env.state,
+                        self.emissions,
+                        self.visitations_per_policy[chosen_policy_idx],
+                        self.episodes,
+                        keep=True # Use existing policy parameters (optimization already happened if needed)
+                    )
+                    if self.verbosity > 1:
+                        print(f"Episode {ep_idx}, h=0: Policy {chosen_policy_idx} chosen, action {first_action_for_episode} selected for all.")
 
-                # Get actions from all policies
+                # --- Execute step for all policies ---
+                current_state_at_h = copy.copy(self.env.state) # Save state at the beginning of timestep h
+
                 for policy_idx, policy in enumerate(self.general_policies):
+                    # Restore state for the current policy simulation at this timestep
+                    self.env.state = current_state_at_h
 
-                    action = policy.next_action(self.env.state, self.emissions, 
-                                    self.visitations_per_policy[policy_idx], self.episodes, True)
-                        
-                    state = copy.copy(self.env.state)
-                    self.feedback.step_single(state, action)
-                    next_state = self.env.step(action)
-                    
+                    # Determine action for this policy at this timestep
+                    if h == 0 and self.same_first_action_in_episode:
+                        action = first_action_for_episode
+                    else:
+                        # Get action normally from the current policy
+                        action = policy.next_action(
+                            self.env.state, # Use the restored state
+                            self.emissions,
+                            self.visitations_per_policy[policy_idx],
+                            self.episodes,
+                            keep=True # Use existing policy parameters
+                        )
+
+                    # Record feedback and step the environment
+                    self.feedback.step_single(self.env.state, action) # Feedback uses the state *before* stepping
+                    next_state = self.env.step(action) # Environment state advances
+
+                    # Log trajectory and visitations
                     if self.verbosity > 3:
-                        print(f"Policy {policy_idx}, Step {h}: {state} -> {action} -> {next_state}")
-                    
+                        print(f"Policy {policy_idx}, Step {h}: {current_state_at_h} -> {action} -> {next_state}")
+
                     self.trajectory_per_policy[policy_idx].append(next_state)
                     self.state_visitations_per_policy[policy_idx].append(next_state)
                     self.action_visitations_per_policy[policy_idx].append(action)
-                    
-                    # Reset environment for next policy
-                    if policy_idx < self.num_policies - 1:
-                        self.env.state = state
+
+                    # The environment state (self.env.state) is now `next_state`.
+                    # It will be overwritten by restoring `current_state_at_h` for the next policy,
+                    # or it will naturally be the correct starting state for the next timestep (h+1)
+                    # after the policy loop finishes.
+
+                # After looping through all policies for timestep h,
+                # self.env.state holds the next_state resulting from the *last* policy's action.
+                # This is the correct state to start timestep h+1 from.
                 
             self.feedback.step_episode()
             

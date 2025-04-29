@@ -7,7 +7,7 @@ from doexpy.policies.summary_policies.density_policy import DensityPolicy
 
 class SolverFactory:
     @staticmethod
-    def create(cfg, env, design, feedback):
+    def create(cfg, env, design, feedback, same_first_action_in_episode: bool = False): # Add flag here
         num_policies = cfg.feedback.num_policies
         adaptive_estimation_start = cfg.feedback.adaptive_estimation_start if cfg.algorithm != 'random' else 0
         total_episodes = cfg.experiment.episodes
@@ -36,11 +36,18 @@ class SolverFactory:
 
         explorer_kwargs = {
             'env': env, 'objective': design, 'convex_solver': optimized_solver, 'verbosity': 3,
-            'feedback': EmptyFeedback(env, design), 'general_policy': 'markovian'
+            'feedback': EmptyFeedback(env, design), 'general_policy': 'markovian',
+            # Pass the flag to the explorer constructor kwargs
+            'same_first_action_in_episode': same_first_action_in_episode
         }
         if explorer_cls is MdpExploreMultiPolicy:
             explorer_kwargs['num_policies'] = num_policies
             explorer_kwargs['adaptive_design_frequency'] = cfg.feedback.adaptive_design_frequency
+            # Remove the flag if it was added generically, as it's specific to MdpExploreMultiPolicy
+            # explorer_kwargs.pop('same_first_action_in_episode', None) # Keep it, MdpExploreMultiPolicy needs it
+        else:
+             # Remove the flag if the explorer is not MdpExploreMultiPolicy
+             explorer_kwargs.pop('same_first_action_in_episode', None)
 
         if use_random_initially:
             explorer = TwoPhaseExplorer(
@@ -55,6 +62,7 @@ class SolverFactory:
 
 class TwoPhaseExplorer:
     def __init__(self, random_solver, optimized_solver, adaptive_estimation_start, total_episodes, explorer_cls, explorer_kwargs):
+        # explorer_kwargs already contains 'same_first_action_in_episode' if applicable
         self.random_solver = random_solver
         self.optimized_solver = optimized_solver
         self.adaptive_estimation_start = adaptive_estimation_start

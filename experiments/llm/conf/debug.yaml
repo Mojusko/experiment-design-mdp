@@ -11,7 +11,7 @@ feedback:
   adaptive_design_frequency: 0
 experiment:
    episodes: 20
-   vocab_size: 300
+   vocab_size: 200
 # Results directory for debug mode
 results_dir: "results/debug"
 algorithm: "design"
@@ -48,6 +48,10 @@ savers:
   - _target_: components.saver.ConfSaver
     params:
       filename: "config_resolved.yaml"
+
+  - _target_: components.saver.ReadableVisitsSaver
+    params:
+      output_filename: "readable_visits_debug.txt"
 
   #  - _target_: components.saver.VisitsImageSaver
   #    _convert_: "partial" # Only convert direct parameters, not nested ones

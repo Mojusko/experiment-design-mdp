@@ -64,7 +64,14 @@ class LLMExperiment:
         # Pass the embedder instance where needed (e.g., FeedbackFactory might need it)
         # Pass the scorer model as before
         self.feedback, self.design, self.estimator = FeedbackFactory.create(cfg, self.env, self._scorer_model, self.embedder)
-        self.explorer = SolverFactory.create(cfg, self.env, self.design, self.feedback)
+        # Pass the same_first_action_in_episode flag to the solver factory
+        self.explorer = SolverFactory.create(
+            cfg,
+            self.env,
+            self.design,
+            self.feedback,
+            same_first_action_in_episode=cfg.get('same_first_action_in_episode', False) # Read from config
+        )
 
         # For test-only mode, initialize estimator to None, will be loaded later (remains same)
         self.estimator = None
