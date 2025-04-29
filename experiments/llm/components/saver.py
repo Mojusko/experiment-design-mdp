@@ -263,8 +263,8 @@ class ImageGenerationSaver(BaseSaver):
             
             # Calculate image-based aesthetics score
             if self.add_image_score:
-                # Process embedding: unsqueeze, normalize, convert to double, and move to correct device
-                image_embedding = image_embedding.unsqueeze(0)
+                # Process embedding: normalize, convert to double, and move to correct device
+                # Removed incorrect unsqueeze(0)
                 image_embedding = image_embedding / image_embedding.norm(dim=1, keepdim=True)  # First L2 normalization
                 image_embedding = image_embedding / image_embedding.norm(dim=1, keepdim=True)  # Second L2 normalization
                 image_embedding = image_embedding.to(self.scorer_model.weight.device).double()
@@ -296,8 +296,8 @@ class ImageGenerationSaver(BaseSaver):
             
             # Calculate image-based aesthetics score
             if self.add_image_score and hasattr(self.scorer_model, 'score_embedding'):
-                # Process embedding: unsqueeze, normalize, convert to double, and move to correct device
-                image_embedding = image_embedding.unsqueeze(0)
+                # Process embedding: normalize, convert to double, and move to correct device
+                # Removed incorrect unsqueeze(0)
                 image_embedding = image_embedding / image_embedding.norm(dim=1, keepdim=True)  # First L2 normalization
                 image_embedding = image_embedding / image_embedding.norm(dim=1, keepdim=True)  # Second L2 normalization
                 image_embedding = image_embedding.to(self.scorer_model.weight.device).double()
