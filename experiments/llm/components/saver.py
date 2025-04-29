@@ -718,13 +718,13 @@ class VisitsImageSaver(BaseSaver):
                     for i in range(len(timestep_images), n_cols):
                         axes[0, i].axis('off')
 
-                    # --- Determine the main title based on base_prompt or first timestep ---
-                    title_prefix = "Base Prompt:"
+                    # --- Determine the main title (always use "Base Prompt:") ---
+                    title_prefix = "Base Prompt:" # Always use this prefix
                     base_prompt_content = ""
                     if hasattr(self.env, 'base_prompt') and self.env.base_prompt:
                         base_prompt_content = self.env.base_prompt
                     else:
-                        # If base_prompt is empty, try to get the prompt for the first timestep (h=1) of the first policy
+                        # If base_prompt is empty, get the prompt for the first timestep (h=1) of the first policy
                         try:
                             first_policy_actions = visits[0][ep_idx][1] # Actions for policy 0, episode ep_idx
                             if isinstance(first_policy_actions, torch.Tensor):
@@ -734,18 +734,19 @@ class VisitsImageSaver(BaseSaver):
                             if first_policy_actions: # Check if there are any actions
                                 first_timestep_actions = first_policy_actions[:1] # Get only the first action(s) for h=1
                                 base_prompt_content = create_prompt(first_timestep_actions, self.env)
-                                title_prefix = "First Timestep:" # Change prefix if using h=1 prompt
+                                # title_prefix remains "Base Prompt:"
                             else:
                                 base_prompt_content = "[No actions for h=1]"
-                                title_prefix = "Info:"
+                                # title_prefix remains "Base Prompt:"
                         except (IndexError, TypeError, Exception) as e:
                             print(f"    Warning: Could not determine first timestep prompt for title: {e}")
                             base_prompt_content = f"Episode {ep_idx}" # Fallback title
-                            title_prefix = "" # No prefix for fallback
+                            # title_prefix remains "Base Prompt:"
 
                     # Wrap the determined title text
-                    wrapped_title = textwrap.fill(f"{title_prefix} '{base_prompt_content}'", width=80) # Adjust width as needed
-                    plt.suptitle(wrapped_title, fontsize=12, y=0.98) # Adjust font size and position (y)
+                    wrapped_title = textwrap.fill(f"{title_prefix} '{base_prompt_content}'", width=60) # Adjust width as needed
+                    # Increase font size, make bold, lower position (adjust y value)
+                    plt.suptitle(wrapped_title, fontsize=16, fontweight='bold', y=0.95)
                     # -----------------------------------------
 
                     # Adjust subplot parameters: increase bottom margin slightly to accommodate xlabels, adjust spacing
