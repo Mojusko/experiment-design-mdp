@@ -368,7 +368,6 @@ llm-feedback-comparison: llm-feedback-comparison-num llm-feedback-comparison-mul
 # Example: make llm-test-only ESTIMATOR_PATH=path/to/estimator.pt [ALGORITHM=random] [FEEDBACK=numerical] [RESULTS_DIR=custom/output]
 llm-test-only:
 	@$(if $(ESTIMATOR_PATH),,$(error ESTIMATOR_PATH is required))
-	# Use the dedicated config for inference testing
 	cd llm && TIMESTAMP=$(TIMESTAMP) OMP_NUM_THREADS=1 MKL_NUM_THREADS=1 $(PYTHONPATH) run_exp.py --config-name=config_inference algorithm=$(ALGORITHM) feedback=$(FEEDBACK) experiment_id="test-$(ALGORITHM)-$(FEEDBACK)-$(shell basename $(ESTIMATOR_PATH) .pt)" seed=1 test_only=true estimator_path="$(ESTIMATOR_PATH)" $(if $(RESULTS_DIR),results_dir="$(RESULTS_DIR)" override_results_dir=true,)
 
 # Test different numbers of rounds for feedback optimization

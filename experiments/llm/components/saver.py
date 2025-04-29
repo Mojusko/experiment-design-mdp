@@ -258,9 +258,8 @@ class ImageGenerationSaver(BaseSaver):
         print("Generating images for BEST prompts:")
         for i, (full_prompt, score) in enumerate(zip(best_prompts, best_scores)):
             print(f"Generating best image {i+1}/{len(best_prompts)} for prompt: {full_prompt}")
-            # Temporarily using only full_prompt with StableDiffusionGenerator
-            image, image_embedding = generator.sample(full_prompt)
-            # Original: image, image_embedding = generator.sample(self.base_prompt, full_prompt)
+            # Pass the embedder instance to the sample method
+            image, image_embedding = generator.sample(full_prompt, embedder=self.embedder)
             
             # Calculate image-based aesthetics score
             if self.add_image_score:
@@ -292,9 +291,8 @@ class ImageGenerationSaver(BaseSaver):
         print("\nGenerating images for WORST prompts:")
         for i, (full_prompt, score) in enumerate(zip(worst_prompts, worst_scores)):
             print(f"Generating worst image {i+1}/{len(worst_prompts)} for prompt: {full_prompt}")
-            # Temporarily using only full_prompt with StableDiffusionGenerator
-            image, image_embedding = generator.sample(full_prompt)
-            # Original: image, image_embedding = generator.sample(self.base_prompt, full_prompt)
+            # Pass the embedder instance to the sample method
+            image, image_embedding = generator.sample(full_prompt, embedder=self.embedder)
             
             # Calculate image-based aesthetics score
             if self.add_image_score and hasattr(self.scorer_model, 'score_embedding'):
@@ -664,6 +662,7 @@ class VisitsImageSaver(BaseSaver):
                         print(f"    Generating image for policy {policy_idx + 1}/{num_policies} (Prompt: '{prompt_display}')")
 
                         # Pass the embedder instance to the sample method
+                        # Ensure self.embedder is passed here
                         image_np, _ = generator.sample(prompt, embedder=self.embedder)
                         # Explicitly use PIL.Image to avoid potential name shadowing
                         timestep_images.append(PIL.Image.fromarray(image_np))
