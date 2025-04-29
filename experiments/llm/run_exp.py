@@ -31,12 +31,15 @@ def main(cfg: DictConfig):
     # Check if we're in test-only mode (which includes inspection mode)
     if cfg.get('test_only', False):
         print("--- Running in Test-Only / Inspection Mode ---")
-        # The logic inside run_test_only now handles checking for estimator_path or visits_path
-        # and setting the correct mode. We just need to pass the estimator_path (which might be None).
-        success = experiment.run_test_only(cfg.get('estimator_path')) # Pass estimator_path (can be None)
+        # The logic inside run_test_only now handles checking for estimator_path, visits_path, and feedback_path
+        # and setting the correct mode. Pass relevant paths from config.
+        success = experiment.run_test_only(
+            estimator_path=cfg.get('estimator_path'), # Can be None
+            feedback_path=cfg.get('feedback_path')    # Can be None
+        )
         if not success:
-            # run_test_only returns False if the required input path (estimator or visits) is missing/invalid
-            print("Exiting due to error during test_only/inspection execution.")
+            # run_test_only returns False if required input paths are missing/invalid or processing fails
+            print("Exiting due to error during test_only/inspection/train_human execution.")
             return 1 # Exit if test_only/inspection failed
 
     # Check if we're in explore-only mode

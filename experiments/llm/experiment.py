@@ -508,10 +508,10 @@ class LLMExperiment:
         return final_comparison_embeddings, final_labels
 
 
-    def run_test_only(self, estimator_path):
+    def run_test_only(self, estimator_path, feedback_path=None): # Add feedback_path argument
         """
         Run in test-only mode. Behavior depends on provided paths:
-        - estimator_path provided: Load estimator, test, save results.
+        - estimator_path provided: Load estimator, test, save results. Optionally use feedback_path to override base_prompt.
         - visits_path provided, estimator_path=None: Load visits, inspect, save results.
         - visits_path and feedback_path provided, estimator_path=None: Load visits & feedback, train estimator, save estimator & results.
         Args:
@@ -526,8 +526,8 @@ class LLMExperiment:
             True if the process was executed successfully, False otherwise.
         """
         # --- Determine Mode based on Inputs ---
+        # feedback_path is now passed as an argument, not read from self.cfg here
         visits_path = self.cfg.get('visits_path')
-        feedback_path = self.cfg.get('feedback_path') # Get feedback path from config
         mode = None
         input_path_for_dir = None # Path used to determine results directory
 
@@ -535,7 +535,9 @@ class LLMExperiment:
             mode = "test"
             input_path_for_dir = estimator_path
             print(f"--- Running in Test Mode (Loading Estimator: {estimator_path}) ---")
-        elif visits_path and feedback_path:
+            if feedback_path:
+                print(f"--- Optional Feedback Path provided for base_prompt override: {feedback_path} ---")
+        elif visits_path and feedback_path: # feedback_path here refers to the one for training
             mode = "train_human_feedback"
             input_path_for_dir = visits_path # Use visits path for dir structure
             print(f"--- Running in Train Human Feedback Mode (Visits: {visits_path}, Feedback: {feedback_path}) ---")
@@ -545,7 +547,7 @@ class LLMExperiment:
             print(f"--- Running in Inspect Mode (Loading Visits: {visits_path}) ---")
         else:
             print("Error: Invalid combination of paths for test_only mode.")
-            print("Provide either 'estimator_path', or 'visits_path', or both 'visits_path' and 'feedback_path'.")
+            print("Provide either 'estimator_path', or 'visits_path', or both 'visits_path' and 'feedback_path' (for training).")
             return False
 
         # --- Validate Input Paths ---
@@ -553,12 +555,18 @@ class LLMExperiment:
         if not os.path.exists(absolute_input_path_for_dir):
             print(f"Error: Input path for directory structure ('{absolute_input_path_for_dir}') not found.")
             return False
-        # Specific checks for train_human_feedback mode
+        # Specific checks for train_human_feedback mode (using feedback_path for training)
         if mode == "train_human_feedback":
-            absolute_feedback_path = to_absolute_path(feedback_path)
-            if not os.path.exists(absolute_feedback_path):
-                 print(f"Error: Feedback path ('{absolute_feedback_path}') not found for train_human_feedback mode.")
+            absolute_feedback_path_train = to_absolute_path(feedback_path)
+            if not os.path.exists(absolute_feedback_path_train):
+                 print(f"Error: Feedback path for training ('{absolute_feedback_path_train}') not found.")
                  return False
+        # Check optional feedback_path for test mode base_prompt override
+        elif mode == "test" and feedback_path:
+            absolute_feedback_path_test = to_absolute_path(feedback_path)
+            if not os.path.exists(absolute_feedback_path_test):
+                 print(f"Warning: Optional feedback path for base_prompt override ('{absolute_feedback_path_test}') not found. Using default base_prompt.")
+                 feedback_path = None # Nullify if not found, proceed with default base_prompt
 
         # --- Setup Results Directory ---
         if not self.cfg.get('override_results_dir', False):
@@ -606,14 +614,31 @@ class LLMExperiment:
                  self.estimator = None # Ensure estimator is None if loading failed
             else:
                  print("Successfully loaded estimator.")
+                 # --- Override base_prompt if feedback_path was valid ---
+                 if mode == "test" and feedback_path:
+                     try:
+                         print(f"Loading feedback file to extract user_prompt: {feedback_path}")
+                         with open(to_absolute_path(feedback_path), 'r') as f:
+                             feedback_json_for_prompt = json.load(f)
+                         user_prompt = feedback_json_for_prompt.get("user_prompt")
+                         if user_prompt is not None and isinstance(user_prompt, str):
+                             print(f"Overriding env.base_prompt with user_prompt: '{user_prompt}'")
+                             self.env.base_prompt = user_prompt
+                             # Update metadata if needed (optional, test_and_save already adds it)
+                             # self.cfg.base_prompt = user_prompt # Update config object if needed elsewhere
+                         else:
+                             print("Warning: 'user_prompt' key not found or not a string in feedback file. Using default base_prompt.")
+                     except Exception as e:
+                         print(f"Warning: Failed to load or parse feedback file for user_prompt: {e}. Using default base_prompt.")
+                 # ------------------------------------------------------
         # --- Train Estimator from Human Feedback ---
         elif mode == "train_human_feedback":
              print("Loading visits and feedback data for training...")
              try:
                  # Load visits
                  loaded_visits = torch.load(absolute_input_path_for_dir) # Load from visits_path
-                 # Load feedback JSON
-                 with open(absolute_feedback_path, 'r') as f:
+                 # Load feedback JSON (using the path validated for training mode)
+                 with open(to_absolute_path(feedback_path), 'r') as f:
                      feedback_json = json.load(f)
 
                  # Process feedback to get training data
