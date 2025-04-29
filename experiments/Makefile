@@ -307,7 +307,7 @@ llm-generate-image:
 		$(if $(GUIDANCE_TOKENS),--guidance_tokens $(GUIDANCE_TOKENS),)
 
 ########################### LLMS
-REPEATS_LLM=8
+REPEATS_LLM=15
 NUMBERS_LLM := $(shell seq 1 ${REPEATS_LLM})
 
 # Jobs for V comparison (non-adaptive design)
@@ -512,9 +512,9 @@ algorithm_code = $(if $(findstring design,$(ALGORITHM)),dsn,$(if $(findstring ra
 # Define the feedback code for experiment ID
 feedback_code = $(if $(findstring multinomial,$(FEEDBACK)),mult,$(if $(findstring numerical,$(FEEDBACK)),num,unk))
 
+# Use config_name=config_inspect for inspection runs
 $(JOBS_LLM_INSPECT_VISITS): job-llm-inspect-visit-%:
 	@$(if $(VISITS_PATH),,$(error VISITS_PATH is required, e.g., make llm-inspect-visits VISITS_PATH=results/.../visits.pkl))
-	# Use config_name=config_inspect for inspection runs
 	cd llm && TIMESTAMP=$(TIMESTAMP) OMP_NUM_THREADS=1 MKL_NUM_THREADS=1 $(PYTHONPATH) run_exp.py --config-name=config_inspect feedback=$(FEEDBACK) algorithm=$(ALGORITHM) test_only=true visits_path="$(VISITS_PATH)" estimator_path=null $(if $(RESULTS_DIR),results_dir="$(RESULTS_DIR)" override_results_dir=true,) experiment_id="inspect-$(algorithm_code)-$(feedback_code)-$*" seed=$* +experiment.repeats=$(REPEATS_LLM)
 
 # Target for inspecting visits

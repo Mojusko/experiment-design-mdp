@@ -14,9 +14,11 @@ const imageElement = document.getElementById('current-image');
 const imageInfoElement = document.getElementById('image-info');
 const prevButton = document.getElementById('prev-button');
 const nextButton = document.getElementById('next-button');
-const saveButton = document.getElementById('save-button');
+const finishButton = document.getElementById('finish-button'); // Added finish button reference
+// Removed saveButton reference
 const feedbackForm = document.getElementById('feedback-form');
 const progressElement = document.getElementById('progress');
+// Removed userPromptInput reference
 // Determine the number of policies dynamically by counting radio buttons
 const policyRadioButtons = feedbackForm.elements['policy_preference'];
 const numPolicies = policyRadioButtons.length;
@@ -38,12 +40,40 @@ function updateImage() {
     // Update progress display
     progressElement.textContent = `${currentIndex + 1} / ${imageFiles.length}`;
 
-    // Load saved feedback for this image
-    loadFeedback();
+    // --- Timestep 1 Handling ---
+    const isTimestepOne = /timestep_01/.test(currentImageFile);
+    feedbackForm.classList.toggle('disabled-feedback', isTimestepOne); // Add/remove class for styling
+
+    policyRadioButtons.forEach((radio, index) => {
+        radio.disabled = isTimestepOne;
+        if (isTimestepOne && index === 0) {
+            radio.checked = true; // Default check Policy 1
+        }
+    });
+
+    if (isTimestepOne) {
+        saveFeedback(); // Save the default feedback for timestep 1
+    } else {
+        // Load user's previous feedback only if not timestep 1
+        loadFeedback();
+    }
+    // --- End Timestep 1 Handling ---
+
 
     // Update button states
     prevButton.disabled = currentIndex === 0;
-    nextButton.disabled = currentIndex === imageFiles.length - 1;
+
+    if (currentIndex === imageFiles.length - 1) {
+        // Last image: Show Finish button, hide Next button
+        nextButton.style.display = 'none';
+        finishButton.style.display = 'inline-block'; // Or 'block' if preferred
+        nextButton.disabled = true; // Keep it disabled logically
+    } else {
+        // Not the last image: Show Next button, hide Finish button
+        nextButton.style.display = 'inline-block'; // Or 'block'
+        finishButton.style.display = 'none';
+        nextButton.disabled = false; // Enable next button
+    }
 }
 
 function saveFeedback() {
@@ -92,46 +122,27 @@ prevButton.addEventListener('click', () => {
 });
 
 nextButton.addEventListener('click', () => {
+    saveFeedback(); // Save feedback for the current image before moving
     if (currentIndex < imageFiles.length - 1) {
-        saveFeedback(); // Save feedback for the image we are leaving
+        // Move to the next image
+        // Move to the next image
         currentIndex++;
         updateImage();
     }
+    // Removed redirection logic - handled by finishButton now
+});
+
+// --- Finish Button Listener ---
+finishButton.addEventListener('click', () => {
+    saveFeedback(); // Save feedback for the last image
+    console.log("Finish button clicked. Redirecting to prompt page.");
+    window.location.href = 'prompt.html'; // Redirect to prompt page
 });
 
 // Save feedback immediately when a radio button is clicked
 feedbackForm.addEventListener('change', saveFeedback);
 
-saveButton.addEventListener('click', () => {
-    // Ensure latest selection is saved before exporting
-    saveFeedback();
-
-    // Count how many images have feedback
-    const feedbackCount = Object.keys(feedbackData).length;
-    const totalImages = imageFiles.length;
-    const progressMessage = `Feedback collected for ${feedbackCount} out of ${totalImages} images.`;
-
-    if (feedbackCount < totalImages) {
-        if (!confirm(`${progressMessage}\n\nDo you want to save the incomplete feedback anyway?`)) {
-            return; // User cancelled
-        }
-    } else {
-         alert(`${progressMessage}\n\nSaving feedback...`);
-    }
-
-
-    const feedbackJson = JSON.stringify(feedbackData, null, 2); // Pretty print JSON
-    const blob = new Blob([feedbackJson], { type: 'application/json' });
-    const url = URL.createObjectURL(blob);
-    const a = document.createElement('a');
-    a.href = url;
-    a.download = 'feedback.json';
-    document.body.appendChild(a);
-    a.click();
-    document.body.removeChild(a);
-    URL.revokeObjectURL(url);
-    console.log("Feedback saved to feedback.json");
-});
+// Removed saveButton event listener
 
 // --- Keyboard Shortcut Listener ---
 document.addEventListener('keydown', (event) => {
@@ -171,7 +182,9 @@ document.addEventListener('keydown', (event) => {
                     currentIndex++;
                     updateImage();
                 } else {
-                    console.log("Already at the last image.");
+                    // If it was the last image, simulate finish button click
+                    console.log("Key pressed on last image. Finishing...");
+                    finishButton.click(); // Trigger the finish button's action
                 }
                 // Prevent default browser action for the number key (e.g., scrolling)
                 event.preventDefault();

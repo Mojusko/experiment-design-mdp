@@ -614,10 +614,11 @@ class VisitsImageSaver(BaseSaver):
             if current_seed_index < 0 or current_seed_index >= self.total_repeats:
                 print(f"Warning: Invalid seed ({self.seed}) for total repeats ({self.total_repeats}). Processing all episodes.")
             else:
-                # Ceiling division: (numerator + denominator - 1) // denominator
-                episodes_per_seed = (num_episodes + self.total_repeats - 1) // self.total_repeats
-                start_ep_idx = current_seed_index * episodes_per_seed
-                end_ep_idx = min(start_ep_idx + episodes_per_seed, num_episodes)
+                # Calculate start and end indices using integer division for slicing
+                start_ep_idx = current_seed_index * num_episodes // self.total_repeats
+                end_ep_idx = (current_seed_index + 1) * num_episodes // self.total_repeats
+                # Ensure end_ep_idx doesn't exceed num_episodes (shouldn't happen with this logic, but safe)
+                end_ep_idx = min(end_ep_idx, num_episodes)
                 # Use inclusive start and exclusive end for clarity
                 print(f"VisitsImageSaver (Seed {self.seed}/{self.total_repeats}): Processing episodes {start_ep_idx} (inclusive) to {end_ep_idx} (exclusive) (Total: {num_episodes})")
         else:
@@ -717,9 +718,38 @@ class VisitsImageSaver(BaseSaver):
                     for i in range(len(timestep_images), n_cols):
                         axes[0, i].axis('off')
 
-                    plt.suptitle(f"Episode {ep_idx} - Timestep {h}", fontsize=16) # Slightly larger title
-                    # Adjust subplot parameters: reduce bottom margin slightly, reduce horizontal spacing
-                    plt.subplots_adjust(bottom=0.2, hspace=0.4, wspace=0.2) # Reduced bottom and wspace
+                    # --- Determine the main title based on base_prompt or first timestep ---
+                    title_prefix = "Base Prompt:"
+                    base_prompt_content = ""
+                    if hasattr(self.env, 'base_prompt') and self.env.base_prompt:
+                        base_prompt_content = self.env.base_prompt
+                    else:
+                        # If base_prompt is empty, try to get the prompt for the first timestep (h=1) of the first policy
+                        try:
+                            first_policy_actions = visits[0][ep_idx][1] # Actions for policy 0, episode ep_idx
+                            if isinstance(first_policy_actions, torch.Tensor):
+                                first_policy_actions = first_policy_actions.cpu().numpy()
+                            first_policy_actions = list(map(int, first_policy_actions))
+
+                            if first_policy_actions: # Check if there are any actions
+                                first_timestep_actions = first_policy_actions[:1] # Get only the first action(s) for h=1
+                                base_prompt_content = create_prompt(first_timestep_actions, self.env)
+                                title_prefix = "First Timestep:" # Change prefix if using h=1 prompt
+                            else:
+                                base_prompt_content = "[No actions for h=1]"
+                                title_prefix = "Info:"
+                        except (IndexError, TypeError, Exception) as e:
+                            print(f"    Warning: Could not determine first timestep prompt for title: {e}")
+                            base_prompt_content = f"Episode {ep_idx}" # Fallback title
+                            title_prefix = "" # No prefix for fallback
+
+                    # Wrap the determined title text
+                    wrapped_title = textwrap.fill(f"{title_prefix} '{base_prompt_content}'", width=80) # Adjust width as needed
+                    plt.suptitle(wrapped_title, fontsize=12, y=0.98) # Adjust font size and position (y)
+                    # -----------------------------------------
+
+                    # Adjust subplot parameters: increase bottom margin slightly to accommodate xlabels, adjust spacing
+                    plt.subplots_adjust(bottom=0.25, hspace=0.4, wspace=0.2) # Increased bottom margin
 
                     # Construct filename including timestep h
                     # Use the absolute episode index ep_idx in the filename

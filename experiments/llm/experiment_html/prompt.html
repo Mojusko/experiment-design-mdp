@@ -1,0 +1,56 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Image Feedback - Enter Prompt</title>
+    <link rel="stylesheet" href="css/style.css">
+    <style>
+        /* Add specific styles for the prompt page */
+        body {
+            /* justify-content: center; */ /* Removed - centering handled by style.css */
+            min-height: 80vh;
+        }
+        #prompt-entry-container {
+            border: 1px solid #ccc;
+            padding: 30px;
+            border-radius: 8px;
+            background-color: #f9f9f9;
+            text-align: center;
+            max-width: 600px;
+            width: 80%;
+        }
+        #prompt-entry-container label {
+            display: block;
+            margin-bottom: 10px;
+            font-weight: bold;
+            font-size: 1.1em;
+        }
+        #prompt-entry-container input[type="text"] {
+            width: 100%;
+            padding: 10px;
+            font-size: 1em;
+            margin-bottom: 20px;
+            box-sizing: border-box;
+        }
+        #save-final-button { /* Use a unique ID */
+            padding: 12px 25px;
+            font-size: 1.1em;
+            cursor: pointer;
+        }
+    </style>
+</head>
+<body>
+    <div id="prompt-entry-container">
+        <h1>Final Step: Enter Content Prompt</h1>
+        <p>Please enter a simple, short prompt describing the desired <strong>content</strong> for a <i>new</i> image to be generated in your style.</p>
+        <!-- Warning moved to introduction.html -->
+        <label for="user-prompt-input">Content Prompt for New Image:</label>
+        <input type="text" id="user-prompt-input" name="user_prompt" placeholder="e.g., A dog chasing a ball, A futuristic city, Two people talking">
+        <button id="save-final-button">Save Feedback</button>
+    </div>
+
+    <!-- Load the script for this page -->
+    <script src="js/prompt.js"></script>
+</body>
+</html>
