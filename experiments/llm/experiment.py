@@ -615,8 +615,8 @@ class LLMExperiment:
                  # Use a dummy identity embedding as fit takes embeddings directly
                  dummy_embedding = CustomEmbedding(embed_dim, lambda x: x, embed_dim)
                  likelihood = MultinomialLikelihood()
-                 # Use lambda_est from config, default if not present
-                 lambda_est = self.cfg.feedback.get('lambda_est', 1.0) # Default regularization
+                 # Use lambda_est from config, fail if not present
+                 lambda_est = self.cfg.feedback.lambda_est # Direct access, will error if missing
                  regularizer = L2Regularizer(lam=lambda_est)
                  estimator = RegularizedMultinomialEstimator(dummy_embedding, likelihood, regularizer)
 

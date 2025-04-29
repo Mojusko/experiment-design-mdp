@@ -1,5 +1,6 @@
 # Configuration specifically for training an estimator from human feedback
 defaults:
+  - experiment: feedback_comparison # Inherit experiment settings
   - embedder: clip # Inherit default embedder settings
   - feedback: multinomial # Inherit multinomial feedback defaults
   - _self_
@@ -13,19 +14,11 @@ experiment_id: "" # Define top-level key to allow overriding from Makefile
 base_prompt: "" # Add base_prompt for LLMGrid initialization
 include_base_prompt_in_first_tokens: false # Add for LLMGrid initialization
 
-# --- Experiment Settings (Copied from feedback_comparison.yaml) ---
-# Define experiment settings directly here instead of inheriting experiment/feedback_comparison
+# --- Experiment Settings Override ---
+# Inherit from feedback_comparison via defaults, but override prefix and scorer_model
 experiment:
-  name: "human_feedback_train" # Specific name for this mode
-  id_prefix: "train-human" # Specific prefix
-  episodes: 1 # Not used in this mode, but required by some components? Set to minimal.
-  vocab_size: 2000 # Needed for env init?
-  vocabulary: # Needed for env init?
-    - 'vocabulary2/bases.txt'
-    - 'vocabulary2/mediums.txt'
-    - 'vocabulary2/movements.txt'
-    - 'vocabulary2/emotions.txt'
-  scorer_model: null # Define key, but set to null as it's not used
+  id_prefix: "train-human" # Override prefix for this specific config
+  scorer_model: null # Override scorer_model to null for this config
 
 # --- Mode Settings ---
 test_only: true # This mode runs within the test_only logic
