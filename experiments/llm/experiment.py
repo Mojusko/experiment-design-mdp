@@ -560,11 +560,19 @@ class LLMExperiment:
 
                 # Use the determined mode ('test', 'inspect', 'train_human_feedback') in the directory name
                 experiment_id_suffix = self.experiment_id or mode # Use existing ID or mode name
-                tests_base_dir = os.path.join(original_dir, "additional_tests")
+
+                # Check if the original_dir already ends with 'additional_tests'
+                if os.path.basename(original_dir) == "additional_tests":
+                    # If yes, use the original_dir itself as the base for new test folders
+                    tests_base_dir = original_dir
+                    print(f"Parent directory '{original_dir}' is already 'additional_tests'. Using it as base.")
+                else:
+                    # Otherwise, create 'additional_tests' inside the original_dir
+                    tests_base_dir = os.path.join(original_dir, "additional_tests")
+                    print(f"Using original results directory parent: {original_dir}")
+
                 # Example: test-dsn-mult-..., inspect-dsn-mult-..., train_human_feedback-dsn-mult-...
                 self.results_dir = os.path.join(tests_base_dir, f"{mode}-{algorithm}-{feedback_type}-{timestamp}")
-
-                print(f"Using original results directory parent: {original_dir}")
                 print(f"Saving {mode} results to: {self.results_dir}")
                 os.makedirs(self.results_dir, exist_ok=True)
 

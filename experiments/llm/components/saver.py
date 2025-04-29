@@ -150,6 +150,7 @@ class ImageGenerationSaver(BaseSaver):
         self.base_prompt = self.params.get('base_prompt', '')  # Extract base_prompt, default to empty string
         self.add_image_score = self.params.get('add_image_score', False)  # Whether to add image scores
         self.metrics_filename = self.params.get('metrics_filename', 'image_metrics.json')
+        self.save_worst = self.params.get('save_worst', False) # Add save_worst flag, default to False
         
     def save_result(self, results):
         """Save the results to a JSON file and generate images if image data is present
@@ -317,44 +318,58 @@ class ImageGenerationSaver(BaseSaver):
             PIL.Image.fromarray(image).save(img_path)
             
             worst_generated_images.append(image)
-        
-        # Create a summary image with all generated images and their scores
-        # Calculate rows needed (2 rows: best and worst)
-        n_cols = max(len(best_prompts), len(worst_prompts))
-        fig, axes = plt.subplots(2, n_cols, figsize=(4*n_cols, 8))
-        
+
+        # Create a summary image with generated images and their scores
+        # Determine number of rows based on save_worst flag
+        n_rows = 2 if self.save_worst and worst_generated_images else 1
+        n_cols = len(best_prompts) # Use number of best prompts for columns
+        if self.save_worst and worst_generated_images:
+            n_cols = max(n_cols, len(worst_prompts)) # Adjust columns if worst are saved and longer
+
+        if n_cols == 0:
+             print("No images generated, skipping summary figure.")
+             plt.close() # Ensure figure is closed if created implicitly
+             return # Exit if no images to plot
+
+        fig, axes = plt.subplots(n_rows, n_cols, figsize=(4*n_cols, 4*n_rows), squeeze=False) # Adjust height per row
+
         # Image scores are already calculated during image generation
-        
-        # Plot best images in the first row
+        # Plot best images in the first row (axes[0, :])
         for i, (img, prompt_score, full_prompt) in enumerate(zip(best_generated_images, best_scores, best_prompts)):
-            axes[0, i].imshow(img)
+            ax = axes[0, i]
+            ax.imshow(img)
             title = f"Best {i+1}: Prompt {prompt_score:.4f}"
             if i < len(best_image_scores):
                 title += f"\nImage {best_image_scores[i]:.4f}"
-            axes[0, i].set_title(title)
-            axes[0, i].set_xlabel(full_prompt, fontsize=8)
-            axes[0, i].set_xticks([])
-            axes[0, i].set_yticks([])
-        
-        # Hide any unused subplots in first row
+            ax.set_title(title)
+            ax.set_xlabel(full_prompt, fontsize=8)
+            ax.set_xticks([])
+            ax.set_yticks([])
+
+        # Hide any unused subplots in the first row
         for i in range(len(best_generated_images), n_cols):
             axes[0, i].axis('off')
-        
-        # Plot worst images in the second row
-        for i, (img, prompt_score, full_prompt) in enumerate(zip(worst_generated_images, worst_scores, worst_prompts)):
-            axes[1, i].imshow(img)
-            title = f"Worst {i+1}: Prompt {prompt_score:.4f}"
-            if i < len(worst_image_scores):
-                title += f"\nImage {worst_image_scores[i]:.4f}"
-            axes[1, i].set_title(title)
-            axes[1, i].set_xlabel(full_prompt, fontsize=8)
-            axes[1, i].set_xticks([])
-            axes[1, i].set_yticks([])
-        
-        # Hide any unused subplots in second row
-        for i in range(len(worst_generated_images), n_cols):
-            axes[1, i].axis('off')
-        
+
+        # Plot worst images in the second row ONLY if save_worst is True and worst images exist
+        if self.save_worst and worst_generated_images:
+            for i, (img, prompt_score, full_prompt) in enumerate(zip(worst_generated_images, worst_scores, worst_prompts)):
+                ax = axes[1, i]
+                ax.imshow(img)
+                title = f"Worst {i+1}: Prompt {prompt_score:.4f}"
+                if i < len(worst_image_scores):
+                    title += f"\nImage {worst_image_scores[i]:.4f}"
+                ax.set_title(title)
+                ax.set_xlabel(full_prompt, fontsize=8)
+                ax.set_xticks([])
+                ax.set_yticks([])
+
+            # Hide any unused subplots in the second row
+            for i in range(len(worst_generated_images), n_cols):
+                axes[1, i].axis('off')
+        elif n_rows == 2: # If we allocated 2 rows but aren't saving worst, hide the whole row
+             for i in range(n_cols):
+                  axes[1, i].axis('off')
+
         plt.tight_layout()
         summary_path = os.path.join(images_dir, "summary.png")
         plt.savefig(summary_path)
@@ -373,6 +388,14 @@ class ImageGenerationSaver(BaseSaver):
             for i, (prompt_score, prompt) in enumerate(zip(worst_scores, worst_prompts)):
                 image_score = worst_image_scores[i] if i < len(worst_image_scores) else "N/A"
                 f.write(f"{i+1}\t{prompt_score:.6f}\t{image_score}\t{prompt}\n")
+
+            # Conditionally write worst prompts section
+            if self.save_worst and worst_prompts:
+                f.write("\nWORST PROMPTS:\n")
+                f.write("Rank\tPrompt Score\tImage Score\tPrompt\n")
+                for i, (prompt_score, prompt) in enumerate(zip(worst_scores, worst_prompts)):
+                    image_score = worst_image_scores[i] if i < len(worst_image_scores) else "N/A"
+                    f.write(f"{i+1}\t{prompt_score:.6f}\t{image_score}\t{prompt}\n")
 
 class LearnedEstimatorSaver(BaseSaver):
     """Saves the learned estimator theta vector to a file."""
