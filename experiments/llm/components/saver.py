@@ -368,7 +368,10 @@ class ImageGenerationSaver(BaseSaver):
              for i in range(n_cols):
                   axes[1, i].axis('off')
 
-        plt.tight_layout()
+        # Use subplots_adjust for more control over spacing, similar to VisitsImageSaver
+        plt.subplots_adjust(wspace=0.4, hspace=0.3) # Increased wspace for horizontal spacing
+        # plt.tight_layout() # Replaced with subplots_adjust
+
         summary_path = os.path.join(images_dir, "summary.png")
         plt.savefig(summary_path)
         plt.close()
