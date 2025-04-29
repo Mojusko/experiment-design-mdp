@@ -4,14 +4,14 @@ defaults:
   - embedder: clip # Add default embedder configuration
   - _self_ # Ensure this config's values override defaults if needed
 
-seed: 12
+seed: 12 # Or keep a default like 1
 verbose: false
-base_prompt: '' # Base prompt is now sampled from vocabulary
+base_prompt: '' # Keep empty for exploration using bases.txt
 # normalize_CLIP: true # Removed, now part of embedder config
-include_base_prompt_in_first_tokens: false # Base prompt is not prepended automatically
+include_base_prompt_in_first_tokens: false # Keep false
 algorithm: "design"
 cache_dir: "${oc.env:HOME}/.cache/huggingface/hub" # Default cache dir
-horizon: 4 # Increased horizon to account for base prompt step
+horizon: 4 # Horizon 4 for exploration including base prompt step
 accuracy: 1e-14
 dense_feedback: true
 # Results directory path
@@ -51,16 +51,16 @@ savers:
     params:
       filename: "metrics.json"
       metrics_keys: ["preference_error", "cosine_error"]
-  #  - _target_: components.saver.LearnedEstimatorSaver # Enabled for standard runs
-  #    params:
-  #      filename: "estimator.pt"
-  #  - _target_: components.saver.VisitsSaver # Enabled for standard runs
-  #    params:
-  #      filename: "visits.pkl"
+  - _target_: components.saver.LearnedEstimatorSaver # Enabled for standard runs
+    params:
+      filename: "estimator.pt"
+  - _target_: components.saver.VisitsSaver # Enabled for standard runs
+    params:
+      filename: "visits.pkl"
   - _target_: components.saver.ConfSaver # Keep ConfSaver
     params:
       filename: "config_resolved.yaml"
-  - _target_: components.saver.ImageGenerationSaver # Enabled to save images from ImageGenerationTester
+  - _target_: components.saver.ImageGenerationSaver # Keep enabled if you want images generated during full run tests
     params:
       # seed: "${seed}" # Seed is handled internally by the saver/tester logic
       # base_prompt: "${base_prompt}" # Base prompt is available via env object
@@ -70,12 +70,12 @@ savers:
       # num_inference_steps: 100 # Uses default from image_generator
       add_image_score: true # Calculate image scores using the estimator
       save_worst: false # Default is false, set true to save worst N images/prompts
-  #  - _target_: components.saver.ReadableVisitsSaver # Enabled for standard runs
-  #    params:
-  #      output_filename: "readable_visits.txt"
-  #      visits_path: ${visits_path} # Inherit top-level visits_path if set
+  - _target_: components.saver.ReadableVisitsSaver # Enabled for standard runs
+    params:
+      output_filename: "readable_visits.txt"
+      # visits_path: ${visits_path} # visits_path is only relevant for inspection/human_train modes
 
-#  - _target_: components.saver.VisitsImageSaver # Keep commented for standard runs
+#  - _target_: components.saver.VisitsImageSaver # Keep commented for standard runs (unless needed)
 #    _convert_: "partial" # Only convert direct parameters, not nested ones
 #    params:
 #      output_subdir: "visit_images" # Standard output dir
