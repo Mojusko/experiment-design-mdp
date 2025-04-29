@@ -340,7 +340,9 @@ class ImageGenerationSaver(BaseSaver):
             if i < len(best_image_scores):
                 title += f"\nImage {best_image_scores[i]:.4f}"
             ax.set_title(title)
-            ax.set_xlabel(full_prompt, fontsize=8)
+            # Wrap prompt text using textwrap for better readability
+            wrapped_prompt = textwrap.fill(full_prompt, width=40) # Wrap at 40 characters
+            ax.set_xlabel(wrapped_prompt, fontsize=8, labelpad=10) # Add padding
             ax.set_xticks([])
             ax.set_yticks([])
 
@@ -357,7 +359,9 @@ class ImageGenerationSaver(BaseSaver):
                 if i < len(worst_image_scores):
                     title += f"\nImage {worst_image_scores[i]:.4f}"
                 ax.set_title(title)
-                ax.set_xlabel(full_prompt, fontsize=8)
+                # Wrap prompt text using textwrap for better readability
+                wrapped_prompt = textwrap.fill(full_prompt, width=40) # Wrap at 40 characters
+                ax.set_xlabel(wrapped_prompt, fontsize=8, labelpad=10) # Add padding
                 ax.set_xticks([])
                 ax.set_yticks([])
 
@@ -369,7 +373,8 @@ class ImageGenerationSaver(BaseSaver):
                   axes[1, i].axis('off')
 
         # Use subplots_adjust for more control over spacing, similar to VisitsImageSaver
-        plt.subplots_adjust(wspace=0.4, hspace=0.3) # Increased wspace for horizontal spacing
+        # Increase bottom margin and hspace to accommodate wrapped text labels
+        plt.subplots_adjust(bottom=0.2, wspace=0.4, hspace=0.5)
         # plt.tight_layout() # Replaced with subplots_adjust
 
         summary_path = os.path.join(images_dir, "summary.png")
