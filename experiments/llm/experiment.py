@@ -413,7 +413,15 @@ class LLMExperiment:
         skipped_count = 0
         error_count = 0
 
-        for image_filename, preferred_policy_idx_1based in feedback_data.items():
+        # --- Access the nested 'preferences' dictionary ---
+        preferences_dict = feedback_data.get("preferences")
+        if not preferences_dict or not isinstance(preferences_dict, dict):
+            print("Error: 'preferences' key not found or is not a dictionary in feedback data.")
+            return None, None
+        # -------------------------------------------------
+
+        # Iterate through the items in the preferences dictionary
+        for image_filename, preferred_policy_idx_1based in preferences_dict.items():
             match = filename_pattern.search(image_filename)
             if not match:
                 # print(f"Warning: Skipping feedback entry, could not parse filename: {image_filename}")
