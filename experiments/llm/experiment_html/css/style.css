@@ -4,7 +4,7 @@ body {
     flex-direction: column; /* Restore flex properties */
     align-items: center; /* Restore flex properties */
     padding: 20px;
-    max-width: 1200px; /* Add max-width for better layout on wider screens */
+    max-width: 1400px; /* Increased max-width */
     margin: 0 auto; /* Center the content block */
 }
 
@@ -14,6 +14,7 @@ body {
 #image-container {
     margin-bottom: 20px;
     text-align: center;
+    width: 100%; /* Make container fill available width */
 }
 
 #current-image {
@@ -21,8 +22,8 @@ body {
     /* max-width: 90%; */
     /* max-height: 80vh; */
 
-    /* Set width relative to container and let height adjust */
-    width: 80%;
+    /* Set width relative to container and let height adjust - Increased to 95% */
+    width: 95%;
     height: auto;
     border: 1px solid #ccc;
     display: block; /* Needed for margin auto centering */
@@ -34,6 +35,12 @@ body {
     border: 1px solid #eee;
     padding: 15px;
     border-radius: 5px;
+    width: 100%; /* Make container fill available width */
+    box-sizing: border-box; /* Include padding in width calculation */
+    /* Add flex properties to center content inside */
+    display: flex;
+    flex-direction: column;
+    align-items: center;
 }
 
 #feedback-container h3 {
@@ -50,7 +57,9 @@ body {
     margin-bottom: 20px;
     display: flex;
     align-items: center;
+    justify-content: center; /* Center items within the container */
     gap: 15px; /* Space between buttons and progress text */
+    width: 100%; /* Make container fill available width */
 }
 
 #progress {

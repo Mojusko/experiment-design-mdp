@@ -193,6 +193,24 @@ document.addEventListener('keydown', (event) => {
                 console.log(`  No radio button found with value "${String(selectedPolicy)}".`);
             }
         }
+    } else if (key === 'ArrowLeft') {
+        // Simulate click on Previous button if enabled
+        if (!prevButton.disabled) {
+            console.log("Left arrow pressed, going previous...");
+            prevButton.click();
+            event.preventDefault(); // Prevent default browser action (scrolling)
+        }
+    } else if (key === 'ArrowRight') {
+        // Check if Finish button is visible (last image)
+        if (finishButton.style.display !== 'none') {
+            console.log("Right arrow pressed on last image, finishing...");
+            finishButton.click();
+        } else if (!nextButton.disabled) {
+            // Otherwise, simulate click on Next button if enabled
+            console.log("Right arrow pressed, going next...");
+            nextButton.click();
+        }
+        event.preventDefault(); // Prevent default browser action (scrolling)
     }
 });
 

@@ -701,7 +701,7 @@ class VisitsImageSaver(BaseSaver):
                 try:
                     n_cols = num_policies
                     n_rows = 1
-                    # Increase figure size (e.g., width factor 5, height 8)
+                    # Restore original figure size (e.g., width factor 5, height 8)
                     fig, axes = plt.subplots(n_rows, n_cols, figsize=(5 * n_cols, 8 * n_rows), squeeze=False)
 
                     for i, (img, prompt) in enumerate(zip(timestep_images, timestep_prompts)):
