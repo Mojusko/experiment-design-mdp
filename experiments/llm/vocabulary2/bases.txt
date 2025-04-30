@@ -106,4 +106,492 @@ A cat wearing sunglasses
 A steampunk airship dock
 A fairy dancing
 A farmer milking a cow
-A pop star singing
+Stack of pancakes
+Old wooden chair
+Raindrops on a window
+Basket of apples
+Rowboat on a calm lake
+Empty birdcage
+Pile of colorful yarn
+Stone bridge over a stream
+Single feather floating down
+Pair of worn boots
+Cup of steaming tea
+Open book on a table
+Clay pot with a small plant
+Set of keys on a ring
+Windmill on a hill
+Patchwork quilt
+Lighthouse beam at night
+Seashells on sandy shore
+Old pocket watch
+Bunch of grapes
+Wooden fence in a field
+Crackling fireplace
+Simple ceramic bowl
+Fishing net hanging to dry
+Maple leaf changing color
+Cobblestone street
+Lantern hanging from a hook
+Pile of smooth river stones
+Woven basket
+Weathered wooden sign
+Spool of thread
+Empty glass bottle
+Bird's nest with eggs
+Rusty bicycle leaning
+Old leather suitcase
+Jar of fireflies
+Simple wooden flute
+Pile of firewood
+Stone well in a courtyard
+Pair of reading glasses
+Quill pen and inkwell
+Mortar and pestle
+Set of dice
+Hourglass running out
+Simple compass pointing north
+Candle burning low
+Ball of twine
+Wooden spinning top
+Clay marbles
+Simple slingshot
+Whittled wooden bird
+Braided rope
+Leather pouch tied shut
+Metal bucket
+Wooden ladle
+Ceramic pitcher
+Iron kettle on a hearth
+Set of simple tools (hammer, saw)
+Loaf of bread on a cutting board
+Wheelbarrow filled with dirt
+Garden trowel and fork
+Watering can
+Scarecrow in a field
+Bundle of dried herbs
+Clay oil lamp
+Simple wooden stool
+Woven floor mat
+Hanging wind chimes
+Sundial in a garden
+Bird bath with water
+Stone garden path
+Wooden gate to a garden
+Beehive in an orchard
+Apple tree with fruit
+Pumpkin patch
+Field of wheat
+Row of corn stalks
+Sheaf of hay
+Old water pump
+Wooden barrel
+Sack of grain
+Chicken coop with chickens
+Goat chewing grass
+Sleeping cat in sunlight
+Dog chasing a ball
+Horse grazing in a field
+Cow standing in a pasture
+Sheep huddled together
+Pig rolling in mud
+Duck swimming in a pond
+Goose honking
+Squirrel burying a nut
+Rabbit nibbling clover
+Owl perched on a branch
+Frog sitting on a lily pad
+Turtle sunning on a log
+Fish swimming in a stream
+Butterfly on a flower
+Dragonfly hovering over water
+Ladybug on a leaf
+Spiderweb with dew drops
+Ants carrying crumbs
+Beetle crawling on bark
+Snail leaving a trail
+Earthworm emerging from soil
+Mushrooms growing on a log
+Moss covering rocks
+Ferns unfurling
+Pinecone on the forest floor
+Acorn on the ground
+Dandelion seeds blowing
+Cattails by a pond
+Water lilies floating
+Ivy growing on a wall
+Bare tree branches in winter
+Snow covering a landscape
+Icicles hanging from a roof
+Frozen puddle
+Footprints in the snow
+Campfire embers glowing
+Tent pitched in a clearing
+Backpack leaning against a tree
+Canteen hanging from a branch
+Map spread out on the ground
+Binoculars looking out
+Fishing rod leaning on a rock
+Camp stool by a fire
+Sleeping bag rolled up
+Marshmallows roasting on sticks
+Kettle boiling over a fire
+Stack of chopped wood
+Axe stuck in a log
+Trail marker on a tree
+Mountain peak in the distance
+Valley stretching below
+River winding through landscape
+Clouds drifting in the sky
+Sun setting over hills
+Moon rising over water
+Stars twinkling in night sky
+Milky Way galaxy visible
+Ocean waves crashing on shore
+Sandy beach with footprints
+Cliffs overlooking the sea
+Sailboat on the horizon
+Fishing boat returning to harbor
+Seagulls flying overhead
+Pelican diving for fish
+Crab scurrying on sand
+Starfish on a rock
+Seaweed washed ashore
+Driftwood on the beach
+Message in a bottle
+Pirate treasure chest (closed)
+Anchor half-buried in sand
+Shipwreck on a reef
+Island silhouette at dusk
+Palm trees swaying
+Coconut on the ground
+Hammock between two trees
+Tropical flower blooming
+Parrot perched on a vine
+Monkeys swinging through trees
+Snake coiled on a branch
+Waterfall in a jungle
+Ancient ruins overgrown
+Stone steps leading up
+Archway covered in vines
+Broken pottery shards
+Old coin on the ground
+Carved stone tablet
+Hieroglyphs on a wall
+Cave entrance, dark inside
+Torch flickering on a wall
+Underground stream
+Stalactites and stalagmites
+Crystal formation glowing
+Geode split open
+Miner's pickaxe
+Lantern casting shadows
+Railway tracks disappearing
+Old steam train puffing
+Horse-drawn carriage
+Cobbler fixing shoes
+Baker shaping dough
+Blacksmith hammering iron
+Weaver at a loom
+Potter at a wheel
+Farmer sowing seeds
+Shepherd with a flock
+Fisherman casting a net
+Hunter tracking prey
+Merchant selling wares
+Scribe writing on scroll
+Monks meditating
+Knight polishing armor
+Archer drawing a bow
+Swords crossed
+Shield leaning on wall
+Helmet on a stand
+Castle tower view
+Drawbridge lowered
+Moat surrounding castle
+Village houses clustered
+Thatched roof cottage
+Smoke curling from chimney
+Market square bustling
+Town crier ringing bell
+Children playing hopscotch
+Woman churning butter
+Man chopping wood
+Clothes drying on a line
+Vegetable garden patch
+Well with a bucket
+Horse tied to a post
+Cart loaded with goods
+Simple wooden bridge
+Path leading into woods
+Forest clearing, sunlit
+Tall trees forming canopy
+Sunlight filtering through leaves
+Babbling brook
+Deer drinking from stream
+Fox peeking from bushes
+Bear scratching a tree
+Wolf howling at moon
+Eagle soaring high
+Hawk circling prey
+Crow sitting on fence
+Robin pulling a worm
+Sparrows bathing in dust
+Pigeon strutting
+Seagull stealing food
+Squirrel chattering
+Chipmunk cheeks full
+Mouse nibbling cheese
+Rat scurrying away
+Bat hanging upside down
+Owl eyes glowing
+Firefly blinking
+Cricket chirping
+Grasshopper jumping
+Praying mantis still
+Caterpillar crawling
+Cocoon hanging from twig
+Butterfly emerging
+Bee collecting pollen
+Wasp building nest
+Fly buzzing annoyingly
+Mosquito biting
+Empty swing set swaying
+Rocking horse
+Toy blocks scattered
+Teddy bear sitting alone
+Dollhouse with furniture
+Kite tangled in tree
+Marbles spilled on floor
+Jump rope coiled
+Hula hoop leaning
+Tricycle parked
+Roller skates on porch
+Baseball bat and glove
+Soccer ball in grass
+Basketball hoop, no net
+Tennis racket on court
+Playing cards fanned out
+Chessboard mid-game
+Checkers stacked
+Dominoes falling
+Jigsaw puzzle pieces
+Building bricks connected
+Toy train on tracks
+Stuffed animal collection
+Puppet on strings
+Mask lying on table
+Feather boa draped
+Top hat on a stand
+Cane leaning in corner
+Gloves folded neatly
+Scarf hanging on hook
+Umbrella closed, wet
+Rain boots by the door
+Spectacles on a book
+Magnifying glass
+Telescope aimed up
+Microscope on a desk
+Test tubes in a rack
+Beakers with colored liquid
+Bunsen burner flame
+Mortar and pestle grinding
+Scales balancing weights
+Abacus beads shifted
+Chalkboard with writing
+Globe spinning slowly
+Atlas open to a map
+Scroll partially unrolled
+Sealing wax and stamp
+Fountain pen uncapped
+Ink bottle, dark liquid
+Paperweight holding papers
+Letter opener on envelope
+Stack of letters tied
+Diary with a lock
+Hourglass half empty
+Calendar page turned
+Clock face showing time
+Old telephone, rotary dial
+Radio playing softly
+Record player spinning vinyl
+Cassette tape unwound
+Film reel canister
+Camera on a tripod
+Lightbulb glowing dimly
+Candlestick holder, wax dripped
+Oil lamp casting light
+Matchbox, one match left
+Key turning in lock
+Door slightly ajar
+Window looking out
+Curtains drawn back
+Empty picture frame
+Mirror reflecting room
+Vase with single flower
+Bowl of fruit
+Pitcher of water
+Glass half full
+Plate with crumbs
+Fork and knife crossed
+Spoon in a bowl
+Napkin folded
+Tablecloth pattern
+Chair pulled out
+Rug on wooden floor
+Staircase leading up
+Hallway stretching long
+Attic filled with boxes
+Basement, damp stone walls
+Roof with missing shingles
+Chimney puffing smoke
+Weather vane spinning
+Fence needing paint
+Gate slightly open
+Garden path overgrown
+Bench under a tree
+Birdhouse on a pole
+Fountain trickling water
+Statue covered in moss
+Sundial casting shadow
+Hammock gently swinging
+Clothesline with pegs
+Wheelbarrow overturned
+Gardening gloves discarded
+Watering hose coiled
+Shovel leaning on wall
+Rake resting on leaves
+Broom sweeping porch
+Doormat worn out
+Welcome sign crooked
+Mailbox with flag up
+Newspaper on doorstep
+Milk bottles on porch
+Cat sleeping on windowsill
+Dog waiting by door
+Horse looking over fence
+Cow chewing cud
+Sheep bleating
+Pig snorting
+Chicken pecking ground
+Duck preening feathers
+Goose stretching neck
+Squirrel scampering up tree
+Rabbit twitching nose
+Owl blinking slowly
+Frog croaking
+Turtle hiding in shell
+Fish jumping from water
+Butterfly fluttering by
+Dragonfly darting past
+Ladybug climbing stem
+Spider spinning web
+Ant carrying leaf
+Beetle on a flower
+Snail on wet pavement
+Worm in loose soil
+Mushroom cluster
+Mossy log
+Fern frond detail
+Pine needles on ground
+Acorn cap empty
+Dandelion gone to seed
+Thistle flower purple
+Clover patch, four-leaf?
+Wildflowers in a meadow
+Tall grass swaying
+Reeds by the water
+Water lily pad floating
+Seaweed drifting in tide
+Coral formation intricate
+Anemone tentacles waving
+Clam shell closed tight
+Oyster pearl inside?
+Urchin spines sharp
+Jellyfish pulsing gently
+Seahorse clinging to weed
+Crab walking sideways
+Lobster claws raised
+Shrimp darting backward
+Octopus changing color
+Squid ink cloud
+Dolphin leaping joyfully
+Whale breaching surface
+Seal balancing ball
+Walrus tusks prominent
+Penguin waddling
+Polar bear on ice floe
+Arctic fox white fur
+Snowy owl silent flight
+Reindeer antlers large
+Moose in shallow water
+Beaver building dam
+Otter playing in water
+Muskrat swimming fast
+Badger digging burrow
+Skunk tail raised warning
+Raccoon washing food
+Opossum playing dead
+Armadillo curled in ball
+Hedgehog spines bristled
+Porcupine quills sharp
+Groundhog peeking out
+Prairie dog standing alert
+Meerkat on lookout duty
+Kangaroo pouch with joey
+Koala sleeping in tree
+Panda eating bamboo
+Sloth hanging upside down
+Lemur large eyes staring
+Chimpanzee grooming another
+Gorilla chest beating
+Orangutan swinging high
+Gibbon calling loudly
+Howler monkey roaring
+Capuchin monkey clever hands
+Squirrel monkey quick moves
+Marmoset tiny body
+Tamarin mustache bright
+Baboon red bottom showing
+Mandrill colorful face
+Elephant trunk spraying water
+Rhinoceros horn sharp point
+Hippopotamus yawning wide
+Giraffe long neck reaching
+Zebra stripes dazzling
+Lion mane majestic
+Tiger stripes camouflaged
+Leopard spots blending in
+Cheetah running fast
+Hyena laughing sound
+Wild dog pack hunting
+Jackal scavenging nearby
+Coyote howling alone
+Wolf pack moving silently
+Bear cub climbing tree
+Fox kit playing outside den
+Deer fawn spotted coat
+Elk bugling call
+Bison herd grazing vast plain
+Yak hairy coat thick
+Llama carrying load
+Alpaca soft fleece prized
+Camel hump storing fat
+Dromedary one hump tall
+Guanaco wild ancestor llama
+Vicuña finest wool soft
+Antelope leaping gracefully
+Gazelle running swiftly
+Wildebeest migrating long
+Buffalo horns curved wide
+Goat climbing steep rocks
+Sheep woolly coat warm
+Ibex horns impressive curve
+Chamois agile mountain goat
+Markhor corkscrew horns unique
+Tahr sure-footed climber
+Argali largest wild sheep
+Mouflon ancestor domestic sheep
+Bighorn sheep rams clashing
+Dall sheep white coat pure
+Snow sheep Siberian mountains
