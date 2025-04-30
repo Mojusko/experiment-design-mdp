@@ -762,8 +762,8 @@ digital sculpting
 virtual production
 extended reality art
 mixed reality art
-holography
-lenticular printing
+holographic display
+lenticular print
 stereoscopy
 panorama
 diorama
@@ -784,217 +784,638 @@ found footage film
 experimental film
 avant-garde film
 abstract film
-video art
-video installation
-multi-channel video
-projection mapping
-light art
-laser art
-neon art
-fire art
-pyrotechnic art
-land art
-ice art
-sand art
-snow art
-graffiti
-street art
-chalk art
-body art
-tattoo art
-hair art
-nail art
-food art
-culinary arts
-mixology
-perfumery
-olfactory art
-gustatory art
-tactile art
-haptic art
-bio art
-transgenic art
-wetware
-diy biology
-citizen science
-eco-art
-environmental activism
-climate art
-anthropocene art
-geology
-biology
-chemistry
-physics
-mathematics
-statistics
-cartography
-data visualization
-infographics
-scientific illustration
-medical illustration
-botanical illustration
-zoological illustration
-forensic art
-courtroom sketching
-editorial cartooning
-political cartooning
-comic strip art
-comic book art
-graphic novel art
-sequential art
-zine culture
-mail art
-stamp art
-artist trading cards
-collage
-photomontage
-decollage
-found photography
-snapshot aesthetic
-vernacular photography
-mobile photography
-drone photography
-satellite photography
-astrophotography
-microphotography
-macro photography
-high-speed photography
-time-lapse photography
-long exposure photography
-infrared photography
-ultraviolet photography
-x-ray photography
-thermal imaging
-sonography
-mri art
-ct scan art
-electron microscopy art
-nanotechnology
-materials science
-alchemy
-esotericism
-occultism
-mysticism
-gnosticism
-kabbalah
-sufism
-shamanism
-animism
-totemism
-fetishism
-iconoclasm
-aniconism
-idolatry
-syncretism
-hybridity
-creolization
-multiculturalism
-interculturalism
-transnationalism
-global art
-world art studies
-post-global art
-altermodern
-speculative fiction
-science fiction
-fantasy art
-horror art
-cyberpunk
-steampunk
-solarpunk
-afrofuturism
-indigenous futurism
-retrofuturism
-dieselpunk
-atompunk
-biopunk
-nanopunk
-mythopoeia
-worldbuilding
-lore
-fandom
-fan art
-cosplay
-larp
-tabletop role-playing games
-video games
-indie games
-art games
-serious games
-gamification
-play theory
-ludology
-narratology
-simulation
-modeling
-visualization
-mapping
-charting
-diagramming
-sketching
-doodle art
-urban sketching
-travel sketching
-nature journaling
-scientific sketching
-engineering drawing
-patent drawing
-forensic sketching
-composite sketching
-fashion illustration
-technical illustration
-exploded view drawing
-cutaway drawing
-architectural rendering
-perspective rendering
-isometric drawing
-axonometric drawing
-oblique projection
-orthographic projection
-plan drawing
-elevation drawing
-section drawing
-detail drawing
-construction drawing
-shop drawing
-as-built drawing
-patent art
-trademark art
-copyright
-intellectual property
-censorship
-freedom of expression
-art and law
-art crime
-art forgery
-art authentication
-provenance research
-art market ethics
-restitution
-repatriation
-cultural heritage
-preservation
-documentation
-archiving
-digitization
-digital preservation
-metadata
-taxonomy
-ontology
-semantic web
-linked data
-artificial intelligence in art history
-machine learning in art creation
-computer vision in art analysis
-digital humanities
-computational aesthetics
-algorithmic criticism
-network analysis in art
-geographic information systems in art history
-remote sensing in archaeology/art history
-virtual archaeology
-augmented reality in museums
-virtual reality in galleries
-online art platforms
-social media art curation
-art in the age of the internet
+video art single channel
+video installation multi-channel
+projection mapping on building
+light art sculpture
+laser art display
+neon art sign
+fire art performance
+pyrotechnic art display
+land art ephemeral
+ice art ephemeral
+sand art ephemeral
+snow art ephemeral
+graffiti ephemeral
+street art ephemeral
+chalk art ephemeral
+body art ephemeral
+tattoo art temporary
+hair art styling
+nail art application
+food art arrangement
+culinary arts plating
+mixology cocktail
+perfumery composition
+olfactory art diffusion
+gustatory art tasting
+tactile art touching
+haptic art interaction
+bio art cultivation
+transgenic art creation
+wetware construction
+diy biology experiment
+citizen science data
+eco-art intervention
+environmental activism artwork
+climate art visualization
+anthropocene art representation
+geology sample
+biology specimen
+chemistry compound
+physics phenomenon
+mathematics equation
+statistics data
+cartography map
+data visualization chart
+infographics design
+diagramming tools
+sketching pencil
+doodle art pen
+urban sketching sketchbook
+travel sketching journal
+nature journaling supplies
+scientific sketching tools
+engineering drawing tools
+patent drawing tools
+forensic sketching tools
+courtroom sketching drawing
+editorial cartooning drawing
+political cartooning drawing
+comic strip art drawing
+comic book art drawing
+graphic novel art drawing
+sequential art panels
+zine production
+mail art postage
+stamp art design
+artist trading card exchange
+digital collage software
+photomontage technique
+decollage technique
+found photography print
+snapshot aesthetic photograph
+vernacular photography image
+mobile photography image
+drone photography image
+satellite photography image
+astrophotography image
+microphotography image
+macro photography image
+high-speed photography image
+time-lapse photography video
+long exposure photography image
+infrared photography image
+ultraviolet photography image
+x-ray photography image
+thermal imaging image
+sonography image
+mri art image
+ct scan art image
+electron microscopy image
+nanotechnology fabrication
+materials science synthesis
+alchemy process
+esotericism symbol
+occultism symbol
+mysticism symbol
+gnosticism symbol
+kabbalah symbol
+sufism symbol
+shamanism artifact
+animism representation
+totemism object
+fetishism object
+iconoclasm act
+aniconism principle
+idolatry object
+syncretism blend
+hybridity form
+creolization process
+multiculturalism representation
+interculturalism exchange
+transnationalism flow
+global art network
+world art studies analysis
+post-global art context
+altermodern context
+speculative fiction narrative
+science fiction imagery
+fantasy art illustration
+horror art imagery
+cyberpunk aesthetic
+steampunk aesthetic
+solarpunk aesthetic
+afrofuturism imagery
+indigenous futurism imagery
+retrofuturism aesthetic
+dieselpunk aesthetic
+atompunk aesthetic
+biopunk aesthetic
+nanopunk aesthetic
+mythopoeia narrative
+worldbuilding design
+lore development
+fandom creation
+fan art drawing
+cosplay costume
+larp performance
+tabletop role-playing game materials
+video game software
+indie game software
+art game software
+serious game design
+gamification design
+play theory concept
+ludology analysis
+narratology analysis
+simulation model
+modeling software
+visualization software
+mapping software
+charting software
+diagramming software
+sketching tool
+doodle art tool
+urban sketching tool
+travel sketching tool
+nature journaling tool
+scientific sketching tool
+engineering drawing tool
+patent drawing tool
+forensic sketching tool
+composite sketching tool
+fashion illustration tool
+technical illustration tool
+exploded view drawing tool
+cutaway drawing tool
+architectural rendering tool
+perspective rendering tool
+isometric drawing tool
+axonometric drawing tool
+oblique projection tool
+orthographic projection tool
+plan drawing tool
+elevation drawing tool
+section drawing tool
+detail drawing tool
+construction drawing tool
+shop drawing tool
+as-built drawing tool
+patent art design
+trademark art design
+copyright law
+intellectual property law
+censorship regulation
+freedom of expression principle
+art and law case study
+art crime investigation
+art forgery analysis
+art authentication process
+provenance research method
+art market ethics code
+restitution process
+repatriation process
+cultural heritage management
+preservation technique
+documentation standard
+archiving process
+digitization process
+digital preservation strategy
+metadata creation
+taxonomy development
+ontology development
+semantic web technology
+linked data technology
+artificial intelligence in art history application
+machine learning in art creation application
+computer vision in art analysis application
+digital humanities methodology
+computational aesthetics theory
+algorithmic criticism theory
+network analysis methodology
+geographic information systems application
+remote sensing application
+virtual archaeology reconstruction
+augmented reality application
+virtual reality application
+online art platform development
+social media art curation strategy
+art in the age of the internet impact
+ancient sumerian art
+ancient akkadian art
+ancient babylonian art
+ancient assyrian art
+ancient hittite art
+ancient phoenician art
+ancient minoan art
+ancient mycenaean art
+ancient cycladic art
+archaic greek sculpture
+classical greek sculpture
+hellenistic sculpture
+etruscan sculpture
+republican roman sculpture
+imperial roman sculpture
+late antique sculpture
+visigothic metalwork
+anglo-saxon metalwork
+viking metalwork
+romanesque sculpture
+gothic stained glass
+renaissance fresco
+baroque painting
+rococo interior design
+neoclassical architecture
+romantic landscape painting
+realism genre painting
+pre-raphaelite painting
+symbolism painting
+art nouveau architecture
+fauvism painting
+expressionism painting
+die brücke printmaking
+der blaue reiter painting
+dada collage
+de stijl painting
+bauhaus design
+constructivism sculpture
+suprematism painting
+futurism painting
+socialist realism painting
+american regionalism painting
+social realism printmaking
+harlem renaissance painting
+abstract art painting
+lyrical abstraction painting
+geometric abstraction painting
+orphism painting
+vorticism painting
+precisionism painting
+art deco design
+nouveau réalisme assemblage
+op art painting
+kinetic art sculpture
+conceptual art text
+land art earthwork
+performance art body
+video art screen
+body art paint
+installation art space
+arte povera materials
+fluxus event
+post-minimalism sculpture
+photorealism painting
+hyperrealism sculpture
+figurative art painting
+new figuration painting
+transavanguardia painting
+neo-expressionism painting
+bad painting painting
+graffiti art wall
+environmental art nature
+bio art lab
+digital art screen
+net art internet
+software art code
+generative art code
+algorithmic art code
+glitch art digital
+pixel art digital
+ascii art text
+crypto art blockchain
+postmodernism theory
+critical theory text
+feminist art activism
+identity art portraiture
+relational aesthetics interaction
+participatory art community
+community art mural
+public art sculpture
+street photography urban
+documentary photography social
+fine art photography print
+pictorialism photograph
+straight photography photograph
+surrealist photography photograph
+conceptual photography photograph
+abstract photography photograph
+landscape photography photograph
+portrait photography photograph
+still life photography photograph
+fashion photography photograph
+advertising photography photograph
+photojournalism photograph
+avant-garde film
+academic art painting
+salon art painting
+orientalism painting
+japonisme print
+chinoiserie decorative arts
+primitivism painting
+folk art object
+naïve art painting
+outsider art object
+visionary art drawing
+self-taught art painting
+tribal art mask
+aboriginal art painting
+indigenous art weaving
+african art sculpture
+oceanic art carving
+pre-columbian pottery
+mesoamerican architecture
+andean textiles
+north american native beadwork
+persian miniature painting
+islamic calligraphy
+ottoman tilework
+safavid carpet weaving
+indian sculpture
+buddhist sculpture
+hindu temple architecture
+jain manuscript illumination
+gandhara sculpture
+gupta sculpture
+rajput miniature
+pahari miniature
+deccani miniature
+bengal school painting
+modern indian painting
+contemporary indian installation
+chinese bronze casting
+shang dynasty bronze
+zhou dynasty bronze
+qin dynasty terracotta
+han dynasty tomb art
+six dynasties buddhist sculpture
+sui dynasty buddhist sculpture
+tang dynasty pottery
+five dynasties and ten kingdoms painting
+song dynasty landscape painting
+yuan dynasty painting
+ming dynasty porcelain
+qing dynasty painting
+modern chinese ink painting
+contemporary chinese video art
+japanese pottery
+jomon period pottery
+yayoi period bronze
+kofun period tomb art
+asuka period buddhist sculpture
+nara period buddhist sculpture
+heian period painting
+kamakura period sculpture
+muromachi period ink painting
+momoyama period screen painting
+edo period ukiyo-e
+meiji period nihonga
+taisho period yoga
+showa period manga
+heisei period anime
+reiwa period digital art
+nihonga painting
+yoga painting
+manga comic
+anime animation
+korean ceramics
+three kingdoms period pottery
+unified silla buddhist art
+goryeo dynasty celadon
+joseon dynasty painting
+modern korean painting
+contemporary korean video art
+southeast asian textiles
+khmer temple architecture
+thai buddhist art
+vietnamese lacquerware
+indonesian batik
+philippine painting
+australian landscape painting
+new zealand maori carving
+latin american surrealism
+mexican folk art
+brazilian concrete art
+argentine conceptual art
+chilean arpillera
+colombian botero style
+cuban poster art
+caribbean naive painting
+canadian landscape painting
+group of seven landscape
+american abstract expressionism
+hudson river school painting
+ashcan school painting
+american impressionism painting
+american modernism painting
+color field painting
+hard-edge painting
+washington color school painting
+california light and space installation
+chicago imagists painting
+funk art sculpture
+west coast pop art painting
+east coast pop art painting
+american minimalism sculpture
+american conceptual art text
+american feminist art installation
+pattern and decoration painting
+neo-geo painting
+appropriation art photography
+pictures generation photography
+young british artists installation
+london school painting
+kitchen sink realism painting
+british pop art painting
+british conceptual art text
+european abstract art
+french rococo painting
+spanish surrealism painting
+italian futurism painting
+german expressionism painting
+dutch golden age painting
+flemish baroque painting
+russian constructivism sculpture
+peredvizhniki painting
+russian avant-garde painting
+suprematism painting
+constructivism design
+non-objective art painting
+abstraction-création painting
+art concret painting
+cobra painting
+tachisme painting
+austrian secession
+viennese actionism
+belgian surrealism
+danish golden age
+finnish golden age
+norwegian romanticism
+swedish grace
+swiss concrete art
+polish constructivism
+czech cubism
+hungarian activism
+romanian avant-garde
+bulgarian symbolism
+serbian modernism
+croatian naive art
+slovenian impressionism
+greek modernism
+turkish miniaturism
+armenian illuminated manuscripts
+georgian cloisonné enamel
+syrian islamic art
+lebanese contemporary art
+israeli contemporary art
+palestinian art
+jordanian art
+saudi arabian art
+emirati art
+qatari art
+kuwaiti art
+bahraini art
+oman art
+yemeni art
+iraqi art
+afghan art
+pakistani truck art
+bangladeshi rickshaw art
+nepalese thangka
+bhutanese thangka
+sri lankan traditional painting
+maldivian art
+mongolian painting
+tibetan buddhist art
+uyghur art
+kazakh art
+uzbek art
+turkmen art
+kyrgyz art
+tajik art
+siberian indigenous art
+central asian islamic art
+caucasus art
+azerbaijani carpet weaving
+chechen art
+dagestani art
+circassian art
+crimean tatar art
+volga bulgar art
+golden horde art
+timurid art
+safavid miniature painting
+qajar art
+pahlavi art
+islamic republic art
+ancient egyptian tomb painting
+ancient nubian art
+ancient ethiopian art
+axumite art
+meroitic art
+nok culture terracotta
+ife bronze casting
+benin bronze casting
+asante gold weights
+kuba textile art
+luba art
+songye art
+yoruba art
+zulu beadwork
+xhosa art
+sotho art
+tswana art
+shona sculpture
+makonde sculpture
+masai art
+samburu art
+rendille art
+oromo art
+amhara art
+tigray art
+eritrean art
+somali art
+djiboutian art
+sudanese art
+south sudanese art
+kenyan art
+ugandan art
+tanzanian art
+rwandan art
+burundian art
+malawian art
+zambian art
+zimbabwean art
+botswanan art
+namibian art
+angolan art
+mozambican art
+madagascar art
+comoros art
+seychelles art
+mauritius art
+réunion art
+saint helena art
+cape verdean art
+senegalese art
+gambian art
+mauritanian art
+mali art
+burkinabé art
+nigerien art
+chadian art
+central african republic art
+cameroonian art
+nigerian art
+beninese art
+togolese art
+ghanaian art
+ivorian art
+liberian art
+sierra leonean art
+guinean art
+guinea-bissau art
+gambian art
+western sahara art
+moroccan art
+algerian art
+tunisian art
+libyan art
+saharan art
+amazigh art
+tuareg art
+fula art
+hausa art
+igbo art
+yoruba art
+mexican folk pottery
+guatemalan textile art
+salvadoran naive painting
+honduran art
+nicaraguan art
+costa rican art
+panamanian mola
+cuban santeria art
+dominican art
+haitian art
+puerto rican art
+jamaican art
+trinidad and tobago art
+barbadian art
+saint lucian art
+grenadian art
+saint vincent and the grenadines art
+dominican art
+antigua and barbuda art
+saint kitts and nevis art
+bahamian art
+belizean art
+guyanese art
+surinamese art
+french guiana art
+brazilian indigenous art
+peruvian textile art
+ecuadorian art
+bolivian art
+paraguayan art
+uruguayan art
