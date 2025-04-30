@@ -163,7 +163,6 @@ Metal bucket
 Wooden ladle
 Ceramic pitcher
 Iron kettle on a hearth
-Set of simple tools (hammer, saw)
 Loaf of bread on a cutting board
 Wheelbarrow filled with dirt
 Garden trowel and fork
@@ -278,7 +277,6 @@ Broken pottery shards
 Old coin on the ground
 Carved stone tablet
 Hieroglyphs on a wall
-Cave entrance, dark inside
 Torch flickering on a wall
 Underground stream
 Stalactites and stalagmites
@@ -324,7 +322,6 @@ Horse tied to a post
 Cart loaded with goods
 Simple wooden bridge
 Path leading into woods
-Forest clearing, sunlit
 Tall trees forming canopy
 Sunlight filtering through leaves
 Babbling brook
@@ -369,7 +366,6 @@ Tricycle parked
 Roller skates on porch
 Baseball bat and glove
 Soccer ball in grass
-Basketball hoop, no net
 Tennis racket on court
 Playing cards fanned out
 Chessboard mid-game
@@ -386,7 +382,6 @@ Top hat on a stand
 Cane leaning in corner
 Gloves folded neatly
 Scarf hanging on hook
-Umbrella closed, wet
 Rain boots by the door
 Spectacles on a book
 Magnifying glass
@@ -404,24 +399,19 @@ Atlas open to a map
 Scroll partially unrolled
 Sealing wax and stamp
 Fountain pen uncapped
-Ink bottle, dark liquid
-Paperweight holding papers
 Letter opener on envelope
 Stack of letters tied
 Diary with a lock
 Hourglass half empty
 Calendar page turned
 Clock face showing time
-Old telephone, rotary dial
 Radio playing softly
 Record player spinning vinyl
 Cassette tape unwound
 Film reel canister
 Camera on a tripod
 Lightbulb glowing dimly
-Candlestick holder, wax dripped
 Oil lamp casting light
-Matchbox, one match left
 Key turning in lock
 Door slightly ajar
 Window looking out
@@ -442,7 +432,6 @@ Rug on wooden floor
 Staircase leading up
 Hallway stretching long
 Attic filled with boxes
-Basement, damp stone walls
 Roof with missing shingles
 Chimney puffing smoke
 Weather vane spinning
@@ -497,7 +486,6 @@ Pine needles on ground
 Acorn cap empty
 Dandelion gone to seed
 Thistle flower purple
-Clover patch, four-leaf?
 Wildflowers in a meadow
 Tall grass swaying
 Reeds by the water

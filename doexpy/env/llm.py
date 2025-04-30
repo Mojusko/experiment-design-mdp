@@ -366,17 +366,24 @@ def create_prompt_from_tokens(tokens: List[str], base_prompt: str = '') -> str:
         # If there are no valid tokens, return the base prompt or empty string
         return base_prompt
 
+    # --- Temporarily reverted prompt format ---
+    # if base_prompt:
+    #     # If base_prompt exists, format as "base in the style of token1, token2, ..."
+    #     return f"{base_prompt} in the style of {', '.join(valid_tokens)}"
+    # else:
+    #     # If no base_prompt, treat the first token as the base
+    #     if len(valid_tokens) == 1:
+    #         # If only one token, return it directly
+    #         return valid_tokens[0]
+    #     else:
+    #         # Format as "token1 in the style of token2, token3, ..."
+    #         return f"{valid_tokens[0]} in the style of {', '.join(valid_tokens[1:])}"
+
+    # New simpler format: base, token1, token2, ... or token1, token2, ...
     if base_prompt:
-        # If base_prompt exists, format as "base in the style of token1, token2, ..."
-        return f"{base_prompt} in the style of {', '.join(valid_tokens)}"
+        return f"{base_prompt}, {', '.join(valid_tokens)}"
     else:
-        # If no base_prompt, treat the first token as the base
-        if len(valid_tokens) == 1:
-            # If only one token, return it directly
-            return valid_tokens[0]
-        else:
-            # Format as "token1 in the style of token2, token3, ..."
-            return f"{valid_tokens[0]} in the style of {', '.join(valid_tokens[1:])}"
+        return ', '.join(valid_tokens)
 
 
 def create_prompt(actions: List[int], env: LLMGrid) -> str:
