@@ -563,7 +563,4 @@ if __name__ == "__main__":
     PIL.Image.fromarray(image_np).save(image_path)
     print(f"Image saved to {image_path}")
 
-    # Optionally save the embedding too
-    embedding_path = os.path.splitext(image_path)[0] + ".pt"
-    torch.save(image_embedding, embedding_path)
-    print(f"Image embedding saved to {embedding_path}")
+    # Removed saving of the generated image's embedding
