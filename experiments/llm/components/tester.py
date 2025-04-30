@@ -147,24 +147,25 @@ def create_dot_product_model_from_estimator(estimator, embedder):
         raise ValueError(f"Failed to create DotProductModel from estimator: {e}")
 
 class ImageGenerationTester(BaseTester):
-    # Updated __init__ to accept embedder and pass it to super()
+    # Updated __init__ to accept embedder, beam_width and pass them to super()
     def __init__(self, scorer_model=None, embedder=None, params=None):
         self.params = params or {}
         # scorer_model and embedder are passed to super() which stores them
-        self.take_best_worst_N = self.params.get('take_best_worst_N', 8) if self.params else 8
-        self.use_estimator = self.params.get('use_estimator', False) if self.params else False
+        self.take_best_worst_N = self.params.get('take_best_worst_N', 8) # N sequences to return
+        self.use_estimator = self.params.get('use_estimator', False)
+        self.beam_width = self.params.get('beam_width', 5) # Beam width for search (K in beam search)
         # Pass scorer_model and embedder to the base class constructor
         super().__init__(scorer_model=scorer_model, embedder=embedder, params=params)
         print(f"Initialized {self.__class__.__name__} with take_best_worst_N={self.take_best_worst_N}, "
-              f"use_estimator={self.use_estimator}")
+              f"use_estimator={self.use_estimator}, beam_width={self.beam_width}")
 
     def run_test(self, cfg, env, estimator, theta_star, training_words_list, testing_words_list, visits=None):
-        """Run the image generation test
+        """Run the image generation test using beam search.
 
-        This tester finds the best and worst prompts based on the scorer model or estimator.
-        It builds the sequence greedily by choosing the best token at each timestep.
-        
-        If use_estimator is True, it will use the estimator instead of the ground truth model.
+        This tester finds the top N best and worst prompts based on the scorer model or estimator,
+        using beam search to explore sequences.
+
+        If use_estimator is True, it will use the estimator instead of the ground truth model for scoring.
         """
         # Determine which model to use for scoring and store it for helper methods
         if self.use_estimator:
@@ -172,184 +173,127 @@ class ImageGenerationTester(BaseTester):
             self.estimator = estimator  # Store for helper methods
         else:
             print(f"Using ground truth model for {self.__class__.__name__}")
-            
-        print(f"Running {self.__class__.__name__} with greedy approach")
-        test_rng = np.random.RandomState(42)
+
+        test_rng = np.random.RandomState(42) # Keep RNG for potential future use, though not used by beam search directly
         horizon = cfg.horizon
-        
         # Make sure testing_words_list is a list of lists with one list per horizon step
         if not isinstance(testing_words_list[0], list):
             testing_words_list = [testing_words_list] * horizon
         
-        # Greedy approach: build sequence by choosing best token at each step
-        return self._run_greedy_test(cfg, env, test_rng, horizon, testing_words_list)
-    
-    def _run_greedy_test(self, cfg, env, test_rng, horizon, testing_words_list):
-        """Greedy approach: build sequence by choosing best token at each step"""
-        # Use the scoring model from the parent method
+        # Beam search approach: find top N best and worst sequences
+        return self._run_beam_search_test(cfg, env, test_rng, horizon, testing_words_list)
+
+    def _score_sequence(self, sequence, env, horizon, testing_words_list, scoring_model):
+        """Scores a potentially partial sequence by padding and using the scoring model."""
+        # Pad sequence if it's shorter than the horizon
+        padded_sequence = list(sequence) # Make a mutable copy
+        current_len = len(padded_sequence)
+        if current_len < horizon:
+            # Use first token from each remaining position's vocab as padding
+            padding = [testing_words_list[i][0] for i in range(current_len, horizon)]
+            padded_sequence.extend(padding)
+
+        # Create prompt and score
+        prompt = create_prompt_from_tokens(padded_sequence, env.base_prompt)
+        score, _ = scoring_model.score_prompt(prompt)
+        return score.item()
+
+    def _beam_search(self, env, horizon, testing_words_list, scoring_model, beam_width, maximize):
+        """Performs beam search to find sequences optimizing the score."""
+        # Initialize beams: list of (score, sequence_tuple)
+        # Start with an empty sequence tuple and score 0 (or score of base prompt if desired)
+        beams = [(0.0, tuple())]
+
+        for h in range(horizon):
+            candidates = []
+            # For each current beam (sequence)
+            for current_score, current_sequence in beams:
+                # Try appending each token from the vocabulary for this step
+                for token in testing_words_list[h]:
+                    new_sequence = current_sequence + (token,)
+                    try:
+                        # Score the new (potentially partial) sequence
+                        score = self._score_sequence(new_sequence, env, horizon, testing_words_list, scoring_model)
+                        candidates.append((score, new_sequence))
+                    except Exception as e:
+                        print(f"Error scoring sequence {new_sequence} with token '{token}': {e}")
+                        continue # Skip this candidate if scoring fails
+
+            # Sort candidates by score (descending for maximize, ascending for minimize)
+            candidates.sort(key=lambda x: x[0], reverse=maximize)
+
+            # Select top beam_width candidates as the new beams
+            beams = candidates[:beam_width]
+
+            if not beams: # Stop if no valid candidates were found
+                print(f"Warning: Beam search terminated early at step {h+1} due to no valid candidates.")
+                break
+
+        # Final beams are sorted by score according to 'maximize'
+        return beams # Returns list of (score, sequence_tuple)
+
+    def _run_beam_search_test(self, cfg, env, test_rng, horizon, testing_words_list):
+        """Runs beam search to find top N best and worst sequences."""
         try:
+            # Determine which scoring model to use
             if self.use_estimator:
                 if self.estimator is None:
                     raise ValueError("Cannot use estimator model when estimator is None.")
                 if self.embedder is None:
-                     raise ValueError("Cannot create estimator model without an embedder instance.")
-                # Use self.embedder (from BaseTester) instead of env.embedder
+                    raise ValueError("Cannot create estimator model without an embedder instance.")
                 scoring_model = create_dot_product_model_from_estimator(self.estimator, self.embedder)
+                print(f"Running beam search test with estimator model, horizon {horizon}, beam width {self.beam_width}")
             else:
                 if self.scorer_model is None:
-                     raise ValueError("Cannot use ground truth model when scorer_model is None.")
+                    raise ValueError("Cannot use ground truth model when scorer_model is None.")
                 scoring_model = self.scorer_model
+                print(f"Running beam search test with ground truth model, horizon {horizon}, beam width {self.beam_width}")
 
-            print(f"Running greedy test with horizon {horizon}")
-            # Start with empty sequence
-            best_sequence = []
-            worst_sequence = []
-            
-            # For each position in the sequence
-            for pos in range(horizon):
-                print(f"Processing position {pos+1}/{horizon} with {len(testing_words_list[pos])} possible tokens")
-                # Score all possible tokens at this position
-                best_scores_at_pos = []
-                best_tokens_at_pos = []
-                worst_scores_at_pos = []
-                worst_tokens_at_pos = []
-                
-                for token in testing_words_list[pos]:
-                    # Create temporary sequence with this token
-                    temp_best_sequence = best_sequence + [token]
-                    temp_worst_sequence = worst_sequence + [token]
-                    
-                    # Pad to full horizon length if needed
-                    if len(temp_best_sequence) < horizon:
-                        # Use first token from each remaining position as padding
-                        padding = [testing_words_list[i][0] for i in range(pos+1, horizon)]
-                        temp_best_sequence = temp_best_sequence + padding
-                        temp_worst_sequence = temp_worst_sequence + padding
-                    
-                    try:
-                        # Score the sequences
-                        best_prompt = create_prompt_from_tokens(temp_best_sequence, env.base_prompt)
-                        best_score, _ = scoring_model.score_prompt(best_prompt)
-                        
-                        worst_prompt = create_prompt_from_tokens(temp_worst_sequence, env.base_prompt)
-                        worst_score, _ = scoring_model.score_prompt(worst_prompt)
-                        
-                        best_scores_at_pos.append(best_score.item())
-                        best_tokens_at_pos.append(token)
-                        worst_scores_at_pos.append(worst_score.item())
-                        worst_tokens_at_pos.append(token)
-                    except Exception as e:
-                        print(f"Error scoring token '{token}': {e}")
-                        continue
-                
-                if not best_scores_at_pos:
-                    print(f"Warning: No valid scores for position {pos+1}. Using default token.")
-                    default_token = testing_words_list[pos][0]
-                    best_sequence.append(default_token)
-                    worst_sequence.append(default_token)
-                    continue
-                    
-                # Choose best token for this position
-                best_idx = np.argmax(best_scores_at_pos)
-                best_sequence.append(best_tokens_at_pos[best_idx])
-                
-                # Choose worst token for this position
-                worst_idx = np.argmin(worst_scores_at_pos)
-                worst_sequence.append(worst_tokens_at_pos[worst_idx])
-                
-                print(f"Position {pos+1}: Best token '{best_tokens_at_pos[best_idx]}' (score: {best_scores_at_pos[best_idx]:.4f}), "
-                      f"Worst token '{worst_tokens_at_pos[worst_idx]}' (score: {worst_scores_at_pos[worst_idx]:.4f})")
+            # Find N best sequences
+            print("Starting beam search for best sequences...")
+            best_results = self._beam_search(env, horizon, testing_words_list, scoring_model, self.beam_width, maximize=True)
+            # Extract top N best sequences and scores
+            top_n_best = best_results[:self.take_best_worst_N]
+            best_sequences = [list(seq) for score, seq in top_n_best] # Convert tuples back to lists
+            best_scores = [score for score, seq in top_n_best]
+            best_prompts = [create_prompt_from_tokens(seq, env.base_prompt) for seq in best_sequences]
+            print(f"Found {len(best_sequences)} best sequences. Best score: {best_scores[0] if best_scores else 'N/A'}")
+
+            # Find N worst sequences
+            print("Starting beam search for worst sequences...")
+            worst_results = self._beam_search(env, horizon, testing_words_list, scoring_model, self.beam_width, maximize=False)
+            # Extract top N worst sequences and scores (top N from the ascending sort)
+            top_n_worst = worst_results[:self.take_best_worst_N]
+            worst_sequences = [list(seq) for score, seq in top_n_worst] # Convert tuples back to lists
+            worst_scores = [score for score, seq in top_n_worst]
+            worst_prompts = [create_prompt_from_tokens(seq, env.base_prompt) for seq in worst_sequences]
+            print(f"Found {len(worst_sequences)} worst sequences. Worst score: {worst_scores[0] if worst_scores else 'N/A'}")
+
         except Exception as e:
-            print(f"Error in greedy test: {e}")
+            print(f"Error during beam search test: {e}")
+            # Return an error structure
             return {
                 "image_generation": {
-                    "best_prompts": [],
-                    "best_scores": [],
-                    "worst_prompts": [],
-                    "worst_scores": [],
-                    "best_sequence": [],
-                    "worst_sequence": []
+                    "best_prompts": [], "best_scores": [], "best_sequences": [],
+                    "worst_prompts": [], "worst_scores": [], "worst_sequences": []
                 },
-                "best_image_score": 0,
-                "worst_image_score": 0,
-                "avg_top_image_score": 0,
+                "best_image_score": 0, "worst_image_score": 0, "avg_top_image_score": 0,
                 "error": str(e)
-            } # Added missing closing brace
+            }
 
-        # For the final position, get the top N best and worst completions
-        if horizon > 0:
-            print(f"Getting top {self.take_best_worst_N} best and worst completions for the final position")
-            # Score all possible completions for the last position
-            final_pos = horizon - 1
-            all_scores = []
-            all_prompts = []
-            
-            # Use best_sequence up to the second-to-last position
-            best_prefix = best_sequence[:-1]
-            worst_prefix = worst_sequence[:-1]
-            
-            # Try all tokens for the last position
-            for token in testing_words_list[final_pos]:
-                # Best sequence with this final token
-                full_best_sequence = best_prefix + [token]
-                best_prompt = create_prompt_from_tokens(full_best_sequence, env.base_prompt)
-                best_score, _ = scoring_model.score_prompt(best_prompt)
-                
-                # Worst sequence with this final token
-                full_worst_sequence = worst_prefix + [token]
-                worst_prompt = create_prompt_from_tokens(full_worst_sequence, env.base_prompt)
-                worst_score, _ = scoring_model.score_prompt(worst_prompt)
-                
-                all_scores.append((best_score.item(), best_prompt, "best"))
-                all_scores.append((worst_score.item(), worst_prompt, "worst"))
-            
-            # Sort all scores
-            all_scores.sort(reverse=True)  # Sort by score descending
-            
-            # Get top N best prompts
-            best_prompts = []
-            best_scores = []
-            for i in range(min(self.take_best_worst_N, len(all_scores))):
-                if all_scores[i][2] == "best":
-                    best_prompts.append(all_scores[i][1])
-                    best_scores.append(all_scores[i][0])
-                if len(best_prompts) >= self.take_best_worst_N:
-                    break
-            
-            print(f"Found {len(best_prompts)} best prompts with scores ranging from {max(best_scores):.4f} to {min(best_scores) if best_scores else 0:.4f}")
-            
-            # Sort all scores in ascending order for worst
-            all_scores.sort()  # Sort by score ascending
-            
-            # Get top N worst prompts
-            worst_prompts = []
-            worst_scores = []
-            for i in range(min(self.take_best_worst_N, len(all_scores))):
-                if all_scores[i][2] == "worst":
-                    worst_prompts.append(all_scores[i][1])
-                    worst_scores.append(all_scores[i][0])
-                if len(worst_prompts) >= self.take_best_worst_N:
-                    break
-            
-            print(f"Found {len(worst_prompts)} worst prompts with scores ranging from {max(worst_scores) if worst_scores else 0:.4f} to {min(worst_scores) if worst_scores else 0:.4f}")
-        else:
-            # Handle edge case of horizon=0
-            best_prompts = []
-            best_scores = []
-            worst_prompts = []
-            worst_scores = []
-        
+        # Return results in the expected format
         return {
             "image_generation": {
                 "best_prompts": best_prompts,
                 "best_scores": best_scores,
+                "best_sequences": best_sequences, # Add sequences
                 "worst_prompts": worst_prompts,
                 "worst_scores": worst_scores,
-                "best_sequence": best_sequence,
-                "worst_sequence": worst_sequence
+                "worst_sequences": worst_sequences # Add sequences
             },
             "best_image_score": best_scores[0] if best_scores else 0,
             "worst_image_score": worst_scores[0] if worst_scores else 0,
+            # Avg score of the N best sequences found by beam search
             "avg_top_image_score": sum(best_scores) / len(best_scores) if best_scores else 0
-        } # Added missing closing brace for the main return dictionary
+        }
 
