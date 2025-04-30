@@ -36,10 +36,10 @@ tester: # Enabled for standard runs
       N_pairs_eval: 5000
   - _target_: components.tester.CosineTester
     params: null
-  - _target_: components.tester.ImageGenerationTester # Enabled for testing estimators
-    params:
-       take_best_worst_N: 4 # Default N
-       use_estimator: true # Use the loaded/trained estimator
+  #  - _target_: components.tester.ImageGenerationTester # Enabled for testing estimators
+  #    params:
+  #       take_best_worst_N: 4 # Default N
+  #       use_estimator: true # Use the loaded/trained estimator
        # save_worst: false # Default is false, uncomment to save worst too
   # VisitsTester removed
 
@@ -61,16 +61,16 @@ savers:
   - _target_: components.saver.ConfSaver # Keep ConfSaver
     params:
       filename: "config_resolved.yaml"
-  - _target_: components.saver.ImageGenerationSaver # Keep enabled if you want images generated during full run tests
-    params:
-      # seed: "${seed}" # Seed is handled internally by the saver/tester logic
-      # base_prompt: "${base_prompt}" # Base prompt is available via env object
-      take_best_worst_N: 4 # Match tester N
-      # debug_mode: false
-      # image_size: 512 # Uses default from image_generator
-      # num_inference_steps: 100 # Uses default from image_generator
-      add_image_score: true # Calculate image scores using the estimator
-      save_worst: false # Default is false, set true to save worst N images/prompts
+  #  - _target_: components.saver.ImageGenerationSaver # Keep enabled if you want images generated during full run tests
+  #    params:
+  #      # seed: "${seed}" # Seed is handled internally by the saver/tester logic
+  #      # base_prompt: "${base_prompt}" # Base prompt is available via env object
+  #      take_best_worst_N: 4 # Match tester N
+  #      # debug_mode: false
+  #      # image_size: 512 # Uses default from image_generator
+  #      # num_inference_steps: 100 # Uses default from image_generator
+  #      add_image_score: true # Calculate image scores using the estimator
+  #      save_worst: false # Default is false, set true to save worst N images/prompts
   - _target_: components.saver.ReadableVisitsSaver # Enabled for standard runs
     params:
       output_filename: "readable_visits.txt"
