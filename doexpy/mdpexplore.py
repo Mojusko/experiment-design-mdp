@@ -401,7 +401,7 @@ class MdpExploreMultiPolicy:
                         self.episodes,
                         keep=True # Use existing policy parameters (optimization already happened if needed)
                     )
-                    if self.verbosity > 1:
+                    if self.verbosity > 3:
                         print(f"Episode {ep_idx}, h=0: Policy {chosen_policy_idx} chosen, action {first_action_for_episode} selected for all.")
 
                 # --- Execute step for all policies ---

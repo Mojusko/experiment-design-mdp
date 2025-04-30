@@ -452,6 +452,12 @@ def get_scorer_model(model_name: str, env: LLMGrid, embedder: BaseEmbedder) -> V
         weight_vector = embedder.embed_text(prompt)
         return DotProductModel(embedder, weight_vector).eval()
 
+    elif model_name == 'futuristic-text':
+        # Use the embedder to get the weight vector from text
+        prompt = "A spaceship cruising in space in futuristic style"
+        weight_vector = embedder.embed_text(prompt)
+        return DotProductModel(embedder, weight_vector).eval()
+
     elif model_name == 'japanese-image':
         # Use the embedder to get the weight vector from an image
         from PIL import Image

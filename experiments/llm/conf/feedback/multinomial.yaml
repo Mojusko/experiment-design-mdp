@@ -38,3 +38,6 @@ model_specific_params:
   ancient-text:
     lambda_dsn: 1 # Example value
     lambda_est: 500 #num_policies=4 (Kept high based on previous findings)
+  futuristic-text:
+    lambda_dsn: 1
+    lambda_est: 500
