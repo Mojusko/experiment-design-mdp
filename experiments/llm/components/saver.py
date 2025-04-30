@@ -1,24 +1,23 @@
-import numpy as np
+# Standard library imports
 import json
 import os
+import textwrap
+import types
+import hashlib
+
+# Third-party imports
+import numpy as np
 import torch
 import matplotlib.pyplot as plt
-# Import PIL module only (no direct Image import)
 import PIL
 import yaml
-import textwrap # Import textwrap
 from abc import ABC, abstractmethod
 from omegaconf import OmegaConf, DictConfig
-from hydra.utils import to_absolute_path # Import Hydra path utility
-# Import necessary components for VisitsImageSaver at the top level
+from hydra.utils import to_absolute_path
+
+# Local imports
 from doexpy.env.llm import create_prompt
 from experiments.llm.image_generator import StableDiffusionGenerator, _get_seed_from_prompt, DEFAULT_CONFIG
-# Removed top-level import causing circular dependency
-# from experiments.llm.image_generator import StableDiffusionGenerator, DoubleGuidanceStableDiffusionGenerator, _get_seed_from_prompt
-# Removed unused import causing circular dependency
-# from doexpy.env.llm import create_prompt_from_tokens
-import hashlib
-import types
 
 def _convert_to_serializable(obj):
     """Convert numpy arrays, torch tensors, and other non-serializable objects to Python primitives."""
@@ -39,31 +38,52 @@ def _convert_to_serializable(obj):
         return obj
 
 class BaseSaver(ABC):
-    """Base class for all savers with simplified interface."""
+    """
+    Base class for all savers with a standardized interface.
+    
+    All savers handle storing experiment results in various formats
+    and configurations. This provides a common interface for different
+    saving strategies.
+    """
 
-    # Use only named arguments, remove **kwargs to be explicit
-    # Removed cfg argument
     def __init__(self,
                  env=None,
                  embedder=None,
-                 params: DictConfig = None, # Hydra populates this from config
+                 params: DictConfig = None,
                  scorer_model=None,
                  results_dir=None,
                  experiment_id=None,
                  skip_existing: bool = False):
-        # Store core objects and config if provided
-        # Dummy args (horizon, dense_feedback, verbose) removed - Python ignores extra args passed during instantiation
+        """
+        Initialize the base saver with common parameters.
+        
+        Args:
+            env: The environment object
+            embedder: The text/image embedder
+            params: Saver-specific parameters from Hydra config
+            scorer_model: Model used for scoring outputs
+            results_dir: Directory to save results
+            experiment_id: Optional ID to identify this experiment run
+            skip_existing: If True, skip saving if output file exists
+        """
         self.env = env
         self.embedder = embedder
-        # self.cfg is removed
-        self.params = params if params is not None else {} # Use the passed params DictConfig
+        self.params = params if params is not None else {}
         self.scorer_model = scorer_model
         self.results_dir = results_dir
         self.experiment_id = experiment_id
         self.skip_existing = skip_existing
 
     def get_output_path(self, filename=None):
-        """Get the output path with experiment_id if provided."""
+        """
+        Get the output path with experiment_id if provided.
+        
+        Args:
+            filename: Optional filename to use instead of the one in params
+            
+        Returns:
+            Full path to the output file, or None if file exists and skip_existing is True
+        """
         # Use instance filename if none provided
         filename = filename or self.params.get('filename')
         if not filename:
@@ -264,9 +284,7 @@ class ImageGenerationSaver(BaseSaver):
             # Calculate image-based aesthetics score
             if self.add_image_score:
                 # Process embedding: normalize, convert to double, and move to correct device
-                # Removed incorrect unsqueeze(0)
-                image_embedding = image_embedding / image_embedding.norm(dim=1, keepdim=True)  # First L2 normalization
-                image_embedding = image_embedding / image_embedding.norm(dim=1, keepdim=True)  # Second L2 normalization
+                image_embedding = image_embedding / torch.linalg.norm(image_embedding, dim=1, keepdim=True)
                 image_embedding = image_embedding.to(self.scorer_model.weight.device).double()
                 
                 # Score the embedding
@@ -297,11 +315,10 @@ class ImageGenerationSaver(BaseSaver):
             # Calculate image-based aesthetics score
             if self.add_image_score and hasattr(self.scorer_model, 'score_embedding'):
                 # Process embedding: normalize, convert to double, and move to correct device
-                # Removed incorrect unsqueeze(0)
-                image_embedding = image_embedding / image_embedding.norm(dim=1, keepdim=True)  # First L2 normalization
-                image_embedding = image_embedding / image_embedding.norm(dim=1, keepdim=True)  # Second L2 normalization
+                # Normalize the embedding once
+                image_embedding = image_embedding / image_embedding.norm(dim=1, keepdim=True)
                 image_embedding = image_embedding.to(self.scorer_model.weight.device).double()
-                
+
                 # Score the embedding
                 image_score = self.scorer_model.score_embedding(image_embedding).item()
                 worst_image_scores.append(image_score)
@@ -389,13 +406,7 @@ class ImageGenerationSaver(BaseSaver):
                 image_score = best_image_scores[i] if i < len(best_image_scores) else "N/A"
                 f.write(f"{i+1}\t{prompt_score:.6f}\t{image_score}\t{prompt}\n")
             
-            f.write("\nWORST PROMPTS:\n")
-            f.write("Rank\tPrompt Score\tImage Score\tPrompt\n")
-            for i, (prompt_score, prompt) in enumerate(zip(worst_scores, worst_prompts)):
-                image_score = worst_image_scores[i] if i < len(worst_image_scores) else "N/A"
-                f.write(f"{i+1}\t{prompt_score:.6f}\t{image_score}\t{prompt}\n")
-
-            # Conditionally write worst prompts section
+            # Write worst prompts section only if save_worst is True
             if self.save_worst and worst_prompts:
                 f.write("\nWORST PROMPTS:\n")
                 f.write("Rank\tPrompt Score\tImage Score\tPrompt\n")
@@ -507,12 +518,18 @@ class VisitsImageSaver(BaseSaver):
                  dense_feedback: bool = False,
                  verbose: bool = False,
                  seed: int = None, # Added seed
-                 total_repeats: int = 1): # Added total_repeats
-        # Pass arguments explicitly to BaseSaver (without cfg)
-        # BaseSaver no longer has dummy args for horizon, dense_feedback, verbose
-        super().__init__(env=env, embedder=embedder, params=params,
-                         scorer_model=scorer_model, results_dir=results_dir,
-                         experiment_id=experiment_id, skip_existing=skip_existing)
+                 total_repeats: int = 1, # Added total_repeats
+                 algorithm: str = None): # Added algorithm
+        # Pass arguments explicitly to BaseSaver
+        super().__init__(
+            env=env, 
+            embedder=embedder, 
+            params=params,
+            scorer_model=scorer_model, 
+            results_dir=results_dir,
+            experiment_id=experiment_id, 
+            skip_existing=skip_existing
+        )
 
         # Store the specific config values needed by this saver
         self.horizon = horizon
@@ -520,6 +537,7 @@ class VisitsImageSaver(BaseSaver):
         self.verbose = verbose
         self.seed = seed # Store the current seed
         self.total_repeats = total_repeats # Store total number of repeats/seeds
+        self.algorithm = algorithm # Store the algorithm name
 
         # --- Validate required objects (self.env should now be set correctly by BaseSaver) ---
         if self.env is None:
@@ -531,23 +549,22 @@ class VisitsImageSaver(BaseSaver):
         # if self.cfg is None:
         #      raise ValueError("VisitsImageSaver requires the 'cfg' object. Ensure it's passed during instantiation.")
         if self.horizon is None: # Add check for horizon as it's critical
-             raise ValueError("VisitsImageSaver requires the 'horizon' value. Ensure it's passed during instantiation.")
+            raise ValueError("VisitsImageSaver requires the 'horizon' value. Ensure it's passed during instantiation.")
         # Add validation for seed and total_repeats
         if self.seed is None: # Add check for seed
-             print("Warning: VisitsImageSaver initialized without a seed. Episode splitting will be disabled.")
+            print("Warning: VisitsImageSaver initialized without a seed. Episode splitting will be disabled.")
         if self.total_repeats is None or self.total_repeats < 1: # Add check for total_repeats
-             print(f"Warning: VisitsImageSaver initialized with invalid total_repeats ({self.total_repeats}). Defaulting to 1, episode splitting disabled.")
-             self.total_repeats = 1
-
-
-        # --- Configuration for Image Generation (using self.params for saver-specific settings) ---
-        # self.params is now directly passed and stored by BaseSaver
-        # Default to using prompt-specific seeds for reproducibility per prompt
+            print(f"Warning: VisitsImageSaver initialized with invalid total_repeats ({self.total_repeats}). Defaulting to 1, episode splitting disabled.")
+            self.total_repeats = 1
+        if self.algorithm is None: # Add check for algorithm
+            raise ValueError("VisitsImageSaver requires the 'algorithm' name. Ensure it's passed during instantiation.")
+ 
+ 
+        # --- Configuration for Image Generation ---
         self.seed_per_prompt = self.params.get('seed_per_prompt', True)
-        self.output_subdir = self.params.get('output_subdir', 'visit_images') # Specific to this saver
-        # image_size, num_inference_steps, guidance_scale, stable_diffusion_id, models_cache_dir, base_seed
-        # are now taken directly from image_generator.DEFAULT_CONFIG when the generator is instantiated.
-
+        self.output_subdir = self.params.get('output_subdir', 'visit_images')
+        # image parameters are taken from DEFAULT_CONFIG when the generator is instantiated
+ 
     def save_result(self, results):
         """
         Generates and saves images based on visited trajectories.
@@ -718,30 +735,29 @@ class VisitsImageSaver(BaseSaver):
                     for i in range(len(timestep_images), n_cols):
                         axes[0, i].axis('off')
 
-                    # --- Determine the main title (always use "Base Prompt:") ---
-                    title_prefix = "Base Prompt:" # Always use this prefix
+                    # --- Determine the main title ---
+                    title_prefix = "Base Prompt:"
                     base_prompt_content = ""
+                    
+                    # Try to get base_prompt from env first
                     if hasattr(self.env, 'base_prompt') and self.env.base_prompt:
                         base_prompt_content = self.env.base_prompt
                     else:
-                        # If base_prompt is empty, get the prompt for the first timestep (h=1) of the first policy
+                        # Fall back to first policy's first action
                         try:
-                            first_policy_actions = visits[0][ep_idx][1] # Actions for policy 0, episode ep_idx
+                            first_policy_actions = visits[0][ep_idx][1]
                             if isinstance(first_policy_actions, torch.Tensor):
                                 first_policy_actions = first_policy_actions.cpu().numpy()
                             first_policy_actions = list(map(int, first_policy_actions))
-
-                            if first_policy_actions: # Check if there are any actions
-                                first_timestep_actions = first_policy_actions[:1] # Get only the first action(s) for h=1
+                            
+                            if first_policy_actions:
+                                first_timestep_actions = first_policy_actions[:1]
                                 base_prompt_content = create_prompt(first_timestep_actions, self.env)
-                                # title_prefix remains "Base Prompt:"
                             else:
                                 base_prompt_content = "[No actions for h=1]"
-                                # title_prefix remains "Base Prompt:"
-                        except (IndexError, TypeError, Exception) as e:
-                            print(f"    Warning: Could not determine first timestep prompt for title: {e}")
-                            base_prompt_content = f"Episode {ep_idx}" # Fallback title
-                            # title_prefix remains "Base Prompt:"
+                        except Exception as e:
+                            print(f"    Warning: Could not determine prompt for title: {e}")
+                            base_prompt_content = f"Episode {ep_idx}"
 
                     # Wrap the determined title text
                     wrapped_title = textwrap.fill(f"{title_prefix} '{base_prompt_content}'", width=60) # Adjust width as needed
@@ -752,9 +768,9 @@ class VisitsImageSaver(BaseSaver):
                     # Adjust subplot parameters: increase bottom margin slightly to accommodate xlabels, adjust spacing
                     plt.subplots_adjust(bottom=0.25, hspace=0.4, wspace=0.2) # Increased bottom margin
 
-                    # Construct filename including timestep h
+                    # Construct filename including algorithm, episode, and timestep h
                     # Use the absolute episode index ep_idx in the filename
-                    filename = f"episode_{ep_idx:03d}_timestep_{h:02d}.png"
+                    filename = f"alg-{self.algorithm}_episode_{ep_idx:03d}_timestep_{h:02d}.png"
                     output_path = os.path.join(output_dir_path, filename)
 
                     plt.savefig(output_path)

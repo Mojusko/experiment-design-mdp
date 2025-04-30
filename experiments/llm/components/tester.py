@@ -153,7 +153,7 @@ class ImageGenerationTester(BaseTester):
         # scorer_model and embedder are passed to super() which stores them
         self.take_best_worst_N = self.params.get('take_best_worst_N', 8) # N sequences to return
         self.use_estimator = self.params.get('use_estimator', False)
-        self.beam_width = self.params.get('beam_width', 5) # Beam width for search (K in beam search)
+        self.beam_width = self.params.get('beam_width', 8) # Beam width for search (K in beam search)
         # Pass scorer_model and embedder to the base class constructor
         super().__init__(scorer_model=scorer_model, embedder=embedder, params=params)
         print(f"Initialized {self.__class__.__name__} with take_best_worst_N={self.take_best_worst_N}, "

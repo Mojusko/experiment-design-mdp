@@ -28,6 +28,40 @@ saveFinalButton.addEventListener('click', () => {
     const outputData = {
         user_prompt: userPrompt,
         preferences: feedbackData // Store image preferences under 'preferences' key
+    // --- Prepare data for JSON ---
+    // Process feedbackData to include detailed info
+    const formattedPreferences = [];
+    const filenamePattern = /alg-([a-zA-Z0-9]+)_episode_(\d+)_timestep_(\d+)\.png$/i;
+
+    for (const filename in feedbackData) {
+        if (feedbackData.hasOwnProperty(filename)) {
+            const match = filename.match(filenamePattern);
+            if (match) {
+                formattedPreferences.push({
+                    filename: filename, // Keep original filename
+                    algorithm: match[1],
+                    episode: parseInt(match[2], 10),
+                    timestep: parseInt(match[3], 10),
+                    preference: feedbackData[filename] // The user's choice (1-based index)
+                });
+            } else {
+                console.warn(`Could not parse filename in feedback data: ${filename}`);
+                // Optionally include raw data if parsing fails
+                // formattedPreferences.push({ filename: filename, preference: feedbackData[filename], error: "parse_failed" });
+            }
+        }
+    }
+
+    // Sort the preferences for consistency (optional, but good practice)
+    formattedPreferences.sort((a, b) => {
+        if (a.algorithm !== b.algorithm) return a.algorithm.localeCompare(b.algorithm);
+        if (a.episode !== b.episode) return a.episode - b.episode;
+        return a.timestep - b.timestep;
+    });
+
+    const outputData = {
+        user_prompt: userPrompt,
+        preferences: formattedPreferences // Store the detailed, formatted preferences
     };
 
     const outputJson = JSON.stringify(outputData, null, 2); // Pretty print JSON

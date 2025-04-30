@@ -145,12 +145,13 @@ class LLMExperiment:
                 # Add arguments specific to VisitsImageSaver if it's the target
                 if s_conf.get('_target_') == 'components.saver.VisitsImageSaver':
                     init_args['horizon'] = self.cfg.horizon
-                    # init_args['horizon'] = self.cfg.horizon # Removed duplicate line
                     init_args['dense_feedback'] = self.cfg.get('dense_feedback', False)
                     init_args['verbose'] = self.cfg.get('verbose', False)
                     init_args['seed'] = self.seed # Pass the current seed
+                    init_args['algorithm'] = self.cfg.algorithm # Pass the algorithm name
                     # Pass total repeats, default to 1 if not found in config
                     init_args['total_repeats'] = self.cfg.experiment.get('repeats', 1)
+
                 # Add arguments specific to ReadableVisitsSaver
                 elif s_conf.get('_target_') == 'components.saver.ReadableVisitsSaver':
                     init_args['horizon'] = self.cfg.horizon

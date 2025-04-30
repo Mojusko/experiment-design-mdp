@@ -6,10 +6,12 @@ if (typeof imageFiles === 'undefined' || !Array.isArray(imageFiles) || imageFile
     throw new Error("imageFiles not loaded."); // Stop script execution
 }
 
-let currentIndex = 0;
-// Initialize feedback storage. Use localStorage for persistence across sessions.
-let feedbackData = JSON.parse(localStorage.getItem('imageFeedback')) || {};
+// --- Global Variables ---
+let currentQuestionIndex = 0; // Index for the shuffled question order
+let displayOrder = []; // Holds the structured and shuffled image data
+let feedbackData = JSON.parse(localStorage.getItem('imageFeedback')) || {}; // Load feedback
 
+// --- DOM Elements ---
 const imageElement = document.getElementById('current-image');
 const imageInfoElement = document.getElementById('image-info');
 const prevButton = document.getElementById('prev-button');
@@ -24,24 +26,82 @@ const policyRadioButtons = feedbackForm.elements['policy_preference'];
 const numPolicies = policyRadioButtons.length;
 console.log(`Detected ${numPolicies} policies.`);
 
-function updateImage() {
-    const currentImageFile = imageFiles[currentIndex];
-    imageElement.src = currentImageFile;
-    imageElement.alt = `Image: ${currentImageFile}`;
+// --- Initialization ---
+function initializeQuestionnaire() {
+    // 1. Parse imageFiles into structured data
+    const structuredImages = imageFiles.map(filename => {
+        const match = filename.match(/alg-([a-zA-Z0-9]+)_episode_(\d+)_timestep_(\d+)\.png$/i);
+        if (match) {
+            return {
+                filename: filename,
+                algorithm: match[1],
+                episode: parseInt(match[2], 10),
+                timestep: parseInt(match[3], 10)
+            };
+        }
+        console.warn(`Could not parse filename: ${filename}`);
+        return null; // Handle potential parsing errors
+    }).filter(item => item !== null); // Remove null entries
 
-    // Extract info from filename (adjust regex if format differs)
-    const match = currentImageFile.match(/episode_(\d+)_timestep_(\d+)/);
-    if (match) {
-        imageInfoElement.textContent = `Episode ${parseInt(match[1], 10)}, Timestep ${parseInt(match[2], 10)}`;
-    } else {
-        imageInfoElement.textContent = currentImageFile.split('/').pop(); // Fallback to filename
+    if (structuredImages.length === 0) {
+        alert("Error: No valid image filenames found in imageList.js. Cannot proceed.");
+        throw new Error("No valid images parsed.");
     }
 
-    // Update progress display
-    progressElement.textContent = `${currentIndex + 1} / ${imageFiles.length}`;
+    // 2. Group by (algorithm, episode)
+    const groupedByEpisode = structuredImages.reduce((acc, imgData) => {
+        const key = `${imgData.algorithm}-${imgData.episode}`;
+        if (!acc[key]) {
+            acc[key] = [];
+        }
+        acc[key].push(imgData);
+        return acc;
+    }, {});
+
+    // 3. Sort images within each group by timestep
+    for (const key in groupedByEpisode) {
+        groupedByEpisode[key].sort((a, b) => a.timestep - b.timestep);
+    }
+
+    // 4. Create a list of unique (algorithm, episode) keys and shuffle it
+    const episodeKeys = Object.keys(groupedByEpisode);
+    // Fisher-Yates (Knuth) Shuffle
+    for (let i = episodeKeys.length - 1; i > 0; i--) {
+        const j = Math.floor(Math.random() * (i + 1));
+        [episodeKeys[i], episodeKeys[j]] = [episodeKeys[j], episodeKeys[i]];
+    }
+    console.log("Shuffled episode order:", episodeKeys);
+
+    // 5. Create the final displayOrder based on the shuffled keys
+    displayOrder = [];
+    episodeKeys.forEach(key => {
+        displayOrder.push(...groupedByEpisode[key]); // Add all timesteps for this shuffled episode
+    });
+
+    console.log(`Initialization complete. Total questions (images): ${displayOrder.length}`);
+
+    // 6. Start the display
+    updateImage();
+}
+
+
+function updateImage() {
+    if (displayOrder.length === 0 || currentQuestionIndex >= displayOrder.length) {
+        console.error("Error: displayOrder is empty or index out of bounds.");
+        imageInfoElement.textContent = "Error loading questions.";
+        return;
+    }
+
+    const currentImageData = displayOrder[currentQuestionIndex];
+    imageElement.src = currentImageData.filename; // Use original filename for src
+    imageElement.alt = `Question ${currentQuestionIndex + 1}`; // Alt text
+
+    // Update title and progress
+    imageInfoElement.textContent = `Question ${currentQuestionIndex + 1} / ${displayOrder.length}`;
+    progressElement.textContent = `${currentQuestionIndex + 1} / ${displayOrder.length}`;
 
     // --- Timestep 1 Handling ---
-    const isTimestepOne = /timestep_01/.test(currentImageFile);
+    const isTimestepOne = currentImageData.timestep === 1;
     feedbackForm.classList.toggle('disabled-feedback', isTimestepOne); // Add/remove class for styling
 
     policyRadioButtons.forEach((radio, index) => {
@@ -59,34 +119,37 @@ function updateImage() {
     }
     // --- End Timestep 1 Handling ---
 
-
     // Update button states
-    prevButton.disabled = currentIndex === 0;
+    prevButton.disabled = currentQuestionIndex === 0;
 
-    if (currentIndex === imageFiles.length - 1) {
+    if (currentQuestionIndex === displayOrder.length - 1) {
         // Last image: Show Finish button, hide Next button
         nextButton.style.display = 'none';
-        finishButton.style.display = 'inline-block'; // Or 'block' if preferred
-        nextButton.disabled = true; // Keep it disabled logically
+        finishButton.style.display = 'inline-block';
+        nextButton.disabled = true;
     } else {
         // Not the last image: Show Next button, hide Finish button
-        nextButton.style.display = 'inline-block'; // Or 'block'
+        nextButton.style.display = 'inline-block';
         finishButton.style.display = 'none';
-        nextButton.disabled = false; // Enable next button
+        nextButton.disabled = false;
     }
 }
 
 function saveFeedback() {
-    const currentImageFile = imageFiles[currentIndex];
+    if (currentQuestionIndex >= displayOrder.length) return; // Safety check
+
+    const currentImageData = displayOrder[currentQuestionIndex];
+    const filenameKey = currentImageData.filename; // Use the original filename as the key
     const selectedValue = feedbackForm.elements['policy_preference'].value;
+
     if (selectedValue) {
-        // Store the selected value (as a number, 0 for skip)
-        feedbackData[currentImageFile] = parseInt(selectedValue, 10);
-        localStorage.setItem('imageFeedback', JSON.stringify(feedbackData)); // Save to localStorage
-        console.log(`Saved feedback for ${currentImageFile}: ${feedbackData[currentImageFile]}`);
+        feedbackData[filenameKey] = parseInt(selectedValue, 10);
+        localStorage.setItem('imageFeedback', JSON.stringify(feedbackData));
+        console.log(`Saved feedback for ${filenameKey}: ${feedbackData[filenameKey]}`);
     } else {
-        // If nothing is selected when moving away, ensure it's cleared or handled
-        // Currently, we only save when a value *is* selected.
+        // Optional: Clear feedback if nothing is selected
+        // delete feedbackData[filenameKey];
+        // localStorage.setItem('imageFeedback', JSON.stringify(feedbackData));
         // If you want to explicitly save 'null' or 'undefined' when nothing is chosen:
         // delete feedbackData[currentImageFile];
         // localStorage.setItem('imageFeedback', JSON.stringify(feedbackData));
@@ -94,8 +157,11 @@ function saveFeedback() {
 }
 
 function loadFeedback() {
-    const currentImageFile = imageFiles[currentIndex];
-    const savedValue = feedbackData[currentImageFile];
+    if (currentQuestionIndex >= displayOrder.length) return; // Safety check
+
+    const currentImageData = displayOrder[currentQuestionIndex];
+    const filenameKey = currentImageData.filename; // Use the original filename as the key
+    const savedValue = feedbackData[filenameKey];
 
     // Reset all radio buttons first
     feedbackForm.reset(); // Clears selection
@@ -114,22 +180,20 @@ function loadFeedback() {
 // --- Event Listeners ---
 
 prevButton.addEventListener('click', () => {
-    if (currentIndex > 0) {
+    if (currentQuestionIndex > 0) {
         saveFeedback(); // Save feedback for the image we are leaving
-        currentIndex--;
+        currentQuestionIndex--;
         updateImage();
     }
 });
 
 nextButton.addEventListener('click', () => {
     saveFeedback(); // Save feedback for the current image before moving
-    if (currentIndex < imageFiles.length - 1) {
-        // Move to the next image
-        // Move to the next image
-        currentIndex++;
+    if (currentQuestionIndex < displayOrder.length - 1) {
+        currentQuestionIndex++;
         updateImage();
     }
-    // Removed redirection logic - handled by finishButton now
+    // Finish button handles the last image case
 });
 
 // --- Finish Button Listener ---
@@ -177,9 +241,9 @@ document.addEventListener('keydown', (event) => {
                 saveFeedback();
 
                 // Move to the next image if not the last one
-                if (currentIndex < imageFiles.length - 1) {
-                    console.log("Moving to next image...");
-                    currentIndex++;
+                if (currentQuestionIndex < displayOrder.length - 1) {
+                    console.log("Moving to next question...");
+                    currentQuestionIndex++;
                     updateImage();
                 } else {
                     // If it was the last image, simulate finish button click
@@ -216,4 +280,4 @@ document.addEventListener('keydown', (event) => {
 
 
 // --- Initial Load ---
-updateImage();
+initializeQuestionnaire(); // Parse, shuffle, and load the first image

@@ -1,22 +1,36 @@
 import os
 import json
+import argparse # Added argparse
 import natsort # For natural sorting (pip install natsort)
+import re # Added re for pattern matching
 
-# --- Configuration ---
-IMAGE_DIR = "experiment_html/images"  # Directory containing the grid images
-OUTPUT_JS_FILE = "experiment_html/js/imageList.js"
-# -------------------
+# --- Configuration Removed ---
+
+# Define the expected filename pattern
+FILENAME_PATTERN = re.compile(r"^alg-([a-zA-Z0-9]+)_episode_(\d+)_timestep_(\d+)\.png$", re.IGNORECASE)
 
 def find_images(directory):
-    """Finds all .png images in the specified directory."""
+    """Finds all .png images matching the expected pattern in the specified directory."""
     image_list = []
     if not os.path.isdir(directory):
         print(f"Error: Image directory '{directory}' not found.")
         return []
+    print(f"Scanning directory: {directory}")
+    found_count = 0
+    skipped_count = 0
     for filename in os.listdir(directory):
-        if filename.lower().endswith(".png"):
-            # Store path relative to the HTML file
+        if FILENAME_PATTERN.match(filename):
+            # Store path relative to the HTML file (assuming HTML is one level up from 'images/')
             image_list.append(f"images/{filename}")
+            found_count += 1
+        elif filename.lower().endswith(".png"):
+            # print(f"  Skipping file (doesn't match pattern): {filename}")
+            skipped_count += 1
+        # else: skip non-png files silently
+
+    print(f"Found {found_count} images matching the pattern.")
+    if skipped_count > 0:
+        print(f"Skipped {skipped_count} PNG files that did not match the expected pattern (alg-*_episode_*_timestep_*.png).")
     return image_list
 
 def generate_js_file(image_list, output_path):
@@ -37,9 +51,25 @@ def generate_js_file(image_list, output_path):
         print(f"Error writing to {output_path}: {e}")
 
 if __name__ == "__main__":
-    print(f"Scanning for images in: {os.path.abspath(IMAGE_DIR)}")
-    images = find_images(IMAGE_DIR)
+    parser = argparse.ArgumentParser(description="Generate a JavaScript image list from PNG files in a directory.")
+    parser.add_argument(
+        "-d", "--directory",
+        required=True,
+        help="Directory containing the grid images (.png files)."
+    )
+    parser.add_argument(
+        "-o", "--output",
+        required=True,
+        help="Path to the output JavaScript file (e.g., experiment_html/js/imageList.js)."
+    )
+    args = parser.parse_args()
+
+    image_dir = args.directory
+    output_js_file = args.output
+
+    print(f"Scanning for images in: {os.path.abspath(image_dir)}")
+    images = find_images(image_dir)
     if images:
-        generate_js_file(images, OUTPUT_JS_FILE)
+        generate_js_file(images, output_js_file)
     else:
         print("No images found. JS file not generated.")
