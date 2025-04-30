@@ -49,7 +49,7 @@ tester:
     params: null
   - _target_: components.tester.ImageGenerationTester
     params:
-       take_best_worst_N: 4 # Default N
+       take_best_worst_N: 8 # Default N
        use_estimator: true # Use the loaded estimator
        save_worst: false # Default is false
 
@@ -65,7 +65,7 @@ savers:
       filename: "config_resolved.yaml"
   - _target_: components.saver.ImageGenerationSaver
     params:
-      take_best_worst_N: 4 # Match tester N
-      add_image_score: true
+      take_best_worst_N: 8 # Match tester N
+      add_image_score: false
       save_worst: false # Match tester setting
   # VisitsSaver, LearnedEstimatorSaver, ReadableVisitsSaver are not needed for inference testing.

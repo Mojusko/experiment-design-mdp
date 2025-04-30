@@ -357,20 +357,26 @@ def create_prompt_from_tokens(tokens: List[str], base_prompt: str = '') -> str:
         base_prompt: Optional base prompt to prepend
 
     Returns:
-        Formatted prompt string with commas
+        Formatted prompt string using "in the style of" separator.
     """
     # Filter out empty tokens and strip whitespace
     valid_tokens = [str(token).strip() for token in tokens if str(token).strip()]
 
+    if not valid_tokens:
+        # If there are no valid tokens, return the base prompt or empty string
+        return base_prompt
+
     if base_prompt:
-        # If we have a base prompt, add the tokens after it with commas
-        if valid_tokens:
-            return base_prompt + ", " + ", ".join(valid_tokens)
-        else:
-            return base_prompt
+        # If base_prompt exists, format as "base in the style of token1, token2, ..."
+        return f"{base_prompt} in the style of {', '.join(valid_tokens)}"
     else:
-        # If no base prompt, just join the tokens with commas
-        return ", ".join(valid_tokens)
+        # If no base_prompt, treat the first token as the base
+        if len(valid_tokens) == 1:
+            # If only one token, return it directly
+            return valid_tokens[0]
+        else:
+            # Format as "token1 in the style of token2, token3, ..."
+            return f"{valid_tokens[0]} in the style of {', '.join(valid_tokens[1:])}"
 
 
 def create_prompt(actions: List[int], env: LLMGrid) -> str:
