@@ -33,8 +33,8 @@ C_design_keywords: null
 # These are used only if use_model_specific_lambda is true
 model_specific_params:
   japanese-text:
-    lambda_dsn: 10
-    lambda_est: 10
+    lambda_dsn: 25
+    lambda_est: 25
   ancient-text:
     lambda_dsn: 1 # Example value
     lambda_est: 1 #num_policies=4 (Kept high based on previous findings)

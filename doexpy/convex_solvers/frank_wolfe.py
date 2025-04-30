@@ -8,7 +8,7 @@ from doexpy.env.discrete_env import DiscreteEnv
 from doexpy.policies.policy_base import Policy
 from doexpy.policies.base_policies.non_stationary_policy import NonStationaryPolicy
 from doexpy.policies.base_policies.stationary_policy import StationaryPolicy
-from doexpy.policies.summary_policies.density_policy import DensityPolicy
+from doexpy.policies.summary_policies.density_policy import DensityPolicy, MarginalDensityPolicy # Added MarginalDensityPolicy
 from doexpy.policies.summary_policies.mixture_policy import MixturePolicy
 from doexpy.policies.summary_policies.tracking_policy import TrackingPolicy
 from doexpy.solvers.solver_base import DiscreteSolver, ContinuousSolver
