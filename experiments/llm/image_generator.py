@@ -309,14 +309,14 @@ class TripleGuidanceStableDiffusionGenerator():
         )
 
     @torch.no_grad()
-    def sample(self, prompt: str, estimator_embedding: torch.Tensor, embedder: BaseEmbedder, raw: bool = False) -> Union[np.ndarray, Tuple[np.ndarray, torch.Tensor]]:
+    def sample(self, prompt: str, estimator_prompt: str = None, embedder: BaseEmbedder = None, raw: bool = False) -> Union[np.ndarray, Tuple[np.ndarray, torch.Tensor]]:
         """
-        Generates an image using triple guidance (uncond, prompt, estimator).
+        Generates an image using triple guidance (uncond, prompt, estimator_prompt).
 
         Args:
-            prompt (str): The text prompt.
-            estimator_embedding (torch.Tensor): The learned estimator vector [1, D].
-            embedder (BaseEmbedder): Embedder instance for final image embedding.
+            prompt (str): The main text prompt.
+            estimator_prompt (str, optional): Text prompt for the estimator guidance. Defaults to None.
+            embedder (BaseEmbedder): Embedder instance for final image embedding. Required.
             raw (bool): If True, return raw image tensor.
 
         Returns:
@@ -348,61 +348,52 @@ class TripleGuidanceStableDiffusionGenerator():
         )
         text_embeddings = self._text_encoder(text_input.input_ids.to(self.device))[0] # Shape: [1, 77, 768]
 
-        # 3. Estimator Embedding
-        # Ensure estimator embedding is on the correct device and has the right shape
-        estimator_emb = estimator_embedding.to(self.device).to(self._text_encoder.dtype) # Match dtype
-        if estimator_emb.shape[0] != 1:
-             estimator_emb = estimator_emb.unsqueeze(0) # Ensure shape [1, D]
+        # 3. Estimator Prompt Embedding (if provided)
+        if estimator_prompt:
+            estimator_input = self._tokenizer(
+                [estimator_prompt], padding="max_length", max_length=max_length, truncation=True, return_tensors="pt"
+            )
+            estimator_embeddings = self._text_encoder(estimator_input.input_ids.to(self.device))[0] # Shape: [1, 77, 768]
 
-        # Check if estimator embedding dimension matches text embedding dimension
-        # Note: SD uses pooled output [1, 768], estimator might be [1, 512] or similar.
-        # We need to project or adapt the estimator embedding to match the expected input dim [1, 77, 768]
-        # For now, we'll replicate the [1, D] embedding across the sequence length (77)
-        # This is a simplification; more sophisticated projection might be needed.
-        target_dim = uncond_embeddings.shape[-1] # e.g., 768
-        if estimator_emb.shape[-1] != target_dim:
-             # Simple projection if dimensions mismatch (e.g., linear layer) - Placeholder!
-             # raise ValueError(f"Estimator embedding dim ({estimator_emb.shape[-1]}) must match text embedding dim ({target_dim}). Projection needed.")
-             # For now, let's try repeating. This might not be ideal.
-             print(f"Warning: Estimator embedding dim ({estimator_emb.shape[-1]}) differs from text embedding dim ({target_dim}). Repeating embedding across sequence length.")
-             if estimator_emb.shape[-1] > target_dim:
-                 estimator_emb = estimator_emb[:, :target_dim] # Truncate if larger
-             elif estimator_emb.shape[-1] < target_dim:
-                 padding = torch.zeros(1, target_dim - estimator_emb.shape[-1], device=self.device, dtype=estimator_emb.dtype)
-                 estimator_emb = torch.cat([estimator_emb, padding], dim=1) # Pad if smaller
+            # Normalize estimator embedding if requested
+            if self.normalize_estimator:
+                # Normalize across the embedding dimension (last dimension)
+                estimator_embeddings = torch.nn.functional.normalize(estimator_embeddings, p=2, dim=-1)
 
-        # Replicate across sequence length dimension (77)
-        estimator_embeddings_seq = estimator_emb.unsqueeze(1).repeat(1, max_length, 1) # Shape: [1, 77, 768]
-
-        # Normalize estimator embedding if requested
-        if self.normalize_estimator:
-            estimator_embeddings_seq = torch.nn.functional.normalize(estimator_embeddings_seq, p=2, dim=-1)
-
-        # Concatenate all three embeddings for UNet input
-        # Order: Unconditional, Text, Estimator
-        combined_embeddings = torch.cat([uncond_embeddings, text_embeddings, estimator_embeddings_seq])
+            # Concatenate all three embeddings for UNet input
+            # Order: Unconditional, Text, Estimator
+            combined_embeddings = torch.cat([uncond_embeddings, text_embeddings, estimator_embeddings])
+            num_conditions = 3
+        else:
+            # If no estimator prompt, use standard CFG
+            combined_embeddings = torch.cat([uncond_embeddings, text_embeddings])
+            num_conditions = 2
 
         # --- Denoising Loop ---
         self._scheduler.set_timesteps(self.num_inference_steps)
         latents = latents * self._scheduler.init_noise_sigma # Scale initial noise
 
         for t in self._scheduler.timesteps:
-            # Expand latents for the three conditions
-            latent_model_input = torch.cat([latents] * 3)
+            # Expand latents for the conditions (2 or 3)
+            latent_model_input = torch.cat([latents] * num_conditions)
             latent_model_input = self._scheduler.scale_model_input(latent_model_input, timestep=t)
 
-            # Predict noise residual for all conditions
+            # Predict noise residual for all conditions (uncond, text, [estimator])
             noise_pred = self._unet(
                 latent_model_input,
                 t,
                 encoder_hidden_states=combined_embeddings
             ).sample
 
-            # Perform guidance
-            noise_pred_uncond, noise_pred_text, noise_pred_estimator = noise_pred.chunk(3)
-            noise_pred = noise_pred_uncond + \
-                         self.guidance_scale * (noise_pred_text - noise_pred_uncond) + \
-                         self.guidance_scale_2 * (noise_pred_estimator - noise_pred_uncond)
+            # Perform guidance based on number of conditions
+            if num_conditions == 3:
+                noise_pred_uncond, noise_pred_text, noise_pred_estimator = noise_pred.chunk(3)
+                noise_pred = noise_pred_uncond + \
+                             self.guidance_scale * (noise_pred_text - noise_pred_uncond) + \
+                             self.guidance_scale_2 * (noise_pred_estimator - noise_pred_uncond)
+            else: # num_conditions == 2 (standard CFG)
+                noise_pred_uncond, noise_pred_text = noise_pred.chunk(2)
+                noise_pred = noise_pred_uncond + self.guidance_scale * (noise_pred_text - noise_pred_uncond)
 
             # Compute previous noisy sample
             latents = self._scheduler.step(noise_pred, t, latents).prev_sample
@@ -417,6 +408,10 @@ class TripleGuidanceStableDiffusionGenerator():
         image = (image * 255).round().astype("uint8")[0] # Final numpy image [H, W, C]
 
         # --- Embed Final Image ---
+        pil_image = PIL.Image.fromarray(image)
+        # --- Embed Final Image ---
+        if embedder is None:
+             raise ValueError("Embedder instance must be provided to TripleGuidanceStableDiffusionGenerator.sample")
         pil_image = PIL.Image.fromarray(image)
         image_embedding = embedder.embed_image(pil_image) # Use the passed embedder
 
@@ -476,39 +471,26 @@ if __name__ == "__main__":
     print(f"  embedder_normalize: {args.embedder_normalize}")
 
     # --- Initialize Generator and Generate Image ---
-    estimator_embedding = None
+    estimator_prompt_text = None
     generator_type = "standard"
 
     if args.estimator:
-        print(f"Estimator provided: '{args.estimator}'")
+        print(f"Estimator argument provided: '{args.estimator}'")
         # Check if it's a path using standard os functions
         estimator_path = os.path.abspath(args.estimator) # Use os.path.abspath
         if ('/' in args.estimator or '\\' in args.estimator) and os.path.exists(estimator_path):
-            print(f"Loading estimator tensor from path: {estimator_path}")
-            try:
-                estimator_embedding = torch.load(estimator_path, map_location=embedder.device)
-                # Ensure it's a tensor and has the correct shape (e.g., [1, D] or [D])
-                if not isinstance(estimator_embedding, torch.Tensor):
-                     raise TypeError(f"Loaded estimator is not a tensor (type: {type(estimator_embedding)})")
-                if estimator_embedding.dim() == 1:
-                     estimator_embedding = estimator_embedding.unsqueeze(0) # Ensure [1, D]
-                print(f"Loaded estimator tensor with shape: {estimator_embedding.shape}")
-                generator_type = "triple_guidance_path"
-            except Exception as e:
-                print(f"Error loading estimator from path '{estimator_path}': {e}. Proceeding without estimator guidance.")
-                estimator_embedding = None # Reset on error
+            # Loading tensors is no longer supported for triple guidance
+            print(f"Error: Estimator path provided ('{estimator_path}'), but Triple Guidance requires estimator text, not a pre-computed tensor.")
+            print("Please provide the estimator as text or remove the --estimator argument to use standard generation.")
+            exit(1) # Exit with error
         else:
-            print(f"Treating estimator as text: '{args.estimator}'")
-            try:
-                estimator_embedding = embedder.embed_text(args.estimator)
-                print(f"Embedded estimator text to shape: {estimator_embedding.shape}")
-                generator_type = "triple_guidance_text"
-            except Exception as e:
-                print(f"Error embedding estimator text '{args.estimator}': {e}. Proceeding without estimator guidance.")
-                estimator_embedding = None # Reset on error
+            # Treat as text
+            print(f"Using estimator text for Triple Guidance: '{args.estimator}'")
+            estimator_prompt_text = args.estimator
+            generator_type = "triple_guidance_text"
 
     # Instantiate the appropriate generator
-    if estimator_embedding is not None:
+    if generator_type == "triple_guidance_text":
         print("Using Triple Guidance Generator")
         generator = TripleGuidanceStableDiffusionGenerator(
             stable_diffusion_id=DEFAULT_CONFIG["stable_diffusion_id"],
@@ -517,13 +499,17 @@ if __name__ == "__main__":
             guidance_scale_2=args.guidance_estimator, # Estimator scale
             image_size=args.image_size,
             # Seed is derived from prompt internally
-            MODELS_CACHE_DIR=DEFAULT_CONFIG["MODELS_CACHE_DIR"]
-            # normalize_estimator=True # Keep default or make configurable? Default is True
+            MODELS_CACHE_DIR=DEFAULT_CONFIG["MODELS_CACHE_DIR"],
+            normalize_estimator=True # Keep normalization enabled by default
         )
-        # Generate image using triple guidance
-        image_np, image_embedding = generator.sample(args.prompt, estimator_embedding, embedder=embedder)
-    else:
-        print("Using Standard Stable Diffusion Generator")
+        # Generate image using triple guidance, passing the estimator text
+        image_np, image_embedding = generator.sample(
+            prompt=args.prompt,
+            estimator_prompt=estimator_prompt_text,
+            embedder=embedder
+        )
+    else: # Standard generator
+        print("Using Standard Stable Diffusion Generator (no estimator text provided)")
         generator = StableDiffusionGenerator(
             stable_diffusion_id=DEFAULT_CONFIG["stable_diffusion_id"],
             num_inference_steps=args.num_inference_steps,
@@ -549,10 +535,9 @@ if __name__ == "__main__":
     estimator_string = "no_est" # Default if no estimator is used
     if generator_type == "triple_guidance_text":
         # Sanitize the estimator text itself
-        sanitized_estimator_text = args.estimator.replace(' ', '_').replace('/', '_').replace('\\', '_')
+        sanitized_estimator_text = estimator_prompt_text.replace(' ', '_').replace('/', '_').replace('\\', '_')
         estimator_string = ''.join(c for c in sanitized_estimator_text if c.isalnum() or c in '_-#')[:30] # Limit length
-    elif generator_type == "triple_guidance_path":
-        estimator_string = "saved_est"
+    # Removed 'saved_est' case as loading tensors is disallowed for triple guidance
 
     # Construct filename using the new format: {prompt}_{estimator}_gP{guidance_prompt}_gE{guidance_estimator}.png
     filename = f"{sanitized_prompt}_{estimator_string}_gP{args.guidance_prompt}_gE{args.guidance_estimator}.png"
