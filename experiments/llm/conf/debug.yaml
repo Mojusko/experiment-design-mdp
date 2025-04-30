@@ -4,14 +4,14 @@ defaults:
   - override embedder: clip 
   - _self_ # Ensure debug-specific values override defaults correctly
 feedback:
-  num_rounds: 4
+  num_rounds: 5
   num_components: 3
   adaptive_estimation_frequency: 0
   adaptive_estimation_start: 0
   adaptive_design_frequency: 0
 experiment:
    episodes: 20
-   vocab_size: 200
+   vocab_size: 400
 # Results directory for debug mode
 results_dir: "results/debug"
 algorithm: "design"

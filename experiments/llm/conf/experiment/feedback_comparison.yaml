@@ -10,7 +10,7 @@ vocabulary:
   - 'vocabulary2/emotions.txt'
 #scorer_model: 'japanese-image'
 #scorer_model: 'japanese-text'
-#scorer_model: 'ancient-text'
+scorer_model: 'ancient-text'
 #scorer_model: 'aesthetics'
-scorer_model: 'futuristic-text'
+#scorer_model: 'futuristic-text'
 
