@@ -1,7 +1,7 @@
 name: "feedback_comparison"
 id_prefix: "feedback"  # Used for filename prefixes
 episodes: 25
-vocab_size: 1000
+vocab_size: 2000
 vocabulary: 
   - 'vocabulary2/bases.txt'
   - 'vocabulary2/mediums.txt'

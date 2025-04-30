@@ -34,7 +34,7 @@ C_design_keywords: null
 model_specific_params:
   japanese-text:
     lambda_dsn: 1
-    lambda_est: 500
+    lambda_est: 10
   ancient-text:
     lambda_dsn: 1 # Example value
     lambda_est: 500 #num_policies=4 (Kept high based on previous findings)
