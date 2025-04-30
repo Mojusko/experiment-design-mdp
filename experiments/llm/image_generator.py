@@ -11,8 +11,7 @@ from transformers import CLIPTextModel, CLIPTokenizer # Keep these for SD text e
 # Removed CLIPModel, CLIPProcessor imports for image embedding here
 # Import BaseEmbedder for type hinting
 from components.embedder import BaseEmbedder, create_embedder # Added create_embedder for main block
-# Define PILImage type for type hinting
-PILImage = PIL.Image.Image
+# Removed unused PILImage type hint alias
 
 import hashlib
 
@@ -560,7 +559,8 @@ if __name__ == "__main__":
 
     # Save the image with the descriptive filename
     image_path = os.path.join(args.output_dir, filename)
-    PILImage.fromarray(image_np).save(image_path) # Save the numpy image
+    # Use PIL.Image directly
+    PIL.Image.fromarray(image_np).save(image_path)
     print(f"Image saved to {image_path}")
 
     # Optionally save the embedding too
