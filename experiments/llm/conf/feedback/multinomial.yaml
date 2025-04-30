@@ -1,5 +1,5 @@
 name: "multinomial"
-num_policies: 6
+num_policies: 4
 num_components: 3
 num_rounds: 8 #static
 lambda_dsn: 1 # Default design lambda, used if use_model_specific_lambda is false
