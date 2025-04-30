@@ -286,25 +286,9 @@ STOCH0: STOCH_ada0 STOCH_opt0 STOCH_static0
 
 STOCH: STOCH1 STOCH2 STOCH3 STOCH0
 
-
-########################### LLMS IMAGE GENERATION
-# Flexible image generation target with double guidance
+#
 llm-generate-image:
-	ifndef BASE_PROMPT
-	    $(error BASE_PROMPT is not set)
-	endif
-	ifndef FULL_PROMPT
-	    $(error FULL_PROMPT is not set)
-	endif
-	cd llm && TIMESTAMP=$(TIMESTAMP) OMP_NUM_THREADS=1 MKL_NUM_THREADS=1 $(PYTHONPATH) image_generator.py \
-		--base_prompt "$(BASE_PROMPT)" \
-		--full_prompt "$(FULL_PROMPT)" \
-		$(if $(OUTPUT_DIR),--output_dir "$(OUTPUT_DIR)",) \
-		$(if $(SEED),--seed $(SEED),) \
-		$(if $(IMAGE_SIZE),--image_size $(IMAGE_SIZE),) \
-		$(if $(NUM_STEPS),--num_inference_steps $(NUM_STEPS),) \
-		$(if $(GUIDANCE_BASE),--guidance_base $(GUIDANCE_BASE),) \
-		$(if $(GUIDANCE_TOKENS),--guidance_tokens $(GUIDANCE_TOKENS),)
+	cd llm && TIMESTAMP=$(TIMESTAMP) OMP_NUM_THREADS=1 MKL_NUM_THREADS=1 $(PYTHONPATH) image_generator.py --prompt "$(PROMPT)" $(if $(OUTPUT_DIR),--output_dir "$(OUTPUT_DIR)",) $(if $(SEED),--seed $(SEED),) $(if $(IMAGE_SIZE),--image_size $(IMAGE_SIZE),) $(if $(NUM_STEPS),--num_inference_steps $(NUM_STEPS),) $(if $(GUIDANCE_PROMPT),--guidance_prompt $(GUIDANCE_PROMPT),) $(if $(GUIDANCE_ESTIMATOR),--guidance_estimator $(GUIDANCE_ESTIMATOR),) $(if $(ESTIMATOR),--estimator "$(ESTIMATOR)",)
 
 ########################### LLMS
 REPEATS_LLM=25
