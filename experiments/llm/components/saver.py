@@ -802,7 +802,7 @@ class ReadableVisitsSaver(BaseSaver):
                  experiment_id=None,
                  skip_existing: bool = False,
                  # Specific config values passed from LLMExperiment
-                 horizon: int = None,
+                 # horizon: int = None, # REMOVED - Get from env
                  dense_feedback: bool = False):
         # Pass common arguments to BaseSaver
         super().__init__(env=env, embedder=embedder, params=params,
@@ -810,17 +810,17 @@ class ReadableVisitsSaver(BaseSaver):
                          experiment_id=experiment_id, skip_existing=skip_existing)
 
         # Store specific config values needed by this saver
-        self.horizon = horizon
+        # self.horizon = horizon # REMOVED
         self.dense_feedback = dense_feedback
 
         # --- Validate required objects and config ---
         if self.env is None:
              raise ValueError(f"{self.__class__.__name__} requires the 'env' object.")
-        if self.horizon is None:
-             raise ValueError(f"{self.__class__.__name__} requires the 'horizon' value.")
+        # if self.horizon is None: # REMOVED validation for self.horizon
+        #      raise ValueError(f"{self.__class__.__name__} requires the 'horizon' value.")
 
         print(f"Initialized {self.__class__.__name__} with params: {self.params}, "
-              f"horizon: {self.horizon}, dense_feedback: {self.dense_feedback}")
+              f"dense_feedback: {self.dense_feedback}") # Removed horizon from print
 
     def save_result(self, results):
         print(f"Running {self.__class__.__name__}")
@@ -863,8 +863,9 @@ class ReadableVisitsSaver(BaseSaver):
             num_episodes = len(visits_to_process[0])
             print(f"Processing {num_policies} policies and {num_episodes} episodes.")
 
-            # Determine the range of horizons to generate prompts for
-            h_range = range(1, self.horizon + 1) if self.dense_feedback else range(self.horizon, self.horizon + 1)
+            # Determine the range of horizons to generate prompts for using env
+            horizon = self.env.max_episode_length
+            h_range = range(1, horizon + 1) if self.dense_feedback else range(horizon, horizon + 1)
 
             # Iterate through each policy and save to a separate file
             for p_idx in range(num_policies):
