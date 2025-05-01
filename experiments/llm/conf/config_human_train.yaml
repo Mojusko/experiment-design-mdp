@@ -24,7 +24,7 @@ experiment:
 test_only: true # This mode runs within the test_only logic
 explore_only: false
 algorithm: "design" # Required for some internal logic/naming, though not used for exploration
-horizon: 4 # Required for env init
+# horizon: 4 # REMOVED - Determined by len(experiment.vocabulary)
 
 # --- Feedback Settings ---
 # Feedback settings are now inherited from conf/feedback/multinomial.yaml via defaults list.

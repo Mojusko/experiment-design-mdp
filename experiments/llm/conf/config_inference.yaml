@@ -2,17 +2,18 @@
 # with a fixed base prompt and adjusted horizon/vocabulary.
 defaults:
   - experiment: feedback_comparison # Inherit base experiment settings
-  - feedback: numerical # Default feedback type (can be overridden)
+  - feedback: multinomial # Default feedback type (can be overridden)
   - embedder: clip # Default embedder
   - _self_
 
 seed: 1 # Default seed for testing (can be overridden)
 verbose: false
-base_prompt: "A very long journey" # Fixed base prompt for inference
+# base_prompt: "A very long journey" # REMOVED - Use bases.txt now
+base_prompt: ''
 include_base_prompt_in_first_tokens: false # Keep false as per request
 algorithm: "design" # Default algorithm (can be overridden)
 cache_dir: "${oc.env:HOME}/.cache/huggingface/hub"
-horizon: 3 # Adjusted horizon for inference (base prompt is fixed)
+# horizon: 4 # REMOVED - Determined by len(experiment.vocabulary)
 accuracy: 1e-14
 dense_feedback: true # Keep true? Or set false if not relevant for testing? Assuming keep.
 results_dir: "results/dummy" # Base directory (usually overridden)
@@ -29,10 +30,10 @@ override_results_dir: false # Default
 
 # --- Experiment Vocabulary Override ---
 # Override the vocabulary inherited from feedback_comparison
-# to remove the bases.txt file for the fixed base prompt.
+# Use standard vocabulary including bases.txt
 experiment:
   vocabulary:
-    # - 'vocabulary2/bases.txt' # REMOVED for inference config
+    - 'vocabulary2/bases.txt' # ADDED back for inference config
     - 'vocabulary2/mediums.txt'
     - 'vocabulary2/movements.txt'
     - 'vocabulary2/emotions.txt'

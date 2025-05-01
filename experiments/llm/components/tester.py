@@ -50,7 +50,7 @@ class PreferenceTester(BaseTester):
         N_test_prompts = self.params['N_test_prompts']
         N_pairs_eval = self.params['N_pairs_eval']
 
-        horizon = cfg.horizon
+        horizon = env.max_episode_length # Use horizon from env
 
         # Make sure testing_words_list is a list of lists with one list per horizon step
         assert isinstance(testing_words_list[0], list)
@@ -175,7 +175,7 @@ class ImageGenerationTester(BaseTester):
             print(f"Using ground truth model for {self.__class__.__name__}")
 
         test_rng = np.random.RandomState(42) # Keep RNG for potential future use, though not used by beam search directly
-        horizon = cfg.horizon
+        horizon = env.max_episode_length # Use horizon from env
         # Make sure testing_words_list is a list of lists with one list per horizon step
         if not isinstance(testing_words_list[0], list):
             testing_words_list = [testing_words_list] * horizon

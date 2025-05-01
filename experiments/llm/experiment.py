@@ -144,7 +144,7 @@ class LLMExperiment:
 
                 # Add arguments specific to VisitsImageSaver if it's the target
                 if s_conf.get('_target_') == 'components.saver.VisitsImageSaver':
-                    init_args['horizon'] = self.cfg.horizon
+                    # init_args['horizon'] = self.cfg.horizon # REMOVED - Saver should use env.max_episode_length
                     init_args['dense_feedback'] = self.cfg.get('dense_feedback', False)
                     init_args['verbose'] = self.cfg.get('verbose', False)
                     init_args['seed'] = self.seed # Pass the current seed
@@ -154,7 +154,7 @@ class LLMExperiment:
 
                 # Add arguments specific to ReadableVisitsSaver
                 elif s_conf.get('_target_') == 'components.saver.ReadableVisitsSaver':
-                    init_args['horizon'] = self.cfg.horizon
+                    # init_args['horizon'] = self.cfg.horizon # REMOVED - Saver should use env.max_episode_length
                     init_args['dense_feedback'] = self.cfg.get('dense_feedback', False)
 
                 # Instantiate the saver using the configuration and the constructed arguments
@@ -276,7 +276,7 @@ class LLMExperiment:
 
         # Add essential metadata
         results.add_metadata('mode', 'explore_only')
-        results.add_metadata('horizon', self.cfg.horizon)
+        results.add_metadata('horizon', self.env.max_episode_length) # Log horizon from env
         results.add_metadata('algorithm', self.cfg.algorithm)
         results.add_metadata('base_prompt', self.cfg.base_prompt)
         results.add_metadata('embedder_class', self.embedder.__class__.__name__)
@@ -303,7 +303,7 @@ class LLMExperiment:
         # Embedder is already initialized in self.embedder
 
         # Create token_lists for training environment
-        horizon = self.cfg.horizon
+        # horizon = self.cfg.horizon # REMOVED - Horizon is determined by len(list_of_text_tokens)
         if self.cfg.algorithm == "optim":
             # For optim, we need to create all possible combinations
             combos = cartesian(self.training_words)
@@ -509,7 +509,7 @@ class LLMExperiment:
         return final_comparison_embeddings, final_labels
 
 
-    def run_test_only(self, estimator_path, feedback_path=None): # Add feedback_path argument
+    def run_test_only(self, mode: str, estimator_path: str = None, visits_path: str = None, feedback_path: str = None) -> bool:
         """
         Run in test-only mode. Behavior depends on provided paths:
         - estimator_path provided: Load estimator, test, save results. Optionally use feedback_path to override base_prompt.
@@ -526,190 +526,158 @@ class LLMExperiment:
         Returns:
             True if the process was executed successfully, False otherwise.
         """
-        # --- Determine Mode based on Inputs ---
-        # feedback_path is now passed as an argument, not read from self.cfg here
-        visits_path = self.cfg.get('visits_path')
-        mode = None
-        input_path_for_dir = None # Path used to determine results directory
+        # Mode is now passed directly as an argument, remove determination logic here
+        # visits_path = self.cfg.get('visits_path') # No longer needed, passed as argument
+        # mode = None # REMOVED
+        input_path_for_dir = None # Path used to determine results directory # REMOVED (Handled in run_exp.py)
 
-        if estimator_path:
-            mode = "test"
-            input_path_for_dir = estimator_path
-            print(f"--- Running in Test Mode (Loading Estimator: {estimator_path}) ---")
-            if feedback_path:
-                print(f"--- Optional Feedback Path provided for base_prompt override: {feedback_path} ---")
-        elif visits_path and feedback_path: # feedback_path here refers to the one for training
-            mode = "train_human_feedback"
-            input_path_for_dir = visits_path # Use visits path for dir structure
-            print(f"--- Running in Train Human Feedback Mode (Visits: {visits_path}, Feedback: {feedback_path}) ---")
-        elif visits_path:
-            mode = "inspect"
-            input_path_for_dir = visits_path
-            print(f"--- Running in Inspect Mode (Loading Visits: {visits_path}) ---")
-        else:
-            print("Error: Invalid combination of paths for test_only mode.")
-            print("Provide either 'estimator_path', or 'visits_path', or both 'visits_path' and 'feedback_path' (for training).")
-            return False
+        # Old mode determination logic REMOVED
+        # if estimator_path:
+        #     mode = "test"
+        #     ...
+        # elif visits_path and feedback_path:
+        #     mode = "train_human_feedback"
+        #     ...
+        # elif visits_path:
+        #     mode = "inspect"
+        #     ...
+        # else:
+        #     ...
+        #     return False
 
-        # --- Validate Input Paths ---
-        absolute_input_path_for_dir = to_absolute_path(input_path_for_dir)
-        if not os.path.exists(absolute_input_path_for_dir):
-            print(f"Error: Input path for directory structure ('{absolute_input_path_for_dir}') not found.")
-            return False
-        # Specific checks for train_human_feedback mode (using feedback_path for training)
-        if mode == "train_human_feedback":
-            absolute_feedback_path_train = to_absolute_path(feedback_path)
-            if not os.path.exists(absolute_feedback_path_train):
-                 print(f"Error: Feedback path for training ('{absolute_feedback_path_train}') not found.")
-                 return False
-        # Check optional feedback_path for test mode base_prompt override
-        elif mode == "test" and feedback_path:
-            absolute_feedback_path_test = to_absolute_path(feedback_path)
-            if not os.path.exists(absolute_feedback_path_test):
-                 print(f"Warning: Optional feedback path for base_prompt override ('{absolute_feedback_path_test}') not found. Using default base_prompt.")
-                 feedback_path = None # Nullify if not found, proceed with default base_prompt
+        print(f"--- Running Test-Only Mode: {mode} ---")
 
-        # --- Setup Results Directory ---
-        if not self.cfg.get('override_results_dir', False):
-            original_dir = os.path.dirname(absolute_input_path_for_dir)
-            if os.path.exists(original_dir):
-                timestamp = os.environ.get('TIMESTAMP', datetime.datetime.now().strftime("%Y-%m-%d-%H-%M"))
-                try:
-                    algorithm = self._get_algorithm_code()
-                    feedback_type = self._get_feedback_code()
-                except ValueError: # Handle cases where cfg might not have algorithm/feedback
-                    algorithm = "unknown_alg"
-                    feedback_type = "unknown_fb"
-                    print("Warning: Could not determine algorithm/feedback from config, using defaults for directory name.")
+        # --- Setup Results Directory (Handled by run_exp.py now) ---
+        # The results_dir is set in __init__ and potentially overridden by run_exp.py
+        # We just need to ensure savers use the final self.results_dir before saving.
 
-                # Use the determined mode ('test', 'inspect', 'train_human_feedback') in the directory name
-                experiment_id_suffix = self.experiment_id or mode # Use existing ID or mode name
-
-                # Check if the original_dir already ends with 'additional_tests'
-                if os.path.basename(original_dir) == "additional_tests":
-                    # If yes, use the original_dir itself as the base for new test folders
-                    tests_base_dir = original_dir
-                    print(f"Parent directory '{original_dir}' is already 'additional_tests'. Using it as base.")
-                else:
-                    # Otherwise, create 'additional_tests' inside the original_dir
-                    tests_base_dir = os.path.join(original_dir, "additional_tests")
-                    print(f"Using original results directory parent: {original_dir}")
-
-                # Example: test-dsn-mult-..., inspect-dsn-mult-..., train_human_feedback-dsn-mult-...
-                self.results_dir = os.path.join(tests_base_dir, f"{mode}-{algorithm}-{feedback_type}-{timestamp}")
-                print(f"Saving {mode} results to: {self.results_dir}")
-                os.makedirs(self.results_dir, exist_ok=True)
-
-                # Update results_dir for all savers
-                for saver in self.savers:
-                    saver.results_dir = self.results_dir
-                    print(f"Updated saver {type(saver).__name__} to use results_dir: {self.results_dir}")
-            else:
-                 print(f"Warning: Could not find original directory '{original_dir}'. Using default results_dir '{self.results_dir}'.")
-
-        # Attempt to load estimator only if estimator_path is provided
-        if estimator_path:
-            print(f"Attempting to load estimator from: {estimator_path}")
+        # --- Mode 1: Load Estimator ---
+        if mode == "load_estimator":
+            if not estimator_path or not os.path.exists(estimator_path):
+                print(f"Error: Estimator file not found or not provided: {estimator_path}")
+                return False
+            print(f"Loading estimator from: {estimator_path}")
             if not self.load_estimator(estimator_path):
-                 print("Warning: Failed to load estimator, proceeding without it.")
-                 self.estimator = None # Ensure estimator is None if loading failed
+                 print("Error: Failed to load estimator.")
+                 return False
+            # Proceed to testing
+            self.test_and_save(current_mode=mode)
+            return True
+
+        # --- Mode 2: Estimate from Visits ---
+        elif mode == "estimate_from_visits":
+            if not visits_path or not os.path.exists(visits_path):
+                print(f"Error: Visits file not found or not provided: {visits_path}")
+                return False
+            print(f"Loading visits from: {visits_path}")
+            # Load visits directly into self.visits
+            try:
+                self.visits = torch.load(visits_path)
+                if not isinstance(self.visits, list) or not self.visits or not self.visits[0]:
+                     print(f"Warning: Loaded visits from {visits_path} appear empty or invalid.")
+                     # Proceed, test_and_save validation will handle it if savers need visits
+            except Exception as e:
+                 print(f"Error loading visits from {visits_path}: {e}")
+                 return False # Stop execution on loading errors
+
+            print("Estimating/Training estimator using visits...")
+            # Train the estimator using the loaded visits.
+            # Assumes the configured feedback mechanism (e.g., PairwiseFeedback)
+            # can handle feedback_data=None or raises an appropriate error.
+            # If NumericalFeedback is used, this might just return the scorer_model.
+            try:
+                # Pass None for feedback_data, assumes feedback.train_estimator handles it
+                self.estimator = self.feedback.train_estimator(self.visits, None)
+            except NotImplementedError as e:
+                 print(f"Error: The configured feedback mechanism ({self.feedback.__class__.__name__}) does not support training from visits alone.")
+                 print(e)
+                 return False
+            except Exception as e:
+                 print(f"Error during estimator training from visits: {e}")
+                 return False
+
+            if self.estimator:
+                print("Estimator trained/obtained successfully.")
+                # Proceed to testing
+                self.test_and_save(current_mode=mode)
+                return True
             else:
-                 print("Successfully loaded estimator.")
-                 # --- Override base_prompt if feedback_path was valid ---
-                 if mode == "test" and feedback_path:
-                     try:
-                         print(f"Loading feedback file to extract user_prompt: {feedback_path}")
-                         with open(to_absolute_path(feedback_path), 'r') as f:
-                             feedback_json_for_prompt = json.load(f)
-                         user_prompt = feedback_json_for_prompt.get("user_prompt")
-                         if user_prompt is not None and isinstance(user_prompt, str):
-                             print(f"Overriding env.base_prompt with user_prompt: '{user_prompt}'")
-                             self.env.base_prompt = user_prompt
-                             # Update metadata if needed (optional, test_and_save already adds it)
-                             # self.cfg.base_prompt = user_prompt # Update config object if needed elsewhere
+                print("Error: Feedback processing did not return a valid estimator from visits.")
+                return False
+
+        # --- Mode 3: Load Estimator and Feedback ---
+        elif mode == "load_estimator_and_feedback":
+            if not estimator_path or not os.path.exists(estimator_path):
+                print(f"Error: Estimator file not found or not provided: {estimator_path}")
+                return False
+            if not feedback_path or not os.path.exists(feedback_path):
+                print(f"Error: Feedback file not found or not provided: {feedback_path}")
+                return False
+
+            print(f"Loading estimator from: {estimator_path}")
+            if not self.load_estimator(estimator_path):
+                 print("Error: Failed to load estimator.")
+                 return False
+
+            print(f"Loading feedback data from: {feedback_path}")
+            # Load feedback data using the feedback component's method
+            # Store it for potential use by testers/savers (e.g., base prompt override)
+            try:
+                self.feedback_data = self.feedback.load_feedback(feedback_path)
+                if self.feedback_data is None:
+                     print("Error: Failed to load feedback data (returned None).")
+                     return False
+                print("Feedback data loaded.")
+                # --- Optional: Re-initialize environment if user_prompt is found ---
+                user_prompt = self.feedback_data.get("user_prompt")
+                if user_prompt is not None and isinstance(user_prompt, str):
+                    print(f"Found user_prompt: '{user_prompt}'. Re-initializing environment without bases.txt.")
+                    # Prepare new vocab list excluding bases.txt
+                    new_vocab_files = [vf for vf in self.cfg.experiment.vocabulary if 'bases.txt' not in vf]
+                    if len(new_vocab_files) == len(self.cfg.experiment.vocabulary):
+                         print("Warning: 'bases.txt' not found in original vocabulary list. Environment not changed.")
+                         # If bases.txt wasn't there, still use the user_prompt as base_prompt
+                         # but keep the original vocabulary and set include_base_prompt_in_first_tokens=False
+                         self.env = self._init_env(
+                             vocab_files=self.cfg.experiment.vocabulary, # Use original vocab
+                             base_prompt=user_prompt,
+                             include_base_prompt_in_first_tokens=False
+                         )
+                    else:
+                        # Re-initialize env with the user_prompt as base_prompt and the reduced vocabulary.
+                        # Horizon is implicitly set by len(new_vocab_files).
+                        # Set include_base_prompt_in_first_tokens=False as the base is now explicit.
+                        self.env = self._init_env(
+                            vocab_files=new_vocab_files,
+                            base_prompt=user_prompt,
+                            include_base_prompt_in_first_tokens=False
+                        )
+                    # Update components dependent on env.emissions
+                    if hasattr(self, 'design') and hasattr(self.design, 'update_estimator'):
+                         # Ensure estimator is available before updating design
+                         if self.estimator:
+                             self.design.update_estimator(self.estimator, self.env.emissions)
+                             print("Design objective updated with new environment emissions.")
                          else:
-                             print("Warning: 'user_prompt' key not found or not a string in feedback file. Using default base_prompt.")
-                     except Exception as e:
-                         print(f"Warning: Failed to load or parse feedback file for user_prompt: {e}. Using default base_prompt.")
-                 # ------------------------------------------------------
-        # --- Train Estimator from Human Feedback ---
-        elif mode == "train_human_feedback":
-             print("Loading visits and feedback data for training...")
-             try:
-                 # Load visits
-                 loaded_visits = torch.load(absolute_input_path_for_dir) # Load from visits_path
-                 # Load feedback JSON (using the path validated for training mode)
-                 with open(to_absolute_path(feedback_path), 'r') as f:
-                     feedback_json = json.load(f)
+                             # This case shouldn't happen in this mode, but good to check
+                             print("Warning: Estimator not available when trying to update design objective.")
+                    else:
+                         print("Warning: Could not update design objective after environment re-initialization.")
+                    print("Environment re-initialized.")
+                else:
+                    print("Optional 'user_prompt' not found in feedback data or not a string. Using environment initialized from config.")
+                # -----------------------------------------------------------------
+            except Exception as e:
+                 print(f"Error loading feedback data or re-initializing environment: {e}")
+                 return False
 
-                 # Process feedback to get training data
-                 comparison_embeddings, labels = self._process_human_feedback(loaded_visits, feedback_json)
-
-                 if comparison_embeddings is None or labels is None:
-                      print("Error: Failed to generate training data from feedback. Cannot train estimator.")
-                      return False # Stop execution
-
-                 # Initialize Estimator (assuming Multinomial for now)
-                 # TODO: Make estimator type configurable if needed
-                 print("Initializing estimator for training...")
-                 embed_dim = self.embedder.get_embedding_dim()
-                 # Use a dummy identity embedding as fit takes embeddings directly
-                 dummy_embedding = CustomEmbedding(embed_dim, lambda x: x, embed_dim)
-                 likelihood = MultinomialLikelihood()
-                 # Use lambda_est from config, fail if not present
-                 lambda_est = self.cfg.feedback.lambda_est # Direct access, will error if missing
-                 regularizer = L2Regularizer(lam=lambda_est)
-                 estimator = RegularizedMultinomialEstimator(dummy_embedding, likelihood, regularizer)
-
-                 # Fit Estimator
-                 print(f"Fitting estimator with {comparison_embeddings.shape[0]} human feedback samples...")
-                 estimator.fit(comparison_embeddings=comparison_embeddings, labels=labels)
-                 self.estimator = estimator # Store the newly fitted estimator
-                 self.visits = loaded_visits # Store loaded visits for potential saving
-                 print("Estimator training complete.")
-
-             except FileNotFoundError as e:
-                  print(f"Error: Required file not found during training setup: {e}")
-                  return False
-             except Exception as e:
-                  print(f"Error during estimator training from human feedback: {e}")
-                  return False
-        # --- Inspection Mode (Load Visits Only) ---
-        elif mode == "inspect":
-             print("No estimator path provided, proceeding without loading estimator (inspection mode).")
-             self.estimator = None # Ensure estimator is None
-             print(f"Attempting to load visits from: {absolute_input_path_for_dir}")
-             try:
-                 # Load visits directly into self.visits
-                 self.visits = torch.load(absolute_input_path_for_dir)
-                 # Basic validation after loading
-                 if not isinstance(self.visits, list) or not self.visits or not self.visits[0]:
-                      print(f"Warning: Loaded visits from {absolute_input_path_for_dir} appear empty or invalid.")
-                      # Decide whether to proceed with empty visits or fail
-                      # For now, let the validation in test_and_save handle it.
-                 else:
-                      print(f"Successfully loaded visits for inspection.")
-             # Corrected Indentation for except blocks
-             except FileNotFoundError:
-                  print(f"Error: Visits file not found at {absolute_input_path_for_dir} during loading attempt.")
-                  self.visits = None # Ensure visits is None if loading fails
-                  return False # Stop execution if visits file is mandatory and not found
-             except Exception as e:
-                  print(f"Error loading visits from {absolute_input_path_for_dir}: {e}")
-                  self.visits = None # Ensure visits is None if loading fails
-                  return False # Stop execution on other loading errors
-
-        # Ensure visits attribute exists, even if loading failed or wasn't attempted
-        if not hasattr(self, 'visits'):
-             print("Initializing empty visits list as it wasn't loaded or generated.")
-             # Infer num_policies from config if possible, else default to 1
-             num_policies = self.cfg.feedback.get('num_policies', 1)
-             self.visits = [] if num_policies == 1 else [[] for _ in range(num_policies)]
-
-        # Always proceed to test and save (unless loading/training failed above)
-        print(f"Proceeding to test_and_save in {mode} mode (estimator is {'fitted' if mode == 'train_human_feedback' else ('loaded' if self.estimator else 'None')}, visits are {'loaded' if self.visits and self.visits[0] else 'not loaded/empty'}).")
-        self.test_and_save(current_mode=mode) # Pass the mode to test_and_save
-        return True # Indicate test/save process was executed
+            # Proceed to testing with potentially modified environment
+            self.test_and_save(current_mode=mode)
+            return True
+        else:
+             # Should not happen if logic in run_exp.py is correct
+             print(f"Error: Unknown test_only mode '{mode}' received by experiment runner.")
+             return False
 
     def test_and_save(self, current_mode="full_run"): # Add current_mode argument with a default
         """
@@ -808,7 +776,7 @@ class LLMExperiment:
                 saver.results_dir = self.results_dir
         
         # Add experiment metadata
-        results.add_metadata('horizon', self.cfg.horizon)
+        results.add_metadata('horizon', self.env.max_episode_length) # Log horizon from env
         results.add_metadata('algorithm', self.cfg.algorithm)
         results.add_metadata('base_prompt', self.cfg.base_prompt)
         # Add embedder info to metadata
@@ -883,10 +851,9 @@ class LLMExperiment:
         """Returns training_words_lists and testing_words_lists for each horizon step"""
         vocab_files = self.cfg.experiment.vocabulary
         
-        # Check if horizon matches the number of vocabulary files
-        # Make sure vocab_files is a flat list, not a list of lists
-        if len(vocab_files) != self.cfg.horizon:
-            raise ValueError(f"Number of vocabulary files ({len(vocab_files)}) must match horizon ({self.cfg.horizon})")
+        # REMOVED Horizon Check: Horizon is now implicitly len(vocab_files)
+        # if len(vocab_files) != self.cfg.horizon:
+        #     raise ValueError(f"Number of vocabulary files ({len(vocab_files)}) must match horizon ({self.cfg.horizon})")
         
         rng = np.random.RandomState(42)
         

@@ -347,12 +347,19 @@ llm-feedback-comparison-num: $(JOBS_LLM_DSN_NUM) $(JOBS_LLM_RAN_NUM)
 llm-feedback-comparison-mul: $(JOBS_LLM_DSN_MULT) $(JOBS_LLM_RAN_MULT)
 llm-feedback-comparison: llm-feedback-comparison-num llm-feedback-comparison-mul
 
-# Simplified test-only target
-# Requires ESTIMATOR_PATH. Allows optional ALGORITHM and FEEDBACK overrides.
-# Example: make llm-test-only ESTIMATOR_PATH=path/to/estimator.pt [FEEDBACK_PATH=path/to/feedback.json] [ALGORITHM=random] [FEEDBACK=numerical] [RESULTS_DIR=custom/output]
+# Test-only / Inference target using config_inference.yaml
+# Supports three modes based on provided paths:
+# 1. Load Estimator: Provide ESTIMATOR_PATH only. Loads estimator, runs testers/savers.
+#    Example: make llm-test-only ESTIMATOR_PATH=path/to/estimator.pt
+# 2. Estimate from Visits: Provide VISITS_PATH only. Loads visits, trains estimator using the configured feedback mechanism (e.g., PairwiseFeedback), runs testers/savers.
+#    Example: make llm-test-only VISITS_PATH=path/to/visits.pkl FEEDBACK=pairwise # Ensure feedback supports training from visits
+# 3. Load Estimator & Feedback: Provide ESTIMATOR_PATH and FEEDBACK_PATH. Loads estimator, loads feedback (e.g., for base prompt evaluation), runs testers/savers.
+#    Example: make llm-test-only ESTIMATOR_PATH=path/to/estimator.pt FEEDBACK_PATH=path/to/feedback.json
+# Any other combination of ESTIMATOR_PATH, VISITS_PATH, FEEDBACK_PATH will cause an error.
+# Allows optional ALGORITHM and FEEDBACK overrides (defaults are design, numerical).
+# Allows optional RESULTS_DIR override.
 llm-test-only:
-	@$(if $(ESTIMATOR_PATH),,$(error ESTIMATOR_PATH is required))
-	cd llm && TIMESTAMP=$(TIMESTAMP) OMP_NUM_THREADS=1 MKL_NUM_THREADS=1 $(PYTHONPATH) run_exp.py --config-name=config_inference algorithm=$(ALGORITHM) feedback=$(FEEDBACK) experiment_id="test-$(ALGORITHM)-$(FEEDBACK)-$(shell basename $(ESTIMATOR_PATH) .pt)" seed=1 test_only=true estimator_path="$(ESTIMATOR_PATH)" $(if $(FEEDBACK_PATH),+feedback_path="$(FEEDBACK_PATH)",) $(if $(RESULTS_DIR),results_dir="$(RESULTS_DIR)" override_results_dir=true,)
+	cd llm && TIMESTAMP=$(TIMESTAMP) OMP_NUM_THREADS=1 MKL_NUM_THREADS=1 $(PYTHONPATH) run_exp.py --config-name=config_inference algorithm=$(ALGORITHM) feedback=$(FEEDBACK) experiment_id="test-$(ALGORITHM)-$(FEEDBACK)-$(shell date +%s)" seed=1 test_only=true $(if $(ESTIMATOR_PATH),estimator_path="$(ESTIMATOR_PATH)",estimator_path=null) $(if $(VISITS_PATH),visits_path="$(VISITS_PATH)",visits_path=null) $(if $(FEEDBACK_PATH),feedback_path="$(FEEDBACK_PATH)",+feedback_path=null) $(if $(RESULTS_DIR),results_dir="$(RESULTS_DIR)" override_results_dir=true,)
 
 # Test different numbers of rounds for feedback optimization
 ROUNDS_VALUES := 5 10 15 20

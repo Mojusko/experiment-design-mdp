@@ -33,7 +33,8 @@ class BaseFeedback:
 
 class NumericalFeedback(BaseFeedback):
     def collect_labels(self, cfg, new_visits, theta_star):
-        horizon = cfg.horizon
+        # Use horizon from the environment
+        horizon = self.env.max_episode_length
         prefix_range = range(1, horizon+1) if cfg.dense_feedback else range(horizon, horizon+1)
         num_episodes = len(new_visits)
 
@@ -78,7 +79,8 @@ class NumericalFeedback(BaseFeedback):
 
 class MultinomialFeedback(BaseFeedback):
     def collect_labels(self, cfg, new_visits, theta_star):
-        horizon = cfg.horizon
+        # Use horizon from the environment
+        horizon = self.env.max_episode_length
         num_policies = cfg.feedback.num_policies
         num_episodes = len(new_visits[0])
         prefix_range = range(1, horizon+1) if cfg.dense_feedback else range(horizon, horizon+1)
