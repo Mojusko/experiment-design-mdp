@@ -41,6 +41,6 @@ model_specific_params:
   futuristic-text:
     lambda_dsn: 1
     lambda_est: 1
-  table-melancholic:
+  asian-text:
     lambda_dsn: 1
     lambda_est: 1
