@@ -40,15 +40,23 @@ class LLMExperiment:
       5) Fit/estimate
       6) Test & save results
     """
-    def __init__(self, cfg: DictConfig):
+    def __init__(self, cfg: DictConfig, derived_results_dir: str = None): # Add derived_results_dir argument
         self.cfg = cfg
         self.rng = np.random.RandomState(int(cfg.seed))
         self.seed = int(cfg.seed) # Store seed as an integer attribute
 
-        # Create results directory with timestamp
-        timestamp = os.environ.get('TIMESTAMP', datetime.datetime.now().strftime("%Y-%m-%d-%H-%M"))
-        self.results_dir = f"{cfg.results_dir}-{timestamp}"
+        # --- Determine and Create Results Directory ---
+        if derived_results_dir:
+            # Use the path derived in run_exp.py directly (already includes timestamp)
+            self.results_dir = derived_results_dir
+            print(f"Using derived results directory: {self.results_dir}")
+        else:
+            # Use default logic: path from config + timestamp
+            timestamp = os.environ.get('TIMESTAMP', datetime.datetime.now().strftime("%Y-%m-%d-%H-%M"))
+            self.results_dir = f"{cfg.results_dir}-{timestamp}"
+            print(f"Using default results directory logic: {self.results_dir}")
         os.makedirs(self.results_dir, exist_ok=True)
+        # ---------------------------------------------
 
         # --- Initialize Embedder ---
         # The create_embedder factory reads cfg.embedder config group

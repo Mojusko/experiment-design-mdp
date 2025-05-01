@@ -56,6 +56,7 @@ def main(cfg: DictConfig):
             input_path_for_dir = estimator_path # Use estimator path as base
 
         # --- Derive Results Directory if not overridden ---
+        derived_results_dir = None # Initialize derived path as None
         if input_path_for_dir and not cfg.get('override_results_dir', False):
             try:
                 from hydra.utils import to_absolute_path
@@ -83,11 +84,11 @@ def main(cfg: DictConfig):
                         # Construct the new results directory path
                         new_results_dir = os.path.join(tests_base_dir, f"{mode}-{experiment_id_suffix}-{timestamp}")
 
-                        # Update the configuration object BEFORE initializing the experiment
+                        # Store the derived path instead of modifying cfg
                         print(f"Derived results directory: {new_results_dir}")
-                        cfg.results_dir = new_results_dir
-                        # Ensure this derived path is used by setting override flag implicitly
-                        cfg.override_results_dir = True # Make sure LLMExperiment uses this path
+                        derived_results_dir = new_results_dir
+                        # cfg.results_dir = new_results_dir # REMOVED
+                        # cfg.override_results_dir = True # REMOVED
 
             except Exception as e:
                 print(f"Warning: Error deriving results directory: {e}. Using default results_dir.")
@@ -110,6 +111,9 @@ def main(cfg: DictConfig):
             # print("Use 'llm-train-human-feedback' target for: visits_path + feedback_path")
             # print("Use 'llm-inspect-visits' target for: visits_path only (with config_inspect)")
             return 1 # Exit due to invalid combination
+
+        # Initialize Experiment - Pass derived_results_dir if available
+        experiment = LLMExperiment(cfg, derived_results_dir=derived_results_dir)
 
         # Call the experiment's test-only runner with the determined mode
         success = experiment.run_test_only(

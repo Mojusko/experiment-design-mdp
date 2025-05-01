@@ -67,6 +67,6 @@ savers:
   - _target_: components.saver.ImageGenerationSaver
     params:
       take_best_worst_N: 8 # Match tester N
-      add_image_score: false
+      add_image_score: true
       save_worst: false # Match tester setting
   # VisitsSaver, LearnedEstimatorSaver, ReadableVisitsSaver are not needed for inference testing.
