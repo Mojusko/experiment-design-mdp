@@ -16,34 +16,17 @@ pass_V: false
 # The code will embed each keyword and use the resulting vectors for C-optimal design.
 # Example: ["old", "classic", "traditional", "eternal"]
 C_design_keywords: [
-  # Original Pairs (20)
-  "modern", "ancient",
-  "colorful", "monochromatic",
-  "complex", "simple",
-  "vibrant", "muted",
-  "dynamic", "static",
-  "natural", "urban",
-  "detailed", "minimalist",
-  "bright", "dark",
-  "warm", "cool",
-  "abstract", "realistic",
-  # Added/Modified Keywords (~30)
-  "impressionist", "photorealistic", # Art Movements / Realism
-  "surreal", "geometric",           # Art Styles
-  "stylized", "naturalistic",       # General Styles (Replaced Cubist/Expressionist)
-  "painterly", "sketchy",           # Visual Texture
-  "cartoonish", "graphic",          # Visual Styles (Replaced Pixelated with Graphic)
-  "japanese", "african",            # Cultural Styles
-  "celtic", "islamic",              # Cultural Styles
-  "historical", "futuristic",       # Eras / Time Periods (Replaced Victorian)
-  "ornate", "plain",                # Detail Level (Replaced Gothic/Baroque)
-  "organic", "mechanical",          # Form/Origin (Replaced Steampunk/Cyberpunk)
-  "whimsical", "melancholic",       # Moods / Atmospheres
-  "serene", "dramatic",             # Moods / Atmospheres
-  "retro", "vintage",               # Time / Style Feel
-  "textured", "smooth",             # Surface Quality (Replaced Watercolor/Oil Painting)
-  "sculptural", "linear"            # Form / Design Style (Replaced Graphic with Linear)
-] # Total: 50 keywords
+  "modern", "ancient",        # 1
+  "colorful", "monochromatic", # 2
+  "complex", "simple",         # 3
+  "vibrant", "muted",          # 4
+  "dynamic", "static",         # 5
+  "natural", "urban",          # 6
+  "detailed", "minimalist",    # 7
+  "bright", "dark",            # 8
+  "warm", "cool",              # 9
+  "abstract", "realistic"      # 10
+]
 #C_design_keywords: null
 
 # Model-specific parameters (moved from experiment config)
