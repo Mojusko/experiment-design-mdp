@@ -46,6 +46,53 @@ def main(cfg: DictConfig):
         elif estimator_path and not visits_path and feedback_path:
             mode = "load_estimator_and_feedback"
             print("Mode: Load Estimator and Feedback")
+        # --- Determine Input Path for Directory Derivation ---
+        input_path_for_dir = None
+        if mode == "load_estimator":
+            input_path_for_dir = estimator_path
+        elif mode == "estimate_from_visits":
+            input_path_for_dir = visits_path
+        elif mode == "load_estimator_and_feedback":
+            input_path_for_dir = estimator_path # Use estimator path as base
+
+        # --- Derive Results Directory if not overridden ---
+        if input_path_for_dir and not cfg.get('override_results_dir', False):
+            try:
+                from hydra.utils import to_absolute_path
+                import datetime
+                absolute_input_path = to_absolute_path(input_path_for_dir)
+                if not os.path.exists(absolute_input_path):
+                     print(f"Warning: Input path '{absolute_input_path}' not found. Using default results_dir.")
+                else:
+                    original_dir = os.path.dirname(absolute_input_path)
+                    # Check if the original_dir itself exists
+                    if not os.path.isdir(original_dir):
+                         print(f"Warning: Parent directory '{original_dir}' of input path not found. Using default results_dir.")
+                    else:
+                        timestamp = os.environ.get('TIMESTAMP', datetime.datetime.now().strftime("%Y-%m-%d-%H-%M"))
+                        # Use mode name in the directory structure
+                        # Example: test-load_estimator-..., test-estimate_from_visits-...
+                        experiment_id_suffix = cfg.experiment_id or mode # Use existing ID or mode name
+
+                        # Determine base directory for 'additional_tests'
+                        if os.path.basename(original_dir) == "additional_tests":
+                            tests_base_dir = original_dir
+                        else:
+                            tests_base_dir = os.path.join(original_dir, "additional_tests")
+
+                        # Construct the new results directory path
+                        new_results_dir = os.path.join(tests_base_dir, f"{mode}-{experiment_id_suffix}-{timestamp}")
+
+                        # Update the configuration object BEFORE initializing the experiment
+                        print(f"Derived results directory: {new_results_dir}")
+                        cfg.results_dir = new_results_dir
+                        # Ensure this derived path is used by setting override flag implicitly
+                        cfg.override_results_dir = True # Make sure LLMExperiment uses this path
+
+            except Exception as e:
+                print(f"Warning: Error deriving results directory: {e}. Using default results_dir.")
+        # ----------------------------------------------------
+
         # --- Deprecated Modes (Handled by other Makefile targets) ---
         # elif not estimator_path and visits_path and feedback_path:
         #     mode = "train_human" # Now handled by llm-train-human-feedback target
