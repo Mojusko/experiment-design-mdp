@@ -441,7 +441,7 @@ def get_scorer_model(model_name: str, env: LLMGrid, embedder: BaseEmbedder) -> V
 
     elif model_name == 'futuristic-text':
         # Use the embedder to get the weight vector from text
-        prompt = "A spaceship cruising in space in futuristic style"
+        prompt = "A futuristic scene with advanced society using advanced technologies"
         weight_vector = embedder.embed_text(prompt)
         return DotProductModel(embedder, weight_vector).eval()
 
