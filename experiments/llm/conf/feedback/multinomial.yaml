@@ -40,7 +40,7 @@ model_specific_params:
     lambda_est: 10 #num_policies=4 (Kept high based on previous findings)
   futuristic-text:
     lambda_dsn: 1
-    lambda_est: 500
+    lambda_est: 100
   asian-text:
     lambda_dsn: 1
     lambda_est: 10
