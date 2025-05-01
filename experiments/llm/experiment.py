@@ -586,17 +586,34 @@ class LLMExperiment:
             # can handle feedback_data=None or raises an appropriate error.
             # If NumericalFeedback is used, this might just return the scorer_model.
             try:
-                # Pass None for feedback_data, assumes feedback.train_estimator handles it
-                self.estimator = self.feedback.train_estimator(self.visits, None)
+                # Step 1: Collect labels using visits and ground truth scorer
+                print("Collecting labels from visits using ground truth scorer...")
+                # Ensure _theta_star is available
+                if self._theta_star is None:
+                     raise ValueError("Ground truth scorer (_theta_star) is not available. Cannot collect labels.")
+                self.feedback.collect_labels(self.cfg, self.visits, self._theta_star)
+
+                # Step 2: Fit the estimator using the collected labels
+                print("Fitting estimator with collected labels...")
+                self.feedback.fit_estimator() # Uses internally stored data
+
+                # Step 3: Retrieve the fitted estimator
+                self.estimator = self.feedback.estimator # Get the estimator instance from the feedback object
+
             except NotImplementedError as e:
                  print(f"Error: The configured feedback mechanism ({self.feedback.__class__.__name__}) does not support training from visits alone.")
                  print(e)
                  return False
+            except AttributeError as e: # Catch the specific error if collect_labels/fit_estimator are missing
+                 print(f"Error: Method missing in feedback class ({self.feedback.__class__.__name__}): {e}")
+                 return False
             except Exception as e:
                  print(f"Error during estimator training from visits: {e}")
+                 # Optionally re-raise for more detail: raise e
                  return False
 
-            if self.estimator:
+            # Check if the estimator was successfully fitted/retrieved
+            if self.estimator and getattr(self.estimator, 'fitted', False): # Check if estimator exists and is marked as fitted
                 print("Estimator trained/obtained successfully.")
                 # Proceed to testing
                 self.test_and_save(current_mode=mode)
