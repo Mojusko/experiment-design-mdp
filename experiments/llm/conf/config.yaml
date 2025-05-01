@@ -12,7 +12,7 @@ include_base_prompt_in_first_tokens: false # Keep false
 algorithm: "design"
 cache_dir: "${oc.env:HOME}/.cache/huggingface/hub" # Default cache dir
 horizon: 4 # Horizon 4 for exploration including base prompt step
-accuracy: 0.0001
+accuracy: 0.0000001
 dense_feedback: true
 same_first_action_in_episode: false # If true, all policies use the same action at h=0 within an episode
 #same_first_action_in_episode: false # If true, all policies use the same action at h=0 within an episode
