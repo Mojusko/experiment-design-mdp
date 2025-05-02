@@ -429,6 +429,7 @@ class MultiPolicyOrigDesignC(MultiPolicyOrigDesignD):
             traces = []
             for i, C_item in enumerate(self.C):
                 C_item_dev = C_item.to(target_device)
+                # Calculate precision in direction C_item
                 traces.append(torch.trace(torch.linalg.inv(C_item_dev @ inv_z_reg @ C_item_dev.T)))
             # Return the mean of the precisions instead of the max
             return torch.mean(torch.stack(traces))
@@ -470,7 +471,11 @@ class MultiPolicyOrigDesignC(MultiPolicyOrigDesignD):
         a_optimal_value = torch.trace(inv_z_reg)
         
         # Combine the two objectives with 50/50 weighting
-        combined_value = 0.5 * c_optimal_value + 0.5 * a_optimal_value
+        # C-optimal maximizes precision in C direction(s) (positive value)
+        # A-optimal maximizes -trace(covariance) = -trace(inv(precision)) = -trace(inv_z_reg)
+        # So we add the C-optimal value and the A-optimal value (which is negative trace)
+        combined_value = 0.5 * c_optimal_value + 0.5 * (-a_optimal_value)
+        # Or equivalently: combined_value = 0.5 * c_optimal_value - 0.5 * a_optimal_value
         
         return combined_value
 
