@@ -208,10 +208,11 @@ class MultiPolicyAggDesignD(MultiPolicyAggDesignA):
         return torch.linalg.slogdet(z + self.lambd/episodes * eye)[1]
 
 class MultiPolicyOrigDesignD(RewardFunctional):
-    def __init__(self, env, lambd=1e-3, dim=0, V=None):
+    def __init__(self, env, lambd=1e-3, dim=0, V=None, ignore_initial_state=False):
         super().__init__()
         self.lambd = lambd
         self.type = "static"
+        self.ignore_initial_state = ignore_initial_state
         self.env = env
         self.V = V
         self.horizon = env.max_episode_length # Keep horizon for regularization scaling
@@ -268,59 +269,104 @@ class MultiPolicyOrigDesignD(RewardFunctional):
         H = distributions[0].shape[0]
         assert H == 1, f"This functional only supports stationary policies (horizon H=1). Got H={H}."
         K = len(distributions) # Number of policies
+        init_state_index = 0 # Assuming LLMGrid init_state is always 0
 
-        # Since H=1, we only consider the first time step (index 0)
-        h = 0
-        d_h = [] # List to store marginal distributions for each policy at step h
+        # --- Calculate Marginal Distributions ---
+        # We need marginal action distributions d(a) (since self.dim == 1)
+        d_h = [] # List to store marginals: d_other if ignore_initial_state, else d_total
+        d_h_init = [] # List to store marginals for initial state if ignore_initial_state
+
         for q in range(K):
-            if self.dim == 0: # Sum over actions -> marginal state distribution d(s)
-                # distributions[q][h] has shape (S, A)
-                # emissions should have shape (S, d_features) - assuming state features
-                d_h_q = torch.sum(distributions[q][h], dim=1) # Shape (S,)
-            elif self.dim == 1: # Sum over states -> marginal action distribution d(a)
-                # distributions[q][h] has shape (S, A)
-                # emissions should have shape (A, d_features) - assuming action features
-                d_h_q = torch.sum(distributions[q][h], dim=0) # Shape (A,)
-            else:
-                raise ValueError(f"Unsupported dim value: {self.dim}. Must be 0 or 1.")
-            d_h.append(d_h_q)
+            dist_q_h = distributions[q][0] # Shape (S, A), index 0 because H=1
 
-        # Check if emissions shape matches the marginal distribution dimension
+            if self.ignore_initial_state:
+                # Calculate marginal for initial state
+                if dist_q_h.shape[0] > init_state_index:
+                    if self.dim == 1:
+                        d_init_q = dist_q_h[init_state_index, :].clone() # Shape (A,)
+                    else: # self.dim == 0 not fully supported/tested with this logic
+                        raise ValueError("ignore_initial_state=True only implemented for dim=1 (action features)")
+                    d_h_init.append(d_init_q)
+                else: # Should not happen if S > 0
+                    d_h_init.append(torch.zeros(emissions.shape[0], device=emissions.device, dtype=emissions.dtype))
+
+                # Calculate marginal for other states
+                if dist_q_h.shape[0] > init_state_index + 1:
+                    if self.dim == 1:
+                        d_other_q = torch.sum(dist_q_h[init_state_index+1:, :], dim=0) # Shape (A,)
+                    else: # self.dim == 0
+                         raise ValueError("ignore_initial_state=True only implemented for dim=1 (action features)")
+                    d_h.append(d_other_q) # Store d_other in d_h list
+                else: # No states other than the initial one
+                    d_h.append(torch.zeros(emissions.shape[0], device=emissions.device, dtype=emissions.dtype))
+
+            else: # Standard calculation (ignore_initial_state is False)
+                if self.dim == 1:
+                    d_total_q = torch.sum(dist_q_h, dim=0) # Shape (A,)
+                elif self.dim == 0:
+                    d_total_q = torch.sum(dist_q_h, dim=1) # Shape (S,)
+                else:
+                    raise ValueError(f"Unsupported dim value: {self.dim}. Must be 0 or 1.")
+                d_h.append(d_total_q) # Store d_total in d_h list
+
+        # --- Check Emissions Shape ---
+        # d_h[0] will have shape (A,) if dim=1, or (S,) if dim=0
+        # emissions should have shape (A, d) if dim=1, or (S, d) if dim=0
         if emissions.shape[0] != d_h[0].shape[0]:
              raise ValueError(f"Dimension mismatch: emissions first dimension ({emissions.shape[0]}) "
                               f"does not match the marginal distribution dimension ({d_h[0].shape[0]}) "
                               f"based on self.dim={self.dim}.")
 
-        # Calculate the approximate Fisher Information Matrix I_approx
-        # I_approx = (1/K^2) * [ (K-1) * sum_q (E_q[phi phi^T]) - sum_{q!=q'} (E_q[phi])(E_{q'}[phi^T]) ]
+        # --- Calculate Fisher Information Matrix z ---
+        z = torch.zeros((feature_dim, feature_dim), dtype=emissions.dtype, device=emissions.device)
 
-        # Term 1: (K-1) * sum_q E_q[phi phi^T]
-        # E_q[phi phi^T] = sum_s d_h_q(s) phi(s) phi(s)^T = emissions.T @ diag(d_h_q) @ emissions
-        term1 = torch.zeros_like(z)
-        for q in range(K):
-            # Ensure d_h[q] is treated as weights for the diagonal
-            term1 += emissions.T @ torch.diag(d_h[q]) @ emissions
+        if self.ignore_initial_state:
+            # Calculate z_init contribution (scaled by 1/K)
+            z_init = torch.zeros_like(z)
+            for q in range(K):
+                # E_q[phi phi^T]_init = emissions.T @ diag(d_h_init[q]) @ emissions
+                Eq_phi_phiT_init = emissions.T @ torch.diag(d_h_init[q]) @ emissions
+                # E_q[phi]_init = emissions.T @ d_h_init[q]
+                Eq_phi_init = emissions.T @ d_h_init[q]
+                # Add term: E_q[phi phi^T]_init - E_q[phi]_init E_q[phi^T]_init
+                z_init += Eq_phi_phiT_init - torch.outer(Eq_phi_init, Eq_phi_init)
+            z_init /= K # Scale by 1/K
 
-        term1 *= K
+            # Calculate z_other contribution (standard formula, scaled by 1/K^2)
+            # Uses d_h list which contains d_other marginals
+            z_other = torch.zeros_like(z)
+            term1_other = torch.zeros_like(z)
+            expected_phis_other = []
+            for q in range(K):
+                term1_other += emissions.T @ torch.diag(d_h[q]) @ emissions
+                expected_phis_other.append(emissions.T @ d_h[q])
+            term1_other *= K
 
-        # Term 2: sum_{q!=q'} (E_q[phi])(E_{q'}[phi^T])
-        # E_q[phi] = sum_s d_h_q(s) phi(s) = emissions.T @ d_h_q
-        # E_{q'}[phi^T] = sum_{s'} d_h_{q'}(s') phi(s')^T = d_h_{q'}.T @ emissions
-        term2 = torch.zeros_like(z)
-        expected_phis = [] # Store E_q[phi] for each q
-        for q in range(K):
-            # d_h[q] has shape (N,), emissions has shape (N, d)
-            # emissions.T @ d_h[q] gives shape (d,)
-            expected_phis.append(emissions.T @ d_h[q]) # Shape (d,)
+            term2_other = torch.zeros_like(z)
+            for q in range(K):
+                for q_prime in range(K):
+                    term2_other += torch.outer(expected_phis_other[q], expected_phis_other[q_prime])
 
-        for q in range(K):
-            for q_prime in range(K):
-                    # expected_phis[q] is (d,), expected_phis[q_prime] is (d,)
-                    # We need outer product: (d,) x (d,) -> (d, d)
+            z_other = (term1_other - term2_other) / (K**2) # Scale by 1/K^2
+
+            # Combine contributions
+            z = z_init + z_other
+
+        else: # Standard calculation (ignore_initial_state is False)
+            # Uses d_h list which contains d_total marginals
+            term1 = torch.zeros_like(z)
+            expected_phis = []
+            for q in range(K):
+                term1 += emissions.T @ torch.diag(d_h[q]) @ emissions
+                expected_phis.append(emissions.T @ d_h[q])
+            term1 *= K
+
+            term2 = torch.zeros_like(z)
+            for q in range(K):
+                for q_prime in range(K):
                     term2 += torch.outer(expected_phis[q], expected_phis[q_prime])
 
-        # Combine terms and scale
-        z = (term1 - term2) / (K**2)
+            z = (term1 - term2) / (K**2) # Scale by 1/K^2
 
         return z
 

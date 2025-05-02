@@ -253,6 +253,11 @@ class FeedbackFactory:
                     # Add to the total V
                     V += V_h
 
+            # --- Determine ignore_initial_state flag ---
+            ignore_initial_state_flag = cfg.get('same_first_action_in_episode', False)
+            if ignore_initial_state_flag:
+                print("Design objective will ignore initial state contribution due to same_first_action_in_episode=True.")
+
             # --- Determine Design based on C_design_keywords ---
             c_vectors = None
             keywords = cfg.feedback.get('C_design_keywords')
@@ -272,19 +277,38 @@ class FeedbackFactory:
                         lambd=lambda_dsn, # Use lambda_dsn
                         dim=1,
                         C=c_vectors, # Use embedded keywords
-                        adaptive_estimation_frequency=cfg.feedback.adaptive_estimation_frequency
+                        adaptive_estimation_frequency=cfg.feedback.adaptive_estimation_frequency,
+                        ignore_initial_state=ignore_initial_state_flag # Pass flag
                     )
                     print("Using Adaptive C-optimal design.")
                 else: # Fallback to Adaptive A-optimal
-                    design = AdaptiveOrigDesignA(env=env, lambd=lambda_dsn, dim=1, V=V) # Use lambda_dsn
+                    design = AdaptiveOrigDesignA(
+                        env=env,
+                        lambd=lambda_dsn, # Use lambda_dsn
+                        dim=1,
+                        V=V,
+                        ignore_initial_state=ignore_initial_state_flag # Pass flag
+                    )
                     print("Using Adaptive A-optimal design (fallback).")
             else:
                 # Static Designs
                 if c_vectors: # Check if c_vectors were successfully generated (i.e., keywords were provided)
-                    design = MultiPolicyOrigDesignC(env=env, lambd=lambda_dsn, dim=1, C=c_vectors) # Use embedded keywords
+                    design = MultiPolicyOrigDesignC(
+                        env=env,
+                        lambd=lambda_dsn,
+                        dim=1,
+                        C=c_vectors, # Use embedded keywords
+                        ignore_initial_state=ignore_initial_state_flag # Pass flag
+                    )
                     print("Using Static C-optimal design.")
                 else: # Fallback to Static A-optimal
-                    design = MultiPolicyOrigDesignA(env=env, lambd=lambda_dsn, dim=1, V=V) # Use lambda_dsn
+                    design = MultiPolicyOrigDesignA(
+                        env=env,
+                        lambd=lambda_dsn,
+                        dim=1,
+                        V=V, # Use lambda_dsn
+                        ignore_initial_state=ignore_initial_state_flag # Pass flag
+                    )
                     print("Using Static A-optimal design (fallback).")
 
             likelihood = MultinomialLikelihood()
