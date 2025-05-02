@@ -3,91 +3,91 @@ two cats playing chess
 a tall giraffe eating leaves
 a robot gardening
 children building a sandcastle
-an old library interior
+a library interior
 an airship flying
 an astronaut on an alien planet surface
-knights playing chess at a table
+people playing chess at a table
 a bustling market street
-a majestic mountain landscape
+a mountain landscape
 a geometric pattern
 a cat wearing a hat
 a city skyline at sunset
 an underwater coral reef with fish
-a cozy cabin in snow
-dragons flying over volcanoes
-a giant mushroom forest
-an elephant painting on a canvas
-a dog surfing on a wave
+a cabin in snow
+birds flying over volcanoes
+a mushroom forest
+an elephant near a canvas
+a dog near water
 a hidden jungle waterfall
-penguins having a picnic on ice
-a treehouse village in a forest
-a grand mansion exterior
-a spaceship landing on a planet
-a knight riding a griffin
-a wizard's study filled with books
-a serene zen garden
-a lively marketplace scene
-a robot orchestra playing music
-a squirrel piloting a small plane
+penguins on ice
+treehouses in a forest
+a mansion exterior
+a spacecraft landing on a planet
+a person riding a large bird
+a study filled with books
+a garden with rocks and sand
+a marketplace scene
+robots playing music
+a squirrel near a small plane
 a desert oasis with palm trees
-a secret agent on a mission
-an octopus attacking a ship
-a colorful candy land
-a bear riding a bicycle
-a floating island in the sky
-a detective at a crime scene
-animals having a tea party
-a vintage train traveling
-a samurai meditating in a garden
+a person in a suit
+an octopus near a ship
+a landscape with candy shapes
+a bear near a bicycle
+an island in the sky
+a person looking at clues
+animals sitting together
+a train traveling
+a person meditating in a garden
 a dense forest
-a scientist in a lab with beakers
+a person in a lab with beakers
 a hummingbird near a flower
-a city in a crystal cave
-a pirate captain on a ship deck
-adventurers exploring ancient ruins
+buildings in a crystal cave
+a person on a ship deck
+people exploring ruins
 a cat napping in a sunbeam
-an inventor with a new contraption
-a mermaid swimming underwater
-a farmer with crops in a field
-a jazz band playing on a stage
-a knight battling a dragon
+a person with a contraption
+a figure swimming underwater
+a person with crops in a field
+musicians playing on a stage
+a person near a large reptile
 a child flying a kite
 a car race on a track
-a chef cooking in a kitchen
-monks chanting in a temple
-a robot butler serving tea
-a fox reading a book
-a giant whale in clouds
-a superhero overlooking a city
-a witch brewing a potion
-a garden gnome riding a snail
+a person cooking in a kitchen
+people in a temple
+a robot serving tea
+a fox near a book
+a whale in clouds
+a figure overlooking a city
+a person brewing a potion
+a small figure riding a snail
 a space station in orbit
-a street musician playing
-explorers in a jungle
-a cat dressed as a pirate
-a modern city street
-a fairy queen on a throne
-a farmer with a tractor
-a rock band performing
-a knight guarding a castle gate
-a child playing in a fantastical world
-a soldier in uniform
-a chef presenting food
-wizards casting spells
-a robot artist painting
-a fox wearing clothes
-a giant turtle carrying a city
-a superhero team assembling
-a witch flying on a broomstick
-a garden gnome fishing by a pond
-a futuristic cityscape
+a musician playing
+people in a jungle
+a cat
+a city street
+a figure on a throne
+a person with a tractor
+musicians performing
+a person guarding a castle gate
+a child playing
+a person in uniform
+a person presenting food
+people casting spells
+a robot painting
+a fox
+a turtle carrying buildings
+figures assembling
+a figure flying on a broomstick
+a small figure fishing by a pond
+a cityscape
 a musician playing violin
-archaeologists uncovering artifacts
-a cat wearing sunglasses
-an airship dock
-a fairy dancing in a meadow
-a farmer milking a cow
-a pop star singing on stage
+people uncovering artifacts
+a cat
+a docking station
+a figure dancing in a meadow
+a person milking a cow
+a person singing on stage
 a dog chasing a ball
 a bird on a tree branch
 a fish in a fishbowl
@@ -223,178 +223,178 @@ a cave filled with sparkling crystals
 an alien landscape with strange plants
 a futuristic city with flying cars
 a medieval village with thatched roofs
-a roman coliseum ruin
-an egyptian pyramid in the desert
-a greek temple ruin
-a byzantine church interior
-a gothic cathedral exterior
-a renaissance palace courtyard
-a baroque interior room
-a rococo salon with ornate furniture
-a neoclassical building facade
-a romantic ruin in a landscape
-a realist street scene painting
-a pre-raphaelite garden scene
-a symbolist dreamscape image
-an art nouveau building facade
-a fauvist landscape painting
-an expressionist portrait painting
-a dada found object
-a de stijl geometric composition
-a bauhaus designed chair
-a constructivist monument sculpture
-a suprematist black square
-a futurist car design
-a socialist realist worker portrait
-an american regionalist farm scene
-a social realist protest scene
-a harlem renaissance jazz club scene
-an abstract painting with bold colors
-a lyrical abstraction painting
-a geometric abstraction painting
-an orphist painting with color circles
-a vorticist design with sharp lines
-a precisionist building drawing
-an art deco designed object
-a nouveau réalisme accumulation of objects
-an op art pattern creating illusion
-a kinetic sculpture in motion
-a conceptual art piece with text
-a land art intervention in nature
-a performance art piece act
-a video art display on screens
-a body art design on skin
-an installation art environment
-an arte povera object made of simple materials
-a fluxus event instruction
-a post-minimalist sculpture form
-a photorealist portrait painting
-a hyperrealist still life painting
-a figurative painting of a person
-a new figuration painting style
-a transavanguardia painting style
-a neo-expressionist painting
-a bad painting style
-a graffiti art piece on a wall
-an environmental art piece in nature
-a bio art experiment in a lab
-a digital art piece on a screen
-a net art piece on the internet
-a software art piece running code
-a generative art piece created by algorithm
-an algorithmic art piece output
-a glitch art piece with digital errors
-a pixel art image design
-an ascii art image made of characters
-a crypto art piece on the blockchain
-a postmodern building design
-a feminist art piece conveying a message
-an identity art piece exploring self
-a relational aesthetics project interaction
-a participatory art project engagement
-a community art project outcome
-a public art piece in a city square
-a street photograph capturing a moment
-a documentary photograph telling a story
-a fine art photograph print
-a pictorialist photograph with soft focus
-a straight photograph with sharp detail
-a surrealist photograph with strange elements
-a conceptual photograph idea
-an abstract photograph composition
-a landscape photograph view
-a portrait photograph of a person
-a still life photograph arrangement
-a fashion photograph model
-an advertising photograph product
-a photojournalism photograph event
-an avant-garde photograph experiment
-an academic painting style
-a salon painting display
-an orientalist painting scene
-a japonisme print design
-a chinoiserie decorative object
-a primitivist painting style
-a folk art object design
-a naive painting style
-an outsider art object creation
-a visionary art piece expression
-a self-taught art piece style
-a tribal art object design
-an aboriginal art piece pattern
-an indigenous art piece craft
-an african art object carving
-an oceanic art object carving
-a pre-columbian artifact design
-a mesoamerican artifact design
-an andean textile pattern
-a north american native artifact design
-a persian miniature painting
-an islamic calligraphy design
-an ottoman tile pattern
-a safavid carpet pattern
-an indian sculpture form
-a buddhist sculpture form
-a hindu temple architecture
-a jain manuscript illumination
-a gandhara sculpture style
-a gupta sculpture style
-a rajput painting scene
-a pahari painting scene
-a deccani painting scene
-a bengal school painting style
-a modern indian painting style
-a contemporary indian installation art
-a chinese bronze vessel
-a shang dynasty bronze vessel
-a zhou dynasty bronze vessel
-a qin dynasty terracotta warrior
-a han dynasty tomb art mural
-a six dynasties buddhist sculpture
-a sui dynasty buddhist sculpture
-a tang dynasty pottery figure
-a five dynasties and ten kingdoms painting
-a song dynasty landscape painting
-a yuan dynasty painting
-a ming dynasty porcelain vase
-a qing dynasty painting
-a modern chinese ink painting
-a contemporary chinese video art
-a japanese pottery bowl
-a jomon period pottery vessel
-a yayoi period bronze bell
-a kofun period tomb art object
-an asuka period buddhist sculpture
-a nara period buddhist sculpture
-a heian period painting scene
-a kamakura period sculpture
-a muromachi period ink painting
-a momoyama period screen painting
-an edo period ukiyo-e print
-a meiji period nihonga painting
-a taisho period yoga painting
-a showa period manga panel
-a heisei period anime scene
-a reiwa period digital art piece
-a nihonga painting style
-a yoga painting style
-a manga comic panel
-an anime animation scene
-a korean ceramic piece
-a three kingdoms period pottery
-a unified silla buddhist art piece
-a goryeo dynasty celadon vase
-a joseon dynasty painting scene
-a modern korean painting style
-a contemporary korean video art
-a southeast asian textile pattern
-a khmer temple architecture
-a thai buddhist art piece
-a vietnamese lacquerware object
-an indonesian batik pattern
-a philippine painting style
-an australian landscape painting
-a new zealand maori carving
-a latin american surrealist painting
-a mexican folk art object
-a brazilian concrete art piece
+a coliseum ruin
+a pyramid in the desert
+a temple ruin
+a church interior
+a cathedral exterior
+a palace courtyard
+an interior room
+a salon with ornate furniture
+a building facade
+a ruin in a landscape
+a street scene painting
+a garden scene
+a dreamscape image
+a building facade
+a landscape painting
+a portrait painting
+a found object
+a geometric composition
+a designed chair
+a monument sculpture
+a black square
+a car design
+a worker portrait
+a farm scene
+a protest scene
+a jazz club scene
+a painting with bold colors
+an abstract painting
+a geometric painting
+a painting with color circles
+a design with sharp lines
+a building drawing
+a designed object
+an accumulation of objects
+a pattern creating illusion
+a sculpture in motion
+an art piece with text
+an art intervention in nature
+a performance piece act
+a video display on screens
+a design on skin
+an art environment
+an object made of simple materials
+an event instruction
+a sculpture form
+a portrait painting
+a still life painting
+a painting of a person
+a painting style
+a painting style
+a painting
+a painting style
+an art piece on a wall
+an art piece in nature
+an experiment in a lab
+an art piece on a screen
+an art piece on the internet
+an art piece running code
+an art piece created by algorithm
+an art piece output
+an art piece with digital errors
+an image design
+an image made of characters
+an art piece on the blockchain
+a building design
+an art piece conveying a message
+an art piece exploring self
+a project interaction
+a project engagement
+a project outcome
+an art piece in a city square
+a photograph capturing a moment
+a photograph telling a story
+a photograph print
+a photograph with soft focus
+a photograph with sharp detail
+a photograph with strange elements
+a photograph idea
+a photograph composition
+a photograph view
+a photograph of a person
+a photograph arrangement
+a photograph model
+a photograph product
+a photograph event
+a photograph experiment
+a painting style
+a painting display
+a painting scene
+a print design
+a decorative object
+a painting style
+an object design
+a painting style
+an object creation
+an art piece expression
+an art piece style
+an art object design
+an art piece pattern
+an art piece craft
+an art object carving
+an art object carving
+an artifact design
+an artifact design
+a textile pattern
+a native artifact design
+a miniature painting
+a calligraphy design
+a tile pattern
+a carpet pattern
+a sculpture form
+a sculpture form
+a temple architecture
+a manuscript illumination
+a sculpture style
+a sculpture style
+a painting scene
+a painting scene
+a painting scene
+a painting style
+a painting style
+an installation art
+a bronze vessel
+a bronze vessel
+a bronze vessel
+a terracotta warrior
+a tomb art mural
+a buddhist sculpture
+a buddhist sculpture
+a pottery figure
+a painting
+a landscape painting
+a painting
+a porcelain vase
+a painting
+an ink painting
+a video art
+a pottery bowl
+a pottery vessel
+a bronze bell
+a tomb art object
+a buddhist sculpture
+a buddhist sculpture
+a painting scene
+a sculpture
+an ink painting
+a screen painting
+an ukiyo-e print
+a nihonga painting
+a yoga painting
+a manga panel
+an anime scene
+a digital art piece
+a painting style
+a painting style
+a comic panel
+an animation scene
+a ceramic piece
+a pottery
+a buddhist art piece
+a celadon vase
+a painting scene
+a painting style
+a video art
+a textile pattern
+a temple architecture
+a buddhist art piece
+a lacquerware object
+a batik pattern
+a painting style
+a landscape painting
+a carving
+a surrealist painting
+a folk art object
+a concrete art piece
