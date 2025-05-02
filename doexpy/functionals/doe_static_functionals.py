@@ -431,9 +431,7 @@ class MultiPolicyOrigDesignC(MultiPolicyOrigDesignD):
                 C_item_dev = C_item.to(target_device)
                 traces.append(torch.trace(torch.linalg.inv(C_item_dev @ inv_z_reg @ C_item_dev.T)))
             # Return the mean of the precisions instead of the max
-            # return torch.mean(torch.stack(traces))
-            # Maximize the minimum precision (minimize the maximum variance)
-            return torch.min(torch.stack(traces))
+            return torch.mean(torch.stack(traces))
 
         # Handle C being a single vector
         # Assume self.C is a (1, d) tensor
