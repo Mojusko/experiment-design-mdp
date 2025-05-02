@@ -407,16 +407,9 @@ class AdaptiveOrigDesignC(MultiPolicyOrigDesignC):
                 # If C was not None and still failed, re-raise the error
                 raise e
         else:
+            pass
              # If super().__init__ succeeded (meaning C was not None)
-             if C is not None:
-                 c_norm_l2 = torch.linalg.norm(C).item()
-                 c_norm_l1 = torch.linalg.norm(C, ord=1).item()
-                 logger.info(f"AdaptiveOrigDesignC initialized with C vector: L2 norm={c_norm_l2:.4f}, L1 norm={c_norm_l1:.4f}")
              # Log update behavior based on frequency
-             if self.adaptive_estimation_frequency == 0:
-                 logger.info("adaptive_estimation_frequency is 0. C vector will NOT be updated.")
-             else:
-                 logger.info(f"adaptive_estimation_frequency is {self.adaptive_estimation_frequency}. C vector WILL be updated.")
 
         self.type = "adaptive"
         self.uniform_alpha = uniform_alpha
@@ -429,9 +422,9 @@ class AdaptiveOrigDesignC(MultiPolicyOrigDesignC):
             logger.info("adaptive_estimation_frequency is 0. Skipping update_estimator for AdaptiveOrigDesignC.")
             return
         else:
+            pass
             # Proceed with the normal update from the estimator via the parent method
-            logger.info(f"adaptive_estimation_frequency > 0. Updating C based on estimator {type(estimator).__name__}.")
-            super().update_estimator(estimator, emissions)
+            #super().update_estimator(estimator, emissions)
 
     def eval(self, emissions, distributions, visitations_per_policy, episodes):
         # Compute agg_densities for each policy's visitation history
