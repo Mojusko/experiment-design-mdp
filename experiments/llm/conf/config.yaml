@@ -14,7 +14,7 @@ cache_dir: "${oc.env:HOME}/.cache/huggingface/hub" # Default cache dir
 # horizon: 4 # REMOVED - Determined by len(experiment.vocabulary)
 accuracy: 0.0000001
 dense_feedback: true
-same_first_action_in_episode: false # If true, all policies use the same action at h=0 within an episode
+same_first_action_in_episode: true # If true, all policies use the same action at h=0 within an episode
 #same_first_action_in_episode: false # If true, all policies use the same action at h=0 within an episode
 # Results directory path
 results_dir: "results/dummy"
