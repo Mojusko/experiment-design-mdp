@@ -5,7 +5,11 @@ from typing import List, Union
 from abc import ABC, abstractmethod
 from doexpy.env.discrete_env import Environment
 from doexpy.functionals.reward_functional import RewardFunctional
-import torch.linalg as la 
+import torch.linalg as la
+import logging
+from stpy.regression.regularized_dictionary.regularized_multinomial_estimator import RegularizedMultinomialEstimator
+
+logger = logging.getLogger(__name__)
 
 class ExperimentDesignFunctional(RewardFunctional):
 
@@ -204,91 +208,120 @@ class MultiPolicyAggDesignD(MultiPolicyAggDesignA):
         return torch.linalg.slogdet(z + self.lambd/episodes * eye)[1]
 
 class MultiPolicyOrigDesignD(RewardFunctional):
-    def __init__(self, env, lambd=1e-3, dim=0, V=None, time_weigh=True):
+    def __init__(self, env, lambd=1e-3, dim=0, V=None):
         super().__init__()
         self.lambd = lambd
         self.type = "static"
         self.env = env
         self.V = V
-        self.horizon = env.max_episode_length
-        self.time_weigh = time_weigh
+        self.horizon = env.max_episode_length # Keep horizon for regularization scaling
         self.estimator = None
-        self.prob_matrix = None
         self.dim = dim
 
     def update_estimator(self, estimator, emissions):
-        """Update the estimator and recompute probability matrix."""
+        """Update the estimator and set C to be the parameter vector."""
         self.estimator = estimator
-        self._update_probability_matrix(emissions)
-
-    def _update_probability_matrix(self, emissions):
-        """Update pairwise probability matrix based on emissions."""
-        logits = self.estimator.mean(emissions)
-        logits = logits.to(emissions.device)
-        exp_logits = torch.exp(logits)
-        exp_logits_i = exp_logits.view(-1, 1)
-        exp_logits_j = exp_logits.view(1, -1)
-        denominators = exp_logits_i + exp_logits_j
+        theta_fit = estimator.theta_fit  # Direct access to theta_fit
         
-        self.prob_matrix = exp_logits_i / denominators
+        # Ensure theta_fit is properly shaped for C-optimal calculations
+        # For C-optimal design, we typically need a row vector (1xN)
+        # If theta_fit is a column vector (Nx1), reshape it to a row vector
+        if theta_fit.dim() == 2 and theta_fit.shape[1] == 1:
+            self.C = theta_fit  # Keep as column vector, we'll transpose when needed
+        else:
+            self.C = theta_fit
 
-    def _get_prob_matrix(self, emissions):
-        """Return pairwise probability matrix or default to 0.5 on the specified device and dtype."""
-        n = emissions.shape[0]
-        if self.prob_matrix is None:
-            return 0.5 * torch.ones((n, n), device=emissions.device, dtype=emissions.dtype)
-        return self.prob_matrix
+    # def _compute_diagonal_terms(self, emissions, prob_matrix, d1_h, d2_h):
+    #     """Compute diagonal terms of the Fisher."""
+    #     d2_h_or_unif = torch.ones_like(d2_h) / d2_h.shape[0] if d2_h.sum() == 0 else d2_h
+    #     d1_h_or_unif = torch.ones_like(d1_h) / d1_h.shape[0] if d1_h.sum() == 0 else d1_h
+    #     p_q1 = torch.mm(prob_matrix, d2_h_or_unif.view(-1,1))
+    #     p_q2 = torch.mm(prob_matrix, d1_h_or_unif.view(-1,1))
+    #
+    #     term1 = emissions.T @ torch.diag(p_q1.squeeze()) @ torch.diag(d1_h) @ emissions
+    #     term2 = emissions.T @ torch.diag(p_q2.squeeze()) @ torch.diag(d2_h) @ emissions
+    #
+    #     return term1 + term2
+    #
+    # def _compute_cross_terms(self, emissions, prob_matrix, d1_h, d2_h):
+    #     # Since prob_matrix is always 0.5, prob * (1 - prob) is always 0.25
+    #     probs = 0.25
+    #     d1d2 = d1_h.unsqueeze(1) @ d2_h.unsqueeze(0)  # [n_states, n_states]
+    #     d2d1 = d2_h.unsqueeze(1) @ d1_h.unsqueeze(0)  # [n_states, n_states]
+    #
+    #     term1 = emissions.T @ (probs * d1d2) @ emissions
+    #     term2 = emissions.T @ (probs * d2d1) @ emissions
+    #
+    #     return term1 + term2
 
-    def _compute_diagonal_terms(self, emissions, prob_matrix, d1_h, d2_h):
-        """Compute diagonal terms of the Fisher."""
-        d2_h_or_unif = torch.ones_like(d2_h) / d2_h.shape[0] if d2_h.sum() == 0 else d2_h
-        d1_h_or_unif = torch.ones_like(d1_h) / d1_h.shape[0] if d1_h.sum() == 0 else d1_h
-        p_q1 = torch.mm(prob_matrix, d2_h_or_unif.view(-1,1))
-        p_q2 = torch.mm(prob_matrix, d1_h_or_unif.view(-1,1))
-
-        term1 = emissions.T @ torch.diag(p_q1.squeeze()) @ torch.diag(d1_h) @ emissions       
-        term2 = emissions.T @ torch.diag(p_q2.squeeze()) @ torch.diag(d2_h) @ emissions       
-        
-        return term1 + term2
-
-    def _compute_cross_terms(self, emissions, prob_matrix, d1_h, d2_h):
-        probs = prob_matrix * (1 - prob_matrix)
-        d1d2 = d1_h.unsqueeze(1) @ d2_h.unsqueeze(0)  # [n_states, n_states]
-        d2d1 = d2_h.unsqueeze(1) @ d1_h.unsqueeze(0)  # [n_states, n_states]
-        
-        term1 = emissions.T @ (probs * d1d2) @ emissions
-        term2 = emissions.T @ (probs * d2d1) @ emissions
-
-        return term1 + term2
-
-    def _calculate_z(self, emissions, distributions, episodes, mask=None):
+    def _calculate_z(self, emissions, distributions, episodes):
         distributions = [d.to(emissions.device) for d in distributions]
-        emissions = emissions.type(distributions[0].dtype)
-        # Assume emissions has shape (n_actions, d_features)
-        z = torch.zeros((emissions.shape[1], emissions.shape[1]), 
+        emissions = emissions.type(distributions[0].dtype) # Shape: (n_elements, d_features) where n_elements depends on self.dim
+        feature_dim = emissions.shape[1]
+        z = torch.zeros((feature_dim, feature_dim),
                         dtype=distributions[0].dtype, device=emissions.device)
-        if len(distributions[0].shape) == 2:
-            distributions = [dist[None, :] for dist in distributions]
+
+        if distributions[0].ndim == 2:
+            # If input is 2D (S, A), add a singleton horizon dimension -> (1, S, A)
+            distributions = [dist.unsqueeze(0) for dist in distributions]
+
         H = distributions[0].shape[0]
-        
-        for h in range(H):
-            time_weight = (H - h)/H if self.time_weigh else 1.0
-            if self.dim == 0:
-                d1_h = torch.sum(distributions[0][h], dim=1)
-                d2_h = torch.sum(distributions[1][h], dim=1)
-            elif self.dim == 1:
-                d1_h = torch.sum(distributions[0][h], dim=0)  
-                d2_h = torch.sum(distributions[1][h], dim=0)
-                
-            prob_matrix = self._get_prob_matrix(emissions)
-            if mask is not None and len(prob_matrix) > len(mask):
-                prob_matrix = prob_matrix[mask][:, mask]
-            prob_matrix = prob_matrix.type(d1_h.dtype)
-            
-            diag_terms = self._compute_diagonal_terms(emissions, prob_matrix, d1_h, d2_h)
-            cross_terms = self._compute_cross_terms(emissions, prob_matrix, d1_h, d2_h)
-            z += time_weight * (diag_terms - cross_terms)
-            
+        assert H == 1, f"This functional only supports stationary policies (horizon H=1). Got H={H}."
+        K = len(distributions) # Number of policies
+
+        # Since H=1, we only consider the first time step (index 0)
+        h = 0
+        d_h = [] # List to store marginal distributions for each policy at step h
+        for q in range(K):
+            if self.dim == 0: # Sum over actions -> marginal state distribution d(s)
+                # distributions[q][h] has shape (S, A)
+                # emissions should have shape (S, d_features) - assuming state features
+                d_h_q = torch.sum(distributions[q][h], dim=1) # Shape (S,)
+            elif self.dim == 1: # Sum over states -> marginal action distribution d(a)
+                # distributions[q][h] has shape (S, A)
+                # emissions should have shape (A, d_features) - assuming action features
+                d_h_q = torch.sum(distributions[q][h], dim=0) # Shape (A,)
+            else:
+                raise ValueError(f"Unsupported dim value: {self.dim}. Must be 0 or 1.")
+            d_h.append(d_h_q)
+
+        # Check if emissions shape matches the marginal distribution dimension
+        if emissions.shape[0] != d_h[0].shape[0]:
+             raise ValueError(f"Dimension mismatch: emissions first dimension ({emissions.shape[0]}) "
+                              f"does not match the marginal distribution dimension ({d_h[0].shape[0]}) "
+                              f"based on self.dim={self.dim}.")
+
+        # Calculate the approximate Fisher Information Matrix I_approx
+        # I_approx = (1/K^2) * [ (K-1) * sum_q (E_q[phi phi^T]) - sum_{q!=q'} (E_q[phi])(E_{q'}[phi^T]) ]
+
+        # Term 1: (K-1) * sum_q E_q[phi phi^T]
+        # E_q[phi phi^T] = sum_s d_h_q(s) phi(s) phi(s)^T = emissions.T @ diag(d_h_q) @ emissions
+        term1 = torch.zeros_like(z)
+        for q in range(K):
+            # Ensure d_h[q] is treated as weights for the diagonal
+            term1 += emissions.T @ torch.diag(d_h[q]) @ emissions
+
+        term1 *= K
+
+        # Term 2: sum_{q!=q'} (E_q[phi])(E_{q'}[phi^T])
+        # E_q[phi] = sum_s d_h_q(s) phi(s) = emissions.T @ d_h_q
+        # E_{q'}[phi^T] = sum_{s'} d_h_{q'}(s') phi(s')^T = d_h_{q'}.T @ emissions
+        term2 = torch.zeros_like(z)
+        expected_phis = [] # Store E_q[phi] for each q
+        for q in range(K):
+            # d_h[q] has shape (N,), emissions has shape (N, d)
+            # emissions.T @ d_h[q] gives shape (d,)
+            expected_phis.append(emissions.T @ d_h[q]) # Shape (d,)
+
+        for q in range(K):
+            for q_prime in range(K):
+                    # expected_phis[q] is (d,), expected_phis[q_prime] is (d,)
+                    # We need outer product: (d,) x (d,) -> (d, d)
+                    term2 += torch.outer(expected_phis[q], expected_phis[q_prime])
+
+        # Combine terms and scale
+        z = (term1 - term2) / (K**2)
+
         return z
 
     def eval(self, emissions, distributions, episodes):
@@ -301,7 +334,6 @@ class MultiPolicyOrigDesignD(RewardFunctional):
 
     def eval_full(self, emissions, distributions, episodes):
         return self.eval(emissions, distributions, episodes)
-
 
 class MultiPolicyOrigDesignA(MultiPolicyOrigDesignD):
     def eval(self, emissions, distributions, episodes):
@@ -316,51 +348,134 @@ class MultiPolicyOrigDesignA(MultiPolicyOrigDesignD):
     def eval_full(self, emissions, distributions, episodes):
         return self.eval(emissions, distributions, episodes)
 
+class MultiPolicyOrigDesignC(MultiPolicyOrigDesignD):
+    def __init__(self, env, lambd, dim=0, C=None, **kwargs):
+        """
+        Initialize the MultiPolicyOrigDesignC class.
 
-class MultiPolicyOrigDesignE(MultiPolicyOrigDesignD):
+        Parameters:
+        - env: The environment object.
+        - lambd (float): The regularization parameter lambda.
+        - Sigma (float): The Sigma parameter.
+        - C (torch.Tensor, list, or None): The C parameter, which can be a tensor, list of tensors, or None.
+        - **kwargs: Additional keyword arguments passed to the parent class (time_weigh is ignored).
+        """
+        # Call the parent class's __init__ to set up common attributes
+        # Note: time_weigh is no longer accepted by the parent __init__
+        super().__init__(env, lambd, dim, **kwargs) 
+        # Set the C attribute specific to this class
+        if C is None:
+            raise ValueError("C cannot be None for MultiPolicyOrigDesignC. It must be provided or set via update_estimator.")
+        self.C = C
+
+    def update_estimator(self, estimator, emissions):
+        """
+        Update the estimator and set C based on the estimator's parameters.
+        
+        NOTE: This method is currently commented out. The intention is to use
+        the C vector(s) provided during initialization (a priori) and not
+        update them based on the fitted estimator during the experiment run.
+        If adaptive C-optimality based on the estimator is desired, this
+        method needs to be uncommented and potentially revised.
+
+        Parameters:
+        - estimator: A RegularizedMultinomialEstimator with theta_fit property
+        - emissions: The emissions tensor
+        """
+        # # Log update intention
+        # logger.info(f"Updating C vector in {type(self).__name__}.")
+        #
+        # # Call parent's update_estimator method (if applicable, though not strictly needed here as we override C logic)
+        # super().update_estimator(estimator, emissions)
+        #
+        # # Get the fitted parameter vector
+        # theta_fit = estimator.theta_fit
+        #
+        # # Normalize the parameter vector before using it as C
+        # norm = torch.linalg.norm(theta_fit)
+        # if norm > 1e-9: # Avoid division by zero or near-zero
+        #     # Assume theta_fit is a 1D vector or (d, 1) or (1, d). Normalize and reshape to (1, d).
+        #     new_C = (theta_fit / norm).view(1, -1)
+        #     new_c_norm_l2 = torch.linalg.norm(new_C).item() # Should be ~1.0
+        #     new_c_norm_l1 = torch.linalg.norm(new_C, ord=1).item()
+        #     logger.info(f"New C vector set from estimator {type(estimator).__name__} (reshaped to {new_C.shape}): L2 norm={new_c_norm_l2:.4f}, L1 norm={new_c_norm_l1:.4f}")
+        #     self.C = new_C
+        # else:
+        #     # Handle zero vector case - raise error as C cannot be None or zero for C-optimality trace calculation
+        #     logger.error("Estimator theta_fit has near-zero norm. Cannot compute C-optimal design. Raising ValueError.")
+        #     raise ValueError("Estimator theta_fit has near-zero norm, cannot set C for C-optimal design.")
+        pass # Method is disabled
+
+    def _compute_c_optimal_value(self, inv_z_reg):
+        """
+        Compute C-optimal design value using the inverse regularized z matrix.
+        
+        Parameters:
+        - inv_z_reg (torch.Tensor): The inverse of the regularized z matrix.
+        
+        Returns:
+        - float: The C-optimal value (trace or max trace).
+        """
+        target_device = inv_z_reg.device  # Get the device of inv_z_reg
+
+        if self.C is None:
+             # This case should ideally not be reached due to checks in __init__ and update_estimator
+             raise ValueError("C is None during C-optimal value computation. This should not happen.")
+
+        # Handle C being a list of vectors
+        if isinstance(self.C, list):
+            # Assume each C_item is a (1, d) tensor
+            # Move each C_item to the target device before computation
+            traces = []
+            for i, C_item in enumerate(self.C):
+                C_item_dev = C_item.to(target_device)
+                traces.append(torch.trace(torch.linalg.inv(C_item_dev @ inv_z_reg @ C_item_dev.T)))
+            # Return the mean of the precisions instead of the max
+            return torch.mean(torch.stack(traces))
+
+        # Handle C being a single vector
+        # Assume self.C is a (1, d) tensor
+        C_dev = self.C.to(target_device) # Move self.C to the target device
+        return torch.trace(torch.linalg.inv(C_dev @ inv_z_reg @ C_dev.T))
+
     def eval(self, emissions, distributions, episodes):
+        """
+        Evaluate the design using the emissions, distributions, and number of episodes.
+
+        Parameters:
+        - emissions (torch.Tensor): The emissions tensor.
+        - distributions (torch.Tensor): The distributions tensor.
+        - episodes (int): The number of episodes.
+
+        Returns:
+        - float: The evaluation result (trace or max trace).
+        """
+        # Compute z using the inherited _calculate_z method
         z = self._calculate_z(emissions, distributions, episodes)
+        
+        # Create an identity matrix matching z's shape and device
         eye = torch.eye(z.shape[0], device=z.device, dtype=z.dtype)
-        return torch.linalg.eigvalsh(z + self.lambd/episodes * eye)[0]
+        
+        # Apply horizon*T regularization: z + (lambda / horizon * episodes)
+        z_reg = z + (self.lambd / (self.horizon * episodes)) * eye
+        
+        # Compute the inverse of the regularized z
+        inv_z_reg = torch.linalg.inv(z_reg)
+            
+        return self._compute_c_optimal_value(inv_z_reg)
 
     def eval_full(self, emissions, distributions, episodes):
+        """
+        Full evaluation method, which delegates to eval.
+
+        Parameters:
+        - emissions (torch.Tensor): The emissions tensor.
+        - distributions (torch.Tensor): The distributions tensor.
+        - episodes (int): The number of episodes.
+
+        Returns:
+        - float: The evaluation result.
+        """
         return self.eval(emissions, distributions, episodes)
-
-
-def compute_mask(aggregated: torch.Tensor, additional: int) -> torch.Tensor:
-    """
-    Given a 1D tensor `aggregated` (e.g. aggregated action weights),
-    returns a sorted tensor of indices that includes:
-      - all indices where the value is nonzero, and
-      - exactly `additional` indices randomly sampled among the zero entries (if available).
-      
-    If there are fewer than `additional` zero indices, all of them are included.
-    """
-    nonzero_idx = (aggregated != 0).nonzero(as_tuple=True)[0]
-    zero_idx = (aggregated == 0).nonzero(as_tuple=True)[0]
-    
-    if additional > 0 and len(zero_idx) > 0:
-        if additional >= len(zero_idx):
-            sampled_zero_idx = zero_idx
-        else:
-            perm = torch.randperm(len(zero_idx))
-            sampled_zero_idx = zero_idx[perm[:additional]]
-        mask = torch.cat([nonzero_idx, sampled_zero_idx])
-    else:
-        mask = nonzero_idx
-
-    mask, _ = torch.sort(mask)
-    return mask
-
-
-class StochasticMultiPolicyRewardFunctionalMixin:
-    def __init__(self, *args, batch_size: int = None, **kwargs):
-        """
-        batch_size: Number of additional (zero) action indices to include alongside all nonzero indices.
-                    If None, no masking is performed.
-        """
-        super().__init__(*args, **kwargs)
-        self.batch_size = batch_size
-
 
 
