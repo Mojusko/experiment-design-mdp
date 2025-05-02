@@ -102,10 +102,12 @@ def plot_results_with_type(results, plot_type):
         x_labels = [str(x) for x in valid_keys]
 
         means = [np.mean(valid_data[k]) for k in valid_keys]
-        stds = [np.std(valid_data[k]) if len(valid_data[k]) > 1 else 0 for k in valid_keys]
+        # Calculate Standard Error of the Mean (SEM = std / sqrt(n))
+        sems = [(np.std(valid_data[k]) / np.sqrt(len(valid_data[k]))) if len(valid_data[k]) > 1 else 0 
+                for k in valid_keys]
 
         plt.figure(figsize=(10, 6))
-        plt.bar(x_labels, means, yerr=stds, capsize=5)
+        plt.bar(x_labels, means, yerr=sems, capsize=5) # Use sems for yerr
 
         if plot_type == "lambda":
             plt.xlabel("Lambda Value")
@@ -129,25 +131,31 @@ def plot_results_with_type(results, plot_type):
 def plot_comparison_results(results, plot_type):
     # For experiments with multiple metrics (e.g., preference_error, cosine_error)
     labels = list(results.keys())
-    preference_means = [np.mean([d["preference_error"] for d in results[alg] if isinstance(d, dict) and "preference_error" in d]) 
-                        if any(isinstance(d, dict) and "preference_error" in d for d in results[alg]) else 0 
-                        for alg in labels]
-    preference_stds = [np.std([d["preference_error"] for d in results[alg] if isinstance(d, dict) and "preference_error" in d]) 
-                       if any(isinstance(d, dict) and "preference_error" in d for d in results[alg]) else 0 
-                       for alg in labels]
-    cosine_means = [np.mean([d["cosine_error"] for d in results[alg] if isinstance(d, dict) and "cosine_error" in d]) 
-                    if any(isinstance(d, dict) and "cosine_error" in d for d in results[alg]) else 0 
-                    for alg in labels]
-    cosine_stds = [np.std([d["cosine_error"] for d in results[alg] if isinstance(d, dict) and "cosine_error" in d]) 
-                   if any(isinstance(d, dict) and "cosine_error" in d for d in results[alg]) else 0 
-                   for alg in labels]
+    
+    preference_means = []
+    preference_sems = []
+    cosine_means = []
+    cosine_sems = []
+
+    for alg in labels:
+        pref_errors = [d["preference_error"] for d in results[alg] if isinstance(d, dict) and "preference_error" in d]
+        cos_errors = [d["cosine_error"] for d in results[alg] if isinstance(d, dict) and "cosine_error" in d]
+        
+        n_pref = len(pref_errors)
+        n_cos = len(cos_errors)
+        
+        preference_means.append(np.mean(pref_errors) if n_pref > 0 else 0)
+        preference_sems.append((np.std(pref_errors) / np.sqrt(n_pref)) if n_pref > 1 else 0)
+        
+        cosine_means.append(np.mean(cos_errors) if n_cos > 0 else 0)
+        cosine_sems.append((np.std(cos_errors) / np.sqrt(n_cos)) if n_cos > 1 else 0)
 
     x = np.arange(len(labels))
     width = 0.35
 
     plt.figure(figsize=(10, 6))
-    plt.bar(x - width/2, preference_means, width, yerr=preference_stds, capsize=5, label="Preference Error")
-    plt.bar(x + width/2, cosine_means, width, yerr=cosine_stds, capsize=5, label="Cosine Error")
+    plt.bar(x - width/2, preference_means, width, yerr=preference_sems, capsize=5, label="Preference Error") # Use sems
+    plt.bar(x + width/2, cosine_means, width, yerr=cosine_sems, capsize=5, label="Cosine Error") # Use sems
 
     plt.xlabel("Design Matrix Type" if plot_type == "v_comparison" else plot_type.capitalize())
     plt.ylabel("Error")
@@ -163,18 +171,21 @@ def plot_design_frequency_results(design_freq_results):
     
     # Prepare data, ensuring we handle cases where a metric might be missing for a run
     preference_means = []
-    preference_stds = []
+    preference_sems = [] # Changed from stds to sems
     cosine_means = []
-    cosine_stds = []
+    cosine_sems = [] # Changed from stds to sems
 
     for key in labels:
         pref_errors = [d["preference_error"] for d in design_freq_results[key] if isinstance(d, dict) and "preference_error" in d]
         cos_errors = [d["cosine_error"] for d in design_freq_results[key] if isinstance(d, dict) and "cosine_error" in d]
         
-        preference_means.append(np.mean(pref_errors) if pref_errors else 0)
-        preference_stds.append(np.std(pref_errors) if len(pref_errors) > 1 else 0)
-        cosine_means.append(np.mean(cos_errors) if cos_errors else 0)
-        cosine_stds.append(np.std(cos_errors) if len(cos_errors) > 1 else 0)
+        n_pref = len(pref_errors)
+        n_cos = len(cos_errors)
+        
+        preference_means.append(np.mean(pref_errors) if n_pref > 0 else 0)
+        preference_sems.append((np.std(pref_errors) / np.sqrt(n_pref)) if n_pref > 1 else 0) # Calculate SEM
+        cosine_means.append(np.mean(cos_errors) if n_cos > 0 else 0)
+        cosine_sems.append((np.std(cos_errors) / np.sqrt(n_cos)) if n_cos > 1 else 0) # Calculate SEM
 
     x = np.arange(len(labels))
     width = 0.35
@@ -183,8 +194,8 @@ def plot_design_frequency_results(design_freq_results):
     x_labels = [f"Ep{ep}-Df{df}" for ep, df in labels]
 
     plt.figure(figsize=(12, 7)) # Adjusted size for potentially more labels
-    plt.bar(x - width/2, preference_means, width, yerr=preference_stds, capsize=5, label="Preference Error")
-    plt.bar(x + width/2, cosine_means, width, yerr=cosine_stds, capsize=5, label="Cosine Error")
+    plt.bar(x - width/2, preference_means, width, yerr=preference_sems, capsize=5, label="Preference Error") # Use sems
+    plt.bar(x + width/2, cosine_means, width, yerr=cosine_sems, capsize=5, label="Cosine Error") # Use sems
 
     plt.xlabel("Configuration (Episodes - Design Frequency)")
     plt.ylabel("Error")
@@ -203,19 +214,22 @@ def plot_lambda_dsn_est_results(lambda_results):
     labels = [f"Dsn={dsn}, Est={est}" for dsn, est in sorted_keys]
     
     preference_means = []
-    preference_stds = []
+    preference_sems = [] # Changed from stds to sems
     cosine_means = []
-    cosine_stds = []
+    cosine_sems = [] # Changed from stds to sems
 
     for key in sorted_keys:
         data_list = lambda_results[key]
         pref_errors = [d["preference_error"] for d in data_list if isinstance(d, dict) and "preference_error" in d]
         cos_errors = [d["cosine_error"] for d in data_list if isinstance(d, dict) and "cosine_error" in d]
         
-        preference_means.append(np.mean(pref_errors) if pref_errors else 0)
-        preference_stds.append(np.std(pref_errors) if len(pref_errors) > 1 else 0)
-        cosine_means.append(np.mean(cos_errors) if cos_errors else 0)
-        cosine_stds.append(np.std(cos_errors) if len(cos_errors) > 1 else 0)
+        n_pref = len(pref_errors)
+        n_cos = len(cos_errors)
+        
+        preference_means.append(np.mean(pref_errors) if n_pref > 0 else 0)
+        preference_sems.append((np.std(pref_errors) / np.sqrt(n_pref)) if n_pref > 1 else 0) # Calculate SEM
+        cosine_means.append(np.mean(cos_errors) if n_cos > 0 else 0)
+        cosine_sems.append((np.std(cos_errors) / np.sqrt(n_cos)) if n_cos > 1 else 0) # Calculate SEM
 
     x = np.arange(len(labels))
     width = 0.35
@@ -224,8 +238,8 @@ def plot_lambda_dsn_est_results(lambda_results):
     fig_width = max(12, len(labels) * 0.8) # Ensure minimum width, scale with number of labels
     plt.figure(figsize=(fig_width, 7)) 
     
-    plt.bar(x - width/2, preference_means, width, yerr=preference_stds, capsize=5, label="Preference Error")
-    plt.bar(x + width/2, cosine_means, width, yerr=cosine_stds, capsize=5, label="Cosine Error")
+    plt.bar(x - width/2, preference_means, width, yerr=preference_sems, capsize=5, label="Preference Error") # Use sems
+    plt.bar(x + width/2, cosine_means, width, yerr=cosine_sems, capsize=5, label="Cosine Error") # Use sems
 
     plt.xlabel("Lambda Configuration (Design, Estimation)")
     plt.ylabel("Error")
@@ -238,17 +252,31 @@ def plot_lambda_dsn_est_results(lambda_results):
 def plot_feedback_results(feedback_results):
     # Create a grouped bar chart comparing both metrics for each algorithm.
     labels = list(feedback_results.keys())
-    preference_means = [np.mean(feedback_results[alg]["preference_error"]) for alg in labels]
-    preference_stds = [np.std(feedback_results[alg]["preference_error"]) for alg in labels]
-    cosine_means = [np.mean(feedback_results[alg]["cosine_error"]) for alg in labels]
-    cosine_stds = [np.std(feedback_results[alg]["cosine_error"]) for alg in labels]
+    
+    preference_means = []
+    preference_sems = [] # Changed from stds to sems
+    cosine_means = []
+    cosine_sems = [] # Changed from stds to sems
+
+    for alg in labels:
+        pref_errors = feedback_results[alg]["preference_error"]
+        cos_errors = feedback_results[alg]["cosine_error"]
+        
+        n_pref = len(pref_errors)
+        n_cos = len(cos_errors)
+        
+        preference_means.append(np.mean(pref_errors) if n_pref > 0 else 0)
+        preference_sems.append((np.std(pref_errors) / np.sqrt(n_pref)) if n_pref > 1 else 0) # Calculate SEM
+        
+        cosine_means.append(np.mean(cos_errors) if n_cos > 0 else 0)
+        cosine_sems.append((np.std(cos_errors) / np.sqrt(n_cos)) if n_cos > 1 else 0) # Calculate SEM
 
     x = np.arange(len(labels))
     width = 0.35
 
     plt.figure(figsize=(10, 6))
-    plt.bar(x - width/2, preference_means, width, yerr=preference_stds, capsize=5, label="Preference Error")
-    plt.bar(x + width/2, cosine_means, width, yerr=cosine_stds, capsize=5, label="Cosine Error")
+    plt.bar(x - width/2, preference_means, width, yerr=preference_sems, capsize=5, label="Preference Error") # Use sems
+    plt.bar(x + width/2, cosine_means, width, yerr=cosine_sems, capsize=5, label="Cosine Error") # Use sems
 
     plt.xlabel("Algorithm")
     plt.ylabel("Error")
