@@ -492,10 +492,11 @@ class MultiPolicyOrigDesignC(MultiPolicyOrigDesignD): # Inherits _calculate_z fr
                             f"Matrix might be ill-conditioned. Regularization: {regularization:.2e}. "
                             f"Returning large negative value.")
              # Return a large negative value to avoid selecting this design
-             return -1e20
+             # Ensure it's a tensor on the correct device
+             return torch.tensor(-1e20, device=projected_fisher.device, dtype=projected_fisher.dtype)
 
-        # Return the log-determinant value (as a standard float)
-        return logabsdet.item()
+        # Return the log-determinant tensor directly for autograd
+        return logabsdet
 
 
     def eval_full(self, emissions, distributions, episodes):
