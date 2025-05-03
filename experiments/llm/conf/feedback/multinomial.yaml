@@ -27,8 +27,8 @@ C_design_keywords: [
   "bright", "dark",            # 8
   "warm", "cool",              # 9
   "abstract", "realistic",      # 10
-  "asian", "indian", "european", 
-  "egyptian", "latin", "african", "roman", "greek"
+  "asian", "chinese", "japanese", "indian", "european", "french", "italian",
+  "egyptian", "latin", "mexican", "brazilian", "african", "roman", "greek"
 ]
 #C_design_keywords: null
 
