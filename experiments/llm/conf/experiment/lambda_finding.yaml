@@ -8,4 +8,3 @@ vocabulary:
   - 'vocabulary2/movements.txt'
   - 'vocabulary2/emotions.txt'
 scorer_model: 'japanese-image'
-
