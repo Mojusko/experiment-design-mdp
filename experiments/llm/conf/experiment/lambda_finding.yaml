@@ -7,5 +7,5 @@ vocabulary:
   - 'vocabulary2/mediums.txt'
   - 'vocabulary2/movements.txt'
   - 'vocabulary2/emotions.txt'
-scorer_model: 'futuristic-text'
+scorer_model: 'japanese-image'
 

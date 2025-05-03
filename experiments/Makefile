@@ -291,7 +291,7 @@ llm-generate-image:
 	cd llm && TIMESTAMP=$(TIMESTAMP) OMP_NUM_THREADS=1 MKL_NUM_THREADS=1 $(PYTHONPATH) image_generator.py --prompt '$(PROMPT)' $(if $(OUTPUT_DIR),--output_dir '$(OUTPUT_DIR)',) $(if $(SEED),--seed $(SEED),) $(if $(IMAGE_SIZE),--image_size $(IMAGE_SIZE),) $(if $(NUM_STEPS),--num_inference_steps $(NUM_STEPS),) $(if $(GUIDANCE_PROMPT),--guidance_prompt $(GUIDANCE_PROMPT),) $(if $(GUIDANCE_ESTIMATOR),--guidance_estimator $(GUIDANCE_ESTIMATOR),) $(if $(ESTIMATOR),--estimator '$(ESTIMATOR)',)
 
 ########################### LLMS
-REPEATS_LLM=20
+REPEATS_LLM=10
 NUMBERS_LLM := $(shell seq 1 ${REPEATS_LLM})
 
 # Jobs for V comparison (non-adaptive design)
@@ -383,7 +383,7 @@ llm-find-rounds: $(JOBS_LLM_ROUNDS)
 # Lambda-finding
 # Define the ranges for the two lambdas
 # Design lambda range
-LAMBDA_DSN_VALUES := 0.1 1  
+LAMBDA_DSN_VALUES := 0.01 0.1 1  
 # Estimation lambda range (wider, larger values)
 LAMBDA_EST_VALUES := 1 10 100 
 # Numerical lambda values (separate range)
