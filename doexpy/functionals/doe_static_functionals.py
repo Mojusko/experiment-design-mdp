@@ -480,23 +480,31 @@ class MultiPolicyOrigDesignC(MultiPolicyOrigDesignD): # Inherits _calculate_z fr
         # eye_k = torch.eye(self.num_c_vectors, device=projected_fisher.device, dtype=projected_fisher.dtype)
         # projected_fisher_reg = projected_fisher + 1e-6 * eye_k # Add small diagonal jitter
 
-        # Compute the objective: log determinant of the projected Fisher matrix
-        # Use slogdet for numerical stability: returns (sign, logabsdet)
-        sign, logabsdet = torch.linalg.slogdet(projected_fisher) # Use projected_fisher_reg if adding jitter
+        # --- Calculate Subspace D-Optimality Term (C-Projection) ---
+        sign_c, logdet_c_proj = torch.linalg.slogdet(projected_fisher)
 
-        # We expect the matrix to be positive semi-definite, so sign should be +1
-        # If sign is not +1 or logabsdet is -inf, it might indicate numerical issues or
-        # insufficient exploration/regularization.
-        if sign <= 0 or torch.isinf(logabsdet):
-             logger.warning(f"slogdet returned sign={sign} or logabsdet={logabsdet}. "
-                            f"Matrix might be ill-conditioned. Regularization: {regularization:.2e}. "
-                            f"Returning large negative value.")
+        # --- Calculate Standard D-Optimality Term (Identity Projection) ---
+        sign_d, logdet_d_opt = torch.linalg.slogdet(z_reg)
+
+        # --- Check for Numerical Issues in EITHER term ---
+        # We expect both matrices to be positive semi-definite, so signs should be +1
+        # If sign is not +1 or logabsdet is -inf for either, it indicates numerical issues.
+        c_proj_failed = sign_c <= 0 or torch.isinf(logdet_c_proj)
+        d_opt_failed = sign_d <= 0 or torch.isinf(logdet_d_opt)
+
+        if c_proj_failed or d_opt_failed:
+             warning_msg = f"slogdet failed. C-Proj: sign={sign_c}, logdet={logdet_c_proj}. D-Opt: sign={sign_d}, logdet={logdet_d_opt}. Regularization: {regularization:.2e}. Returning large negative value."
+             logger.warning(warning_msg)
              # Return a large negative value to avoid selecting this design
              # Ensure it's a tensor on the correct device
              return torch.tensor(-1e20, device=projected_fisher.device, dtype=projected_fisher.dtype)
 
-        # Return the log-determinant tensor directly for autograd
-        return logabsdet
+        # --- Combine Objectives ---
+        # Simple 50/50 average
+        combined_objective = 0.5 * logdet_c_proj + 0.5 * logdet_d_opt
+
+        # Return the combined objective tensor directly for autograd
+        return combined_objective
 
 
     def eval_full(self, emissions, distributions, episodes):
