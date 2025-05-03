@@ -6,9 +6,9 @@ defaults:
 
 seed: 12 # Or keep a default like 1
 verbose: false
-base_prompt: '' # Keep empty for exploration using bases.txt
+base_prompt: 'A man drinking tea' # Keep empty for exploration using bases.txt
 # normalize_CLIP: true # Removed, now part of embedder config
-include_base_prompt_in_first_tokens: false # Keep false
+include_base_prompt_in_first_tokens: true # Keep false
 algorithm: "design"
 cache_dir: "${oc.env:HOME}/.cache/huggingface/hub" # Default cache dir
 # horizon: 4 # REMOVED - Determined by len(experiment.vocabulary)
