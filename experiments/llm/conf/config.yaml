@@ -15,7 +15,7 @@ cache_dir: "${oc.env:HOME}/.cache/huggingface/hub" # Default cache dir
 accuracy: 0.00000001
 dense_feedback: true
 #same_first_action_in_episode: true # If true, all policies use the same action at h=0 within an episode
-same_first_action_in_episode: false # If true, all policies use the same action at h=0 within an episode
+same_first_action_in_episode: true # If true, all policies use the same action at h=0 within an episode
 # Results directory path
 results_dir: "results/dummy"
 # Experiment identifier (can be overridden from Makefile)
