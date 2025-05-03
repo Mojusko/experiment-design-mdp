@@ -429,7 +429,7 @@ def get_scorer_model(model_name: str, env: LLMGrid, embedder: BaseEmbedder) -> V
 
     if model_name == 'japanese-text':
         # Use the embedder to get the weight vector from text
-        prompt = "An image reflecting traditional Japanese aesthetics, emphasizing harmony, simplicity, and natural elements."
+        prompt = 'An image reflecting traditional Japanese art'
         weight_vector = embedder.embed_text(prompt)
         return DotProductModel(embedder, weight_vector).eval()
 
