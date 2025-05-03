@@ -11,7 +11,7 @@ adaptive_estimation_start: 0
 #adaptive_design_frequency: 100 
 adaptive_design_frequency: 0 
 #pass_V: true
-pass_V: true
+pass_V: false
 
 # Keywords for C-optimal design. If null or empty, A-optimal design will be used.
 # The code will embed each keyword and use the resulting vectors for C-optimal design.
