@@ -1,1001 +1,1595 @@
-oil paint on canvas
-watercolor on paper
-marble sculpture
-chinese ink painting
-charcoal drawing on paper
-bronze casting
-fresco painting on plaster
-acrylic paint on wood
-japanese sumi-e
-tempera on panel
-gouache on paper
-pastel on paper
-encaustic painting on wood
-egg tempera on panel
-casein paint on board
-watercolor on vellum
-ink wash on silk
-calligraphy ink on paper
-graphite pencil on paper
-colored pencil on paper
-conté crayon on paper
-sanguine crayon on paper
-silverpoint on prepared ground
-goldpoint on prepared ground
-pen and ink on paper
-reed pen and ink on paper
-brush and ink on paper
-felt-tip pen on paper
-marker pen on paper
-ballpoint pen on paper
-digital drawing
-digital painting
-vector graphics
-raster graphics
 3d modeling
+3d printed ceramic
+3d printed metal
+3d printed plastic
+3d printed resin
 3d rendering
-digital collage
-digital photomontage
-digital illustration
-digital animation
-pixel art
-ascii art
-generative art code
+abstract animation
+abstract drawing
+abstract film
+abstract photography
+abstract painting
+abstract printmaking
+abstract sculpture
+abstract expressionism
+action painting
+acrylic gouache on board
+acrylic ink on paper
+acrylic paint on wood
+acrylic painting
+action painting
+african architecture (traditional)
+african basket weaving
+african beadwork
+african body painting
+african contemporary art
+african film
+african fresco painting
+african jewelry design
+african mask making
+african metalwork
+african music (as sound art)
+african oral traditions (storytelling as art)
+african painting
+african performance art (dance, ritual)
+african pottery
+african rock art
+african sculpture (wood, bronze, stone)
+african street art
+african textile art (kente cloth, mud cloth)
+african photography
+ai art
+ai art generation
+ai art material
+ai art source
+alebrijes (wood carvings)
+alchemy process
+alchemy substances
+algorithmic art
 algorithmic art code
-software art code
-net art code
-video art installation
-single-channel video
-multi-channel video
-video projection
-video mapping
-interactive video installation
-performance art documentation
-body art paint
-tattoo ink on skin
-henna on skin
-sand painting on ground
-ice sculpture
-snow sculpture
-sand sculpture
-environmental sculpture earth
-land art stone
-land art wood
-land art plants
-land art water
-site-specific installation
+algorithmic art code source
+algorithmic criticism algorithm
+algorithmic criticism theory
+altermodern context
+albumen print chemicals
+ambrotype plate
+amulets
+ancient egyptian architecture
+ancient egyptian beadwork
+ancient egyptian cartonnage
+ancient egyptian faience
+ancient egyptian fresco painting
+ancient egyptian hieroglyphic inscriptions
+ancient egyptian ivory carving
+ancient egyptian jewelry design
+ancient egyptian metalwork
+ancient egyptian mummy masks
+ancient egyptian ostraca
+ancient egyptian papyrus painting
+ancient egyptian pottery
+ancient egyptian relief sculpture
+ancient egyptian sarcophagus art
+ancient egyptian sculpture (stone, wood)
+ancient egyptian stelae
+ancient egyptian textile weaving
+ancient egyptian tomb painting
+ancient greek architectural sculpture (pediments, friezes)
+ancient greek architecture
+ancient greek black-figure pottery
+ancient greek bronze sculpture
+ancient greek bust sculpture
+ancient greek coinage (as art)
+ancient greek fresco painting
+ancient greek ivory carving
+ancient greek jewelry design
+ancient greek kouros and kore sculpture
+ancient greek metalwork
+ancient greek painting (lost, known through descriptions)
+ancient greek pottery (vase painting)
+ancient greek relief sculpture
+ancient greek sculpture (marble, bronze)
+ancient greek textile art
+ancient greek wall painting
+ancient greek white ground pottery
+ancient greek floor mosaic
+ancient roman architecture
+ancient roman bronze sculpture
+ancient roman bust sculpture
+ancient roman coinage (as art)
+ancient roman equestrian sculpture
+ancient roman floor mosaic
+ancient roman fresco painting
+ancient roman glass art
+ancient roman ivory carving
+ancient roman jewelry design
+ancient roman metalwork
+ancient roman mosaic
+ancient roman painting (portraits, landscapes)
+ancient roman pottery
+ancient roman relief sculpture
+ancient roman sarcophagus art
+ancient roman sculpture (marble, bronze)
+ancient roman textile art
+ancient roman triumphal arches (as architectural sculpture)
+ancient roman wall painting
+anime
+animism representation
+anthropocene art data source
+anthropocene art representation
+aquatint resin
+aquatint on paper
+architectural drawing
+architectural rendering paper
+architectural rendering software
+architectural rendering tool
+architectural photography
+archiving material
+archiving process
+archiving system
+art and law case study
+art and law documents
+art and law document
+art authentication document
+art authentication tools
+art crime document
+art crime evidence
+art crime investigation
+art forgery analysis
+art forgery materials
+art forgery document
+art game software
+art in the age of the internet impact
+art in the age of the internet network
+art market ethics code
+art market ethics guidelines
+artist trading card
+artist trading card board
+artist trading card exchange
+ascii art
+ascii art source
+as-built drawing tools
+as-built drawing paper
+assemblage
+assemblage material
+assemblage mixed materials
 assemblage found objects
-ready-made object
+assemblage on board
+assemblage on panel
+assemblage source
+assembled metal
+assembled plastic
+assembled wood
+astrophotography image
+astrophotography telescope
+atompunk aesthetic
+augmented reality application
+augmented reality display
+augmented reality experience
+authentication tools
+autumn scene painting
+avant-garde film
+axonometric drawing paper
+axonometric drawing tools
+ballpoint pen
+ballpoint pen on paper
+ballpoint pen source
+basic ceramic form
+basic printmaking (monotype)
+basic textile design
+basic weaving
+basket weaving
+beadwork
+beadwork beads
+bio art
+bio art animals
+bio art bacteria
+bio art cultivation
+bio art dna
+bio art living organisms
+bio art material
+bio art source
+bio art tissue culture
+bio art lab equipment
+biology specimen
+biology tool
+biopunk aesthetic
+black and white photography
+blacksmithing iron
+blacksmithing material
+blacksmithing source
+body art ephemeral
+body art paint
+body art paint source
+body painting material
+body painting on skin
+body painting source
+bone carving
+bonsai (living art)
+bookbinding materials
+bookbinding process
+botanical illustration
+botanical illustration drawing
+botanical illustration pen
+botanical illustration drawing
+botanical illustration tool
+bright ceramics
+bright printmaking
+bronze casting
+bronze casting material
+bronze casting source
+bronze ingot
+bronze sculpture
+bronze sculpture casting
+browse
+brush and ink on paper
+brush and ink source
+brush hair
+c-print on paper
+calligraphy ink on paper
+calligraphy ink source
+calligraphy pen
+calaveras
+carnival costumes
+carnival costumes (bright colors)
+carborundum print on paper
+carved bone
+carved glass
+carved jade
+carved soapstone
+carved stone
+carved wood
+cartography
+cartography ink
+cartography map
+cartography tool
+casein binder
+casein paint on board
+casein medium
+cast aluminum
+cast bronze
+cast concrete
+cast iron
+cast paper
+cast plaster
+cast resin
+chalk art
+chalk art ephemeral
+chalk art material
+chalk art on pavement
+chalk art source
+charcoal drawing
+charcoal drawing (smudged)
+charcoal drawing on paper
+charcoal source
+charcoal stick
+charcoal stick on paper
+charting software
+charting tool
+chemistry compound
+chemistry tool
+chiaroscuro in painting
+chinese architecture
+chinese bronze casting
+chinese brush painting
+chinese calligraphy
+chinese ceramics (porcelain)
+chinese folk art
+chinese garden design
+chinese ink painting
+chinese ink stick
+chinese ink source
+chinese jade carving
+chinese kite making
+chinese lacquerware
+chinese lantern making
+chinese New Year prints
+chinese opera costume design
+chinese paper cutting
+chinese screen painting
+chinese seal carving
+chinese shadow puppetry
+chinese silk painting
+chinese textile art
+chinese wood carving
+citizen science data
+citizen science data source
+citizen science lab equipment
+climate art data source
+climate art visualization
+cnc routed metal
+cnc routed plastic
+cnc routed wood
+coinage (as art)
+collage
+collage on board
+collage on canvas
+collage on paper
+collage paper
+collage software
+collagraph on paper
+collodion process chemicals
+colored pencil drawing
+colored pencil on paper
+colored pencil set
+colored pencil source
+comic book art
+comic book art drawing
+comic book art materials
+comic strip art
+comic strip art drawing
+comic strip art materials
+computational aesthetics algorithm
+computational aesthetics material
+computational aesthetics theory
+computer software
+computer vision in art analysis algorithm
+computer vision in art analysis application
+computer vision in art analysis material
+composite sketching tools
+composite sketching paper
+concrete sculpture
+conceptual abstraction
+conceptual art (minimalist concepts)
+construction drawing tools
+construction drawing paper
+conté crayon (single color)
+conté crayon on paper
+conté crayon set
+conté crayon source
+cool palette acrylic painting
+cool palette oil painting
+cool toned photography
+copyright documentation
+copyright document
+copyright law
+cosplay costume
+courtroom sketching
+courtroom sketching drawing
+courtroom sketching materials
+courtroom sketching tool
+cozy interior art
+creating art about dark themes
+creating art in natural settings
+creolization process
+cross-media project
+ct scan art image
+ct scan machine
+culinary arts ingredients
+culinary arts material
+culinary arts plating
+cultural heritage artifact
+cultural heritage document
+cultural heritage management
+cuneiform tablets
+cutaway drawing tools
+cutaway drawing paper
+cyanotype chemicals
+cyberpunk aesthetic
+daguerreotype plate
+dance performance (as art)
+dark palette acrylic painting
+dark palette oil painting
+dark room photography
+data art
+data art generation
+data art material
+data art source
+data art visualization
+data visualization
+data visualization chart
+data visualization software
+data visualization tool
+day of the dead art (ofrendas, calaveras)
+decollage technique
+decoupage
+decoupage paper
+depicting cool landscapes or subjects (winter, night, water)
+depicting natural landscapes
+depicting urban scenes
+depicting warm landscapes or subjects
+desert landscape art
+design of urban spaces (as art)
+detail drawing tools
+detail drawing paper
+detailed drawing (pen and ink, graphite)
+detailed oil painting
+detailed printmaking (engraving, etching)
+detailed painting (realism, hyperrealism)
+detailed wood carving
+diagramming software
+diagramming tool
+dieselpunk aesthetic
+digital animation
+digital animation source
+digital camera
+digital camera raw file
+digital collage
+digital collage source
+digital collage software
+digital drawing
+digital drawing source
+digital drawing tool
+digital humanities data
+digital humanities material
+digital humanities methodology
+digital illustration
+digital illustration source
+digital painting
+digital painting source
+digital photography file
+digital photography sensor
+digital photomontage
+digital photomontage source
+digital preservation format
+digital preservation material
+digital preservation strategy
+digital print on acrylic
+digital print on canvas
+digital print on film
+digital print on metal
+digital print on paper
+digital print on wood
+digital print on fabric
+digital printmaking
+digital printmaking source
+digital printing acrylic
+digital printing canvas
+digital printing fabric
+digital printing film
+digital printing metal
+digital printing paper
+digital printing wood
+digital printing source
+digital tablet
+digital video camera
+digitization equipment
+digitization material
+digitization process
+diorama construction
+diy biology experiment
+diy biology lab equipment
+diy biology materials
+diy biology source
+documentation format
+documentation material
+documentation standard
+documentation process
+doodle
+doodle art pen
+doodle art paper
+doodle art tool
+dot matrix print on paper
+drawing (traditional)
+drone camera
+drone photography image
+drone photography image
+drypoint needle
+drypoint on paper
+drypoint (heavy lines)
+drypoint source
+durational performance
+dye sublimation print on metal
+dye sublimation print source
+dynamic printmaking
+dynamic photography
+earth material
+earth pigments painting
+eco-art intervention
+eco-art material source
+editorial cartooning
+editorial cartooning drawing
+editorial cartooning materials
+editorial cartooning tool
+egg tempera on panel
+egg tempera medium
+egg yolk binder
+elaborate tapestry
+electron microscope
+electron microscopy image
+elevation drawing tools
+elevation drawing paper
+embroidery
+embroidery thread
+enamel
+enamel art
+encaustic medium
+encaustic painting on wood
+encaustic wax
+engineering drawing tools
+engineering drawing paper
+engineering drawing tool
+engraved glass
+engraved metal
+engraving
+engraving plate
+engraving on paper
+engraving (deep lines)
+engraving source
+environmental activism artwork
+environmental activism material
+environmental sculpture (fixed)
+environmental sculpture earth
+environmental sculpture material
+environmental sculpture source
+event score performance
+etching
+etching plate
+etching on paper
+etching (deep lines)
+etching source
+experimental film
+exploded view drawing tools
+exploded view drawing paper
+exploded view drawing tool
+expanded cinema projection
+essential forms
+ex-votos
+fabricated metal
+fabricated plastic
+fabricated wood
+face painting material
+face painting on skin
+face painting source
+faded fresco
+faded photography
+fandom creation
+fan art drawing
+fantasy art illustration
+fashion design material
+fashion design textiles
+fashion design source
+fashion illustration materials
+fashion illustration paper
+fashion illustration tool
+felt-tip pen on paper
+felt-tip pen set
+felt-tip pen source
+fetishism object
+fiber art
+fiber art material
+fiber art thread
+fiber art source
+film art
+film noir photography
+fire art
+fire art performance
+fire source
+fluid sculpture
+folk art painting
+folk art painting (bright colors)
+food art edible materials
+food art arrangement
+food art material
+food art source
+forged iron
+forged steel
+forensic art
+forensic art materials
+forensic art sketch
+forensic art tool
+forensic sketching tools
+forensic sketching paper
+forensic sketching tool
+found footage film
+found object assemblage
+found object assemblage
+found object construction
+found object material
 found object sculpture
+found object sculpture source
+found object collection
+found objects
+found objects on board
+found objects on canvas
+found objects on panel
+found object material
+found photography print
+french baroque painting
+french book illustration
+french ceramics (sèvres)
+french cubism
+french drawing
+french fashion design
+french film (new wave)
+french fauvism
+french graphic design
+french impressionist painting
+french furniture design
+french painting (baroque, rococo, futurism, arte povera)
+french perfume making (as olfactory art)
+french photography
+french post-impressionist painting
+french printmaking
+french rococo painting
+french sculpture (rodin)
+french street art
+french surrealism
+french tapestry
+fresco
+fresco painting
+fresco painting on plaster
+fresco source
+freedom of expression document
+freedom of expression medium
+freedom of expression principle
+gamification design
+gelatin silver print chemicals
+generative art
+generative art code
+generative art code source
+generative art (abstract forms)
+geology sample
+geology tool
+geometric abstraction
+geographic information systems application
+geographic information systems data
+geographic information systems material
+gestural abstraction
+gestural drawing
+giclée print on canvas
+giclée print on paper
+gis application
+gis data
+gis material
+glass art
+glass art molten glass
+glass art source
+global art network
+gnosticism symbol
+gold leaf
+goldpoint on prepared ground
+goldpoint source
+goldsmithing
+goldsmithing gold
+goldsmithing material
+goldsmithing source
+gothic art
+gouache
+gouache medium
+gouache on paper
+gouache painting
+gouache painting (with muted tones)
+gouache painting
+graffiti
+graffiti ephemeral
+graffiti material
+graffiti paint
+graffiti source
+graphic design
+graphic novel art
+graphic novel art drawing
+graphic novel art materials
+graphic novel art drawing
+graphite drawing
+graphite drawing (soft)
+graphite pencil on paper
+graphite source
+graphite stick
+grayscale digital art
+greek architecture
+greek bronze sculpture
+greek bust sculpture
+greek coinage (as art)
+greek fresco painting
+greek ivory carving
+greek jewelry design
+greek kouros and kore sculpture
+greek metalwork
+greek painting (lost, known through descriptions)
+greek pottery (vase painting)
+greek relief sculpture
+greek sculpture (marble, bronze)
+greek textile art
+greek wall painting
+greek white ground pottery
+greek floor mosaic
+gum bichromate chemicals
+gustatory art food
+gustatory art material
+gustatory art tasting
+hacktivism
+hacktivism code
+hacktivism code source
+hacktivism material
+hacktivism source
+haiga (haiku painting)
+hair art application
+hair art styling
+hair art material
+hair art source
+haiku poetry (as text art)
+happening event
+haptic art feedback
+haptic art interaction
+haptic art material
+haptic art source
+heraldic art paint
+henna on skin
+henna source
+henna art
+hieroglyphic inscriptions
+high-speed camera
+high-speed photography image
+high-speed photography image
+holographic display
+horror art imagery
+hybridity form
+hyperrealism
+ice art ephemeral
+ice carving tool
+ice sculpture
+ice sculpture source
+iconoclasm act
+idolatry object
+ikebana (flower arrangement)
+illuminated manuscript
+illuminated manuscript vellum
+illuminated manuscripts
+illuminated manuscripts (bright colors)
+immersive environment
+indigenous futurism imagery
+indian architecture (as art)
+indian classical dance (as art)
+indian classical music (as sound art)
+indian folk art
+indian fresco painting
+indian jewelry design
+indian manuscript illumination
+indian miniature painting
+indian pottery
+indian pottery painting
+indian puppetry
+indian sculpture (stone, bronze)
+indian textile art (sari, weaving, embroidery)
+indian thangka painting
+indian pattachitra painting
+indian kalamkari textile painting
+indie game software
+infographics design
+infographics software
+infographics tool
+infrared camera
+infrared photography image
+infrared photography image
+ink sketch
+ink wash medium
+ink wash on silk
+ink wash painting
+ink wash painting (dark tones)
+ink wash (light)
+ink wash source
+inktense pencil on paper
+inkjet print on canvas
+inkjet print on paper
+inkjet print source
+instant film
+installation art (non-moving)
+installation art in urban settings
+interactive art
+interactive installation
+interactive video installation
+interactive video installation source
+interculturalism exchange
+intermedia art
+intarsia inlaid wood
+intarsia material
+intarsia source
+intellectual property document
+intellectual property documentation
+intellectual property law
+intricate sculpture
+invisible sculpture
+ip documentation
+ip law
+irish art
+iron casting
+isometric drawing paper
+isometric drawing tools
+isometric drawing tool
+italian architecture
+italian book illustration
+italian ceramics (majolica)
+italian fashion design
+italian film (neorealism, spaghetti westerns as genre art)
+italian fresco painting
+italian furniture design
+italian glass art (murano)
+italian graphic design
+italian mosaic
+italian opera (as art)
+italian painting (baroque, rococo, futurism, arte povera)
+italian photography
+italian printmaking
+italian product design
+italian renaissance painting
+italian renaissance sculpture (marble, bronze)
+italian street art
+italian drawing
+ivory carving
+jade carving
+japanese ceramics
+japanese garden design
+japanese illustration
+japanese lacquerware
+japanese screen painting
+japanese sumi-e
+japanese sumi-e source
+japanese textile art (kimono, weaving)
+japanese wood carving
+jewelry
+jewelry design
+jewelry design gems
+jewelry design metal
+jewelry design material
+jewelry design source
+kabbalah symbol
+kalamkari textile painting
+kente cloth
+kinetic sculpture
+kinetic sculpture material
 kinetic sculpture metal
 kinetic sculpture mixed media
-light sculpture neon
+kinetic sculpture motor
+kinetic sculpture parts
+kinetic sculpture source
+kintsugi (repairing ceramics with gold)
+lacquerware
+land art
+land art ephemeral
+land art (fixed)
+land art material
+land art plants
+land art stone
+land art wood
+land art water
+land art source
+large-scale installation
+larp performance
+laser art display
+laser cut metal
+laser cut paper
+laser cut wood
+latex paint on canvas
+lenticular print
+light art
+light art (minimal forms)
+light art sculpture
+light art display
+light installation
+light sculpture
+light sculpture bulb
+light sculpture components
 light sculpture led
+light sculpture material
+light sculpture neon
 light sculpture projection
-sound sculpture
-sound installation
-bio art living organisms
-bio art dna
-bio art bacteria
-bio art plants
-bio art animals
-bio art tissue culture
-transgenic art organisms
-wetware biological materials
-diy biology materials
-robotic art mechanics
+light sculpture source
+lightjet print on paper
+lightjet print source
+line drawing
+linked data format
+linked data material
+linked data technology
+linocut on paper
+linocut (single color ink)
+lithograph on paper
+lithography
+lithography stone
+lithography source
+live art performance
+live music performance (as sound art)
+live painting
+long exposure camera
+long exposure photography image
+long exposure photography image
+lore development
+ludology analysis
+lyrical abstraction
+macabre art
+machine learning in art creation algorithm
+machine learning in art creation application
+machine learning in art creation material
+macro photography image
+macro photography image
+macro photography lens
+madhubani painting
+mail art
+mail art envelope
+mail art postage
+mail art material
+manga
+mapping software
+mapping urban data (data art)
+mapping tool
+marble block
+marble sculpture
+marble source
+marker art
+marker pen on paper
+marker pen set
+marker pen source
+marquetry
+marquetry material
+marquetry wood veneer
+marquetry source
+mask making
+materials science compounds
+materials science synthesis
+materials science material
+mathematics equation
+mathematics tool
+medical illustration
+medical illustration drawing
+medical illustration pen
+medical illustration drawing
+medical illustration tool
+mehndi (henna art)
+metal engraving
+metalwork
+metalwork metal
+metalwork material
+metalwork source
+metadata creation
+metadata material
+metadata standard
+mexican architecture
+mexican basket weaving
+mexican ceramics (talavera)
+mexican ex-votos
+mexican folk art
+mexican mask making
+mexican muralism
+mexican painting (fridakahlo, diegorivera)
+mexican papel picado (paper cutting)
+mexican photography
+mexican pottery
+mexican popular art
+mexican printmaking (posada)
+mexican retablos
+mexican sculpture
+mexican silverwork
+mexican street art
+mexican textile art (weaving, embroidery)
+mexican wood carvings (alebrijes)
+mezzotint
+mezzotint on paper
+mezzotint rocker
+mezzotint source
+microphotography
+microphotography image
+microphotography image
+microphotography microscope
+microphone
+minimalist painting
+minimalist sculpture
+minimalist photography
+simple graphic design
+minimalist painting
+miniature painting
+miniature painting brush
+mixology cocktail
+mixology liquids
+mixology material
+mixology source
+mixed media
+mixed media experience
+mixed media on board
+mixed media on canvas
+mixed media on panel
+mixed reality experience
+modeling software
+monochromatic printmaking
+monotype plate
+monotype on paper
+monotype source
+moonlight painting
+mosaic
+mosaic mural
+mosaic tile
+motor
+moving image art
+mri art image
+mri machine
+mud cloth
+multiculturalism representation
+multimedia presentation
+multi-channel video
+multi-channel video source
+mummy masks
+mural paint
+mural painting
+mural material
+mural source
+music (as sound art)
+muted ceramic glaze
+muted pastel painting
+muted printmaking
+muted photography
+muted tones watercolor
+muted tones gouache
+mycelium art
+mysticism symbol
+mythopoeia narrative
+nail art application
+nail art material
+nail art polish
+nail art source
+nanopunk aesthetic
+nanotechnology fabrication
+nanotechnology materials
+nanotechnology material
+narratology analysis
+natural dye textiles
+natural fiber art
+natural fibers
+natural light in photography
+natural material sculpture
+natural wood carving
+nature journaling
+nature journaling paper
+nature journaling supplies
+nature journaling tool
+neon art
+neon art sign
+neon tube
+net art
+net art code
+net art code source
+net art source
+network analysis data
+network analysis methodology
+network analysis material
+netsuke carving
+non-representational art
+oblique projection tools
+oblique projection paper
+oblique projection tool
+occultism symbol
+ofrendas
+oil bar on canvas
+oil paint medium
+oil paint on canvas
+oil paint tube
+oil painting
+oil pastel on paper
+oil stick on canvas
+olfactory art diffusion
+olfactory art scents
+olfactory art material
+olfactory art source
+online art platform development
+online art platform software
+online art platform material
+ontology development
+ontology model
+ontology material
+opera (as art)
+origami
+orthographic projection tools
+orthographic projection paper
+orthographic projection tool
+ostraca
+palladium print chemicals
+panorama painting
+papel picado (paper cutting)
+papermaking
+papermaking pulp
+papermaking material
+papyrus painting
+participatory performance
+pastel
+pastel medium
+pastel on paper
+pastel stick
+patent art design
+patent art materials
+patent art paper
+patent drawing tools
+patent drawing paper
+patent drawing tool
+pattachitra painting
+pen and ink on paper
+pen and ink source
+pen nib
+pencil sketch
+performance art
+performance art (abstract movements)
+performance art (minimal actions)
+performance art documentation
+performance art documentation source
+performance art in urban spaces
+perfumery composition
+perfumery scents
+perfumery material
+perfumery source
+perspective rendering tools
+perspective rendering paper
+perspective rendering tool
+photogram paper
+photogram source
+photographic print on acrylic
+photographic print on canvas
+photographic print on fabric
+photographic print on metal
+photographic print on paper
+photographic print on wood
+photographic print source
+photography (traditional)
+photography film
+photography paper
+photography source
+photomontage technique
+photogravure on paper
+photorealism
+physics phenomenon
+physics tool
+pixel art
+pixel art source
+plain pottery
+plan drawing tools
+plan drawing paper
+plan drawing tool
+plant material art
+plant material
+plant material source
+plasma cut metal
+plaster powder
+plaster source
+platinum palladium print on paper
+platinum palladium print source
+platinum print chemicals
+play theory concept
+plotter drawing on paper
+polaroid film
+political cartooning
+political cartooning drawing
+political cartooning materials
+political cartooning tool
+porcelain ceramics
+posada prints
+post-global art context
+pottery
+pottery clay
+pottery painting
+pottery source
+preservation chemicals
+preservation material
+preservation technique
+printmaking
+printmaking ink
+printmaking source
+product design
+projection mapping on building
+projector
+provenance research document
+provenance research documents
+provenance research method
+pure color or form
+pure form and color exploration
+puppetry
+pyrotechnic art display
+pyrotechnic device
+quilting
+quilting fabric
+quick sketch
+raku pottery
+rangoli (sand art)
+raster graphics
+raster graphics editor
+raster graphics source
+ready-made material
+ready-made object
+ready-made object display
+ready-made object display
+ready-made object source
+readymade object
+readymade object
+reductionist art
+reed pen
+reed pen and ink on paper
+reed pen source
+relief sculpture
+remote sensing application
+remote sensing data
+remote sensing material
+repatriation document
+repatriation documents
+repatriation process
+resin casting
+restitution document
+restitution documents
+restitution process
+retablos
+retrofuturism aesthetic
+risograph print on paper
+robotic art
 robotic art electronics
+robotic art mechanics
 robotic art programming
-ai art generation
-data art visualization
-tactical media broadcasting
-hacktivism code
+robotic art material
+robotic art source
+robotic art lab equipment
+rock art
+roman architecture
+roman bronze sculpture
+roman bust sculpture
+roman coinage (as art)
+roman equestrian sculpture
+roman floor mosaic
+roman fresco painting
+roman glass art
+roman ivory carving
+roman jewelry design
+roman metalwork
+roman mosaic
+roman painting (portraits, landscapes)
+roman pottery
+roman relief sculpture
+roman sarcophagus art
+roman sculpture (marble, bronze)
+roman textile art
+roman triumphal arches (as architectural sculpture)
+roman wall painting
+sarcophagus art
+sari
+satellite imaging
+satellite photography image
+satellite photography image
+salt print chemicals
+sand art ephemeral
+sand painting
+sand painting on ground
+sand painting source
+sand sculpture
+sand sculpture source
+sand sculpting tool
+sandblasted glass
+sandblasted stone
+sanguine crayon
+sanguine crayon on paper
+sanguine crayon set
+sanguine crayon source
+scientific illustration
+scientific illustration drawing
+scientific illustration pen
+scientific illustration drawing
+scientific illustration tool
+scientific sketching tools
+scientific sketching paper
+scientific sketching tool
+screen
+screen print on fabric
+screen print on glass
+screen print on metal
+screen print on paper
+screen print on wood
+screen printing
+screen printing screen
+screen printing source
+sculpted clay
+sculpted concrete
+sculpted foam
+sculpted ice
+sculpted plaster
+sculpted sand
+sculpted snow
+sculpted wax
+sculpture
+seascape painting
+section drawing tools
+section drawing paper
+section drawing tool
+seal carving
+semantic web data
+semantic web material
+semantic web technology
+sensation art
+sensor
+sequential art
+sequential art materials
+sequential art panels
+serious game design
+sepia drawing
+sèvres ceramics
+shading techniques
+shadow puppetry
+shamanism artifact
+shop drawing tools
+shop drawing paper
+shop drawing tool
+shodo (calligraphy)
+silk fabric
+silk painting
+silk source
+silver gelatin print on paper
+silver gelatin print source
+silverpoint
+silverpoint on prepared ground
+silverpoint source
+silversmithing
+silversmithing metal
+silversmithing material
+silversmithing source
+simple calligraphy
+simple ceramic form
+simple graphic design
+simple installation
+simple jewelry design
+simple pottery
+simple wood carving
+simple weaving
+simulation model
+single brushstroke painting
+single channel video
+single-channel video source
+single color field painting
+single color painting
+single object ready-made
+site-specific installation
+site-specific installation material
+site-specific installation source
+sketching paper
+sketching pencil
+sketching tool
+snapshot aesthetic photograph
+snow art ephemeral
+snow sculpture
+snow sculpture source
+snow sculpting tool
+soapstone carving
+social media art curation platform
+social media art curation strategy
+social sculpture project
+software art code
+software art code source
+software art material
+solarplate etching on paper
+solarpunk aesthetic
+sonography image
+sonography machine
+sound art
+sound art (abstract sounds)
+sound art (minimal sounds)
+sound art using urban sounds
+sound installation
+sound installation source
+sound sculpture
+sound sculpture components
+sound sculpture material
+sound sculpture speaker
+sound sculpture source
+source
+speculative fiction narrative
+spontaneous drawing
+spray paint
+stamp art
+stamp art design
+stamp art stamp
+stamp art material
+stained glass
+stained glass material
+stained glass windows
+stained glass source
+static sculpture
+statistics data
+statistics tool
+steampunk aesthetic
+stelae
+sticker art
+stone carving
+stone carving material
+stone carving source
+stone sculpture
+stone sculpture carving
+storytelling (as art)
+street art
+street art ephemeral
+street art material
 street art spray paint
 street art stencil
 street art sticker
 street art wheatpaste
-graffiti paint
-mural paint
-urban art mixed media
-yarn bombing yarn
-chalk art on pavement
-body painting on skin
-face painting on skin
-nail art polish
-hair art styling
-food art edible materials
-culinary arts ingredients
-mixology liquids
-perfumery scents
-olfactory art scents
-gustatory art food
-tactile art textures
-haptic art feedback
-textile art fiber
-fiber art thread
-wearable art fabric
-fashion design textiles
-jewelry design metal
-jewelry design gems
-ceramic art clay
-pottery clay
-glass art molten glass
-stained glass
-metalwork metal
-goldsmithing gold
-silversmithing silver
-blacksmithing iron
-woodworking wood
-marquetry wood veneer
-intarsia inlaid wood
-bronze sculpture casting
-stone sculpture carving
-wood sculpture carving
-ceramic sculpture firing
-assemblage mixed materials
-found object assemblage
-readymade object
-kinetic sculpture motor
-light sculpture bulb
-sound sculpture speaker
-ice carving tool
-snow sculpting tool
-sand sculpting tool
-environmental sculpture material
-land art material
-site-specific installation material
-assemblage material
-found object material
-ready-made material
-kinetic sculpture material
-light sculpture material
-sound sculpture material
-bio art material
-transgenic art material
-wetware material
-diy biology material
-robotic art material
-ai art material
-data art material
+street art source
+street art (action-oriented)
+structural film
+subtle printmaking
+sufism symbol
+sumi ink bottle
+sumi-e source
+sunset painting
+surrealism
+syncretism blend
+tableau vivant performance
+tactical media
+tactical media broadcasting
+tactical media code
 tactical media material
-hacktivism material
-street art material
-graffiti material
-mural material
-urban art material
-yarn bombing material
-chalk art material
-body painting material
-face painting material
-nail art material
-hair art material
-food art material
-culinary arts material
-mixology material
-perfumery material
-olfactory art material
-gustatory art material
+tactical media source
 tactile art material
-haptic art material
-textile art material
-fiber art material
-wearable art material
-fashion design material
-jewelry design material
-ceramic art material
-pottery material
-glass art material
-stained glass material
-metalwork material
-goldsmithing material
-silversmithing material
-blacksmithing material
-woodworking material
-marquetry material
-intarsia material
-bronze casting material
-stone carving material
-wood carving material
-ceramic firing material
-printmaking ink
-woodcut block
-engraving plate
-etching plate
-drypoint needle
-mezzotint rocker
-aquatint resin
-lithography stone
-screen printing screen
-monotype plate
-digital printing paper
-digital printing canvas
-digital printing metal
-digital printing acrylic
-digital printing wood
-digital printing fabric
-digital printing film
-photography film
-photography paper
-digital photography sensor
-digital photography file
-photogram paper
-cyanotype chemicals
-salt print chemicals
-albumen print chemicals
-gelatin silver print chemicals
-platinum print chemicals
-palladium print chemicals
-gum bichromate chemicals
-collodion process chemicals
-daguerreotype plate
-tintype plate
-ambrotype plate
-polaroid film
-instant film
-digital camera
-smartphone camera
-drone camera
-satellite imaging
-astrophotography telescope
-microphotography microscope
-macro photography lens
-high-speed camera
-time-lapse camera
-long exposure camera
-infrared camera
-ultraviolet camera
-x-ray machine
-thermal imaging camera
-sonography machine
-mri machine
-ct scan machine
-electron microscope
-nanotechnology materials
-materials science compounds
-alchemy substances
-scientific illustration pen
-medical illustration pen
-botanical illustration pen
-zoological illustration pen
-forensic art materials
-courtroom sketching materials
-editorial cartooning materials
-political cartooning materials
-comic strip art materials
-comic book art materials
-graphic novel art materials
-sequential art materials
-zine paper
-mail art envelope
-stamp art stamp
-artist trading card board
-collage paper
-decoupage paper
-mosaic tile
+tactile art textures
+tactile art touching
+tactile art source
+tapestry
 tapestry thread
-embroidery thread
-quilting fabric
-beadwork beads
-papermaking pulp
-bookbinding materials
-miniature painting brush
-illuminated manuscript vellum
-heraldic art paint
-cartography ink
-data visualization software
-infographics software
-diagramming tools
-sketching pencil
-doodle art pen
-urban sketching sketchbook
-travel sketching journal
-nature journaling supplies
-scientific sketching tools
-engineering drawing tools
-patent drawing tools
-forensic sketching tools
-composite sketching tools
-fashion illustration materials
-technical illustration materials
-exploded view drawing tools
-cutaway drawing tools
-architectural rendering software
-perspective rendering tools
-isometric drawing tools
-axonometric drawing tools
-oblique projection tools
-orthographic projection tools
-plan drawing tools
-elevation drawing tools
-section drawing tools
-detail drawing tools
-construction drawing tools
-shop drawing tools
-as-built drawing tools
-patent art materials
-trademark art materials
-copyright documentation
-intellectual property documentation
-censorship material
-freedom of expression medium
-art and law documents
-art crime evidence
-art forgery materials
-art authentication tools
-provenance research documents
-art market ethics guidelines
-restitution documents
-repatriation documents
-cultural heritage artifact
-preservation chemicals
-documentation format
-archiving system
-digitization equipment
-digital preservation format
-metadata standard
+tapestry material
+tattoo art temporary
+tattoo ink on skin
+tattoo ink source
+taxonomy development
 taxonomy structure
-ontology model
-semantic web data
-linked data format
-artificial intelligence in art history data
-machine learning in art creation algorithm
-computer vision in art analysis algorithm
-digital humanities data
-computational aesthetics algorithm
-algorithmic criticism algorithm
-network analysis data
-geographic information systems data
-remote sensing data
-virtual archaeology model
-augmented reality display
-virtual reality headset
-online art platform software
-social media art curation platform
-art in the age of the internet network
-oil stick on canvas
-oil pastel on paper
-acrylic ink on paper
-acrylic gouache on board
-watercolor pencil on paper
-inktense pencil on paper
-charcoal stick on paper
-carbon pencil on paper
-wax crayon on paper
-oil bar on canvas
-mixed media on paper
-mixed media on canvas
-mixed media on board
-mixed media on panel
-collage on paper
-collage on canvas
-collage on board
-assemblage on board
-assemblage on panel
-found objects on canvas
-found objects on board
-found objects on panel
-digital print on paper
-digital print on canvas
-digital print on metal
-digital print on acrylic
-digital print on wood
-digital print on fabric
-digital print on film
-giclée print on paper
-giclée print on canvas
-photographic print on paper
-photographic print on metal
-photographic print on acrylic
-photographic print on wood
-photographic print on fabric
-lightjet print on paper
-c-print on paper
-silver gelatin print on paper
-platinum palladium print on paper
-inkjet print on paper
-inkjet print on canvas
-dye sublimation print on metal
-uv print on various substrates
-screen print on paper
-screen print on fabric
-screen print on wood
-screen print on metal
-screen print on glass
-lithograph on paper
-etching on paper
-engraving on paper
-woodcut on paper
-linocut on paper
-collagraph on paper
-monotype on paper
-drypoint on paper
-aquatint on paper
-mezzotint on paper
-carborundum print on paper
-solarplate etching on paper
-photogravure on paper
-digital printmaking
-risograph print on paper
+taxonomy material
+talavera ceramics
+tempera medium
+tempera on panel
+tempera paint
+tempera painting
+tempera source
+terracotta sculpture
+text art
+textile art
+textile art fiber
+textile art material
+textile weaving
+thangka painting
+theater performance (as art)
+thermal imaging camera
+thermal imaging image
+thermal imaging image
 thermal print on paper
-dot matrix print on paper
-plotter drawing on paper
-laser cut wood
-laser cut metal
-laser cut paper
-3d printed plastic
-3d printed metal
-3d printed ceramic
-3d printed resin
-cnc routed wood
-cnc routed metal
-cnc routed plastic
-plasma cut metal
+three-dimensional art
+tie-dye fabric
+tie-dye fabric (bright colors)
+time-based media
+time-lapse camera
+time-lapse photography video
+time-lapse photography image
+tintype plate
+tomb painting
+toned paper drawing
+totemism object
+touching (as tactile art)
+traditional architecture
+traditional drawing
+traditional painting (portrait, still life)
+traditional photography
+traditional printmaking
+traditional sculpture (bust, statue)
+trademark art design
+trademark art materials
+trademark art paper
+transgenic art creation
+transgenic art lab equipment
+transgenic art organisms
+transgenic art material
+transgenic art source
+transmedia storytelling
+transnationalism flow
+travel sketching journal
+travel sketching paper
+travel sketching tool
+trompe-l'œil
+triumphal arches (as architectural sculpture)
+unadorned objects
+ukiyo-e printmaking
+ultraviolet camera
+ultraviolet photography image
+ultraviolet photography image
+unfired clay
+urban art
+urban art mixed media
+urban art material
+urban art source
+urban photography
+urban sketching sketchbook
+urban sketching paper
+urban sketching tool
+using cool materials like ice, snow, water, certain metals, glass
+using dark materials in sculpture
+using found natural objects
+using low light in video art
+using natural fibers
+using urban materials
+using warm materials like wood, clay, warm metals
+uv print on various substrates
+vase painting
+vector graphics
+vector graphics editor
+vector graphics source
+vellum skin
+vellum source
+vernacular photography image
+video art
+video art installation
+video art installation source
+video art projected onto urban buildings
+video art single channel
+video art single channel source
+video editing software
+video installation
+video installation multi-channel
+video installation multi-channel source
+video mapping
+video mapping source
+video projection
+video projection source
+vibrant printmaking
+vibrant printmaking
+virtual archaeology model
+virtual archaeology reconstruction
+virtual archaeology material
+virtual reality
+virtual reality application
+virtual reality experience
+virtual reality headset
+visualization software
+visualization tool
+wall painting
+warm colored textiles
+warm lighting in installation
+warm palette acrylic painting
+warm palette oil painting
+warm toned photography
+warli painting
+watchmaking (as art)
+water jet cut glass
 water jet cut metal
 water jet cut stone
-water jet cut glass
-sandblasted glass
-sandblasted stone
-etched glass
-etched metal
-engraved metal
-engraved glass
-carved wood
-carved stone
-carved bone
-carved ivory
-carved jade
-carved soapstone
-sculpted clay
-sculpted plaster
-sculpted wax
-sculpted concrete
-sculpted foam
-sculpted ice
-sculpted snow
-sculpted sand
-cast bronze
-cast aluminum
-cast iron
-cast resin
-cast plaster
-cast concrete
-cast paper
-fabricated metal
-fabricated plastic
-fabricated wood
-welded steel
-welded aluminum
-forged iron
-forged steel
-assembled metal
-assembled plastic
-assembled wood
-found object construction
-ready-made object display
-light installation
-sound installation
-video installation
-interactive installation
-immersive environment
-virtual reality experience
-augmented reality experience
-mixed reality experience
-holographic display
-lenticular print
-stereoscopic image
-panorama painting
-diorama construction
-tableau vivant performance
-happening event
-event score performance
-intermedia art
-multimedia presentation
-cross-media project
-transmedia storytelling
-live art performance
-durational performance
-participatory performance
-social sculpture project
-expanded cinema projection
-structural film
-found footage film
-experimental film
-avant-garde film
-abstract film
-video art single channel
-video installation multi-channel
-projection mapping on building
-light art sculpture
-laser art display
-neon art sign
-fire art performance
-pyrotechnic art display
-land art ephemeral
-ice art ephemeral
-sand art ephemeral
-snow art ephemeral
-graffiti ephemeral
-street art ephemeral
-chalk art ephemeral
-body art ephemeral
-tattoo art temporary
-hair art styling
-nail art application
-food art arrangement
-culinary arts plating
-mixology cocktail
-perfumery composition
-olfactory art diffusion
-gustatory art tasting
-tactile art touching
-haptic art interaction
-bio art cultivation
-transgenic art creation
-wetware construction
-diy biology experiment
-citizen science data
-eco-art intervention
-environmental activism artwork
-climate art visualization
-anthropocene art representation
-geology sample
-biology specimen
-chemistry compound
-physics phenomenon
-mathematics equation
-statistics data
-cartography map
-data visualization chart
-infographics design
-scientific illustration drawing
-medical illustration drawing
-botanical illustration drawing
-zoological illustration drawing
-forensic art sketch
-courtroom sketching drawing
-editorial cartooning drawing
-political cartooning drawing
-comic strip art drawing
-comic book art drawing
-graphic novel art drawing
-sequential art panels
-zine production
-mail art postage
-stamp art design
-artist trading card exchange
-digital collage software
-photomontage technique
-decollage technique
-found photography print
-snapshot aesthetic photograph
-vernacular photography image
-mobile photography image
-drone photography image
-satellite photography image
-astrophotography image
-microphotography image
-macro photography image
-high-speed photography image
-time-lapse photography video
-long exposure photography image
-infrared photography image
-ultraviolet photography image
-x-ray photography image
-thermal imaging image
-sonography image
-mri art image
-ct scan art image
-electron microscopy image
-nanotechnology fabrication
-materials science synthesis
-alchemy process
-esotericism symbol
-occultism symbol
-mysticism symbol
-gnosticism symbol
-kabbalah symbol
-sufism symbol
-shamanism artifact
-animism representation
-totemism object
-fetishism object
-iconoclasm act
-aniconism principle
-idolatry object
-syncretism blend
-hybridity form
-creolization process
-multiculturalism representation
-interculturalism exchange
-transnationalism flow
-global art network
-world art studies analysis
-post-global art context
-altermodern context
-speculative fiction narrative
-science fiction imagery
-fantasy art illustration
-horror art imagery
-cyberpunk aesthetic
-steampunk aesthetic
-solarpunk aesthetic
-afrofuturism imagery
-indigenous futurism imagery
-retrofuturism aesthetic
-dieselpunk aesthetic
-atompunk aesthetic
-biopunk aesthetic
-nanopunk aesthetic
-mythopoeia narrative
-worldbuilding design
-lore development
-fandom creation
-fan art drawing
-cosplay costume
-larp performance
-tabletop role-playing game materials
-video game software
-indie game software
-art game software
-serious game design
-gamification design
-play theory concept
-ludology analysis
-narratology analysis
-simulation model
-modeling software
-visualization software
-mapping software
-charting software
-diagramming software
-sketching tool
-doodle art tool
-urban sketching tool
-travel sketching tool
-nature journaling tool
-scientific sketching tool
-engineering drawing tool
-patent drawing tool
-forensic sketching tool
-composite sketching tool
-fashion illustration tool
-technical illustration tool
-exploded view drawing tool
-cutaway drawing tool
-architectural rendering tool
-perspective rendering tool
-isometric drawing tool
-axonometric drawing tool
-oblique projection tool
-orthographic projection tool
-plan drawing tool
-elevation drawing tool
-section drawing tool
-detail drawing tool
-construction drawing tool
-shop drawing tool
-as-built drawing tool
-patent art design
-trademark art design
-copyright law
-intellectual property law
-censorship regulation
-freedom of expression principle
-art and law case study
-art crime investigation
-art forgery analysis
-art authentication process
-provenance research method
-art market ethics code
-restitution process
-repatriation process
-cultural heritage management
-preservation technique
-documentation standard
-archiving process
-digitization process
-digital preservation strategy
-metadata creation
-taxonomy development
-ontology development
-semantic web technology
-linked data technology
-artificial intelligence in art history application
-machine learning in art creation application
-computer vision in art analysis application
-digital humanities methodology
-computational aesthetics theory
-algorithmic criticism theory
-network analysis methodology
-geographic information systems application
-remote sensing application
-virtual archaeology reconstruction
-augmented reality application
-virtual reality application
-online art platform development
-social media art curation strategy
-art in the age of the internet impact
-oil paint tube
-watercolor pan
-marble block
-chinese ink stick
-charcoal stick
-bronze ingot
-plaster powder
-acrylic paint tube
-sumi ink bottle
-tempera paint
-gouache paint
-pastel stick
-encaustic wax
-egg yolk binder
-casein binder
-vellum skin
-silk fabric
-calligraphy pen
-graphite stick
-colored pencil set
-conté crayon set
-sanguine crayon set
-silver wire
-gold wire
-pen nib
-reed pen
-brush hair
-felt-tip pen set
-marker pen set
-ballpoint pen
-digital tablet
-computer software
-vector graphics editor
-raster graphics editor
-3d modeling software
-3d rendering software
-digital camera raw file
-digital video camera
-video editing software
-projector
-screen
-speaker
-microphone
-sensor
-circuit board
-wire
-motor
-light bulb
-led light
-laser pointer
-neon tube
-fire source
-pyrotechnic device
-earth material
-stone material
-wood material
-plant material
-water source
-found object collection
-ready-made object source
-kinetic sculpture parts
-light sculpture components
-sound sculpture components
-bio art lab equipment
-transgenic art lab equipment
-wetware lab equipment
-diy biology lab equipment
-citizen science data source
-eco-art material source
-environmental activism material
-climate art data source
-anthropocene art data source
-geology tool
-biology tool
-chemistry tool
-physics tool
-mathematics tool
-statistics tool
-cartography tool
-data visualization tool
-infographics tool
-diagramming tool
-sketching paper
-doodle art paper
-urban sketching paper
-travel sketching paper
-nature journaling paper
-scientific sketching paper
-engineering drawing paper
-patent drawing paper
-forensic sketching paper
-composite sketching paper
-fashion illustration paper
-technical illustration paper
-exploded view drawing paper
-cutaway drawing paper
-architectural rendering paper
-perspective rendering paper
-isometric drawing paper
-axonometric drawing paper
-oblique projection paper
-orthographic projection paper
-plan drawing paper
-elevation drawing paper
-section drawing paper
-detail drawing paper
-construction drawing paper
-shop drawing paper
-as-built drawing paper
-patent art paper
-trademark art paper
-copyright document
-intellectual property document
-censorship document
-freedom of expression document
-art and law document
-art crime document
-art forgery document
-art authentication document
-provenance research document
-art market ethics document
-restitution document
-repatriation document
-cultural heritage document
-preservation material
-documentation material
-archiving material
-digitization material
-digital preservation material
-metadata material
-taxonomy material
-ontology material
-semantic web material
-linked data material
-artificial intelligence in art history material
-machine learning in art creation material
-computer vision in art analysis material
-digital humanities material
-computational aesthetics material
-algorithmic criticism material
-network analysis material
-geographic information systems material
-remote sensing material
-virtual archaeology material
-augmented reality material
-virtual reality material
-online art platform material
-social media art curation material
-art in the age of the internet material
-oil paint medium
+watercolor
 watercolor medium
-marble source
-chinese ink source
-charcoal source
-bronze source
-plaster source
-acrylic paint medium
-sumi-e source
-tempera medium
-gouache medium
-pastel medium
-encaustic medium
-egg tempera medium
-casein medium
-vellum source
-silk source
-ink wash medium
-calligraphy ink source
-graphite source
-colored pencil source
-conté crayon source
-sanguine crayon source
-silverpoint source
-goldpoint source
-pen and ink source
-reed pen source
-brush and ink source
-felt-tip pen source
-marker pen source
-ballpoint pen source
-digital drawing source
-digital painting source
-vector graphics source
-raster graphics source
-3d modeling source
-3d rendering source
-digital collage source
-digital photomontage source
-digital illustration source
-digital animation source
-pixel art source
-ascii art source
-generative art code source
-algorithmic art code source
-software art code source
-net art code source
-video art installation source
-single-channel video source
-multi-channel video source
-video projection source
-video mapping source
-interactive video installation source
-performance art documentation source
-body art paint source
-tattoo ink source
-henna source
-sand painting source
-ice sculpture source
-snow sculpture source
-sand sculpture source
-environmental sculpture source
-land art source
-site-specific installation source
-assemblage source
-ready-made object source
-found object sculpture source
-kinetic sculpture source
-light sculpture source
-sound sculpture source
-bio art source
-transgenic art source
-wetware source
-diy biology source
-robotic art source
-ai art source
-data art source
-tactical media source
-hacktivism source
-street art source
-graffiti source
-mural source
-urban art source
-yarn bombing source
-chalk art source
-body painting source
-face painting source
-nail art source
-hair art source
-food art source
-culinary arts source
-mixology source
-perfumery source
-olfactory art source
-gustatory art source
-tactile art source
-haptic art source
-textile art source
-fiber art source
+watercolor on paper
+watercolor on vellum
+watercolor wash
+watercolor pencil on paper
+watercolor pan
+watercolor source
+wax crayon on paper
+wearable art
+wearable art fabric
+wearable art material
 wearable art source
-fashion design source
-jewelry design source
-ceramic art source
-pottery source
-glass art source
-stained glass source
-metalwork source
-goldsmithing source
-silversmithing source
-blacksmithing source
-woodworking source
-marquetry source
-intarsia source
-bronze casting source
-stone carving source
+weaving
+welded aluminum
+welded steel
+wetware biological materials
+wetware construction
+wetware lab equipment
+wetware material
+wetware source
+wheatpaste art
+white ground pottery
+window installation
+winter scene painting
+wire sculpture
+wood carving
+wood carving (intricate)
+wood carving material
 wood carving source
-ceramic firing source
-printmaking source
+wood sculpture carving
+woodcut block
+woodcut on paper
+woodcut (single color ink)
 woodcut source
-engraving source
-etching source
-drypoint source
-mezzotint source
-aquatint source
-lithography source
-screen printing source
-monotype source
-digital printing source
-photographic print source
-lightjet print source
-c-print source
-silver gelatin print source
-platinum palladium print source
-inkjet print source
-dye sublimation print source
+woodworking
+woodworking material
+woodworking source
+world art studies analysis
+worldbuilding design
+x-ray machine
+x-ray photography image
+x-ray photography image
+yarn bombing
+yarn bombing material
+yarn bombing yarn
+yarn bombing source
+yellow journalism (as art)
+zen garden design
+zine
+zine paper
+zine production
+zine material
+zoological illustration
+zoological illustration drawing
+zoological illustration pen
+zoological illustration drawing
+zoological illustration tool
+zustand for state management
