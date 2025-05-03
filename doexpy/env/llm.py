@@ -445,6 +445,12 @@ def get_scorer_model(model_name: str, env: LLMGrid, embedder: BaseEmbedder) -> V
         weight_vector = embedder.embed_text(prompt)
         return DotProductModel(embedder, weight_vector).eval()
 
+    elif model_name == 'roman-text':
+        # Use the embedder to get the weight vector from text
+        prompt = "An image in the style of Ancient Roman art, featuring classical architecture, sculptures, or scenes from Roman life."
+        weight_vector = embedder.embed_text(prompt)
+        return DotProductModel(embedder, weight_vector).eval()
+
     elif model_name == 'asian-text':
         # Use the embedder to get the weight vector from text
         prompt = 'Asian style'
