@@ -20,12 +20,12 @@ C_design_keywords: [
   "modern", "ancient",        # 1
   "colorful", "monochromatic", # 2
   "complex", "simple",         # 3
-  "vibrant", "muted",          # 4
-  "dynamic", "static",         # 5
-  "natural", "urban",          # 6
+#"vibrant", "muted",          # 4
+#  "dynamic", "static",         # 5
+#  "natural", "urban",          # 6
   "detailed", "minimalist",    # 7
   "bright", "dark",            # 8
-  "warm", "cool",              # 9
+#  "warm", "cool",              # 9
   "abstract", "realistic",      # 10
   "asian", "chinese", "japanese", "indian", "european", "french", "italian",
   "egyptian", "latin", "african", "roman", "greek"
