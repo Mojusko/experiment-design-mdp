@@ -17,18 +17,16 @@ pass_V: false
 # The code will embed each keyword and use the resulting vectors for C-optimal design.
 # Example: ["old", "classic", "traditional", "eternal"]
 C_design_keywords: [
-#  "modern", "ancient",        # 1
-#  "colorful", "monochromatic", # 2
-#  "complex", "simple",         # 3
-#  "vibrant", "muted",          # 4
-#  "dynamic", "static",         # 5
-#  "natural", "urban",          # 6
-#  "detailed", "minimalist",    # 7
-#  "bright", "dark",            # 8
-#  "warm", "cool",              # 9
-#  "abstract", "realistic",      # 10
-  "japanese", "chinese", "indian", "italian", "french", 
-  "egyptian", "mexican", "african", "roman", "greek"
+  "modern", "ancient",        # 1
+  "colorful", "monochromatic", # 2
+  "complex", "simple",         # 3
+  "vibrant", "muted",          # 4
+  "dynamic", "static",         # 5
+  "natural", "urban",          # 6
+  "detailed", "minimalist",    # 7
+  "bright", "dark",            # 8
+  "warm", "cool",              # 9
+  "abstract", "realistic",      # 10
 ]
 #C_design_keywords: null
 
@@ -36,8 +34,8 @@ C_design_keywords: [
 # These are used only if use_model_specific_lambda is true
 model_specific_params:
   japanese-text:
-    lambda_dsn: 0.1
-    lambda_est: 500
+    lambda_dsn: 1
+    lambda_est: 100
   ancient-text:
     lambda_dsn: 1 # Example value
     lambda_est: 100 #num_policies=4 (Kept high based on previous findings)

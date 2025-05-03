@@ -7,4 +7,4 @@ vocabulary:
   - 'vocabulary2/mediums.txt'
   - 'vocabulary2/movements.txt'
   - 'vocabulary2/emotions.txt'
-scorer_model: 'japanese-text'
+scorer_model: 'ancient-text'

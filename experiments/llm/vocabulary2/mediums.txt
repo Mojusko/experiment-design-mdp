@@ -1,404 +1,1000 @@
-oil paint on canvas
-watercolor on paper
-marble sculpture
-ink painting
-charcoal drawing on paper
-bronze casting
-fresco painting on plaster
-acrylic paint on wood
-sumi-e
-cave painting with ochre
-egyptian papyrus painting
-stained glass mosaic
-woodblock printing on paper
-digital illustration
-clay pottery firing
-woven silk textile
-etching on copper plate
-granite stone carving
-pastel on canvas
-miniature painting
-tempera on panel
-sandstone sculpture
-ink wash on silk
-gouache on paper
-alabaster relief carving
-silverpoint on vellum
-lithography on stone
-enamel on metal
-porcelain ceramic glazing
-wool tapestry weaving
-pencil sketch on paper
-chalk drawing on slate
-linocut printing
-steel sculpture welding
-glass blowing art
-collage with found objects
-mixed media on canvas
-terracotta figurine
-gold leaf on wood
-bamboo carving
-silkscreen on fabric
-drypoint engraving
-limestone bas-relief
-oil pastel on board
-sumi ink on rice paper
-clay relief sculpture
-wax resist dyeing
-photographic film printing
-digital vector art
-oak wood sculpture
-cedar plank carving
-copper plate embossing
-acrylic resin casting
-felt textile art
-stone mosaic inlay
-chisel on basalt
-watercolor on vellum
-oil paint on linen
-marble dust fresco
-ink drawing on bamboo
-bronze patina sculpture
-gesso on panel
-sand painting
-embroidered cotton fabric
-engraving on ivory
-plaster cast molding
-charcoal on cave wall
-wood veneer inlay
-glass etching
-pumice stone carving
-soft pastel on paper
-pigment on parchment
-ceramic slip casting
-woven reed basketry
-photo emulsion printing
-digital 3d modeling
-iron forging art
-quartz crystal carving
-tempera on plaster
-ink on mulberry paper
-granite relief sculpture
-oil paint on copper
-acrylic on masonite
-clay coil pottery
-silk thread embroidery
-etching on zinc
-marble inlay work
-chalk on blackboard
-linseed oil painting
-steel wire sculpture
-glass mosaic tile
-collage on wood
-woven wool rug
-silver filigree work
-stone intaglio carving
-pastel on parchment
-ink wash on canvas
-bronze lost-wax casting
-fresco on wet plaster
-digital pixel art
-cedar wood relief
-papyrus scroll painting
-oil paint on burlap
-watercolor on silk
-marble bust carving
-sumi-e on paper
-charcoal on wood
-terracotta tile glazing
-woodcut on silk
-acrylic on cardboard
-glass bead weaving
-plaster relief painting
-ink on hemp paper
-granite block sculpture
-pastel on sandpaper
-oil paint on velvet
-clay slab pottery
-woven linen textile
-etching on steel
-stone mosaic floor
-chalk pastel drawing
-silverpoint on paper
-lithography on paper
-enamel on copper
-porcelain vase painting
-wool felt applique
-pencil on vellum
-chisel on limestone
-linocut on canvas
-steel plate engraving
-glass fusing art
-mixed media collage
-terracotta relief tile
-gold foil stamping
-bamboo ink drawing
-silkscreen on paper
-drypoint on plastic
-sandstone relief carving
-oil paint on panel
-watercolor on cotton
-marble statue carving
-brush painting
-charcoal on canvas
-bronze figure casting
-fresco on dry plaster
-acrylic on glass
-ink wash
-cave pigment drawing
-egyptian wall painting
-stained glass panel
-woodblock on fabric
-digital photo manipulation
-clay hand building
-woven tapestry art
-etching on brass
-granite pillar carving
-pastel on linen
-pigment painting
-tempera on canvas
-sandstone block sculpture
-ink on silk scroll
-gouache on vellum
-alabaster statue
-silverpoint on wood
-lithography on metal
-enamel on glass
-porcelain tile glazing
-wool embroidery art
-pencil on parchment
-chalk on paper
-linocut on paper
-steel rod sculpture
-glass casting mold
-collage on paper
-mixed media on board
-terracotta pot firing
-gold leaf on canvas
-bamboo relief carving
-silkscreen on cotton
-drypoint on copper
-limestone statue carving
-oil pastel on paper
-sumi ink on silk
-clay figure sculpting
-wax resist on fabric
-photographic silver print
-digital animation art
-oak plank carving
-cedar totem pole
-copper wire weaving
-acrylic pour painting
-felt needle art
-stone tile mosaic
-chisel on granite
-watercolor on board
-oil paint on silk
-marble frieze carving
-ink wash on paper
-bronze relief casting
-gesso on wood
-sand mandala art
-embroidered silk cloth
-engraving on stone
-plaster wall relief
-charcoal on stone
-wood marquetry inlay
-glass painting art
-pumice relief sculpture
-soft pastel on canvas
-pigment on wood
-ceramic glaze firing
-woven grass mat
-photo gravure printing
-digital graphic design
-iron cast sculpture
-quartz relief carving
-tempera on paper
-ink on cotton paper
-granite statue carving
-oil paint on board
-acrylic on linen
-clay wheel pottery
-silk embroidery thread
-etching on glass
-marble mosaic tile
-chalk on vellum
-linseed oil on canvas
-steel frame sculpture
-glass bead mosaic
-collage on canvas
-woven cotton rug
-silver wire art
-stone cameo carving
-pastel on cotton
-ink wash on linen
-bronze figure sculpture
-fresco on stone
-digital concept art
-cedar relief panel
-papyrus ink drawing
-oil paint on cotton
-watercolor on linen
-marble relief sculpture
-sumi-e on canvas
-charcoal on parchment
-terracotta vase glazing
-woodcut on cotton
-acrylic on metal
-glass thread weaving
-plaster cast sculpture
-ink on rice paper
-granite frieze carving
-pastel on wood
-oil paint on masonite
-clay relief tile
-woven wool textile
-etching on paper
-stone inlay mosaic
-chalk pastel on paper
-silverpoint on canvas
-lithography on canvas
-enamel on steel
-porcelain figure painting
-wool tapestry art
-pencil on cotton
-chisel on sandstone
-linocut on silk
-steel sheet sculpture
-glass blowing sculpture
-mixed media on paper
-terracotta slab tile
-gold leaf on paper
-bamboo brush painting
-silkscreen on linen
-drypoint on zinc
-sandstone statue carving
-oil pastel on canvas
-sumi ink on cotton
-clay hand sculpture
-wax resist on silk
-photographic dye print
-digital motion graphics
-oak relief carving
-cedar figure sculpture
-copper plate art
-acrylic flow painting
-felt fabric art
-stone floor mosaic
-chisel on marble
-watercolor on cotton
-oil paint on glass
-marble wall relief
-ink wash on silk
-bronze statue casting
-gesso on canvas
-sand drawing art
-embroidered linen cloth
-engraving on brass
-plaster figure molding
-charcoal on cotton
-wood parquetry art
-glass tile painting
-pumice statue carving
-soft pastel on silk
-pigment on cotton
-ceramic slip art
-woven bamboo mat
-photo intaglio printing
-digital line art
-iron relief sculpture
-quartz figure carving
-tempera on silk
-ink on linen paper
-granite bust carving
-oil paint on vellum
-acrylic on cotton
-clay press pottery
-silk thread art
-etching on copper
-marble tile mosaic
-chalk on silk
-linseed oil on panel
-steel mesh sculpture
-glass fused art
-collage on linen
-woven silk rug
-silver relief art
-stone glyph carving
-pastel on vellum
-ink wash on cotton
-bronze frieze casting
-fresco on tile
-digital render art
-cedar plank art
-papyrus brush painting
-oil paint on silk
-watercolor on parchment
-marble figure sculpture
-sumi-e on silk
-charcoal on silk
-terracotta figure glazing
-woodcut on paper
-acrylic on silk
-glass bead art
-plaster wall art
-ink on cotton scroll
-granite column sculpture
-pastel on cotton
-oil paint on cotton
-clay coil sculpture
-woven cotton textile
-etching on bronze
-stone wall mosaic
-chalk pastel on canvas
-silverpoint on cotton
-lithography on cotton
-enamel on brass
-porcelain bowl glazing
-wool felt art
-pencil on linen
-chisel on alabaster
-linocut on linen
-steel plate art
-glass cast sculpture
-mixed media on cotton
-terracotta pot glazing
-gold leaf on silk
-bamboo ink art
-silkscreen on canvas
-drypoint on brass
-sandstone wall carving
-oil pastel on silk
-sumi ink on linen
-clay slab sculpture
-wax resist on cotton
-photographic color print
-digital sketch art
-oak figure carving
-cedar wall sculpture
-copper relief art
-acrylic layer painting
-felt woven art
-stone panel mosaic
-chisel on quartz
-watercolor on silk
-oil paint on parchment
-marble slab carving
-mayan stone relief
-tibetan thangka painting
-russian icon painting
-greek vase painting
-cloth dyeing
-wood carving
-persian tile glazing
-korean celadon pottery
-aboriginal bark painting
-byzantine gold mosaic
-venetian glass art
-ottoman calligraphy ink
-sumerian clay tablet
- inca textile weaving
-aztec stone carving
-mongolian felt art
-silk painting
+Oil paint on stretched canvas
+Acrylic paint on gessoed wood panel
+Watercolor on cold-press paper
+Gouache on hot-press paper
+Tempera on gessoed panel
+Encaustic on rigid support
+Fresco on wet plaster
+Ink wash on rice paper
+Casein paint on board
+Alkyd paint on canvas
+Graphite pencil on smooth drawing paper
+Charcoal stick on textured paper
+Conté crayon on toned paper
+Soft pastel on sanded paper
+Oil pastel on paper
+Colored pencil on drawing paper
+Ink pen on bristol board
+Brush and ink on paper
+Marker on marker paper
+Silverpoint on prepared ground
+Goldpoint on prepared ground
+Crayon on paper
+Digital drawing on tablet
+Digital painting in software
+Terracotta clay, hand-built
+Stoneware clay, wheel-thrown
+Porcelain clay, slip-cast
+Marble, carved
+Granite, carved
+Limestone, carved
+Soapstone, carved
+Wood, carved (oak)
+Wood, carved (pine)
+Wood, carved (cherry)
+Wood, assembled (found wood)
+Bronze, cast
+Steel, welded
+Aluminum, forged
+Copper, sheet metal
+Plaster, modeled
+Resin, cast
+Wax, modeled
+Ice, carved
+Sand, sculpted
+Glass, blown
+Ceramic, glazed and fired
+Etching on copper plate
+Engraving on metal plate
+Drypoint on plexiglass
+Mezzotint on copper plate
+Aquatint on zinc plate
+Lithography on limestone
+Lithography on aluminum plate
+Screen printing on paper
+Screen printing on fabric
+Woodcut print
+Linocut print
+Monotype print
+Collagraph print
+Giclée print (digital inkjet)
+Film photography (35mm, black and white)
+Film photography (medium format, color)
+Digital photography (DSLR)
+Digital photography (mirrorless)
+Daguerreotype process
+Cyanotype process
+Platinum print process
+Gelatin silver print process
+C-print process
+Inkjet print process (photography)
+Photogravure process
+Pinhole photography
+Photogram technique
+Digital 3D modeling (polygonal)
+Digital 3D modeling (NURBS)
+Digital sculpture (voxel-based)
+2D animation (traditional hand-drawn)
+2D animation (digital cutout)
+3D animation (computer generated)
+Stop motion animation (with physical models)
+Stop motion animation (digital capture)
+Generative art (code-based)
+Algorithmic art (mathematical)
+Interactive art (sensor-based)
+Video art (single channel)
+Video art (multi-channel installation)
+Sound art (installation)
+Sound art (performance)
+Net art (web-based)
+Virtual Reality (VR) art
+Augmented Reality (AR) art
+Digital collage
+Digital photography manipulation
+Pixel art
+Vector art
+Weaving (on loom)
+Knitting (fiber art)
+Crocheting (fiber art)
+Embroidery (thread on fabric)
+Quilting (fabric layers)
+Feltmaking (wet felting)
+Feltmaking (needle felting)
+Dyeing (natural dyes on fiber)
+Dyeing (synthetic dyes on fiber)
+Batik (wax resist dyeing)
+Shibori (tie-dyeing technique)
+Tapestry weaving
+Sewing (fabric construction)
+Fiber sculpture (various techniques)
+Paper collage
+Fabric collage
+Photo collage
+Decoupage on object
+Assemblage (found objects)
+Mixed media painting (combining paint and other materials)
+Mixed media drawing (combining drawing materials and other materials)
+Mixed media sculpture (combining various sculpting materials)
+Site-specific installation (using environmental elements)
+Site-specific installation (using constructed elements)
+Light installation (using artificial light)
+Light installation (using natural light)
+Sound installation (using speakers)
+Sound installation (using resonant objects)
+Environmental art (altering the landscape)
+Land art (using natural materials)
+Ephemeral art (using temporary materials like ice)
+Performance art (body-based)
+Performance art (voice-based)
+Performance art (action-based)
+Performance art (durational)
+Performance art (interactive with audience)
+Performance art (with props)
+Performance art (with costumes)
+Performance art (with sound)
+Performance art (with video)
+Pottery (earthenware)
+Pottery (stoneware)
+Pottery (porcelain)
+Ceramic tiles, hand-painted
+Ceramic sculpture
+Glassblowing (vessels)
+Glassblowing (sculptural forms)
+Mosaic (with glass tiles)
+Mosaic (with ceramic tiles)
+Mosaic (with stone tesserae)
+Jewelry making (silver)
+Jewelry making (gold)
+Jewelry making (copper)
+Jewelry making (with gemstones)
+Book arts (altered books)
+Book arts (artist's books)
+Calligraphy (with dip pen)
+Calligraphy (with brush)
+Calligraphy (with marker)
+Street art (graffiti with spray paint)
+Street art (stenciling with spray paint)
+Street art (mural painting)
+Body art (tattooing)
+Body art (piercing)
+Body art (body painting)
+Food art (sculptural)
+Food art (performance-based)
+Light sculpture (neon)
+Light sculpture (LED)
+Sound sculpture
+Bio art (using living organisms)
+Robotics art
+Kinetic art (moving sculpture)
+Assemblage with discarded electronics
+Collage with found photographs
+Decoupage on furniture
+Papier-mâché sculpture
+Plaster casting (body casts)
+Sandblasted glass
+Stained glass
+Etched glass
+Pyrography (wood burning)
+Scratchboard drawing
+Airbrush painting
+Spray paint on canvas
+Oil stick on paper
+Wax crayon resist (painting)
+Sgraffito technique (painting)
+Impasto technique (painting)
+Glazing technique (painting)
+Washes technique (painting)
+Dry brush technique (painting)
+Alla prima technique (painting)
+Pointillism technique (painting/drawing)
+Cross-hatching technique (drawing)
+Stippling technique (drawing)
+Blending technique (drawing)
+Scribbling technique (drawing)
+Carving technique (sculpture)
+Modeling technique (sculpture)
+Casting technique (sculpture)
+Welding technique (sculpture)
+Forging technique (sculpture)
+Assemblage technique (sculpture)
+Construction technique (sculpture)
+Weaving technique (textiles)
+Knitting technique (textiles)
+Crocheting technique (textiles)
+Embroidery technique (textiles)
+Quilting technique (textiles)
+Feltmaking technique (textiles)
+Dyeing technique (textiles)
+Batik technique (textiles)
+Shibori technique (textiles)
+Tapestry technique (textiles)
+Sewing technique (textiles)
+Collage technique (mixed media)
+Decoupage technique (mixed media)
+Layering technique (mixed media)
+Site-specific technique (installation)
+Performance technique (improvised)
+Performance technique (choreographed)
+Pottery technique (hand-building)
+Pottery technique (wheel-throwing)
+Glassblowing technique
+Mosaic technique
+Jewelry making technique (metalsmithing)
+Book arts technique (binding)
+Calligraphy technique
+Street art technique (freehand spray)
+Street art technique (stenciling)
+Street art technique (mural painting)
+Tattooing technique
+Body painting technique
+Food sculpting technique
+Light sculpture technique
+Sound art technique (recording)
+Sound art technique (synthesis)
+Robotics programming
+Bio art technique (tissue culture)
+Kinetic art technique (mechanical)
+Oil paint on linen
+Acrylic paint on paper
+Watercolor on rough paper
+Gouache on illustration board
+Tempera on paper
+Encaustic on panel
+Ink wash on watercolor paper
+Casein paint on canvas
+Alkyd paint on wood panel
+Graphite pencil on newsprint
+Charcoal pencil on smooth paper
+Conté crayon on smooth paper
+Soft pastel on felt
+Oil pastel on canvas
+Colored pencil on black paper
+Ink brush on silk
+Marker on cardboard
+Silverpoint on vellum
+Goldpoint on paper
+Crayon on fabric
+Digital drawing (vector-based)
+Digital painting (raster-based)
+Terracotta clay, coiled
+Stoneware clay, slab-built
+Porcelain clay, thrown
+Marble, polished
+Granite, rough-cut
+Limestone, polished
+Soapstone, polished
+Wood, assembled (new wood)
+Bronze, patinated
+Steel, rusted
+Aluminum, polished
+Copper, patinated
+Plaster, carved
+Resin, colored
+Wax, cast
+Ice, ephemeral
+Sand, temporary sculpture
+Glass, fused
+Ceramic, raku fired
+Etching on zinc plate
+Engraving on wood block
+Drypoint on copper plate
+Mezzotint on steel plate
+Aquatint on copper plate
+Lithography (transfer paper)
+Screen printing (photo emulsion)
+Woodcut (relief print)
+Linocut (reduction print)
+Monoprint (using stencils)
+Collagraph (cardboard plate)
+Giclée print on canvas
+Film photography (large format)
+Digital photography (smartphone)
+Ambrotype process
+Tintype process
+Salt print process
+Albumen print process
+Dye transfer print process
+Digital printmaking (sublimation)
+Photogram (color)
+Digital 3D modeling (sculptural)
+Digital sculpture (subdivision modeling)
+2D animation (motion graphics)
+3D animation (character animation)
+Stop motion animation (claymation)
+Generative art (visual)
+Algorithmic art (sound)
+Interactive art (projection mapping)
+Video art (looping)
+Sound art (generative)
+Net art (interactive website)
+VR art (sculpting in VR)
+AR art (overlaying digital on real)
+Digital collage (photo manipulation)
+Digital drawing (abstract)
+Pixel art animation
+Vector art illustration
+Weaving (tapestry)
+Knitting (sculptural)
+Crocheting (installation)
+Embroidery (thread painting)
+Quilting (art quilts)
+Feltmaking (wearable art)
+Dyeing (tie-dye)
+Dyeing (natural pigments)
+Batik (on silk)
+Shibori (on cotton)
+Tapestry (Gobelin technique)
+Sewing (couture techniques)
+Fiber sculpture (soft sculpture)
+Paper collage (layered)
+Fabric collage (appliqué)
+Photo collage (digital)
+Decoupage on glass
+Assemblage with natural objects
+Mixed media painting (with collage)
+Mixed media drawing (with paint)
+Mixed media sculpture (with found objects)
+Site-specific installation (indoors)
+Site-specific installation (outdoors)
+Light installation (projection)
+Light installation (fiber optics)
+Sound installation (ambient)
+Sound installation (interactive)
+Environmental art (restoration)
+Land art (earthworks)
+Ephemeral art (using fog)
+Performance art (site-specific)
+Performance art (with audience participation)
+Performance art (political)
+Performance art (social commentary)
+Performance art (minimalist)
+Pottery (saggar fired)
+Pottery (wood fired)
+Porcelain (bone china)
+Ceramic tiles, mosaic
+Ceramic sculpture (large scale)
+Glassblowing (sculptural installation)
+Mosaic (with found objects)
+Jewelry making (bronze)
+Jewelry making (steel)
+Jewelry making (with beads)
+Book arts (pop-up books)
+Book arts (accordion books)
+Calligraphy (Western scripts)
+Calligraphy (Eastern scripts)
+Street art (wheatpasting)
+Street art (sticker art)
+Body art (scarification)
+Body art (temporary tattoos)
+Food art (edible sculpture)
+Food art (plating as art)
+Light sculpture (fluorescent)
+Light sculpture (incandescent)
+Sound sculpture (wind chimes)
+Bio art (genetic manipulation)
+Robotics art (interactive robots)
+Kinetic art (wind-powered)
+Assemblage with industrial materials
+Collage with text and images
+Decoupage on boxes
+Papier-mâché masks
+Plaster casting (object casts)
+Sandblasted wood
+Stained glass (traditional)
+Etched metal
+Airbrush on fabric
+Spray paint on wall
+Oil stick on canvas
+Wax crayon resist (drawing)
+Sgraffito (ceramics)
+Impasto (sculpture)
+Glazing (ceramics)
+Washes (drawing)
+Dry brush (drawing)
+Alla prima (sculpture)
+Pointillism (digital art)
+Cross-hatching (printmaking)
+Stippling (printmaking)
+Blending (painting)
+Scribbling (mixed media)
+Carving (woodcut)
+Modeling (clay)
+Casting (metal)
+Welding (sculpture)
+Forging (metal)
+Assemblage (mixed media)
+Construction (installation)
+Weaving (basketry)
+Knitting (wearable art)
+Crocheting (amigurumi)
+Embroidery (cross-stitch)
+Quilting (patchwork)
+Feltmaking (hat making)
+Dyeing (natural pigments on paper)
+Batik (on paper)
+Shibori (on wood)
+Tapestry (contemporary)
+Sewing (soft sculpture)
+Fiber sculpture (wall hanging)
+Paper collage (3D)
+Fabric collage (quilted)
+Photo collage (analog)
+Decoupage on canvas
+Assemblage with natural history specimens
+Mixed media painting (with drawing)
+Mixed media drawing (with collage)
+Mixed media sculpture (with light)
+Site-specific installation (urban)
+Site-specific installation (rural)
+Light installation (neon sculpture)
+Light installation (projection mapping)
+Sound installation (interactive soundscape)
+Environmental art (land reclamation)
+Land art (stone arrangements)
+Ephemeral art (using snow)
+Performance art (ritualistic)
+Performance art (narrative)
+Performance art (abstract)
+Performance art (political protest)
+Performance art (comedy)
+Pottery (pit fired)
+Pottery (salt glazed)
+Porcelain (translucent)
+Ceramic tiles, hand-pressed
+Ceramic sculpture (figurative)
+Glassblowing (functional objects)
+Mosaic (with found glass)
+Jewelry making (brass)
+Jewelry making (titanium)
+Jewelry making (with resin)
+Book arts (隧道書 - tunnel books)
+Book arts (leporello books)
+Calligraphy (modern scripts)
+Calligraphy (illuminated manuscripts)
+Street art (reverse graffiti)
+Street art (yarn bombing)
+Body art (branding)
+Body art (scarring)
+Food art (molecular gastronomy as art)
+Food art (cake decorating as art)
+Light sculpture (laser)
+Light sculpture (holographic)
+Sound sculpture (acoustic)
+Bio art (microbial art)
+Robotics art (painting robots)
+Kinetic art (water-powered)
+Assemblage with computer components
+Collage with magazine clippings
+Decoupage on eggs
+Papier-mâché animals
+Plaster casting (face casts)
+Sandblasted metal
+Stained glass (contemporary)
+Etched plastic
+Airbrush on canvas
+Spray paint on metal
+Oil stick on wood panel
+Wax crayon resist (fabric)
+Sgraffito (plaster)
+Impasto (mixed media)
+Glazing (painting, thin layers)
+Washes (watercolor, wet-on-wet)
+Dry brush (oil paint)
+Alla prima (watercolor)
+Pointillism (drawing)
+Cross-hatching (drawing)
+Stippling (drawing)
+Blending (pastel)
+Scribbling (drawing)
+Carving (stone)
+Modeling (wax)
+Casting (plaster)
+Welding (found metal)
+Forging (iron)
+Assemblage (wood and metal)
+Construction (sculpture)
+Weaving (off-loom)
+Knitting (machine knitting art)
+Crocheting (freeform)
+Embroidery (machine embroidery art)
+Quilting (modern quilting)
+Feltmaking (nuno felting)
+Dyeing (eco-printing)
+Batik (on wood)
+Shibori (on paper)
+Tapestry (digital)
+Sewing (textile installation)
+Fiber sculpture (public art)
+Paper collage (abstract)
+Fabric collage (abstract)
+Photo collage (surreal)
+Decoupage on furniture (restoration)
+Assemblage with natural materials
+Mixed media painting (with text)
+Mixed media drawing (with paint and collage)
+Mixed media sculpture (with sound)
+Site-specific installation (historical site)
+Site-specific installation (natural environment)
+Light installation (video projection)
+Light installation (interactive light)
+Sound installation (environmental sound)
+Environmental art (habitat creation)
+Land art (ice sculpture)
+Ephemeral art (using steam)
+Performance art (endurance)
+Performance art (participatory)
+Performance art (experimental)
+Performance art (site-responsive)
+Performance art (street performance)
+Pottery (smoked)
+Pottery (terra sigillata)
+Porcelain (painted)
+Ceramic tiles, glazed
+Ceramic sculpture (abstract)
+Glassblowing (lighting fixtures)
+Mosaic (with pebbles)
+Jewelry making (aluminum)
+Jewelry making (with polymer clay)
+Jewelry making (with found objects)
+Book arts (altered photographs)
+Book arts (scrolls)
+Calligraphy (experimental scripts)
+Calligraphy (digital)
+Street art (projection bombing)
+Street art (moss graffiti)
+Body art (suspension)
+Body art (implants)
+Food art (sugar sculpture)
+Food art (chocolate sculpture)
+Light sculpture (plasma)
+Light sculpture (fire)
+Sound sculpture (electronic)
+Bio art (plant art)
+Robotics art (drawing robots)
+Kinetic art (solar-powered)
+Assemblage with natural and artificial objects
+Collage with historical documents
+Decoupage on walls
+Papier-mâché puppets
+Plaster casting (animal casts)
+Sandblasted stone
+Stained glass (architectural)
+Etched wood
+Airbrush on paper
+Spray paint on cardboard
+Oil stick on metal
+Wax crayon resist (wood)
+Sgraffito (painting)
+Impasto (drawing)
+Glazing (drawing)
+Washes (ink)
+Dry brush (watercolor)
+Alla prima (acrylic)
+Pointillism (textiles)
+Cross-hatching (etching)
+Stippling (engraving)
+Blending (airbrush)
+Scribbling (painting)
+Carving (linocut)
+Modeling (plaster)
+Casting (resin)
+Welding (aluminum)
+Forging (steel)
+Assemblage (paper and fabric)
+Construction (installation, temporary)
+Weaving (tapestry, narrative)
+Knitting (installation art)
+Crocheting (public art)
+Embroidery (goldwork)
+Quilting (traditional patterns)
+Feltmaking (sculptural forms)
+Dyeing (resist dyeing)
+Batik (on leather)
+Shibori (on paper lanterns)
+Tapestry (abstract)
+Sewing (costume design)
+Fiber sculpture (installation)
+Paper collage (figurative)
+Fabric collage (figurative)
+Photo collage (abstract)
+Decoupage on ceramics
+Assemblage with organic materials
+Mixed media painting (with photography)
+Mixed media drawing (with textiles)
+Mixed media sculpture (with video)
+Site-specific installation (industrial site)
+Site-specific installation (abandoned building)
+Light installation (holographic projection)
+Light installation (UV light)
+Sound installation (voice recordings)
+Environmental art (pollution remediation as art)
+Land art (crop circles)
+Ephemeral art (using fog and light)
+Performance art (collaborative)
+Performance art (solo)
+Performance art (durational, long-term)
+Performance art (with animals)
+Performance art (with technology)
+Pottery (naked raku)
+Pottery (smoke fired)
+Porcelain (carved)
+Ceramic tiles, hand-painted and glazed
+Ceramic sculpture (animal forms)
+Glassblowing (scientific glass)
+Mosaic (with broken ceramics)
+Jewelry making (copper wire wrapping)
+Jewelry making (with glass beads)
+Jewelry making (with wood)
+Book arts (miniature books)
+Book arts (altered maps)
+Calligraphy (abstract)
+Calligraphy (calligrammes)
+Street art (paste-ups)
+Street art (reverse stenciling)
+Body art (temporary body paint)
+Body art (henna tattoos)
+Food art (ice sculpture)
+Food art (fruit carving)
+Light sculpture (LED matrix)
+Light sculpture (projection mapping on objects)
+Sound sculpture (kinetic sound)
+Bio art (using bacteria)
+Robotics art (performance with robots)
+Kinetic art (magnetic)
+Assemblage with musical instruments
+Collage with stamps
+Decoupage on furniture (painted)
+Papier-mâché figures
+Plaster casting (architectural details)
+Sandblasted glass (etched patterns)
+Stained glass (leaded)
+Etched stone
+Airbrush on wood
+Spray paint on fabric
+Oil stick on cardboard
+Wax crayon resist (ceramics)
+Sgraffito (wood)
+Impasto (ceramics)
+Glazing (watercolor)
+Washes (acrylic)
+Dry brush (acrylic)
+Alla prima (gouache)
+Pointillism (digital painting)
+Cross-hatching (ink)
+Stippling (ink)
+Blending (colored pencil)
+Scribbling (mixed media drawing)
+Carving (plaster)
+Modeling (resin)
+Casting (wax)
+Welding (copper)
+Forging (aluminum)
+Assemblage (plastic)
+Construction (sculpture, large scale)
+Weaving (complex patterns)
+Knitting (conceptual art)
+Crocheting (sculptural forms)
+Embroidery (beadwork)
+Quilting (artistic collage)
+Feltmaking (wearable accessories)
+Dyeing (discharge dyeing)
+Batik (on paper, multiple layers)
+Shibori (on clothing)
+Tapestry (photographic)
+Sewing (upcycled materials)
+Fiber sculpture (environmental)
+Paper collage (text-based)
+Fabric collage (textile art)
+Photo collage (historical)
+Decoupage on metal
+Assemblage with tools
+Mixed media painting (with drawing and collage)
+Mixed media drawing (with paint and textiles)
+Mixed media sculpture (with light and sound)
+Site-specific installation (transportation hub)
+Site-specific installation (educational institution)
+Light installation (fluorescent tubes)
+Light installation (incandescent bulbs)
+Sound installation (found sounds)
+Environmental art (sustainable materials)
+Land art (ephemeral drawings on earth)
+Ephemeral art (using projected light)
+Performance art (with audience interaction, planned)
+Performance art (with audience interaction, improvised)
+Performance art (political satire)
+Performance art (social commentary, humorous)
+Pottery (wood fired, ash glaze)
+Pottery (salt glazed, cobalt decoration)
+Porcelain (bisque fired)
+Ceramic tiles, relief carved
+Ceramic sculpture (architectural elements)
+Glassblowing (murrine technique)
+Mosaic (with mirror)
+Jewelry making (platinum)
+Jewelry making (with ceramic beads)
+Jewelry making (with paper)
+Book arts (altered maps, layered)
+Book arts (pop-up books, complex)
+Calligraphy (experimental, abstract)
+Calligraphy (with digital tools)
+Street art (yarn bombing, large scale)
+Street art (moss graffiti, intricate designs)
+Body art (temporary body paint, airbrushed)
+Body art (henna tattoos, traditional patterns)
+Food art (vegetable carving)
+Food art (bread sculpture)
+Light sculpture (laser projection)
+Light sculpture (holographic installation)
+Sound sculpture (found objects, amplified)
+Bio art (using fungi)
+Robotics art (collaborative robots)
+Kinetic art (pneumatic)
+Assemblage with musical scores
+Collage with banknotes
+Decoupage on wood panels
+Papier-mâché furniture
+Plaster casting (plant casts)
+Sandblasted stone (relief carving)
+Stained glass (faceted)
+Etched glass (acid etching)
+Airbrush on metal
+Spray paint on wood
+Oil stick on fabric
+Wax crayon resist (paper, layered)
+Sgraffito (metal)
+Impasto (digital painting)
+Glazing (digital painting)
+Washes (digital painting)
+Dry brush (digital painting)
+Alla prima (digital painting)
+Pointillism (mosaic)
+Cross-hatching (digital drawing)
+Stippling (digital drawing)
+Blending (digital painting)
+Scribbling (digital drawing)
+Carving (ice)
+Modeling (sand)
+Casting (glass)
+Welding (bronze)
+Forging (copper)
+Assemblage (rubber)
+Construction (installation, permanent)
+Weaving (double weave)
+Knitting (performance art)
+Crocheting (environmental art)
+Embroidery (silk shading)
+Quilting (improvisational)
+Feltmaking (hat making, shaped)
+Dyeing (natural pigments on wood)
+Batik (on ceramic)
+Shibori (on paper fans)
+Tapestry (abstract geometric)
+Sewing (textile sculpture)
+Fiber sculpture (wearable art)
+Paper collage (abstract geometric)
+Fabric collage (abstract geometric)
+Photo collage (documentary)
+Decoupage on shoes
+Assemblage with discarded toys
+Mixed media painting (with found objects)
+Mixed media drawing (with digital elements)
+Mixed media sculpture (with interactive elements)
+Site-specific installation (healthcare setting)
+Site-specific installation (religious building)
+Light installation (LED sculpture)
+Light installation (projection on architecture)
+Sound installation (instrumental sounds)
+Environmental art (water purification as art)
+Land art (stone walls)
+Ephemeral art (using fire)
+Performance art (political commentary)
+Performance art (social commentary, serious)
+Performance art (absurdist)
+Performance art (with live music)
+Performance art (with recorded sound)
+Pottery (anagama fired)
+Pottery (gas fired)
+Porcelain (stained)
+Ceramic tiles, painted and fired
+Ceramic sculpture (mythological forms)
+Glassblowing (lampworking)
+Mosaic (with industrial waste)
+Jewelry making (titanium anodizing)
+Jewelry making (with found metal)
+Jewelry making (with glass)
+Book arts (scrolls, illuminated)
+Book arts (altered maps, political)
+Calligraphy (historical reproductions)
+Calligraphy (with found tools)
+Street art (wheatpasting, large scale)
+Street art (sticker art, political)
+Body art (temporary body paint, brush applied)
+Body art (henna tattoos, contemporary designs)
+Food art (chocolate sculpture, large scale)
+Food art (sugar sculpture, intricate)
+Light sculpture (plasma ball installation)
+Light sculpture (fire sculpture)
+Sound sculpture (electronic, interactive)
+Bio art (using cells)
+Robotics art (sculpting with robots)
+Kinetic art (electromagnetic)
+Assemblage with books
+Collage with maps
+Decoupage on musical instruments
+Papier-mâché sculptures (abstract)
+Plaster casting (fabric casts)
+Sandblasted metal (patterns)
+Stained glass (dalle de verre)
+Etched wood (pyrography combined)
+Airbrush on glass
+Spray paint on canvas (stencils)
+Oil stick on canvas (impasto)
+Wax crayon resist (wood carving)
+Sgraffito (ceramics, layered slips)
+Impasto (mixed media painting)
+Glazing (oil paint, thin layers)
+Washes (watercolor, dry-on-wet)
+Dry brush (gouache)
+Alla prima (tempera)
+Pointillism (printmaking)
+Cross-hatching (woodcut)
+Stippling (linocut)
+Blending (pastel, finger blending)
+Scribbling (charcoal)
+Carving (linoleum)
+Modeling (clay, figurative)
+Casting (bronze, lost-wax)
+Welding (steel, found objects)
+Forging (copper, decorative)
+Assemblage (textiles and objects)
+Construction (installation, site-specific)
+Weaving (jacquard)
+Knitting (conceptual installation)
+Crocheting (environmental installation)
+Embroidery ( stumpwork)
+Quilting (narrative quilts)
+Feltmaking (wearable art, complex)
+Dyeing (natural pigments on silk)
+Batik (on paper, single layer)
+Shibori (on wood panels)
+Tapestry (abstract expressionist)
+Sewing (sculptural forms)
+Fiber sculpture (architectural)
+Paper collage (narrative)
+Fabric collage (narrative)
+Photo collage (political)
+Decoupage on clothing
+Assemblage with tools and hardware
+Mixed media painting (with digital elements)
+Mixed media drawing (with video)
+Mixed media sculpture (with interactive light)
+Site-specific installation (public park)
+Site-specific installation (transportation vehicle)
+Light installation (UV light reactive materials)
+Light installation (interactive projection mapping)
+Sound installation (white noise)
+Environmental art (air purification as art)
+Land art (snow sculpture)
+Ephemeral art (using dry ice)
+Performance art (with audience interaction, minimal)
+Performance art (with audience interaction, extensive)
+Performance art (absurdist comedy)
+Performance art (with live sound)
+Performance art (with recorded video)
+Pottery (electric fired)
+Pottery (soda fired)
+Porcelain (unglazed)
+Ceramic tiles, hand-carved
+Ceramic sculpture (abstract geometric)
+Glassblowing (off-hand sculpting)
+Mosaic (with found glass and ceramics)
+Jewelry making (with polymer clay and metal)
+Jewelry making (with found objects and resin)
+Jewelry making (with paper and resin)
+Book arts (altered maps, abstract)
+Book arts (pop-up books, simple)
+Calligraphy (experimental, calligrammes)
+Calligraphy (with unconventional tools)
+Street art (paste-ups, political)
+Street art (sticker art, humorous)
+Body art (temporary body paint, abstract)
+Body art (henna tattoos, geometric patterns)
+Food art (ice sculpture, temporary installation)
+Food art (fruit carving, detailed)
+Light sculpture (LED strip installation)
+Light sculpture (projection mapping on water)
+Sound sculpture (found objects, acoustic)
+Bio art (using plants and technology)
+Robotics art (drawing with robotic arms)
+Kinetic art (hydraulic)
+Assemblage with clothing
+Collage with postcards
+Decoupage on mirrors
+Papier-mâché figures (realistic)
+Plaster casting (architectural details, relief)
+Sandblasted glass (deep carving)
+Stained glass (copper foil technique)
+Etched metal (acid etching)
+Airbrush on cardboard
+Spray paint on glass
+Oil stick on paper (layered)
+Wax crayon resist (fabric dyeing)
+Sgraffito (wood carving)
+Impasto (sculpture, clay)
+Glazing (ceramics, multiple layers)
+Washes (ink, layered)
+Dry brush (gouache, textured)
+Alla prima (mixed media painting)
+Pointillism (textile art)
+Cross-hatching (digital printmaking)
+Stippling (digital printmaking)
+Blending (airbrush on canvas)
+Scribbling (charcoal on large scale)
+Carving (stone, relief)
+Modeling (clay, abstract)
+Casting (plaster, relief)
+Welding (aluminum, sculptural)
+Forging (iron, functional art)
+Assemblage (electronic waste)
+Construction (installation, site-responsive)
+Weaving (complex structures)
+Knitting (social practice art)
+Crocheting (yarn bombing installation)
+Embroidery (photorealistic)
+Quilting (storytelling quilts)
+Feltmaking (wearable art, abstract)
+Dyeing (discharge dyeing on black fabric)
+Batik (on ceramic tiles)
+Shibori (on paper lamps)
+Tapestry (photographic portrait)
+Sewing (architectural textile)
+Fiber sculpture (public art, large scale)
+Paper collage (political commentary)
+Fabric collage (social commentary)
+Photo collage (surreal narrative)
+Decoupage on furniture (mixed media)
+Assemblage with musical instruments (deconstructed)
+Mixed media painting (with light)
+Mixed media drawing (with sound)
+Mixed media sculpture (with video projection)
+Site-specific installation (cultural institution)
+Site-specific installation (natural reserve)
+Light installation (UV light performance)
+Light installation (interactive light sculpture)
+Sound installation (voice recordings, layered)
+Environmental art (waste transformation as art)
+Land art (ice sculpture, temporary)
+Ephemeral art (using light and sound)
+Performance art (with audience interaction, minimal props)
+Performance art (with audience interaction, extensive props)
+Performance art (political commentary, serious)
+Performance art (social commentary, humorous and serious)
+Performance art (with live music and video)
+Performance art (with recorded sound and video)
+Pottery (saggar fired, with resist)
+Pottery (wood fired, natural ash glaze)
+Porcelain (painted and glazed)
+Ceramic tiles, relief carved and glazed
+Ceramic sculpture (abstract organic)
+Glassblowing (lampworking, intricate)
+Mosaic (with industrial waste and found objects)
+Jewelry making (with polymer clay and found objects)
+Jewelry making (with glass and metal)
+Jewelry making (with wood and metal)
+Book arts (altered maps, narrative)
+Book arts (pop-up books, architectural)
+Calligraphy (experimental, abstract expressionist)
+Calligraphy (with unconventional tools and materials)
+Street art (paste-ups, narrative)
+Street art (sticker art, political and humorous)
+Body art (temporary body paint, detailed)
+Body art (henna tattoos, complex designs)
+Food art (ice sculpture, large scale installation)
+Food art (fruit carving, intricate patterns)
+Light sculpture (LED matrix, interactive)
+Light sculpture (projection mapping on architectural features)
+Sound sculpture (found objects, amplified and processed)
+Bio art (using cells and technology)
+Robotics art (performance with multiple robots)
+Kinetic art (electromagnetic, interactive)
+Assemblage with discarded electronics and light
