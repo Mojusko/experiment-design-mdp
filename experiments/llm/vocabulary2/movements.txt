@@ -1419,156 +1419,9 @@ ecuadorian art movement
 bolivian art movement
 paraguayan art movement
 uruguayan art movement
-digital art medium movement
-installation art medium movement
-video art medium movement
-performance art medium movement
-conceptual art medium movement
-ancient stone sculpture movement
-ancient pottery movement
-ancient fresco painting movement
-papyrus scroll medium movement
-ancient bronze casting movement
-colorful acrylic paint movement
-colorful oil paint movement
-colorful gouache medium movement
-colorful screen printing movement
-colorful digital painting medium movement
-monochromatic charcoal drawing movement
-monochromatic graphite pencil movement
-monochromatic ink wash movement
-black and white photography medium movement
-monochrome print medium movement
-intricate carving medium movement
-detailed embroidery medium movement
-complex mosaic tilework movement
-illuminated manuscript medium movement
-complex assemblage medium movement
-simple line drawing movement
-simple woodblock print movement
-plain weave textile medium movement
-unadorned pottery medium movement
-simple concrete sculpture movement
-vibrant fluorescent paint movement
-vibrant neon lights medium movement
-vibrant bold graphics movement
-vibrant digital screen display movement
-vibrant spray paint art movement
-muted watercolor wash movement
-muted pastel drawing movement
-muted earth pigments movement
-muted natural dyes movement
-muted sepia photography movement
-dynamic time-lapse photography movement
-dynamic video animation movement
-dynamic performance art medium movement
-dynamic mobile sculpture movement
-dynamic splash painting technique movement
-static still life photography movement
-static architectural drawing movement
-static formal portraiture movement
-static grid composition medium movement
-static relief sculpture movement
-natural wood sculpture medium movement
-natural stone carving medium movement
-natural botanical illustration movement
-natural pressed flowers medium movement
-natural fiber weaving medium movement
-urban spray paint mural movement
-urban concrete sculpture movement
-urban found object art movement
-urban cityscape photography movement
-urban digital mapping medium movement
-detailed fine pen and ink drawing movement
-detailed engraving medium movement
-detailed mezzotint medium movement
-detailed high-resolution photography movement
-detailed micro-mosaic medium movement
-minimalist monochrome painting movement
-minimalist geometric sculpture movement
-minimalist plain surface medium movement
-minimalist industrial materials movement
-minimalist text-based art medium movement
-bright acrylic paint medium movement
-bright neon sign medium movement
-bright stained glass medium movement
-bright backlit display medium movement
-bright vibrant textile dye movement
-dark charcoal on black paper movement
-dark nocturne painting medium movement
-dark low-key photography movement
-dark etching deep shadows movement
-dark darkroom print medium movement
-warm oil paint reds yellows oranges movement
-warm terracotta sculpture medium movement
-warm wood carving medium movement
-warm gold leaf medium movement
-warm amber jewelry medium movement
-cool watercolor blues greens movement
-cool silverpoint drawing medium movement
-cool steel sculpture medium movement
-cool glass art medium movement
-cool cyanotype print medium movement
-abstract non-representational sculpture movement
-abstract dripped paint medium movement
-abstract color field canvas movement
-abstract geometric print medium movement
-abstract digital generation medium movement
-realistic oil portrait painting movement
-realistic life drawing medium movement
-realistic sculpture medium movement
-realistic documentary photography movement
-realistic detailed still life medium movement
-japanese woodblock print medium movement
-japanese sumi-e ink wash medium movement
-japanese calligraphy medium movement
-japanese raku pottery medium movement
-japanese shoji screen medium movement
-chinese ink painting medium movement
-chinese porcelain vase medium movement
-chinese jade carving medium movement
-chinese silk scroll painting medium movement
-chinese cloisonné enamel medium movement
-indian miniature painting medium movement
-indian bronze sculpture chola movement
-indian kalamkari textile medium movement
-indian madhubani painting medium movement
-indian warli painting medium movement
-italian fresco painting medium movement
-italian marble sculpture medium movement
-italian oil on canvas medium movement
-italian mosaic medium movement
-italian terracotta relief medium movement
-french oil painting medium movement
-french pastel drawing medium movement
-french tapestry weaving medium movement
-french sèvres porcelain medium movement
-french gothic stained glass medium movement
-egyptian hieroglyphic carving medium movement
-egyptian papyrus painting medium movement
-egyptian faience beads medium movement
-egyptian gold funerary mask medium movement
-egyptian granite statue movement
-mexican mural painting medium movement
-mexican papier-mâché sculpture medium movement
-mexican talavera pottery medium movement
-mexican amate bark painting medium movement
-mexican silverwork medium movement
-african wood mask carving medium movement
-african bronze casting lost wax medium movement
-african beaded jewelry medium movement
-african mud cloth textile medium movement
-african terracotta sculpture medium movement
-roman mosaic floor medium movement
-roman concrete construction medium movement
-roman bronze equestrian statue medium movement
-roman cameo carving medium movement
-roman sarcophagus relief medium movement
-greek red-figure pottery medium movement
-greek black-figure pottery movement
-greek marble sculpture movement
-greek bronze statue movement
-greek architectural orders movement
+digital art
+performance art movement
+conceptual art movement
 modernism movement
 postmodernism
 contemporary art movement
@@ -1618,7 +1471,6 @@ static neoclassicism movement
 static minimalism movement
 static geometric abstraction movement
 static precisionism movement
-static still life painting movement
 natural landscape painting movement
 natural romanticism movement
 natural hudson river school movement
