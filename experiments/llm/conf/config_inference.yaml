@@ -48,11 +48,11 @@ tester:
       N_pairs_eval: 5000
   - _target_: components.tester.CosineTester
     params: null
-  - _target_: components.tester.ImageGenerationTester
-    params:
-       take_best_worst_N: 8 # Default N
-       use_estimator: true # Use the loaded estimator
-       save_worst: false # Default is false
+  #  - _target_: components.tester.ImageGenerationTester
+  #    params:
+  #       take_best_worst_N: 8 # Default N
+  #       use_estimator: true # Use the loaded estimator
+  #       save_worst: false # Default is false
 
 # --- Savers (Enabled for Inference Results) ---
 savers:
@@ -64,9 +64,9 @@ savers:
   - _target_: components.saver.ConfSaver
     params:
       filename: "config_resolved.yaml"
-  - _target_: components.saver.ImageGenerationSaver
-    params:
-      take_best_worst_N: 8 # Match tester N
-      add_image_score: true
-      save_worst: false # Match tester setting
+  #  - _target_: components.saver.ImageGenerationSaver
+  #    params:
+  #      take_best_worst_N: 8 # Match tester N
+  #      add_image_score: true
+  #      save_worst: false # Match tester setting
   # VisitsSaver, LearnedEstimatorSaver, ReadableVisitsSaver are not needed for inference testing.
