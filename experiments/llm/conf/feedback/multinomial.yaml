@@ -26,7 +26,7 @@ C_design_keywords: [
   "detailed", "minimalist",    # 7
   "bright", "dark",            # 8
 #  "warm", "cool",              # 9
-  "abstract", "realistic",      # 10
+#  "abstract", "realistic",      # 10
   "asian", "chinese", "japanese", "indian", "european", "french", "italian",
   "egyptian", "latin", "african", "roman", "greek"
 ]
