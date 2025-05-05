@@ -73,7 +73,7 @@ savers:
 #      visits_path: ${visits_path} # Inherit top-level visits_path if set
 
   - _target_: components.saver.VisitsImageSaver # Enabled for inspect mode
-    _convert_: "partial" # Only convert direct parameters, not nested ones
+    # _convert_: "partial" # REMOVED - Let Hydra handle conversions normally
     params:
       output_subdir: "visit_images_inspect" # Specific subdir for inspection images
       # image_size and num_inference_steps are now taken from image_generator defaults

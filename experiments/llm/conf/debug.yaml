@@ -11,7 +11,7 @@ feedback:
   adaptive_design_frequency: 0
 experiment:
    episodes: 20
-   vocab_size: 400
+   vocab_size: 50
 # Results directory for debug mode
 results_dir: "results/debug"
 algorithm: "design"
