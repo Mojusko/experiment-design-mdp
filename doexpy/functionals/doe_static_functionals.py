@@ -432,9 +432,8 @@ class MultiPolicyOrigDesignC(MultiPolicyOrigDesignD):
                 # Calculate precision in direction C_item
                 traces.append(torch.trace(torch.linalg.inv(C_item_dev @ inv_z_reg @ C_item_dev.T)))
             # Return the mean of the precisions instead of the max
-            # return torch.mean(torch.stack(traces)) # Original: Mean
-            # return torch.prod(torch.stack(traces)) # Previous: Product
-            return torch.log(torch.stack(traces)).sum() # New: Log-Product (Sum of Logs)
+            return torch.mean(torch.stack(traces)) # Original: Mean
+            #return torch.log(torch.stack(traces)).sum() # New: Log-Product (Sum of Logs)
 
         # Handle C being a single vector
         # Assume self.C is a (1, d) tensor
