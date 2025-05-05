@@ -17,16 +17,16 @@ pass_V: false
 # The code will embed each keyword and use the resulting vectors for C-optimal design.
 # Example: ["old", "classic", "traditional", "eternal"]
 C_design_keywords: [
-  "modern", "ancient",        # 1
-  "colorful", "monochromatic", # 2
-  "complex", "simple",         # 3
+#  "modern", "ancient",        # 1
+#  "colorful", "monochromatic", # 2
+#  "complex", "simple",         # 3
 #"vibrant", "muted",          # 4
 #  "dynamic", "static",         # 5
 #  "natural", "urban",          # 6
-  "detailed", "minimalist",    # 7
-  "bright", "dark",            # 8
+#  "detailed", "minimalist",    # 7
+#  "bright", "dark",            # 8
 #  "warm", "cool",              # 9
-  "abstract", "realistic",      # 10
+#  "abstract", "realistic",      # 10
   "asian", "chinese", "japanese", "indian", "european", "french", "italian",
   "egyptian", "latin", "african", "roman", "greek"
 ]
