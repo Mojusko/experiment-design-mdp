@@ -348,43 +348,25 @@ class MultiPolicyOrigDesignA(MultiPolicyOrigDesignD):
     def eval_full(self, emissions, distributions, episodes):
         return self.eval(emissions, distributions, episodes)
 
-class MultiPolicyOrigDesignC(MultiPolicyOrigDesignD): # Inherits _calculate_z from D
+class MultiPolicyOrigDesignC(MultiPolicyOrigDesignD):
     def __init__(self, env, lambd, dim=0, C=None, **kwargs):
         """
-        Initialize the MultiPolicyOrigDesignC class using Subspace D-optimality.
+        Initialize the MultiPolicyOrigDesignC class.
 
         Parameters:
         - env: The environment object.
         - lambd (float): The regularization parameter lambda.
-        - dim (int): Dimension for marginalization (0 for states, 1 for actions).
-        - C (List[torch.Tensor]): List of C vectors (e.g., embedded keywords).
-          Each tensor should be (1, d). The list will be stacked into (k, d).
-        - **kwargs: Additional keyword arguments (V is ignored for this objective).
+        - Sigma (float): The Sigma parameter.
+        - C (torch.Tensor, list, or None): The C parameter, which can be a tensor, list of tensors, or None.
+        - **kwargs: Additional keyword arguments passed to the parent class (time_weigh is ignored).
         """
-        # Call the parent class's __init__ but V is not used here.
-        super().__init__(env=env, lambd=lambd, dim=dim, V=None) # Pass V=None
-
-        if C is None or not isinstance(C, list) or not C:
-            raise ValueError("C must be a non-empty list of torch.Tensors for MultiPolicyOrigDesignC.")
-
-        # Normalize each vector before stacking (recommended)
-        # Move to device during normalization
-        try:
-            C_normalized = [(c.to(env.device) / torch.linalg.norm(c)).to(env.device) for c in C]
-            self.C_stack = torch.cat(C_normalized, dim=0) # Shape (k, d)
-            logger.info(f"Initialized {type(self).__name__} with {len(C)} C vectors stacked into shape {self.C_stack.shape}.")
-        except Exception as e:
-            logger.error(f"Error during C vector normalization/stacking: {e}")
-            # Check shapes if possible
-            for i, c_vec in enumerate(C):
-                if not isinstance(c_vec, torch.Tensor) or c_vec.ndim != 2 or c_vec.shape[0] != 1:
-                     logger.error(f"C vector at index {i} has unexpected shape/type: {type(c_vec)}, shape={c_vec.shape if isinstance(c_vec, torch.Tensor) else 'N/A'}. Expected (1, d).")
-            raise ValueError("Failed to process C vectors. Check logs for details.") from e
-
-
-        # Store k (number of C vectors)
-        self.num_c_vectors = self.C_stack.shape[0]
-
+        # Call the parent class's __init__ to set up common attributes
+        # Note: time_weigh is no longer accepted by the parent __init__
+        super().__init__(env, lambd, dim, **kwargs) 
+        # Set the C attribute specific to this class
+        if C is None:
+            raise ValueError("C cannot be None for MultiPolicyOrigDesignC. It must be provided or set via update_estimator.")
+        self.C = C
 
     def update_estimator(self, estimator, emissions):
         """
@@ -422,9 +404,40 @@ class MultiPolicyOrigDesignC(MultiPolicyOrigDesignD): # Inherits _calculate_z fr
         #     # Handle zero vector case - raise error as C cannot be None or zero for C-optimality trace calculation
         #     logger.error("Estimator theta_fit has near-zero norm. Cannot compute C-optimal design. Raising ValueError.")
         #     raise ValueError("Estimator theta_fit has near-zero norm, cannot set C for C-optimal design.")
-        pass # Method is disabled - C vectors are fixed
+        pass # Method is disabled
 
-    # Inherits _calculate_z from MultiPolicyOrigDesignD
+    def _compute_c_optimal_value(self, inv_z_reg):
+        """
+        Compute C-optimal design value using the inverse regularized z matrix.
+        
+        Parameters:
+        - inv_z_reg (torch.Tensor): The inverse of the regularized z matrix.
+        
+        Returns:
+        - float: The C-optimal value (trace or max trace).
+        """
+        target_device = inv_z_reg.device  # Get the device of inv_z_reg
+
+        if self.C is None:
+             # This case should ideally not be reached due to checks in __init__ and update_estimator
+             raise ValueError("C is None during C-optimal value computation. This should not happen.")
+
+        # Handle C being a list of vectors
+        if isinstance(self.C, list):
+            # Assume each C_item is a (1, d) tensor
+            # Move each C_item to the target device before computation
+            traces = []
+            for i, C_item in enumerate(self.C):
+                C_item_dev = C_item.to(target_device)
+                # Calculate precision in direction C_item
+                traces.append(torch.trace(torch.linalg.inv(C_item_dev @ inv_z_reg @ C_item_dev.T)))
+            # Return the mean of the precisions instead of the max
+            return torch.mean(torch.stack(traces))
+
+        # Handle C being a single vector
+        # Assume self.C is a (1, d) tensor
+        C_dev = self.C.to(target_device) # Move self.C to the target device
+        return torch.trace(torch.linalg.inv(C_dev @ inv_z_reg @ C_dev.T))
 
     def eval(self, emissions, distributions, episodes):
         """
@@ -435,77 +448,23 @@ class MultiPolicyOrigDesignC(MultiPolicyOrigDesignD): # Inherits _calculate_z fr
         - distributions (torch.Tensor): The distributions tensor.
         - episodes (int): The number of episodes.
 
-        Evaluate the design using Subspace D-optimality: logdet(C @ Z_reg @ C.T).
-
-        Parameters:
-        - emissions (torch.Tensor): The emissions tensor.
-        - distributions (List[torch.Tensor]): List of distribution tensors for each policy.
-        - episodes (int): The number of episodes.
-
         Returns:
-        - float: The log-determinant objective value.
+        - float: The evaluation result (trace or max trace).
         """
-        # Compute the approximate Fisher Information Matrix Z
-        # Z shape: (d, d) where d is feature_dim
+        # Compute z using the inherited _calculate_z method
         z = self._calculate_z(emissions, distributions, episodes)
-        feature_dim = z.shape[0]
-
-        # Ensure C_stack's dimension matches feature dimension
-        if self.C_stack.shape[1] != feature_dim:
-            raise ValueError(f"Dimension mismatch: C_stack second dimension ({self.C_stack.shape[1]}) "
-                             f"does not match feature dimension ({feature_dim}).")
-
-        # Create identity matrix for regularization
-        eye_d = torch.eye(feature_dim, device=z.device, dtype=z.dtype)
-
-        # Apply regularization to Z: Z_reg = Z + (lambda / (horizon * episodes)) * I_d
-        # Use self.horizon inherited from MultiPolicyOrigDesignD
-        # Ensure episodes is not zero to avoid division by zero
-        if episodes <= 0:
-             logger.warning("Episodes <= 0 in eval. Setting regularization to a large value.")
-             regularization = self.lambd * 1e10 # Effectively infinite regularization
-        else:
-            regularization = self.lambd / (self.horizon * episodes)
-        z_reg = z + regularization * eye_d
-
-        # Project Z_reg onto the subspace defined by C_stack
-        # C_stack shape: (k, d)
-        # Z_reg shape: (d, d)
-        # C_stack.T shape: (d, k)
-        # projected_fisher shape: (k, k)
-        projected_fisher = self.C_stack @ z_reg @ self.C_stack.T
-
-        # Optional: Add a small regularization to the projected matrix itself
-        # This helps if C_stack @ C_stack.T is ill-conditioned (e.g., keywords are very similar)
-        # eye_k = torch.eye(self.num_c_vectors, device=projected_fisher.device, dtype=projected_fisher.dtype)
-        # projected_fisher_reg = projected_fisher + 1e-6 * eye_k # Add small diagonal jitter
-
-        # --- Calculate Subspace D-Optimality Term (C-Projection) ---
-        sign_c, logdet_c_proj = torch.linalg.slogdet(projected_fisher)
-
-        # --- Calculate Standard D-Optimality Term (Identity Projection) ---
-        sign_d, logdet_d_opt = torch.linalg.slogdet(z_reg)
-
-        # --- Check for Numerical Issues in EITHER term ---
-        # We expect both matrices to be positive semi-definite, so signs should be +1
-        # If sign is not +1 or logabsdet is -inf for either, it indicates numerical issues.
-        c_proj_failed = sign_c <= 0 or torch.isinf(logdet_c_proj)
-        d_opt_failed = sign_d <= 0 or torch.isinf(logdet_d_opt)
-
-        if c_proj_failed or d_opt_failed:
-             warning_msg = f"slogdet failed. C-Proj: sign={sign_c}, logdet={logdet_c_proj}. D-Opt: sign={sign_d}, logdet={logdet_d_opt}. Regularization: {regularization:.2e}. Returning large negative value."
-             logger.warning(warning_msg)
-             # Return a large negative value to avoid selecting this design
-             # Ensure it's a tensor on the correct device
-             return torch.tensor(-1e20, device=projected_fisher.device, dtype=projected_fisher.dtype)
-
-        # --- Combine Objectives ---
-        # Simple 50/50 average
-        combined_objective = 0.5 * logdet_c_proj + 0.5 * logdet_d_opt
-
-        # Return the combined objective tensor directly for autograd
-        return combined_objective
-
+        
+        # Create an identity matrix matching z's shape and device
+        eye = torch.eye(z.shape[0], device=z.device, dtype=z.dtype)
+        
+        # Apply horizon*T regularization: z + (lambda / horizon * episodes)
+        z_reg = z + (self.lambd / (self.horizon * episodes)) * eye
+        
+        # Compute the inverse of the regularized z
+        inv_z_reg = torch.linalg.inv(z_reg)
+            
+        # Return the C-optimal value computed using the inverse regularized z
+        return self._compute_c_optimal_value(inv_z_reg)
 
     def eval_full(self, emissions, distributions, episodes):
         """
