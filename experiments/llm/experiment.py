@@ -173,33 +173,35 @@ class LLMExperiment:
                 # We explicitly pass the arguments NOT defined in the saver's YAML config,
                 # only passing arguments relevant to the specific saver type.
 
-                # Base arguments common to most savers
+                # Base arguments common to most savers (excluding env, which is passed explicitly)
                 # scorer_model is NOT passed here; savers that need it access it via results or don't need it.
-                init_args = {
-                    'env': self.env,
+                init_args_base = { # Renamed to avoid potential conflicts
+                    # 'env': self.env, # REMOVED - Pass env explicitly below
                     'embedder': self.embedder,
                     # 'scorer_model': self._scorer_model, # REMOVED
                     'results_dir': self.results_dir,
-                    'experiment_id': self.experiment_id
+                    'experiment_id': self.experiment_id,
                     # 'params' and other config-specific args are handled by Hydra via s_conf
+                    # Pass the main config `cfg` itself, so savers can access necessary top-level keys
+                    'cfg': self.cfg # Pass the main config object
                 }
 
-                # Add arguments specific to VisitsImageSaver if it's the target
+                # Add arguments specific to VisitsImageSaver if it's the target (No longer needed)
                 # No longer needed - saver derives from env and cfg passed via BaseSaver
                 # if s_conf.get('_target_') == 'components.saver.VisitsImageSaver':
                 #     pass # init_args['dense_feedback'] = self.cfg.get('dense_feedback', False) etc.
 
-                # Add arguments specific to ReadableVisitsSaver
+                # Add arguments specific to ReadableVisitsSaver (No longer needed)
                 # No longer needed - saver derives from env and cfg passed via BaseSaver
                 # elif s_conf.get('_target_') == 'components.saver.ReadableVisitsSaver':
                 #     pass # init_args['dense_feedback'] = self.cfg.get('dense_feedback', False)
 
                 # Instantiate the saver using the configuration and the constructed arguments
-                # Pass the main config `cfg` itself, so savers can access necessary top-level keys
-                init_args['cfg'] = self.cfg # Pass the main config object
+                # Pass env explicitly as a keyword argument, separate from the base args dictionary
                 saver = hydra.utils.instantiate(
                     s_conf, # The saver's specific config (contains _target_, params, etc.)
-                    **init_args # Pass the dynamically built dictionary of arguments
+                    env=self.env, # Pass env explicitly
+                    **init_args_base # Pass the rest of the arguments from the dictionary
                 )
                 self.savers.append(saver)
                 print(f"Successfully initialized saver: {s_conf._target_}")
