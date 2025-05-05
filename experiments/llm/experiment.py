@@ -133,10 +133,55 @@ class LLMExperiment:
                 else:
                     experiment_id = f"{self.cfg.experiment.id_prefix}-{algorithm_code}-{feedback_code}"
 
-        self.experiment_id = experiment_id
+        self.experiment_id = experiment_id # Initial experiment_id (e.g., from Makefile)
 
-        # Initialize testers and savers with results_dir and experiment_id
-        # Pass embedder and env to testers/savers that might need it
+        # --- Override experiment_id and algorithm if in test/inspect mode ---
+        if self.cfg.get('test_only', False):
+            input_path = self.cfg.get('visits_path') or self.cfg.get('estimator_path')
+            if input_path:
+                try:
+                    from hydra.utils import to_absolute_path
+                    abs_input_path = to_absolute_path(input_path)
+                    filename = os.path.basename(abs_input_path)
+                    print(f"Attempting to parse original info from input filename: {filename}")
+
+                    # Regex to capture prefix, alg, feed, seed from visits/estimator files
+                    # Example: visits-feedback-rand-mult-1.pkl
+                    # Example: estimator-feedback-dsn-num-5.pt
+                    pattern = re.compile(r"^(?:visits|estimator)-(.+)-(\w+)-(\w+)-(\d+)\.(?:pkl|pt)$")
+                    match = pattern.match(filename)
+
+                    if match:
+                        original_prefix = match.group(1)
+                        original_alg_code = match.group(2)
+                        original_feed_code = match.group(3)
+                        original_seed = match.group(4)
+
+                        # Reconstruct the original experiment ID
+                        parsed_original_id = f"{original_prefix}-{original_alg_code}-{original_feed_code}-{original_seed}"
+
+                        # Map alg_code back to algorithm name
+                        alg_map = {"dsn": "design", "rand": "random", "opt": "optim"}
+                        parsed_original_algorithm = alg_map.get(original_alg_code)
+
+                        if parsed_original_algorithm:
+                            print(f"  Parsed Original ID: {parsed_original_id}")
+                            print(f"  Parsed Original Algorithm: {parsed_original_algorithm} (from code '{original_alg_code}')")
+
+                            # Override the experiment ID and algorithm used internally
+                            print(f"  Overriding self.experiment_id from '{self.experiment_id}' to '{parsed_original_id}'")
+                            self.experiment_id = parsed_original_id
+                            print(f"  Overriding self.cfg.algorithm from '{self.cfg.algorithm}' to '{parsed_original_algorithm}'")
+                            self.cfg.algorithm = parsed_original_algorithm # Modify the config object directly
+                        else:
+                            print(f"  Warning: Could not map parsed algorithm code '{original_alg_code}' to a known algorithm name.")
+                    else:
+                        print(f"  Warning: Could not parse original ID and algorithm from filename '{filename}' using pattern.")
+                except Exception as e:
+                    print(f"  Warning: Error during parsing of input path '{input_path}': {e}")
+        # -----------------------------------------------------------------
+
+        # Initialize testers and savers with potentially overridden results_dir and experiment_id
         testers_config = self.cfg.get('tester') # Get the config value (could be list or None)
         self.testers = []
         if testers_config:
