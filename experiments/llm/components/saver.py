@@ -432,16 +432,17 @@ class VisitsSaver(BaseSaver):
                  scorer_model=None,
                  results_dir=None,
                  experiment_id=None,
-                 skip_existing: bool = False):
-        # Pass arguments explicitly to BaseSaver (without cfg)
-        # Dummy args (horizon, dense_feedback, verbose) removed - Python ignores extra args passed during instantiation
+                 skip_existing: bool = False,
+                 **kwargs): # Add kwargs to accept unused arguments
+        # Pass arguments explicitly to BaseSaver, including kwargs
         super().__init__(env=env, embedder=embedder, params=params,
                          scorer_model=scorer_model, results_dir=results_dir,
-                         experiment_id=experiment_id, skip_existing=skip_existing)
+                         experiment_id=experiment_id, skip_existing=skip_existing,
+                         **kwargs) # Pass kwargs to BaseSaver
 
     def save_result(self, results):
         file_path = self.get_output_path(self.params.get('filename', 'visits.pkl'))
-        
+
         # Get visits from results
         visits = results.visits
         
