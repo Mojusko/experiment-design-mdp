@@ -20,7 +20,6 @@ C_design_keywords: [
   "modern", "ancient",        # 1
   "colorful", "monochromatic", # 2
   "complex", "simple",         # 3
-  "happy", "sad",         # 3
 #"vibrant", "muted",          # 4
 #  "dynamic", "static",         # 5
 #  "natural", "urban",          # 6
@@ -28,8 +27,7 @@ C_design_keywords: [
   "bright", "dark",            # 8
 #  "warm", "cool",              # 9
   "abstract", "realistic",      # 10
-  "clear", "symbolic", "pattern", "direct", "artistic", "ugly",
-  "asian", "chinese", "japanese", "indian", "european", "french", "italian", "german",
+  "asian", "chinese", "japanese", "indian", "european", "french", "italian",
   "egyptian", "latin", "african", "roman", "greek"
 ]
 #C_design_keywords: null
