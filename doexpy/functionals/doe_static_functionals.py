@@ -464,9 +464,15 @@ class MultiPolicyOrigDesignC(MultiPolicyOrigDesignD):
         
         # Compute the inverse of the regularized z
         inv_z_reg = torch.linalg.inv(z_reg)
-            
-        # Return the C-optimal value computed using the inverse regularized z
-        return self._compute_c_optimal_value(inv_z_reg)
+
+        # Calculate the original C-optimal value (log-product of traces)
+        c_optimal_value = self._compute_c_optimal_value(inv_z_reg)
+
+        # Calculate the A-optimal value (-trace(inv(Z_reg)))
+        a_optimal_value = -torch.trace(inv_z_reg)
+
+        # Return the weighted sum
+        return 0.5 * c_optimal_value + 0.5 * a_optimal_value
 
     def eval_full(self, emissions, distributions, episodes):
         """
