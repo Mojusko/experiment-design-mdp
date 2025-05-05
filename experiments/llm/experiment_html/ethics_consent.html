@@ -1,0 +1,50 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Participant Information and Consent</title>
+    <link rel="stylesheet" href="css/style.css">
+    <style>
+        /* Styles similar to introduction page for consistency */
+        body {
+            text-align: left;
+            max-width: 800px;
+            margin: 20px auto;
+        }
+        #consent-container {
+            background-color: #f8f8f8;
+            border: 1px solid #ddd;
+            padding: 20px;
+            border-radius: 5px;
+            margin-bottom: 20px;
+        }
+        #consent-container h2 {
+             text-align: center;
+             margin-bottom: 1.5em;
+        }
+        #consent-container p {
+            line-height: 1.5;
+            margin-bottom: 1.5em;
+        }
+        #agree-button {
+            display: block;
+            margin: 20px auto; /* Center the button */
+            padding: 12px 25px;
+            font-size: 1.1em;
+            cursor: pointer;
+        }
+    </style>
+</head>
+<body>
+    <div id="consent-container">
+        <h2>Participant Information and Ethics Disclaimer</h2>
+        <p>Thank you for taking part in this study. You will be asked to provide artistic feedback on a series of neutral images. These images have been selected to avoid any bias or representation related to gender, race, religion, socio-economic status, or other sensitive topics.</p>
+        <p>Please note that your responses will be used for research purposes to better understand aesthetic perception and artistic interpretation. All data collected will be anonymized and handled confidentially. Participation is entirely voluntary, and you are free to withdraw from the study at any time without penalty.</p>
+        <p>By proceeding, you acknowledge that you understand the nature of the study and consent to your feedback being used for academic research.</p>
+    </div>
+
+    <button id="agree-button" onclick="sessionStorage.setItem('userConsented', 'true'); window.location.href='introduction.html'">I Agree</button>
+
+</body>
+</html>

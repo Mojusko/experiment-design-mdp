@@ -7,6 +7,12 @@
     <link rel="stylesheet" href="css/style.css">
 </head>
 <body>
+    <script>
+        // Redirect to consent page if consent hasn't been given in this session
+        if (!sessionStorage.getItem('userConsented')) {
+            window.location.href = 'ethics_consent.html';
+        }
+    </script>
     <!-- Introduction container removed -->
 
     <div id="image-container">
