@@ -2,9 +2,9 @@ name: "multinomial"
 #num_policies: 4
 num_policies: 4
 num_components: 3
-num_rounds: 8 #static
+num_rounds: 12 #static
 lambda_dsn: 1 # Default design lambda, used if use_model_specific_lambda is false
-lambda_est: 200 # Default estimation lambda, used if use_model_specific_lambda is false (Set higher based on previous findings)
+lambda_est: 100 # Default estimation lambda, used if use_model_specific_lambda is false (Set higher based on previous findings)
 use_model_specific_lambda: true # Set to false to use the defaults above
 adaptive_estimation_frequency: 0
 adaptive_estimation_start: 0
@@ -16,34 +16,34 @@ pass_V: false
 # Keywords for C-optimal design. If null or empty, A-optimal design will be used.
 # The code will embed each keyword and use the resulting vectors for C-optimal design.
 # Example: ["old", "classic", "traditional", "eternal"]
-C_design_keywords: [
-  "modern", "ancient",        # 1
-  "colorful", "monochromatic", # 2
-  "complex", "simple",         # 3
-#"vibrant", "muted",          # 4
-#  "dynamic", "static",         # 5
-#  "natural", "urban",          # 6
-  "detailed", "minimalist",    # 7
-  "bright", "dark",            # 8
-#  "warm", "cool",              # 9
-#  "abstract", "realistic",      # 10
-  "asian", "chinese", "japanese", "indian", "european", "french", "italian",
-  "egyptian", "latin", "african", "roman", "greek"
-]
-#C_design_keywords: null
+#C_design_keywords: [
+#  "modern", "ancient",        # 1
+#  "colorful", "monochromatic", # 2
+#  "complex", "simple",         # 3
+##"vibrant", "muted",          # 4
+##  "dynamic", "static",         # 5
+##  "natural", "urban",          # 6
+#  "detailed", "minimalist",    # 7
+#  "bright", "dark",            # 8
+##  "warm", "cool",              # 9
+##  "abstract", "realistic",      # 10
+#  "asian", "chinese", "japanese", "indian", "european", "french", "italian",
+#  "egyptian", "latin", "african", "roman", "greek"
+#]
+C_design_keywords: null
 
 # Model-specific parameters (moved from experiment config)
 # These are used only if use_model_specific_lambda is true
 model_specific_params:
   japanese-text:
     lambda_dsn: 1
-    lambda_est: 200
+    lambda_est: 100
   ancient-text:
     lambda_dsn: 1 # Example value
-    lambda_est: 200 #num_policies=4 (Kept high based on previous findings)
+    lambda_est: 100 #num_policies=4 (Kept high based on previous findings)
   futuristic-text:
     lambda_dsn: 1
-    lambda_est: 200
+    lambda_est: 100
   asian-text:
     lambda_dsn: 1
-    lambda_est: 200
+    lambda_est: 100
