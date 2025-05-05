@@ -107,9 +107,10 @@ class PreferenceTester(BaseTester):
         return {"preference_error": error}
 
 class CosineTester(BaseTester):
-    # Removed scorer_model from __init__, pass embedder to super()
-    def __init__(self, embedder=None, params=None):
-        super().__init__(embedder, params) # Pass embedder to base class
+    # Accept env, embedder, params like BaseTester
+    def __init__(self, env=None, embedder=None, params=None):
+        # Pass all relevant arguments to the base class constructor
+        super().__init__(env=env, embedder=embedder, params=params)
         print(f"Initialized {self.__class__.__name__} with {self.params}")
 
     @staticmethod
