@@ -58,16 +58,19 @@ if __name__ == "__main__":
         help="Directory containing the grid images (.png files)."
     )
     parser.add_argument(
-        "-o", "--output",
+        "-o", "--output-dir", # Changed argument name
         required=True,
-        help="Path to the output JavaScript file (e.g., experiment_html/js/imageList.js)."
+        # Updated help text
+        help="Path to the HTML experiment directory (e.g., experiments/llm/experiment_html). The script will place imageList.js in its 'js' subdirectory."
     )
     args = parser.parse_args()
 
     image_dir = args.directory
-    output_js_file = args.output
+    # Construct the output JS file path based on the provided directory
+    output_js_file = os.path.join(args.output_dir, "js", "imageList.js")
 
     print(f"Scanning for images in: {os.path.abspath(image_dir)}")
+    print(f"Output JS file will be: {os.path.abspath(output_js_file)}") # Added confirmation message
     images = find_images(image_dir)
     if images:
         generate_js_file(images, output_js_file)

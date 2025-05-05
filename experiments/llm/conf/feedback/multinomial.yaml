@@ -16,21 +16,21 @@ pass_V: false
 # Keywords for C-optimal design. If null or empty, A-optimal design will be used.
 # The code will embed each keyword and use the resulting vectors for C-optimal design.
 # Example: ["old", "classic", "traditional", "eternal"]
-C_design_keywords: [
-  "modern", "ancient",        # 1
-  "colorful", "monochromatic", # 2
-  "complex", "simple",         # 3
-#"vibrant", "muted",          # 4
-#  "dynamic", "static",         # 5
-#  "natural", "urban",          # 6
-  "detailed", "minimalist",    # 7
-  "bright", "dark",            # 8
-#  "warm", "cool",              # 9
-#  "abstract", "realistic",      # 10
-  "asian", "chinese", "japanese", "indian", "european", "french", "italian",
-  "egyptian", "latin", "african", "roman", "greek"
-]
-#C_design_keywords: null
+#C_design_keywords: [
+#  "modern", "ancient",        # 1
+#  "colorful", "monochromatic", # 2
+#  "complex", "simple",         # 3
+##"vibrant", "muted",          # 4
+##  "dynamic", "static",         # 5
+##  "natural", "urban",          # 6
+#  "detailed", "minimalist",    # 7
+#  "bright", "dark",            # 8
+##  "warm", "cool",              # 9
+##  "abstract", "realistic",      # 10
+#  "asian", "chinese", "japanese", "indian", "european", "french", "italian",
+#  "egyptian", "latin", "african", "roman", "greek"
+#]
+C_design_keywords: null
 
 # Model-specific parameters (moved from experiment config)
 # These are used only if use_model_specific_lambda is true
