@@ -261,8 +261,7 @@ def generate_emissions(unique_elements: List[str], embedder: BaseEmbedder, verbo
         embed_text = text  # Always embed the text as is
         if verbose:
             # Verbose printing can be helpful for debugging token content
-            if verbose:
-                print(f"Embedding text: {text}")
+            print(f"Embedding text: {text}")
 
         # Use the embedder's method
         feat = embedder.embed_text(text)

@@ -175,33 +175,38 @@ class LLMExperiment:
 
                 # Base arguments common to most savers (excluding env, which is passed explicitly)
                 # scorer_model is NOT passed here; savers that need it access it via results or don't need it.
-                init_args_base = { # Renamed to avoid potential conflicts
+                init_args = { # Use a single dictionary again
                     # 'env': self.env, # REMOVED - Pass env explicitly below
                     'embedder': self.embedder,
                     # 'scorer_model': self._scorer_model, # REMOVED
                     'results_dir': self.results_dir,
                     'experiment_id': self.experiment_id,
                     # 'params' and other config-specific args are handled by Hydra via s_conf
-                    # Pass the main config `cfg` itself, so savers can access necessary top-level keys
-                    'cfg': self.cfg # Pass the main config object
+                    # 'cfg': self.cfg # REMOVED - Stop passing the full config object
                 }
 
-                # Add arguments specific to VisitsImageSaver if it's the target (No longer needed)
-                # No longer needed - saver derives from env and cfg passed via BaseSaver
-                # if s_conf.get('_target_') == 'components.saver.VisitsImageSaver':
-                #     pass # init_args['dense_feedback'] = self.cfg.get('dense_feedback', False) etc.
+                # Add arguments specific to VisitsImageSaver if it's the target
+                if s_conf.get('_target_') == 'components.saver.VisitsImageSaver':
+                    # Pass necessary values explicitly from the main config
+                    init_args['horizon'] = self.env.max_episode_length # Get horizon from env
+                    init_args['dense_feedback'] = self.cfg.get('dense_feedback', False)
+                    init_args['verbose'] = self.cfg.get('verbose', False)
+                    init_args['seed'] = self.seed # Pass the experiment seed
+                    init_args['total_repeats'] = self.cfg.experiment.get('repeats', 1) # Pass total repeats
+                    init_args['algorithm'] = self.cfg.algorithm # Pass algorithm name
 
-                # Add arguments specific to ReadableVisitsSaver (No longer needed)
-                # No longer needed - saver derives from env and cfg passed via BaseSaver
-                # elif s_conf.get('_target_') == 'components.saver.ReadableVisitsSaver':
-                #     pass # init_args['dense_feedback'] = self.cfg.get('dense_feedback', False)
+                # Add arguments specific to ReadableVisitsSaver
+                elif s_conf.get('_target_') == 'components.saver.ReadableVisitsSaver':
+                    # Pass necessary values explicitly from the main config
+                    init_args['horizon'] = self.env.max_episode_length # Get horizon from env
+                    init_args['dense_feedback'] = self.cfg.get('dense_feedback', False)
 
                 # Instantiate the saver using the configuration and the constructed arguments
-                # Pass env explicitly as a keyword argument, separate from the base args dictionary
+                # Pass env explicitly as a keyword argument, separate from the init_args dictionary
                 saver = hydra.utils.instantiate(
                     s_conf, # The saver's specific config (contains _target_, params, etc.)
                     env=self.env, # Pass env explicitly
-                    **init_args_base # Pass the rest of the arguments from the dictionary
+                    **init_args # Pass the rest of the arguments from the dictionary
                 )
                 self.savers.append(saver)
                 print(f"Successfully initialized saver: {s_conf._target_}")

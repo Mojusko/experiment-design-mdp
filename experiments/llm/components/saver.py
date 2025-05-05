@@ -55,8 +55,8 @@ class BaseSaver(ABC):
                  scorer_model=None,
                  results_dir=None,
                  experiment_id=None,
-                 skip_existing: bool = False,
-                 cfg: DictConfig = None): # Add cfg argument
+                 skip_existing: bool = False):
+                 # cfg: DictConfig = None): # REMOVED cfg argument
         """
         Initialize the base saver with common parameters.
         Args:
@@ -75,7 +75,7 @@ class BaseSaver(ABC):
         self.results_dir = results_dir
         self.experiment_id = experiment_id
         self.skip_existing = skip_existing
-        self.cfg = cfg # Store the main config object
+        # self.cfg = cfg # REMOVED cfg storage
 
     def get_output_path(self, filename=None):
         """
@@ -501,9 +501,15 @@ class VisitsImageSaver(BaseSaver):
                  results_dir=None,
                  experiment_id=None,
                  skip_existing: bool = False,
-                 # Specific config values are now derived from cfg inside __init__
-                 cfg: DictConfig = None): # Accept cfg from BaseSaver
-        # Pass arguments explicitly to BaseSaver, including cfg
+                 # Specific config values passed explicitly from LLMExperiment
+                 horizon: int = None,
+                 dense_feedback: bool = False,
+                 verbose: bool = False,
+                 seed: int = None,
+                 total_repeats: int = 1,
+                 algorithm: str = None):
+                 # cfg: DictConfig = None): # REMOVED cfg argument
+        # Pass arguments explicitly to BaseSaver (without cfg)
         super().__init__(
             env=env,
             embedder=embedder,
@@ -511,36 +517,39 @@ class VisitsImageSaver(BaseSaver):
             scorer_model=scorer_model,
             results_dir=results_dir,
             experiment_id=experiment_id,
-            skip_existing=skip_existing,
-            cfg=cfg # Pass cfg to BaseSaver
+            skip_existing=skip_existing
+            # cfg=cfg # REMOVED cfg argument
         )
 
-        # --- Validate required objects (env, cfg should be set by BaseSaver) ---
+        # --- Validate required objects (env should be set by BaseSaver) ---
         if self.env is None:
             # Add more context to the error
             raise ValueError("VisitsImageSaver requires the 'env' object. Ensure it's passed during instantiation and not overridden to null by config.")
+        # Embedder is optional for BaseSaver but required here
+        if self.embedder is None:
             raise ValueError("VisitsImageSaver requires the 'embedder' object. Ensure it's passed during instantiation.")
-        if self.cfg is None:
-             raise ValueError("VisitsImageSaver requires the 'cfg' object. Ensure it's passed during instantiation.")
+        # REMOVED cfg check
+        # if self.cfg is None:
+        #      raise ValueError("VisitsImageSaver requires the 'cfg' object. Ensure it's passed during instantiation.")
 
-        # --- Derive configuration from env and cfg ---
-        self.horizon = self.env.max_episode_length # Derive horizon from env
-        self.dense_feedback = self.cfg.get('dense_feedback', False)
-        self.verbose = self.cfg.get('verbose', False)
-        self.seed = int(self.cfg.seed) if self.cfg.seed is not None else None # Get seed from cfg
-        self.total_repeats = self.cfg.experiment.get('repeats', 1) # Get repeats from cfg
-        self.algorithm = self.cfg.algorithm # Get algorithm from cfg
+        # --- Store explicitly passed configuration ---
+        self.horizon = horizon
+        self.dense_feedback = dense_feedback
+        self.verbose = verbose
+        self.seed = seed
+        self.total_repeats = total_repeats
+        self.algorithm = algorithm
 
-        # Validate derived values
+        # Validate explicitly passed values
         if self.horizon is None or self.horizon <= 0:
-             raise ValueError(f"VisitsImageSaver derived an invalid horizon ({self.horizon}) from env.")
+             raise ValueError(f"VisitsImageSaver received an invalid horizon: {self.horizon}")
         if self.seed is None:
-            print("Warning: VisitsImageSaver derived no seed from cfg. Episode splitting will be disabled.")
+            print("Warning: VisitsImageSaver initialized without a seed. Episode splitting will be disabled.")
         if self.total_repeats is None or self.total_repeats < 1:
-            print(f"Warning: VisitsImageSaver derived invalid total_repeats ({self.total_repeats}) from cfg. Defaulting to 1, episode splitting disabled.")
+            print(f"Warning: VisitsImageSaver initialized with invalid total_repeats ({self.total_repeats}). Defaulting to 1, episode splitting disabled.")
             self.total_repeats = 1
         if self.algorithm is None:
-            raise ValueError("VisitsImageSaver derived no algorithm name from cfg.")
+            raise ValueError("VisitsImageSaver requires the 'algorithm' name.")
 
 
         # --- Configuration for Image Generation (from params) ---
@@ -576,10 +585,10 @@ class VisitsImageSaver(BaseSaver):
             print("Expected structure: List[List[Tuple[states, actions]]]")
             return
 
-        # --- Use Horizon, Dense Feedback Flag, and Verbose Flag stored in self (derived in __init__) ---
-        horizon = self.horizon # Now derived from env
-        dense_feedback = self.dense_feedback # Now derived from cfg
-        verbose = self.verbose # Now derived from cfg
+        # --- Use Horizon, Dense Feedback Flag, and Verbose Flag stored in self (from explicit __init__ args) ---
+        horizon = self.horizon # Now from explicit arg
+        dense_feedback = self.dense_feedback # Now from explicit arg
+        verbose = self.verbose # Now from explicit arg
         print(f"VisitsImageSaver: Horizon={horizon}, Dense Feedback={dense_feedback}, Verbose={verbose}")
 
         # --- Setup Output Directory ---
@@ -784,9 +793,11 @@ class ReadableVisitsSaver(BaseSaver):
                  results_dir=None,
                  experiment_id=None,
                  skip_existing: bool = False,
-                 # Specific config values are now derived from cfg inside __init__
-                 cfg: DictConfig = None): # Accept cfg from BaseSaver
-        # Pass common arguments to BaseSaver, including cfg
+                 # Specific config values passed explicitly from LLMExperiment
+                 horizon: int = None,
+                 dense_feedback: bool = False):
+                 # cfg: DictConfig = None): # REMOVED cfg argument
+        # Pass common arguments to BaseSaver (without cfg)
         super().__init__(
             env=env,
             embedder=embedder,
@@ -794,23 +805,24 @@ class ReadableVisitsSaver(BaseSaver):
             scorer_model=scorer_model,
             results_dir=results_dir,
             experiment_id=experiment_id,
-            skip_existing=skip_existing,
-            cfg=cfg # Pass cfg to BaseSaver
+            skip_existing=skip_existing
+            # cfg=cfg # REMOVED cfg argument
         )
 
-        # --- Validate required objects (env, cfg should be set by BaseSaver) ---
+        # --- Validate required objects (env should be set by BaseSaver) ---
         if self.env is None:
              raise ValueError(f"{self.__class__.__name__} requires the 'env' object.")
-        if self.cfg is None:
-             raise ValueError(f"{self.__class__.__name__} requires the 'cfg' object.")
+        # REMOVED cfg check
+        # if self.cfg is None:
+        #      raise ValueError(f"{self.__class__.__name__} requires the 'cfg' object.")
 
-        # --- Derive configuration from env and cfg ---
-        self.horizon = self.env.max_episode_length # Derive horizon from env
-        self.dense_feedback = self.cfg.get('dense_feedback', False) # Derive dense_feedback from cfg
+        # --- Store explicitly passed configuration ---
+        self.horizon = horizon
+        self.dense_feedback = dense_feedback
 
-        # Validate derived values
+        # Validate explicitly passed values
         if self.horizon is None or self.horizon <= 0:
-             raise ValueError(f"{self.__class__.__name__} derived an invalid horizon ({self.horizon}) from env.")
+             raise ValueError(f"{self.__class__.__name__} received an invalid horizon: {self.horizon}")
 
         print(f"Initialized {self.__class__.__name__} with params: {self.params}, "
               f"dense_feedback: {self.dense_feedback}, horizon: {self.horizon}")
@@ -856,8 +868,8 @@ class ReadableVisitsSaver(BaseSaver):
             num_episodes = len(visits_to_process[0])
             print(f"Processing {num_policies} policies and {num_episodes} episodes.")
 
-            # Determine the range of horizons to generate prompts for using self.horizon and self.dense_feedback
-            horizon = self.horizon # Use derived horizon
+            # Determine the range of horizons to generate prompts for using self.horizon and self.dense_feedback (from explicit args)
+            horizon = self.horizon # Use horizon from explicit arg
             h_range = range(1, horizon + 1) if self.dense_feedback else range(horizon, horizon + 1)
 
             # Iterate through each policy and save to a separate file
