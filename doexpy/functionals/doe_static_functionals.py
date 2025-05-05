@@ -472,7 +472,7 @@ class MultiPolicyOrigDesignC(MultiPolicyOrigDesignD):
         a_optimal_value = -torch.trace(inv_z_reg) / 100
 
         # Return the weighted sum
-        return c_optimal_value + 0.5 * a_optimal_value
+        return 0.75 * c_optimal_value + 0.25 * a_optimal_value
 
     def eval_full(self, emissions, distributions, episodes):
         """
