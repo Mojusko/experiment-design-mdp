@@ -176,7 +176,6 @@ class LLMExperiment:
                 # Base arguments common to most savers (excluding env, which is passed explicitly)
                 # scorer_model is NOT passed here; savers that need it access it via results or don't need it.
                 init_args = { # Use a single dictionary again
-                    'env': self.env,
                     'embedder': self.embedder,
                     # 'scorer_model': self._scorer_model, # REMOVED
                     'results_dir': self.results_dir,
