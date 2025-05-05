@@ -73,7 +73,25 @@ def main(cfg: DictConfig):
                         timestamp = os.environ.get('TIMESTAMP', datetime.datetime.now().strftime("%Y-%m-%d-%H-%M"))
                         # Use mode name in the directory structure
                         # Example: test-load_estimator-..., test-estimate_from_visits-...
-                        experiment_id_suffix = cfg.experiment_id or mode # Use existing ID or mode name
+                        # --- Try to extract original ID from input path ---
+                        original_id_part = None
+                        try:
+                            # Extract the filename part (e.g., visits-feedback-rand-mult-1.pkl)
+                            input_filename = os.path.basename(absolute_input_path)
+                            # Remove common prefixes/suffixes to isolate the core ID part
+                            # Example: remove "visits-", ".pkl", "estimator-", ".pt"
+                            id_core = input_filename.replace("visits-", "").replace("estimator-", "").split('.')[0]
+                            # Further refine if needed, e.g., remove timestamp if present
+                            # This is heuristic, might need adjustment based on actual filename patterns
+                            original_id_part = id_core
+                            print(f"Extracted original ID part: {original_id_part}")
+                        except Exception as path_e:
+                            print(f"Could not extract original ID from path: {path_e}")
+
+                        # Use the extracted ID if found, otherwise fallback to cfg.experiment_id or mode
+                        experiment_id_suffix = original_id_part or cfg.experiment_id or mode
+                        print(f"Using experiment ID suffix for directory: {experiment_id_suffix}")
+                        # ----------------------------------------------------
 
                         # Determine base directory for 'additional_tests'
                         if os.path.basename(original_dir) == "additional_tests":
