@@ -142,20 +142,13 @@ class LLMExperiment:
         if testers_config:
              for t_conf in testers_config:
                  try:
-                     # Base arguments needed by testers (via BaseTester)
-                     # scorer_model is NOT passed here; it will be passed to run_test
-                     init_args = {
-                         'embedder': self.embedder,
-                         # 'params' is handled by Hydra via t_conf
-                     }
-                     # Add arguments specific to certain testers if needed
-                     # Example: If a tester needed 'env', add it here conditionally based on t_conf._target_
-                     # if t_conf.get('_target_') == 'components.tester.SomeTesterNeedingEnv':
-                     #     init_args['env'] = self.env
-
+                     # Instantiate tester, passing core objects explicitly.
+                     # Hydra handles 'params' from t_conf automatically.
                      tester = hydra.utils.instantiate(
-                         t_conf, # The tester's specific config
-                         **init_args # Pass the dynamically built dictionary
+                         t_conf,          # The tester's specific config
+                         env=self.env,          # Pass env explicitly
+                         embedder=self.embedder # Pass embedder explicitly
+                         # No other common args needed based on current BaseTester/subclasses
                      )
                      self.testers.append(tester)
                      print(f"Successfully initialized tester: {t_conf._target_}")
@@ -173,39 +166,19 @@ class LLMExperiment:
                 # We explicitly pass the arguments NOT defined in the saver's YAML config,
                 # only passing arguments relevant to the specific saver type.
 
-                # Base arguments common to most savers (excluding env, which is passed explicitly)
-                # scorer_model is NOT passed here; savers that need it access it via results or don't need it.
-                init_args = { # Use a single dictionary again
-                    'embedder': self.embedder,
-                    # 'scorer_model': self._scorer_model, # REMOVED
-                    'results_dir': self.results_dir,
-                    'experiment_id': self.experiment_id,
-                    # 'params' and other config-specific args are handled by Hydra via s_conf
-                    # 'cfg': self.cfg # REMOVED - Stop passing the full config object
-                }
-
-                # Add arguments specific to VisitsImageSaver if it's the target
-                if s_conf.get('_target_') == 'components.saver.VisitsImageSaver':
-                    # Pass necessary values explicitly from the main config
-                    init_args['horizon'] = self.env.max_episode_length # Get horizon from env
-                    init_args['dense_feedback'] = self.cfg.get('dense_feedback', False)
-                    init_args['verbose'] = self.cfg.get('verbose', False)
-                    init_args['seed'] = self.seed # Pass the experiment seed
-                    init_args['total_repeats'] = self.cfg.experiment.get('repeats', 1) # Pass total repeats
-                    init_args['algorithm'] = self.cfg.algorithm # Pass algorithm name
-
-                # Add arguments specific to ReadableVisitsSaver
-                elif s_conf.get('_target_') == 'components.saver.ReadableVisitsSaver':
-                    # Pass necessary values explicitly from the main config
-                    init_args['horizon'] = self.env.max_episode_length # Get horizon from env
-                    init_args['dense_feedback'] = self.cfg.get('dense_feedback', False)
-
-                # Instantiate the saver using the configuration and the constructed arguments
-                # Pass env explicitly as a keyword argument, separate from the init_args dictionary
+                # Instantiate saver, passing core objects and common config explicitly.
+                # Hydra handles 'params' from s_conf automatically.
+                # Conditional logic for specific saver types is removed.
                 saver = hydra.utils.instantiate(
-                    s_conf, # The saver's specific config (contains _target_, params, etc.)
-                    env=self.env, # Pass env explicitly
-                    **init_args # Pass the rest of the arguments from the dictionary
+                    s_conf,             # The saver's specific config (_target_, params, etc.)
+                    env=self.env,             # Pass env explicitly
+                    embedder=self.embedder,     # Pass embedder explicitly
+                    results_dir=self.results_dir, # Pass results_dir explicitly
+                    experiment_id=self.experiment_id, # Pass experiment_id explicitly
+                    seed=self.seed,           # Pass seed explicitly
+                    total_repeats=self.cfg.experiment.get('repeats', 1), # Pass total_repeats explicitly
+                    algorithm=self.cfg.algorithm # Pass algorithm explicitly
+                    # scorer_model is not passed here
                 )
                 self.savers.append(saver)
                 print(f"Successfully initialized saver: {s_conf._target_}")

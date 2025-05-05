@@ -14,9 +14,9 @@ def generate_test_sequence(rng, word_lists, horizon):
 class BaseTester(ABC):
     """Base class for all testers with simplified interface."""
 
-    # Removed scorer_model from __init__ as it's passed to run_test
-    def __init__(self, embedder=None, params=None):
-        # self.scorer_model = scorer_model # REMOVED
+    # Accept env, embedder, params
+    def __init__(self, env=None, embedder=None, params=None):
+        self.env = env # Store env instance
         self.embedder = embedder # Store embedder instance
         self.params = params or {}
 

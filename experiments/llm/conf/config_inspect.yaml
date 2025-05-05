@@ -76,5 +76,7 @@ savers:
     # _convert_: "partial" # REMOVED - Let Hydra handle conversions normally
     params:
       output_subdir: "visit_images_inspect" # Specific subdir for inspection images
-      # image_size and num_inference_steps are now taken from image_generator defaults
       seed_per_prompt: true # Use deterministic generation per prompt
+      dense_feedback: ${dense_feedback} # Get from top-level config
+      verbose: ${verbose} # Get from top-level config
+      # image_size and num_inference_steps are now taken from image_generator defaults

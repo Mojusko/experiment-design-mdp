@@ -75,6 +75,7 @@ savers:
   - _target_: components.saver.ReadableVisitsSaver # Enabled for standard runs
     params:
       output_filename: "readable_visits.txt"
+      dense_feedback: ${dense_feedback} # Get from top-level config
       # visits_path: ${visits_path} # visits_path is only relevant for inspection/human_train modes
 
 #  - _target_: components.saver.VisitsImageSaver # Keep commented for standard runs (unless needed)
