@@ -30,7 +30,12 @@ pass_V: false
 #  "asian", "chinese", "japanese", "indian", "european", "french", "italian",
 #  "egyptian", "latin", "african", "roman", "greek"
 #]
-C_design_keywords: null
+C_design_keywords: [
+  "ancient", "historical", "traditional",
+  "futuristic", "modern", "technology",
+  "japanese", "asian", "roman", "european",
+  "artistic", "cultural"
+]
 
 # Model-specific parameters (moved from experiment config)
 # These are used only if use_model_specific_lambda is true
