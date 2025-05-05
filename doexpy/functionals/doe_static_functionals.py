@@ -466,7 +466,7 @@ class MultiPolicyOrigDesignC(MultiPolicyOrigDesignD):
         inv_z_reg = torch.linalg.inv(z_reg)
 
         # Calculate the original C-optimal value (log-product of traces)
-        c_optimal_value = self._compute_c_optimal_value(inv_z_reg)
+        c_optimal_design = self._compute_c_optimal_value(inv_z_reg)
 
         # Return the weighted sum
         return c_optimal_design
