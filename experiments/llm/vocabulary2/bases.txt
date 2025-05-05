@@ -9,7 +9,6 @@ An astronaut on an alien planet
 Knights playing chess
 A cyberpunk market street
 A mountain landscape
-An abstract pattern
 A cat wearing a hat
 A futuristic city skyline
 An underwater coral reef
@@ -107,3 +106,108 @@ A steampunk airship dock
 A fairy dancing
 A farmer milking a cow
 A pop star singing
+
+A person reading a book
+A dog fetching a stick
+A cat sleeping on a chair
+Birds flying in the sky
+A boat on the water
+A car driving on a road
+A bicycle leaning against a wall
+A tree in a field
+Clouds in the sky
+A mountain range
+A river flowing
+A bridge over water
+A house with a chimney
+A street lamp at night
+People walking on a sidewalk
+A train on tracks
+An airplane in the sky
+A helicopter hovering
+A bus at a bus stop
+A motorcycle parked
+A group of people talking
+Someone cooking in a kitchen
+A computer on a desk
+A phone on a table
+A television screen displaying static
+A bookshelf filled with books
+A window looking out at rain
+A door slightly ajar
+Stairs leading up
+A clock on the wall
+A table with chairs
+A bed with pillows
+A sofa in a living room
+A lamp providing light
+A plant in a pot
+Flowers in a vase
+Fruit in a bowl
+A cup of coffee
+A plate with food
+A fork and knife
+A spoon in a bowl
+A glass of water
+A bottle on a counter
+A backpack on the floor
+Shoes by the door
+A coat hanging on a hook
+A hat on a shelf
+Gloves on a radiator
+A scarf draped over a chair
+An umbrella leaning in a corner
+A suitcase packed
+A map spread out
+A compass pointing north
+Binoculars looking at a distance
+A camera on a tripod
+A paintbrush in a jar
+A canvas on an easel
+A sculpture on a pedestal
+A guitar leaning against a wall
+Sheet music on a stand
+A microphone on a stand
+Headphones on a desk
+A vinyl record playing
+A cassette tape
+A CD in a player
+A keyboard and mouse
+A printer printing a page
+A filing cabinet
+Office supplies on a desk
+A whiteboard with writing
+A bulletin board with notes
+A fire hydrant on a street
+A mailbox by a curb
+A traffic light showing red
+A stop sign at an intersection
+A crosswalk with pedestrians
+A park bench under a tree
+A swing set in a playground
+A slide in a park
+A fountain spraying water
+Pigeons gathered on the ground
+Ducks swimming in a pond
+A squirrel running up a tree
+A deer in the woods
+A horse in a stable
+Cows grazing in a field
+Sheep on a hillside
+Chickens in a coop
+A pig in mud
+A fish swimming in a tank
+A turtle basking on a rock
+A frog sitting on a lily pad
+An insect on a leaf
+A spiderweb between branches
+A beach with waves
+Shells on the sand
+A lighthouse on a cliff
+A pier extending into the water
+A sailboat on the horizon
+A sunset over the ocean
+Stars in the night sky
+The moon, partially visible
+A campfire burning
+A tent pitched in a clearing
