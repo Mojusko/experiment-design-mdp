@@ -35,28 +35,42 @@ def main(cfg: DictConfig):
         visits_path = cfg.get('visits_path')
         feedback_path = cfg.get('feedback_path')
 
-        # Determine the mode based on provided paths
+        # Determine the mode based on provided paths AND inspection_mode flag
         mode = None
-        if estimator_path and not visits_path and not feedback_path:
-            mode = "load_estimator"
-            print("Mode: Load Estimator")
-        elif not estimator_path and visits_path and not feedback_path:
-            mode = "estimate_from_visits"
-            print("Mode: Estimate from Visits")
-        elif estimator_path and not visits_path and feedback_path:
-            mode = "load_estimator_and_feedback"
-            print("Mode: Load Estimator and Feedback")
-        # --- Determine Input Path for Directory Derivation ---
-        input_path_for_dir = None
-        if mode == "load_estimator":
-            input_path_for_dir = estimator_path
-        elif mode == "estimate_from_visits":
+        derived_results_dir = None # Initialize derived path as None
+
+        if cfg.get('inspection_mode', False):
+            mode = "inspect_visits"
+            print("Mode: Inspect Visits (based on inspection_mode=true)")
+            # For inspection, the input path is always visits_path
             input_path_for_dir = visits_path
-        elif mode == "load_estimator_and_feedback":
-            input_path_for_dir = estimator_path # Use estimator path as base
+            if not visits_path:
+                 print("\nError: inspection_mode=true requires visits_path to be provided.")
+                 return 1
+        else:
+            # Original path-based mode detection for non-inspection test_only runs
+            if estimator_path and not visits_path and not feedback_path:
+                mode = "load_estimator"
+                print("Mode: Load Estimator")
+                input_path_for_dir = estimator_path
+            elif not estimator_path and visits_path and not feedback_path:
+                mode = "estimate_from_visits"
+                print("Mode: Estimate from Visits")
+                input_path_for_dir = visits_path
+            elif estimator_path and not visits_path and feedback_path:
+                mode = "load_estimator_and_feedback"
+                print("Mode: Load Estimator and Feedback")
+                input_path_for_dir = estimator_path # Use estimator path as base
+            else:
+                 # Invalid combination if not inspection mode
+                 print("\nError: Invalid combination of paths for test_only mode.")
+                 print("Valid combinations for llm-test-only:")
+                 print("  1. --config-name=config_inference estimator_path=/path/to/estimator.pt")
+                 print("  2. --config-name=config_inference visits_path=/path/to/visits.pkl")
+                 print("  3. --config-name=config_inference estimator_path=/path/to/estimator.pt feedback_path=/path/to/feedback.json")
+                 return 1 # Exit due to invalid combination
 
         # --- Derive Results Directory if not overridden ---
-        derived_results_dir = None # Initialize derived path as None
         if input_path_for_dir and not cfg.get('override_results_dir', False):
             try:
                 from hydra.utils import to_absolute_path

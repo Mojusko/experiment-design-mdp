@@ -20,7 +20,8 @@ experiment_id: ""
 
 
 # --- Special Modes ---
-test_only: false  # Set to true to run test-only mode (load estimator or visits, test, save)
+inspection_mode: true # Explicitly mark this config for inspection
+test_only: true  # Inspection mode implies test_only
 explore_only: false # Set to true to run explore-only mode (explore, save visits/images)
 
 # --- Test-only / Inspection mode specific configuration ---

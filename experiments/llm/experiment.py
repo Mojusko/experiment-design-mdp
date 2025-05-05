@@ -795,7 +795,30 @@ class LLMExperiment:
                 print("Error: Feedback processing did not return a valid estimator from visits.")
                 return False
 
-        # --- Mode 3: Load Estimator and Feedback ---
+        # --- Mode 3: Inspect Visits ---
+        elif mode == "inspect_visits":
+            if not visits_path or not os.path.exists(visits_path):
+                print(f"Error: Visits file not found or not provided for inspection: {visits_path}")
+                return False
+            print(f"Loading visits for inspection from: {visits_path}")
+            # Load visits directly into self.visits
+            try:
+                self.visits = torch.load(visits_path)
+                if not isinstance(self.visits, list) or not self.visits or not self.visits[0]:
+                     print(f"Warning: Loaded visits from {visits_path} appear empty or invalid.")
+                     # Proceed, test_and_save validation will handle it if savers need visits
+            except Exception as e:
+                 print(f"Error loading visits from {visits_path}: {e}")
+                 return False # Stop execution on loading errors
+
+            # Ensure estimator is None for inspection mode
+            self.estimators = [None] * self.num_scorer_models
+            print("Skipping estimator training/loading in inspection mode.")
+            # Proceed directly to saving (which includes VisitsImageSaver)
+            self.test_and_save(current_mode=mode)
+            return True
+
+        # --- Mode 4: Load Estimator and Feedback ---
         elif mode == "load_estimator_and_feedback":
             if not estimator_path or not os.path.exists(estimator_path):
                 print(f"Error: Estimator file not found or not provided: {estimator_path}")
@@ -1002,7 +1025,13 @@ class LLMExperiment:
         # Add lists for other potential metrics here
         # ...
 
-        if current_mode != "train_human_feedback":
+        # Skip testers if in inspection or human feedback training mode
+        if current_mode == "inspect_visits":
+            print("Skipping testers in 'inspect_visits' mode.")
+        elif current_mode == "train_human_feedback":
+            print("Skipping testers in 'train_human_feedback' mode.")
+        else:
+            # Run testers only for other modes (full_run, load_estimator, estimate_from_visits, load_estimator_and_feedback)
             print("\n--- Running Testers for Each Model ---")
             for i in range(self.num_scorer_models):
                 model_name = self.scorer_model_names[i]
@@ -1063,8 +1092,7 @@ class LLMExperiment:
                         print(f"  Error running tester {tester_name} for model '{model_name}': {e}")
 
             print("--------------------------------------\n")
-        else:
-            print("Skipping testers in 'train_human_feedback' mode.")
+        # Removed redundant else block here
 
         # --- Calculate Averaged Metrics ---
         averaged_metrics = {}
