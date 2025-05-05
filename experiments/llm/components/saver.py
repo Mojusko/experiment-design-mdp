@@ -592,7 +592,9 @@ class VisitsImageSaver(BaseSaver):
         # --- Setup Output Directory ---
         # We create a specific subdirectory for these images
         output_dir_path = os.path.join(self.results_dir, self.output_subdir)
-        if self.experiment_id:
+        # Avoid adding experiment_id subdir if we are in the specific 'inspect' mode
+        # Check against the default subdir name used in config_inspect.yaml
+        if self.experiment_id and self.output_subdir != "visit_images_inspect":
             output_dir_path = os.path.join(output_dir_path, self.experiment_id)
         os.makedirs(output_dir_path, exist_ok=True)
         print(f"VisitsImageSaver: Saving visit images to {output_dir_path}")
