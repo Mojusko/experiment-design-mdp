@@ -469,10 +469,10 @@ class MultiPolicyOrigDesignC(MultiPolicyOrigDesignD):
         c_optimal_value = self._compute_c_optimal_value(inv_z_reg)
 
         # Calculate the A-optimal value (-trace(inv(Z_reg)))
-        a_optimal_value = -torch.trace(inv_z_reg)
+        #a_optimal_value = -torch.trace(inv_z_reg)
 
         # Return the weighted sum
-        return 0.85 * c_optimal_value + 0.15 * a_optimal_value
+        return c_optimal_value 
 
     def eval_full(self, emissions, distributions, episodes):
         """
