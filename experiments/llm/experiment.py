@@ -185,21 +185,18 @@ class LLMExperiment:
                 }
 
                 # Add arguments specific to VisitsImageSaver if it's the target
-                if s_conf.get('_target_') == 'components.saver.VisitsImageSaver':
-                    # init_args['horizon'] = self.cfg.horizon # REMOVED - Saver should use env.max_episode_length
-                    init_args['dense_feedback'] = self.cfg.get('dense_feedback', False)
-                    init_args['verbose'] = self.cfg.get('verbose', False)
-                    init_args['seed'] = self.seed # Pass the current seed
-                    init_args['algorithm'] = self.cfg.algorithm # Pass the algorithm name
-                    # Pass total repeats, default to 1 if not found in config
-                    init_args['total_repeats'] = self.cfg.experiment.get('repeats', 1)
+                # No longer needed - saver derives from env and cfg passed via BaseSaver
+                # if s_conf.get('_target_') == 'components.saver.VisitsImageSaver':
+                #     pass # init_args['dense_feedback'] = self.cfg.get('dense_feedback', False) etc.
 
                 # Add arguments specific to ReadableVisitsSaver
-                elif s_conf.get('_target_') == 'components.saver.ReadableVisitsSaver':
-                    # init_args['horizon'] = self.cfg.horizon # REMOVED - Saver should use env.max_episode_length
-                    init_args['dense_feedback'] = self.cfg.get('dense_feedback', False)
+                # No longer needed - saver derives from env and cfg passed via BaseSaver
+                # elif s_conf.get('_target_') == 'components.saver.ReadableVisitsSaver':
+                #     pass # init_args['dense_feedback'] = self.cfg.get('dense_feedback', False)
 
                 # Instantiate the saver using the configuration and the constructed arguments
+                # Pass the main config `cfg` itself, so savers can access necessary top-level keys
+                init_args['cfg'] = self.cfg # Pass the main config object
                 saver = hydra.utils.instantiate(
                     s_conf, # The saver's specific config (contains _target_, params, etc.)
                     **init_args # Pass the dynamically built dictionary of arguments

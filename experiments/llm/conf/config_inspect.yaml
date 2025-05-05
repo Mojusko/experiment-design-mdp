@@ -11,7 +11,6 @@ base_prompt: '' # Base prompt is now sampled from vocabulary
 include_base_prompt_in_first_tokens: false # Base prompt is not prepended automatically
 algorithm: "design"
 cache_dir: "${oc.env:HOME}/.cache/huggingface/hub" # Default cache dir
-horizon: 4 # Increased horizon to account for base prompt step
 accuracy: 1e-14
 dense_feedback: true
 # Results directory path
