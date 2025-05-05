@@ -1,4 +1,5 @@
 import os
+import re # Added import for regular expressions
 import torch
 import numpy as np
 import datetime
@@ -17,18 +18,16 @@ from doexpy.env.llm import (
 from components.embedder import BaseEmbedder, create_embedder
 from components.feedback import FeedbackFactory
 from components.solver import SolverFactory
-from components.tester  import BaseTester, ImageGenerationTester
+from components.tester import BaseTester, ImageGenerationTester
 # Import specific saver types needed for validation and estimator creation
-from components.saver   import BaseSaver, VisitsSaver, VisitsImageSaver, ConfSaver, LearnedEstimatorSaver
-# Import estimator and related components for initialization
-from stpy.regression.regularized_dictionary.regularized_multinomial_estimator import RegularizedMultinomialEstimator
-from stpy.probability.multinomial_likelihood import MultinomialLikelihood
-from stpy.regularization.regularizer import L2Regularizer
+# Removed LearnedEstimatorSaver from direct import here, will handle skipping later
+from components.saver import BaseSaver, VisitsSaver, VisitsImageSaver, ConfSaver
+# Removed unused estimator/likelihood/regularizer imports here, they are used within factories/components
+# from stpy.regression.regularized_dictionary.regularized_multinomial_estimator import RegularizedMultinomialEstimator
+# from stpy.probability.multinomial_likelihood import MultinomialLikelihood
+# from stpy.regularization.regularizer import L2Regularizer
 from stpy.embeddings.polynomial_embedding import CustomEmbedding # Corrected import path
-import json # For loading feedback JSON
-import re # For parsing filenames
-
-
+# Removed unused json and re imports
 
 class LLMExperiment:
     """
@@ -63,26 +62,60 @@ class LLMExperiment:
         self.embedder: BaseEmbedder = create_embedder(cfg.embedder)
         print(f"Initialized Embedder: {self.embedder.__class__.__name__} with model {self.embedder.model_id}")
 
+        # --- Handle Scorer Model Configuration ---
+        scorer_model_config = cfg.experiment.get('scorer_model')
+        if isinstance(scorer_model_config, str):
+            self.scorer_model_names = [scorer_model_config]
+            print(f"Using single scorer model: {self.scorer_model_names}")
+        elif isinstance(scorer_model_config, list):
+            self.scorer_model_names = scorer_model_config
+            print(f"Using multiple scorer models: {self.scorer_model_names}")
+        elif OmegaConf.is_list(scorer_model_config): # Handle OmegaConf ListConfig
+             self.scorer_model_names = OmegaConf.to_container(scorer_model_config, resolve=True)
+             print(f"Using multiple scorer models (from ListConfig): {self.scorer_model_names}")
+        else:
+            raise ValueError(f"scorer_model in config must be a string or a list, got {type(scorer_model_config)}")
+        self.num_scorer_models = len(self.scorer_model_names)
+
         # --- Load Data & Initialize Environment ---
         self.training_words, self.testing_words, self.model_words = self._load_data()
-        # _init_env now uses self.embedder
-        self.env = self._init_env() # This initializes self._scorer_model and self._theta_star
+        # _init_env now uses self.embedder and populates _scorer_models and _theta_stars
+        self.env = self._init_env() # Initializes self._scorer_models and self._theta_stars
 
-        # --- Initialize Core Components ---
-        # Pass the embedder instance where needed (e.g., FeedbackFactory might need it)
-        # Pass the scorer model as before
-        self.feedback, self.design, self.estimator = FeedbackFactory.create(cfg, self.env, self._scorer_model, self.embedder)
-        # Pass the same_first_action_in_episode flag to the solver factory
+        # --- Initialize Core Components (Lists for multiple models) ---
+        self.feedbacks = []
+        self.designs = []
+        self.estimators = [] # Will hold estimator instances for each model
+
+        # Create feedback, design, and estimator for each scorer model
+        for i, model_name in enumerate(self.scorer_model_names):
+            print(f"Initializing components for scorer model: {model_name}")
+            # Pass the specific scorer model instance and name to the factory
+            feedback, design, estimator = FeedbackFactory.create(
+                cfg,
+                self.env,
+                self._scorer_models[i], # Pass the specific model instance
+                self.embedder,
+                scorer_model_name=model_name # Pass the name for lambda lookup
+            )
+            self.feedbacks.append(feedback)
+            self.designs.append(design)
+            self.estimators.append(estimator) # Add the initial estimator instance
+
+        # --- Initialize Solver ---
+        # The explorer uses the design and feedback from the *first* scorer model
+        # The exploration path is the same, but estimation differs per model later
+        print(f"Initializing explorer using components from the first model: {self.scorer_model_names[0]}")
         self.explorer = SolverFactory.create(
             cfg,
             self.env,
-            self.design,
-            self.feedback,
+            self.designs[0], # Use first design
+            self.feedbacks[0], # Use first feedback
             same_first_action_in_episode=cfg.get('same_first_action_in_episode', False) # Read from config
         )
 
-        # For test-only mode, initialize estimator to None, will be loaded later (remains same)
-        self.estimator = None
+        # Note: self.estimator is now self.estimators (a list)
+        # For test-only mode, estimators will be loaded into this list later.
         
         # Build experiment_id with prefix if available
         experiment_id = str(self.cfg.experiment_id) if self.cfg.experiment_id is not None else ""
@@ -109,9 +142,9 @@ class LLMExperiment:
         if testers_config:
              for t_conf in testers_config:
                  try:
-                     # Base arguments needed by all testers (via BaseTester)
+                     # Base arguments needed by testers (via BaseTester)
+                     # scorer_model is NOT passed here; it will be passed to run_test
                      init_args = {
-                         'scorer_model': self._scorer_model,
                          'embedder': self.embedder,
                          # 'params' is handled by Hydra via t_conf
                      }
@@ -141,10 +174,11 @@ class LLMExperiment:
                 # only passing arguments relevant to the specific saver type.
 
                 # Base arguments common to most savers
+                # scorer_model is NOT passed here; savers that need it access it via results or don't need it.
                 init_args = {
                     'env': self.env,
                     'embedder': self.embedder,
-                    'scorer_model': self._scorer_model,
+                    # 'scorer_model': self._scorer_model, # REMOVED
                     'results_dir': self.results_dir,
                     'experiment_id': self.experiment_id
                     # 'params' and other config-specific args are handled by Hydra via s_conf
@@ -181,6 +215,8 @@ class LLMExperiment:
         if self.cfg.get('explore_only', False):
             if self.testers:
                 raise ValueError("Testers are not allowed in explore_only mode.")
+            # Import saver classes locally for isinstance check
+            from components.saver import VisitsSaver, VisitsImageSaver, ConfSaver
             allowed_savers = (VisitsSaver, VisitsImageSaver, ConfSaver) # Allow ConfSaver too
             for saver in self.savers:
                 if not isinstance(saver, allowed_savers):
@@ -188,9 +224,12 @@ class LLMExperiment:
                                      f"Only {', '.join(s.__name__ for s in allowed_savers)} are permitted.")
 
     def calculate_cosine_error(self, est_weight, gt_weight):
-        """Calculate cosine error between two weight vectors"""
-        est_weight = est_weight.cpu()
-        gt_weight = gt_weight.cpu()
+        """Calculate cosine error between two weight vectors."""
+        # Ensure weights are tensors before moving to CPU
+        if isinstance(est_weight, torch.Tensor):
+            est_weight = est_weight.cpu()
+        if isinstance(gt_weight, torch.Tensor):
+            gt_weight = gt_weight.cpu()
         # Compute cosine similarity and convert it to an error metric
         cos_sim = torch.nn.functional.cosine_similarity(est_weight.flatten(), gt_weight.flatten(), dim=0)
         return 1 - cos_sim.item()
@@ -209,20 +248,41 @@ class LLMExperiment:
                 all_visits[policy_idx].append(single_visit)
                 recent_visits_buffer[policy_idx].append(single_visit)
 
-            if est_freq > 0 and ep_idx < total_episodes - 1 and ep_idx >= est_start and ep_idx % est_freq == 0:
-                self.feedback.collect_labels(self.cfg, recent_visits_buffer, self._theta_star)
-                self.feedback.fit_estimator()
-                self.estimator = self.feedback.estimator  # Store the updated estimator
-                self.design.update_estimator(self.estimator, self.env.emissions)
-                
-                # Calculate and print cosine error
-                est_weight = self.estimator.theta_fit
-                gt_weight = self._scorer_model.weight
-                error = self.calculate_cosine_error(est_weight, gt_weight)
-                print(f"Episode {ep_idx} partial re-fit complete. Cosine error: {error:.4f}")
-                
+            # --- Adaptive Estimation Loop (if enabled) ---
+            if est_freq > 0 and ep_idx < total_episodes - 1 and ep_idx >= est_start and (ep_idx + 1) % est_freq == 0:
+                print(f"\n--- Running Adaptive Estimation at Episode {ep_idx + 1} ---")
+                # Loop through each scorer model to collect labels and fit estimator
+                for i in range(self.num_scorer_models):
+                    feedback = self.feedbacks[i]
+                    theta_star = self._theta_stars[i]
+                    scorer_model = self._scorer_models[i]
+                    model_name = self.scorer_model_names[i]
+
+                    # Check if components are valid for this model
+                    if feedback is None or theta_star is None or scorer_model is None:
+                        print(f"Skipping adaptive estimation for model '{model_name}': Missing components.")
+                        continue
+
+                    print(f"Collecting labels for model: {model_name}")
+                    feedback.collect_labels(self.cfg, recent_visits_buffer, theta_star)
+                    print(f"Fitting estimator for model: {model_name}")
+                    feedback.fit_estimator()
+                    self.estimators[i] = feedback.estimator # Update the specific estimator
+
+                    # Calculate and print cosine error for this model
+                    if self.estimators[i] and hasattr(self.estimators[i], 'theta_fit') and hasattr(scorer_model, 'weight'):
+                        est_weight = self.estimators[i].theta_fit
+                        gt_weight = scorer_model.weight
+                        error = self.calculate_cosine_error(est_weight, gt_weight)
+                        print(f"Episode {ep_idx + 1} partial re-fit complete for model '{model_name}'. Cosine error: {error:.4f}")
+                    else:
+                        print(f"Could not calculate cosine error for model '{model_name}' (estimator or ground truth weight missing).")
+
+                # Clear the buffer after processing all models for this frequency step
+                print("Clearing recent visits buffer.")
                 for p_i in range(num_policies):
                     recent_visits_buffer[p_i].clear()
+                print("-----------------------------------------------------\n")
 
         results = self.explorer.run(
             episodes=total_episodes,
@@ -231,22 +291,64 @@ class LLMExperiment:
         )
         # Extract only the visitations (third element) from the results tuple
         # MdpExploreMultiPolicy.run returns (objective_values, opt, visitations_per_policy)
-        self.visits = results[2] if isinstance(results, tuple) and len(results) == 3 else results
+        # Ensure results is a tuple and has 3 elements before accessing index 2
+        if isinstance(results, tuple) and len(results) == 3:
+            self.visits = results[2]
+        else:
+            # Handle cases where explorer might return something else (e.g., just visits)
+            # Or log a warning/error if the structure is unexpected
+            print(f"Warning: Unexpected explorer result structure: {type(results)}. Assuming it contains visits.")
+            self.visits = results # Assign directly, hoping it's the visits
 
+        # --- Final Estimation Loop ---
+        print("\n--- Running Final Estimation ---")
+        # Determine which visits buffer to use for final collection
+        final_visits_to_process = None
         if any(len(buf) > 0 for buf in recent_visits_buffer):
-            self.feedback.collect_labels(self.cfg, recent_visits_buffer, self._theta_star)
-        elif est_start == 0:
-            self.feedback.collect_labels(self.cfg, all_visits, self._theta_star)
+            print("Using remaining recent visits buffer for final estimation.")
+            final_visits_to_process = recent_visits_buffer
+        elif est_start == 0: # If estimation never happened adaptively, use all visits
+            print("Using all visits for final estimation (adaptive estimation start was 0).")
+            final_visits_to_process = all_visits
+        else:
+            print("No remaining visits in buffer and adaptive estimation occurred. Final estimation based on last adaptive fit.")
+            # In this case, estimators are already fitted, just print final errors below.
 
-        self.feedback.fit_estimator()
-        self.estimator = self.feedback.estimator  # Store the fitted estimator
-        self.design.update_estimator(self.estimator, self.env.emissions)
-        
-        # Calculate and print final cosine error
-        est_weight = self.estimator.theta_fit
-        gt_weight = self._scorer_model.weight
-        error = self.calculate_cosine_error(est_weight, gt_weight)
-        print(f"Final estimation after all {total_episodes} episodes complete. Cosine error: {error:.4f}")
+        # Loop through each scorer model for final label collection (if needed) and fitting
+        for i in range(self.num_scorer_models):
+            feedback = self.feedbacks[i]
+            theta_star = self._theta_stars[i]
+            scorer_model = self._scorer_models[i]
+            model_name = self.scorer_model_names[i]
+
+            # Check if components are valid
+            if feedback is None or theta_star is None or scorer_model is None:
+                print(f"Skipping final estimation for model '{model_name}': Missing components.")
+                continue
+
+            # Collect labels only if there are visits to process from this run
+            if final_visits_to_process:
+                print(f"Collecting final labels for model: {model_name}")
+                feedback.collect_labels(self.cfg, final_visits_to_process, theta_star)
+                print(f"Fitting final estimator for model: {model_name}")
+                feedback.fit_estimator()
+                self.estimators[i] = feedback.estimator # Update the specific estimator
+            else:
+                # If no new visits, the estimator should be the one from the last adaptive step
+                # Ensure self.estimators[i] exists from previous steps
+                if i >= len(self.estimators) or self.estimators[i] is None:
+                     print(f"Warning: Estimator for model '{model_name}' not found from previous steps.")
+                     continue # Skip error calculation if no estimator exists
+
+            # Calculate and print final cosine error for this model
+            if self.estimators[i] and hasattr(self.estimators[i], 'theta_fit') and hasattr(scorer_model, 'weight'):
+                est_weight = self.estimators[i].theta_fit
+                gt_weight = scorer_model.weight
+                error = self.calculate_cosine_error(est_weight, gt_weight)
+                print(f"Final estimation for model '{model_name}' after {total_episodes} episodes complete. Cosine error: {error:.4f}")
+            else:
+                print(f"Could not calculate final cosine error for model '{model_name}' (estimator or ground truth weight missing).")
+        print("------------------------------\n")
 
     def run_explore_only(self):
         """Runs only the exploration phase and saves visits/images."""
@@ -334,32 +436,45 @@ class LLMExperiment:
             verbose=self.cfg.verbose
         )
 
-        # --- Initialize Scorer Model and Theta Star (only if scorer_model is specified) ---
-        scorer_model_name = self.cfg.experiment.get('scorer_model') # Use .get() for safety
-        if scorer_model_name:
-            print(f"Initializing ground truth scorer model: {scorer_model_name}")
-            # Build scorer model using the environment and the embedder
-            self._scorer_model = get_scorer_model(
-                model_name=scorer_model_name,
-                env=env,
-                embedder=self.embedder # Pass embedder
-            )
-            # Create the ground truth function using the scorer model
-            self._theta_star = make_theta_star(env, self._scorer_model, verbose=self.cfg.verbose)
-            # Store scorer vector if needed (optional, depends on usage)
-            # self.env._scorer_vector = self._scorer_model.weight
-        else:
-            print("Skipping ground truth scorer model initialization (scorer_model not specified or null).")
-            self._scorer_model = None
-            self._theta_star = None
+        # Initialize lists for models and thetas
+        self._scorer_models = []
+        self._theta_stars = []
 
+        # Loop through configured scorer model names
+        for model_name in self.scorer_model_names:
+            scorer_model_instance = None # Initialize for this iteration
+            if model_name:
+                print(f"Initializing ground truth scorer model: {model_name}")
+                # Build scorer model using the environment and the embedder
+                scorer_model_instance = get_scorer_model(
+                    model_name=model_name,
+                    env=env,
+                    embedder=self.embedder # Pass embedder
+                )
+                # Create the ground truth function using the scorer model
+                theta_star_instance = make_theta_star(env, scorer_model_instance, verbose=self.cfg.verbose)
+            else:
+                # Handle case where a model name might be null/empty in the list
+                print("Warning: Encountered null/empty scorer_model name. Skipping ground truth initialization for this entry.")
+                scorer_model_instance = None
+                theta_star_instance = None
 
+            # Append the instances (or None) to the lists
+            self._scorer_models.append(scorer_model_instance)
+            self._theta_stars.append(theta_star_instance)
+
+        # Store scorer vector if needed (optional, depends on usage) - This might need adjustment if used
+        # Example: Store the first model's weight if needed elsewhere
+        # if self._scorer_models and self._scorer_models[0] is not None:
+        #     self.env._scorer_vector = self._scorer_models[0].weight
 
         return env
 
     def load_estimator(self, estimator_path):
-        """Load a pre-computed estimator from file
-        
+        """
+        Load a pre-computed estimator from file.
+        NOTE: Currently only supports loading a *single* estimator for the *first* model
+              when multiple scorer models are configured.
         Args:
             estimator_path: Path to the saved estimator file
             
@@ -379,12 +494,21 @@ class LLMExperiment:
             device = self.embedder.device
             theta = theta.to(device)
 
-            # Setup feedback components with the loaded theta
-            self.feedback.fit_estimator(preloaded_theta=theta)
-            self.estimator = self.feedback.estimator
-            self.design.update_estimator(self.estimator, self.env.emissions)
-            
-            print(f"Successfully loaded estimator with shape {theta.shape}")
+            # --- Basic Multi-Model Handling ---
+            if self.num_scorer_models > 1:
+                print(f"Warning: Loading estimator from {estimator_path} for the *first* model ({self.scorer_model_names[0]}) only.")
+
+            # Setup feedback components for the first model with the loaded theta
+            # Ensure lists are populated before accessing index 0
+            if not self.feedbacks or not self.estimators:
+                 print("Error: Feedback/Estimator lists not initialized before loading estimator.")
+                 return False
+
+            self.feedbacks[0].fit_estimator(preloaded_theta=theta)
+            self.estimators[0] = self.feedbacks[0].estimator # Update the first estimator instance
+            # Skip design update: self.designs[0].update_estimator(self.estimators[0], self.env.emissions)
+
+            print(f"Successfully loaded estimator for model '{self.scorer_model_names[0]}' with shape {theta.shape}")
             return True
         except Exception as e:
             print(f"Error loading estimator: {e}")
@@ -516,6 +640,7 @@ class LLMExperiment:
         print(f"Generated training data shapes: Embeddings {final_comparison_embeddings.shape}, Labels {final_labels.shape}")
         return final_comparison_embeddings, final_labels
 
+    # Removed unused _process_human_feedback method
 
     def run_test_only(self, mode: str, estimator_path: str = None, visits_path: str = None, feedback_path: str = None) -> bool:
         """
@@ -534,33 +659,50 @@ class LLMExperiment:
         Returns:
             True if the process was executed successfully, False otherwise.
         """
-        # Mode is now passed directly as an argument, remove determination logic here
-        # visits_path = self.cfg.get('visits_path') # No longer needed, passed as argument
-        # mode = None # REMOVED
-        input_path_for_dir = None # Path used to determine results directory # REMOVED (Handled in run_exp.py)
-
-        # Old mode determination logic REMOVED
-        # if estimator_path:
-        #     mode = "test"
-        #     ...
-        # elif visits_path and feedback_path:
-        #     mode = "train_human_feedback"
-        #     ...
-        # elif visits_path:
-        #     mode = "inspect"
-        #     ...
-        # else:
-        #     ...
-        #     return False
-
+        # Mode is now passed directly as an argument
         print(f"--- Running Test-Only Mode: {mode} ---")
 
         # --- Setup Results Directory (Handled by run_exp.py now) ---
         # The results_dir is set in __init__ and potentially overridden by run_exp.py
-        # We just need to ensure savers use the final self.results_dir before saving.
+
+        # --- Basic Multi-Model Handling ---
+        if self.num_scorer_models > 1:
+            print(f"Warning: Test-only mode currently has limited support for multiple scorer models.")
+            if mode == "load_estimator":
+                print("-> Will load estimator for the first model only.")
+            elif mode == "estimate_from_visits":
+                print("-> Will estimate for the first model only.")
+            elif mode == "load_estimator_and_feedback":
+                 print("-> Will load estimator for the first model only. Feedback processing might affect environment for all.")
+            # 'train_human_feedback' mode needs significant changes to support multiple models, likely unsupported for now.
+            if mode == "train_human_feedback":
+                 print("Error: Mode 'train_human_feedback' is not supported with multiple scorer models.")
+                 return False
 
         # --- Mode 1: Load Estimator ---
         if mode == "load_estimator":
+            #     mode = "test"
+            #     ...
+            # elif visits_path and feedback_path:
+            #     mode = "train_human_feedback"
+            #     ...
+            # elif visits_path:
+            #     mode = "inspect"
+            #     ...
+            # else:
+            #     ...
+            #     return False
+
+            # Indentation added for the block below
+            print(f"--- Running Test-Only Mode: {mode} ---") # This line was moved inside the if block
+
+            # --- Setup Results Directory (Handled by run_exp.py now) ---
+            # The results_dir is set in __init__ and potentially overridden by run_exp.py
+        # We just need to ensure savers use the final self.results_dir before saving.
+
+        # --- Mode 1: Load Estimator ---
+        if mode == "load_estimator": # This if statement needs the block below indented
+            # Indentation added for the block below
             if not estimator_path or not os.path.exists(estimator_path):
                 print(f"Error: Estimator file not found or not provided: {estimator_path}")
                 return False
@@ -597,33 +739,35 @@ class LLMExperiment:
                 # Step 1: Collect labels using visits and ground truth scorer
                 print("Collecting labels from visits using ground truth scorer...")
                 # Ensure _theta_star is available
-                if self._theta_star is None:
-                     raise ValueError("Ground truth scorer (_theta_star) is not available. Cannot collect labels.")
-                self.feedback.collect_labels(self.cfg, self.visits, self._theta_star)
+                # Use the first model's theta_star, consistent with limited multi-model support
+                if not self._theta_stars or self._theta_stars[0] is None:
+                     raise ValueError("Ground truth scorer (_theta_stars[0]) is not available. Cannot collect labels.")
+                # Use the first feedback mechanism and first theta_star
+                self.feedbacks[0].collect_labels(self.cfg, self.visits, self._theta_stars[0])
 
                 # Step 2: Fit the estimator using the collected labels
                 print("Fitting estimator with collected labels...")
-                self.feedback.fit_estimator() # Uses internally stored data
+                self.feedbacks[0].fit_estimator() # Uses internally stored data
 
-                # Step 3: Retrieve the fitted estimator
-                self.estimator = self.feedback.estimator # Get the estimator instance from the feedback object
+                # Step 3: Retrieve the fitted estimator (for the first model)
+                self.estimators[0] = self.feedbacks[0].estimator # Get the estimator instance
 
             except NotImplementedError as e:
-                 print(f"Error: The configured feedback mechanism ({self.feedback.__class__.__name__}) does not support training from visits alone.")
+                 print(f"Error: The configured feedback mechanism ({self.feedbacks[0].__class__.__name__}) does not support training from visits alone.")
                  print(e)
                  return False
             except AttributeError as e: # Catch the specific error if collect_labels/fit_estimator are missing
-                 print(f"Error: Method missing in feedback class ({self.feedback.__class__.__name__}): {e}")
+                 print(f"Error: Method missing in feedback class ({self.feedbacks[0].__class__.__name__}): {e}")
                  return False
             except Exception as e:
-                 print(f"Error during estimator training from visits: {e}")
+                 print(f"Error during estimator training from visits (model 0): {e}")
                  # Optionally re-raise for more detail: raise e
                  return False
 
-            # Check if the estimator was successfully fitted/retrieved
-            if self.estimator and getattr(self.estimator, 'fitted', False): # Check if estimator exists and is marked as fitted
-                print("Estimator trained/obtained successfully.")
-                # Proceed to testing
+            # Check if the first estimator was successfully fitted/retrieved
+            if self.estimators and self.estimators[0] and getattr(self.estimators[0], 'fitted', False):
+                print("Estimator for the first model trained/obtained successfully.")
+                # Proceed to testing (will handle multiple models internally)
                 self.test_and_save(current_mode=mode)
                 return True
             else:
@@ -648,10 +792,11 @@ class LLMExperiment:
             # Load feedback data using the feedback component's method
             # Store it for potential use by testers/savers (e.g., base prompt override)
             try:
-                self.feedback_data = self.feedback.load_feedback(feedback_path)
+                # Use the first feedback mechanism
+                self.feedback_data = self.feedbacks[0].load_feedback(feedback_path)
                 if self.feedback_data is None:
-                     print("Error: Failed to load feedback data (returned None).")
-                     return False
+                    print("Error: Failed to load feedback data (returned None).")
+                    return False
                 print("Feedback data loaded.")
                 # --- Optional: Re-initialize environment if user_prompt is found ---
                 user_prompt = self.feedback_data.get("user_prompt")
@@ -660,34 +805,40 @@ class LLMExperiment:
                     # Prepare new vocab list excluding bases.txt
                     new_vocab_files = [vf for vf in self.cfg.experiment.vocabulary if 'bases.txt' not in vf]
                     if len(new_vocab_files) == len(self.cfg.experiment.vocabulary):
-                         print("Warning: 'bases.txt' not found in original vocabulary list. Environment not changed.")
-                         # If bases.txt wasn't there, still use the user_prompt as base_prompt
-                         # but keep the original vocabulary and set include_base_prompt_in_first_tokens=False
-                         self.env = self._init_env(
-                             vocab_files=self.cfg.experiment.vocabulary, # Use original vocab
-                             base_prompt=user_prompt,
-                             include_base_prompt_in_first_tokens=False
-                         )
+                        print("Warning: 'bases.txt' not found in original vocabulary list. Environment not changed.")
+                        # If bases.txt wasn't there, still use the user_prompt as base_prompt
+                        # but keep the original vocabulary and set include_base_prompt_in_first_tokens=False
+                        # Re-initialize env with modified base_prompt, keeping original vocab
+                        # Need to modify _init_env or create a helper to handle this
+                        print("Warning: Environment re-initialization with modified base_prompt not fully implemented yet.")
+                        # For now, just update the env's base_prompt attribute directly
+                        self.env.base_prompt = user_prompt
+                        self.env.include_base_prompt_in_first_tokens = False
+                        # Note: Emissions might need regeneration if base_prompt changes significantly
+                        print(f"Updated env.base_prompt to '{user_prompt}'. Emissions not regenerated.")
                     else:
                         # Re-initialize env with the user_prompt as base_prompt and the reduced vocabulary.
                         # Horizon is implicitly set by len(new_vocab_files).
-                        # Set include_base_prompt_in_first_tokens=False as the base is now explicit.
-                        self.env = self._init_env(
-                            vocab_files=new_vocab_files,
-                            base_prompt=user_prompt,
-                            include_base_prompt_in_first_tokens=False
-                        )
-                    # Update components dependent on env.emissions
-                    if hasattr(self, 'design') and hasattr(self.design, 'update_estimator'):
-                         # Ensure estimator is available before updating design
-                         if self.estimator:
-                             self.design.update_estimator(self.estimator, self.env.emissions)
-                             print("Design objective updated with new environment emissions.")
-                         else:
-                             # This case shouldn't happen in this mode, but good to check
-                             print("Warning: Estimator not available when trying to update design objective.")
-                    else:
-                         print("Warning: Could not update design objective after environment re-initialization.")
+                       # Set include_base_prompt_in_first_tokens=False as the base is now explicit.
+                       # Need to modify _init_env or create a helper to handle this
+                       print("Warning: Environment re-initialization with modified vocabulary not fully implemented yet.")
+                       # For now, just update the env's base_prompt attribute directly
+                       self.env.base_prompt = user_prompt
+                       self.env.include_base_prompt_in_first_tokens = False
+                       # Note: Emissions and token lists need regeneration
+                       print(f"Updated env.base_prompt to '{user_prompt}'. Vocabulary/Emissions not regenerated.")
+
+                   # Update components dependent on env.emissions (Skip design update)
+                   # if hasattr(self, 'designs') and self.designs and hasattr(self.designs[0], 'update_estimator'):
+                   #      # Ensure estimator is available before updating design
+                    #      if self.estimators and self.estimators[0]:
+                    #          # self.designs[0].update_estimator(self.estimators[0], self.env.emissions)
+                    #          # print("Design objective updated with new environment emissions.")
+                    #          pass # Skipping design update
+                    #      else:
+                    #          print("Warning: Estimator not available when trying to update design objective.")
+                    # else:
+                    #      print("Warning: Could not update design objective after environment re-initialization.")
                     print("Environment re-initialized.")
                 else:
                     print("Optional 'user_prompt' not found in feedback data or not a string. Using environment initialized from config.")
@@ -716,16 +867,17 @@ class LLMExperiment:
         # Create a container for all results
         from components.results import ExperimentResults
         results = ExperimentResults()
-        
-        # Set the estimator and visits
-        results.set_estimator(self.estimator)
+
+        # Set the list of estimators and visits
+        results.set_estimators(self.estimators) # Use the list of estimators
         # Ensure visits are valid before setting
         valid_visits = self.visits and isinstance(self.visits, list) and self.visits[0]
         results.set_visits(self.visits if valid_visits else None) # Set to None if invalid/empty
 
         # --- Pre-run Validation ---
         print("Validating requirements for configured testers and savers...")
-        estimator_available = self.estimator is not None
+        # Check if *at least one* estimator is available in the list
+        estimators_available = self.estimators and any(est is not None for est in self.estimators)
         # Check if visits list exists, is not empty, and its first element is not empty
         visits_available = bool(self.visits and isinstance(self.visits, list) and self.visits[0])
 
@@ -736,28 +888,33 @@ class LLMExperiment:
         # --- Mode-Specific Validation ---
         if current_mode == "train_human_feedback":
             # Ensure LearnedEstimatorSaver is present
-            if not any(isinstance(s, LearnedEstimatorSaver) for s in self.savers):
-                 raise ValueError(f"Mode '{current_mode}' requires LearnedEstimatorSaver to be configured, but it was not found.")
-            # Ensure estimator was actually fitted
-            if not estimator_available:
-                 raise ValueError(f"Mode '{current_mode}' completed but the estimator is not available. Training likely failed.")
+            # Check if LearnedEstimatorSaver is present (it will be skipped if num_models > 1)
+            has_les = any(isinstance(s, LearnedEstimatorSaver) for s in self.savers)
+            if not has_les:
+                 print(f"Warning: Mode '{current_mode}' typically uses LearnedEstimatorSaver, but it was not found in config.")
+            # Ensure at least one estimator was actually fitted
+            if not estimators_available:
+                 raise ValueError(f"Mode '{current_mode}' completed but no estimator is available. Training likely failed.")
             # Testers are generally skipped in this mode, so no tester validation needed here.
-            print(f"Validation for mode '{current_mode}': LearnedEstimatorSaver found.")
+            print(f"Validation for mode '{current_mode}': Estimator(s) available.")
         # -----------------------------
 
         # Validate Testers (Skip if in train_human_feedback mode)
         if current_mode != "train_human_feedback":
             for tester in self.testers:
                 tester_name = type(tester).__name__
+                # Check if *any* estimator is available if the tester needs one
                 if isinstance(tester, (PreferenceTester, CosineTester)):
-                    if not estimator_available:
-                        raise ValueError(f"Tester '{tester_name}' requires an estimator, but it was not loaded or available.")
+                    if not estimators_available:
+                        raise ValueError(f"Tester '{tester_name}' requires an estimator, but none were loaded or available.")
                 elif isinstance(tester, ImageGenerationTester):
                      # ImageGenerationTester needs scorer_model OR estimator if use_estimator=True
-                     if tester.use_estimator and not estimator_available:
-                         raise ValueError(f"Tester '{tester_name}' is configured with use_estimator=True, but the estimator is not available.")
-                     if not tester.use_estimator and self.scorer_model is None:
-                          raise ValueError(f"Tester '{tester_name}' is configured to use the scorer_model, but it's not available.")
+                     if tester.use_estimator and not estimators_available:
+                         raise ValueError(f"Tester '{tester_name}' is configured with use_estimator=True, but no estimator is available.")
+                     # Check if *any* scorer model is available if needed
+                     scorer_models_available = self._scorer_models and any(sm is not None for sm in self._scorer_models)
+                     if not tester.use_estimator and not scorer_models_available:
+                          raise ValueError(f"Tester '{tester_name}' is configured to use the scorer_model, but none are available.")
                      if self.embedder is None: # Also needs embedder
                           raise ValueError(f"Tester '{tester_name}' requires an embedder, but it's not available.")
                 # Add checks for other testers if they have specific requirements
@@ -769,10 +926,11 @@ class LLMExperiment:
         for saver in self.savers:
             saver_name = type(saver).__name__
             if isinstance(saver, LearnedEstimatorSaver):
-                if not estimator_available:
-                    raise ValueError(f"Saver '{saver_name}' requires an estimator, but it was not loaded or available.")
+                # Check if *any* estimator is available if LearnedEstimatorSaver is used (will be skipped later if num_models > 1)
+                if not estimators_available:
+                    raise ValueError(f"Saver '{saver_name}' requires an estimator, but none were loaded or available.")
             elif isinstance(saver, (VisitsSaver, VisitsImageSaver, ReadableVisitsSaver)):
-                # More detailed check for visits availability
+                # More detailed check for visits availability (remains the same)
                 if not visits_available:
                     error_reason = "Visit data is required but not available"
                     if self.visits is None:
@@ -784,7 +942,8 @@ class LLMExperiment:
                     elif not self.visits[0]: # Check if the first policy's list is empty
                          error_reason = "Visit data for the first policy is empty"
                     # Add context about the source path if inspection mode failed
-                    if self.cfg.get('test_only', False) and not estimator_available and self.cfg.get('visits_path'):
+                    # Use the correct variable name 'estimators_available'
+                    if self.cfg.get('test_only', False) and not estimators_available and self.cfg.get('visits_path'):
                          error_reason += f". Attempted load from: {self.cfg.visits_path}"
 
                     raise ValueError(f"Saver '{saver_name}' requires visit data. Reason: {error_reason}.")
@@ -808,47 +967,117 @@ class LLMExperiment:
         results.add_metadata('embedder_class', self.embedder.__class__.__name__)
         results.add_metadata('embedder_model_id', self.embedder.model_id)
         results.add_metadata('embedder_normalize', self.embedder.normalize)
+        # Add scorer model names to metadata
+        results.add_metadata('scorer_model_names', self.scorer_model_names)
 
         # Add the resolved config as a plain dictionary for the ConfSaver
         config_dict = OmegaConf.to_container(self.cfg, resolve=True)
         results.add_metadata('config_dict', config_dict)
 
-        # Run all testers and collect metrics (Skip if in train_human_feedback mode)
-        all_tester_results = {} # Initialize dictionary to accumulate results
+        # --- Run Testers and Collect Metrics (Looping through models) ---
+        # Initialize lists to store metrics across all models
+        all_preference_errors = []
+        all_cosine_errors = []
+        # Add lists for other potential metrics here
+        # ...
+
         if current_mode != "train_human_feedback":
-            print("Running testers...")
-            for tester in self.testers:
-                print(f"Running tester: {type(tester).__name__}")
-                # Pass visits=self.visits if needed by any tester in the future
-                tester_results = tester.run_test( # Get results from the current tester
-                    cfg=self.cfg,
-                    env=self.env,
-                    estimator=self.estimator, # Can be None if tester doesn't need it (but validation would have caught it if it did)
-                    theta_star=self._theta_star,
-                    training_words_list=self.training_words,
-                    testing_words_list=self.testing_words
-                    # visits=self.visits # Pass visits if any tester needs them
-                )
-                # Update the accumulated results dictionary
-                if tester_results: # Ensure tester returned something
-                    all_tester_results.update(tester_results)
+            print("\n--- Running Testers for Each Model ---")
+            for i in range(self.num_scorer_models):
+                model_name = self.scorer_model_names[i]
+                estimator = self.estimators[i] if self.estimators and i < len(self.estimators) else None
+                theta_star = self._theta_stars[i] if self._theta_stars and i < len(self._theta_stars) else None
+                scorer_model = self._scorer_models[i] if self._scorer_models and i < len(self._scorer_models) else None
+
+                print(f"\nTesting Model: {model_name}")
+
+                # Check if essential components for this model are available
+                if theta_star is None or scorer_model is None:
+                    print(f"Skipping testing for model '{model_name}': Ground truth components missing.")
+                    continue
+                # Note: Estimator might be None if fitting failed, testers should handle this
+
+                for tester in self.testers:
+                    tester_name = type(tester).__name__
+                    print(f"  Running tester: {tester_name}")
+
+                    # Check if this tester requires an estimator and if it's available for *this* model
+                    if isinstance(tester, (PreferenceTester, CosineTester)) and estimator is None:
+                        print(f"  Skipping {tester_name} for model '{model_name}': Estimator not available.")
+                        continue
+                    if isinstance(tester, ImageGenerationTester) and tester.use_estimator and estimator is None:
+                         print(f"  Skipping {tester_name} (use_estimator=True) for model '{model_name}': Estimator not available.")
+                         continue
+
+                    # --- Skip ImageGenerationTester for subsequent models (i > 0) ---
+                    if isinstance(tester, ImageGenerationTester) and i > 0:
+                        print(f"  Skipping {tester_name} for model '{model_name}' (run only for the first model).")
+                        continue
+                    # -------------------------------------------------------------
+
+                    try:
+                        # Run the test with the components for the current model
+                        tester_results = tester.run_test(
+                           cfg=self.cfg,
+                           env=self.env,
+                           estimator=estimator, # Pass the specific estimator for this model
+                           theta_star=theta_star, # Pass the specific theta_star for this model
+                           scorer_model=scorer_model, # RE-ADDED - Pass the specific scorer_model for this iteration
+                           training_words_list=self.training_words,
+                           testing_words_list=self.testing_words
+                       )
+
+                        # Process and store results for this model
+                        if tester_results:
+                            for key, value in tester_results.items():
+                                print(f"    Model '{model_name}' - {key}: {value:.4f}")
+                                # Append to corresponding list
+                                if key == "preference_error":
+                                    all_preference_errors.append(value)
+                                elif key == "cosine_error":
+                                    all_cosine_errors.append(value)
+                                # Add elif for other metrics...
+
+                    except Exception as e:
+                        print(f"  Error running tester {tester_name} for model '{model_name}': {e}")
+
+            print("--------------------------------------\n")
         else:
             print("Skipping testers in 'train_human_feedback' mode.")
-        # --- Removed duplicated code block here ---
 
-        # Add all accumulated metrics to the results container
-        if all_tester_results:
-            results.add_metrics(all_tester_results)
+        # --- Calculate Averaged Metrics ---
+        averaged_metrics = {}
+        if all_preference_errors:
+            avg_pref_error = np.mean(all_preference_errors)
+            averaged_metrics["preference_error"] = avg_pref_error
+            print(f"Average Preference Error across models: {avg_pref_error:.4f}")
+        if all_cosine_errors:
+            avg_cosine_error = np.mean(all_cosine_errors)
+            averaged_metrics["cosine_error"] = avg_cosine_error
+            print(f"Average Cosine Error across models: {avg_cosine_error:.4f}")
+        # Calculate averages for other metrics...
 
-        # Use all savers to save the results (validation ensures requirements are met)
-        print("Running savers...")
-        # Removed duplicated lines causing IndentationError here
-        
-        # Use all savers to save the results
+        # Add averaged metrics to the results container
+        if averaged_metrics:
+            results.add_metrics(averaged_metrics)
+
+        # --- Run Savers ---
+        print("\n--- Running Savers ---")
         for saver in self.savers:
-            # Pass the results object containing potentially loaded estimator/visits
-            print(f"Running saver: {type(saver).__name__}")
-            saver.save_result(results)
+            saver_name = type(saver).__name__
+
+            # Skip LearnedEstimatorSaver if multiple models were used
+            if isinstance(saver, LearnedEstimatorSaver) and self.num_scorer_models > 1:
+                print(f"Skipping saver: {saver_name} (multiple scorer models configured)")
+                continue
+
+            # Pass the results object containing potentially loaded estimators/visits
+            print(f"Running saver: {saver_name}")
+            try:
+                saver.save_result(results)
+            except Exception as e:
+                 print(f"Error running saver {saver_name}: {e}")
+                 # Decide if we should continue or stop? For now, continue.
 
     def _get_algorithm_code(self):
         """Get a short code for the algorithm type"""

@@ -2,22 +2,24 @@
 import json
 import os
 import textwrap
-import types
-import hashlib
+# import types # Removed unused import
+# import hashlib # Removed unused import
 
 # Third-party imports
 import numpy as np
 import torch
 import matplotlib.pyplot as plt
-import PIL
-import yaml
+import PIL.Image
+import yaml # Added yaml import for ConfSaver
 from abc import ABC, abstractmethod
-from omegaconf import OmegaConf, DictConfig
-from hydra.utils import to_absolute_path
+from omegaconf import DictConfig # Keep DictConfig for type hints
+# from hydra.utils import to_absolute_path # Removed unused import
 
 # Local imports
 from doexpy.env.llm import create_prompt
+# Moved imports to top level:
 from experiments.llm.image_generator import StableDiffusionGenerator, _get_seed_from_prompt, DEFAULT_CONFIG
+
 
 def _convert_to_serializable(obj):
     """Convert numpy arrays, torch tensors, and other non-serializable objects to Python primitives."""
@@ -158,11 +160,10 @@ class ImageGenerationSaver(BaseSaver):
     
     def __init__(self, **kwargs):
         super().__init__(**kwargs)
-        # Import DEFAULT_CONFIG here if needed for defaults, or rely on _generate_images
-        from experiments.llm.image_generator import DEFAULT_CONFIG
+        # DEFAULT_CONFIG is now imported at the top level
 
         self.take_best_worst_N = self.params.get('take_best_worst_N', 8)
-        # Seed logic is specific here (_get_seed_from_prompt(base_prompt)), not using default directly
+        # Seed logic is specific here (_get_seed_from_prompt(self.base_prompt)), not using default directly
         self.debug_mode = self.params.get('debug_mode', False)
         # Get image_size and num_inference_steps from params or DEFAULT_CONFIG
         self.image_size = self.params.get('image_size', DEFAULT_CONFIG['image_size'])
@@ -253,8 +254,7 @@ class ImageGenerationSaver(BaseSaver):
             images_dir = os.path.join(images_dir, self.experiment_id)
             os.makedirs(images_dir, exist_ok=True)
 
-        # Import generator classes, seed function, and DEFAULT_CONFIG locally
-        from experiments.llm.image_generator import StableDiffusionGenerator, _get_seed_from_prompt, DEFAULT_CONFIG
+        # Imports moved to top level
 
         # Initialize image generator using self attributes (derived from params/DEFAULT_CONFIG)
         # and specific seed logic for this saver.
@@ -269,8 +269,8 @@ class ImageGenerationSaver(BaseSaver):
         
         # Generate images for the best prompts
         best_generated_images = []
-        best_image_scores = []
-        
+        # best_image_scores = [] # Removed unused variable
+
         # Print debug info
         if self.debug_mode:
             print(f"DEBUG MODE: Generating smaller images ({self.image_size}x{self.image_size}) with fewer steps ({self.num_inference_steps})")
@@ -280,58 +280,39 @@ class ImageGenerationSaver(BaseSaver):
             print(f"Generating best image {i+1}/{len(best_prompts)} for prompt: {full_prompt}")
             # Pass the embedder instance to the sample method
             image, image_embedding = generator.sample(full_prompt, embedder=self.embedder)
-            
-            # Calculate image-based aesthetics score
-            if self.add_image_score:
-                # Process embedding: normalize, convert to double, and move to correct device
-                image_embedding = image_embedding / torch.linalg.norm(image_embedding, dim=1, keepdim=True)
-                image_embedding = image_embedding.to(self.scorer_model.weight.device).double()
-                
-                # Score the embedding
-                image_score = self.scorer_model.score_embedding(image_embedding).item()
-                best_image_scores.append(image_score)
-            else:
-                image_score = None
-            
-            # Save the image with both scores in filename
+            # Image score calculation is removed from saver.
+            image_score = None # Image score is always None now within the saver
+
+            # Save the image with prompt score in filename
             score_text = f"prompt_{score:.4f}"
-            if image_score is not None:
-                score_text += f"_image_{image_score:.4f}"
+            # Removed image score from filename:
+            # if image_score is not None:
+            #     score_text += f"_image_{image_score:.4f}"
             img_path = os.path.join(images_dir, f"best_{i+1}_{score_text}.png")
             PIL.Image.fromarray(image).save(img_path)
-            
+
             best_generated_images.append(image)
         
         # Generate images for the worst prompts
         worst_generated_images = []
-        worst_image_scores = []
-        
+        # worst_image_scores = [] # Removed unused variable
+
         print("\nGenerating images for WORST prompts:")
         for i, (full_prompt, score) in enumerate(zip(worst_prompts, worst_scores)):
             print(f"Generating worst image {i+1}/{len(worst_prompts)} for prompt: {full_prompt}")
             # Pass the embedder instance to the sample method
             image, image_embedding = generator.sample(full_prompt, embedder=self.embedder)
-            
-            # Calculate image-based aesthetics score
-            if self.add_image_score and hasattr(self.scorer_model, 'score_embedding'):
-                # Process embedding: normalize, convert to double, and move to correct device
-                # Normalize the embedding once
-                image_embedding = image_embedding / image_embedding.norm(dim=1, keepdim=True)
-                image_embedding = image_embedding.to(self.scorer_model.weight.device).double()
+            # Image score calculation is removed from saver.
+            image_score = None # Image score is always None now within the saver
 
-                # Score the embedding
-                image_score = self.scorer_model.score_embedding(image_embedding).item()
-                worst_image_scores.append(image_score)
-            else:
-                image_score = None
-            
-            # Save the image with both scores in filename
+            # Save the image with prompt score in filename
             score_text = f"prompt_{score:.4f}"
-            if image_score is not None:
-                score_text += f"_image_{image_score:.4f}"
+            # Removed image score from filename:
+            # if image_score is not None:
+            #     score_text += f"_image_{image_score:.4f}"
             img_path = os.path.join(images_dir, f"worst_{i+1}_{score_text}.png")
             PIL.Image.fromarray(image).save(img_path)
-            
+
             worst_generated_images.append(image)
 
         # Create a summary image with generated images and their scores
@@ -351,17 +332,16 @@ class ImageGenerationSaver(BaseSaver):
         # Image scores are already calculated during image generation
         # Plot best images in the first row (axes[0, :])
         for i, (img, prompt_score, full_prompt) in enumerate(zip(best_generated_images, best_scores, best_prompts)):
-            ax = axes[0, i]
-            ax.imshow(img)
-            title = f"Best {i+1}: Prompt {prompt_score:.4f}"
-            if i < len(best_image_scores):
-                title += f"\nImage {best_image_scores[i]:.4f}"
-            ax.set_title(title)
-            # Wrap prompt text using textwrap for better readability
-            wrapped_prompt = textwrap.fill(full_prompt, width=40) # Wrap at 40 characters
-            ax.set_xlabel(wrapped_prompt, fontsize=8, labelpad=10) # Add padding
-            ax.set_xticks([])
-            ax.set_yticks([])
+           ax = axes[0, i]
+           ax.imshow(img)
+           title = f"Best {i+1}: Prompt {prompt_score:.4f}"
+           # Image score is removed
+           ax.set_title(title)
+           # Wrap prompt text using textwrap for better readability
+           wrapped_prompt = textwrap.fill(full_prompt, width=40) # Wrap at 40 characters
+           ax.set_xlabel(wrapped_prompt, fontsize=8, labelpad=10) # Add padding
+           ax.set_xticks([])
+           ax.set_yticks([])
 
         # Hide any unused subplots in the first row
         for i in range(len(best_generated_images), n_cols):
@@ -370,17 +350,16 @@ class ImageGenerationSaver(BaseSaver):
         # Plot worst images in the second row ONLY if save_worst is True and worst images exist
         if self.save_worst and worst_generated_images:
             for i, (img, prompt_score, full_prompt) in enumerate(zip(worst_generated_images, worst_scores, worst_prompts)):
-                ax = axes[1, i]
-                ax.imshow(img)
-                title = f"Worst {i+1}: Prompt {prompt_score:.4f}"
-                if i < len(worst_image_scores):
-                    title += f"\nImage {worst_image_scores[i]:.4f}"
-                ax.set_title(title)
-                # Wrap prompt text using textwrap for better readability
-                wrapped_prompt = textwrap.fill(full_prompt, width=40) # Wrap at 40 characters
-                ax.set_xlabel(wrapped_prompt, fontsize=8, labelpad=10) # Add padding
-                ax.set_xticks([])
-                ax.set_yticks([])
+               ax = axes[1, i]
+               ax.imshow(img)
+               title = f"Worst {i+1}: Prompt {prompt_score:.4f}"
+               # Image score is removed
+               ax.set_title(title)
+               # Wrap prompt text using textwrap for better readability
+               wrapped_prompt = textwrap.fill(full_prompt, width=40) # Wrap at 40 characters
+               ax.set_xlabel(wrapped_prompt, fontsize=8, labelpad=10) # Add padding
+               ax.set_xticks([])
+               ax.set_yticks([])
 
             # Hide any unused subplots in the second row
             for i in range(len(worst_generated_images), n_cols):
@@ -397,41 +376,49 @@ class ImageGenerationSaver(BaseSaver):
         summary_path = os.path.join(images_dir, "summary.png")
         plt.savefig(summary_path)
         plt.close()
-        
+
         # Save scores and prompts to a text file
         with open(os.path.join(images_dir, "results.txt"), "w") as f:
             f.write("BEST PROMPTS:\n")
-            f.write("Rank\tPrompt Score\tImage Score\tPrompt\n")
+            f.write("Rank\tPrompt Score\tPrompt\n") # Image Score column header already removed
             for i, (prompt_score, prompt) in enumerate(zip(best_scores, best_prompts)):
-                image_score = best_image_scores[i] if i < len(best_image_scores) else "N/A"
-                f.write(f"{i+1}\t{prompt_score:.6f}\t{image_score}\t{prompt}\n")
-            
+               # Image score already removed
+               f.write(f"{i+1}\t{prompt_score:.6f}\t{prompt}\n") # Write without image score
+
             # Write worst prompts section only if save_worst is True
             if self.save_worst and worst_prompts:
                 f.write("\nWORST PROMPTS:\n")
-                f.write("Rank\tPrompt Score\tImage Score\tPrompt\n")
+                f.write("Rank\tPrompt Score\tPrompt\n") # Image Score column header already removed
                 for i, (prompt_score, prompt) in enumerate(zip(worst_scores, worst_prompts)):
-                    image_score = worst_image_scores[i] if i < len(worst_image_scores) else "N/A"
-                    f.write(f"{i+1}\t{prompt_score:.6f}\t{image_score}\t{prompt}\n")
+                    # Image score already removed
+                    f.write(f"{i+1}\t{prompt_score:.6f}\t{prompt}\n") # Write without image score
 
 class LearnedEstimatorSaver(BaseSaver):
     """Saves the learned estimator theta vector to a file."""
     
     def save_result(self, results):
+        # Note: This saver is skipped if num_scorer_models > 1 in LLMExperiment.test_and_save
+        # If it runs, it means there's only one model/estimator.
         file_path = self.get_output_path(self.params.get('filename', 'estimator.pt'))
-        
-        # Get theta from results
-        theta = results.get_theta()
-        
-        # If theta is available, save it
-        if theta is not None:
+        if file_path is None: # Handle skip_existing
+             print(f"Skipping save for {self.params.get('filename', 'estimator.pt')} as it already exists.")
+             return
+
+        # Get the list of thetas (should contain only one if this saver runs)
+        thetas = results.get_thetas()
+
+        # Check if the list is valid and contains at least one theta
+        if thetas and thetas[0] is not None:
+            theta_to_save = thetas[0] # Get the first (and only) theta
             try:
-                torch.save(theta, file_path)
-                print(f"Saved estimator theta (shape: {theta.shape}) to {file_path}")
+                # Use the correct variable theta_to_save
+                torch.save(theta_to_save, file_path)
+                print(f"Saved estimator theta (shape: {theta_to_save.shape}) to {file_path}")
             except Exception as e:
                 print(f"Error saving estimator: {e}")
         else:
-            print("Error: No theta vector available in estimator")
+            # Update the error message for clarity
+            print("Error: No valid theta vector found in results for LearnedEstimatorSaver.")
 
 class VisitsSaver(BaseSaver):
     """Saves exploration visits to a file."""
@@ -695,13 +682,15 @@ class VisitsImageSaver(BaseSaver):
 
                     except IndexError:
                         print(f"    Warning: Missing visit data for episode {ep_idx}, policy {policy_idx}. Skipping.")
-                        # Explicitly use PIL.Image. Use generator's image size.
-                        timestep_images.append(PIL.Image.new('RGB', (generator.image_size[0], generator.image_size[1]), color = 'grey')) # Placeholder
+                        # Explicitly use PIL.Image. Use generator's image size (int) to create tuple.
+                        placeholder_size = (generator.image_size, generator.image_size)
+                        timestep_images.append(PIL.Image.new('RGB', placeholder_size, color = 'grey')) # Placeholder
                         timestep_prompts.append("Error: Missing Data")
                     except Exception as e:
                         print(f"    Error generating image for episode {ep_idx}, policy {policy_idx}, h={h}: {e}")
-                        # Explicitly use PIL.Image. Use generator's image size.
-                        timestep_images.append(PIL.Image.new('RGB', (generator.image_size[0], generator.image_size[1]), color = 'red')) # Error placeholder
+                        # Explicitly use PIL.Image. Use generator's image size (int) to create tuple.
+                        placeholder_size = (generator.image_size, generator.image_size)
+                        timestep_images.append(PIL.Image.new('RGB', placeholder_size, color = 'red')) # Error placeholder
                         timestep_prompts.append(f"Error: {e}")
 
                 # --- Print Prompts if Verbose (using flag stored in self.verbose) ---

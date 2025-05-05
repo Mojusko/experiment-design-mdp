@@ -383,7 +383,7 @@ llm-find-rounds: $(JOBS_LLM_ROUNDS)
 # Lambda-finding
 # Define the ranges for the two lambdas
 # Design lambda range
-LAMBDA_DSN_VALUES := 0.01 0.1 1 10
+LAMBDA_DSN_VALUES := 0.01 0.1 1 5
 # Estimation lambda range (wider, larger values)
 LAMBDA_EST_VALUES := 1 10 100 500
 # Numerical lambda values (separate range)

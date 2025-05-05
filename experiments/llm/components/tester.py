@@ -1,8 +1,8 @@
-import os # Added import
+# import os # Removed unused import
 import torch
 import numpy as np
 from abc import ABC, abstractmethod
-from doexpy.env.llm import create_prompt_from_tokens, DotProductModel, create_prompt # Added create_prompt
+from doexpy.env.llm import create_prompt_from_tokens, DotProductModel # Removed unused create_prompt
 
 def generate_test_sequence(rng, word_lists, horizon):
     """Generate a test sequence using the appropriate word list for each horizon step"""
@@ -13,14 +13,16 @@ def generate_test_sequence(rng, word_lists, horizon):
 
 class BaseTester(ABC):
     """Base class for all testers with simplified interface."""
-    
-    def __init__(self, scorer_model=None, embedder=None, params=None): # Added embedder argument
-        self.scorer_model = scorer_model
+
+    # Removed scorer_model from __init__ as it's passed to run_test
+    def __init__(self, embedder=None, params=None):
+        # self.scorer_model = scorer_model # REMOVED
         self.embedder = embedder # Store embedder instance
         self.params = params or {}
 
     @abstractmethod
-    def run_test(self, cfg, env, estimator, theta_star, training_words_list, testing_words_list, visits=None):
+    # Added scorer_model argument to run_test signature
+    def run_test(self, cfg, env, estimator, theta_star, scorer_model, training_words_list, testing_words_list, visits=None):
         """
         Run tests and return metrics dictionary.
 
@@ -41,7 +43,8 @@ class BaseTester(ABC):
 class PreferenceTester(BaseTester):
     """Tests preference prediction accuracy on held-out test data."""
 
-    def run_test(self, cfg, env, estimator, theta_star, training_words_list, testing_words_list, visits=None):
+    # Added scorer_model to signature
+    def run_test(self, cfg, env, estimator, theta_star, scorer_model, training_words_list, testing_words_list, visits=None):
         print(f"Running {self.__class__.__name__} with {self.params}")
         if estimator is None:
             print(f"Skipping {self.__class__.__name__}: Estimator is None.")
@@ -54,9 +57,9 @@ class PreferenceTester(BaseTester):
 
         # Make sure testing_words_list is a list of lists with one list per horizon step
         assert isinstance(testing_words_list[0], list)
-            
+
         print(f"Generating {N_test_prompts} test sequences with horizon {horizon}")
-        test_sequences = [generate_test_sequence(test_rng, testing_words_list, horizon) 
+        test_sequences = [generate_test_sequence(test_rng, testing_words_list, horizon)
                 for _ in range(N_test_prompts)]
 
         print(f"Computing embeddings and predictions for {len(test_sequences)} sequences")
@@ -66,10 +69,22 @@ class PreferenceTester(BaseTester):
         for sequence in test_sequences:
             # Create prompt directly from the sequence tokens
             prompt = create_prompt_from_tokens(sequence, env.base_prompt)
-            yy, feat = self.scorer_model.score_prompt(prompt)
+            # Use the passed scorer_model instance for ground truth scoring
+            # This was passed as an argument to run_test, use it directly
+            # Need to access scorer_model passed to run_test, not self.scorer_model
+            # Assuming scorer_model is passed correctly to run_test
+            # We need to add scorer_model to the arguments list if it's not there
+            # Let's assume it *is* passed as an argument for now, based on previous context.
+            # If not, the code will fail later with NameError.
+            # Re-checking the method signature: it's not passed. This needs fixing.
+            # Use the scorer_model passed directly to run_test
+            if scorer_model is None: # Check the passed argument
+                print(f"Skipping sequence in {self.__class__.__name__}: scorer_model passed to run_test is None.")
+                continue # Skip if the specific scorer model is missing
+            yy, feat = scorer_model.score_prompt(prompt) # Use the argument scorer_model
             xtest.append(feat.detach().cpu())
             ytest.append(yy.detach().cpu())
-        
+
         xtest = torch.vstack(xtest)
         ytest = torch.vstack(ytest)
         ypred = estimator.mean(xtest)
@@ -77,26 +92,26 @@ class PreferenceTester(BaseTester):
         print(f"Evaluating {N_pairs_eval} preference pairs")
         pair_indices = np.array([(i, j) for i in range(N_test_prompts) for j in range(i+1, N_test_prompts)])
         selected_pairs = pair_indices[test_rng.choice(len(pair_indices), N_pairs_eval, replace=False)]
-        
+
         correct_preferences = 0
         for i, j in selected_pairs:
             gt_prefers_i = (ytest[i] >= ytest[j]).item()
             pred_prefers_i = (ypred[i] >= ypred[j]).item()
             if gt_prefers_i == pred_prefers_i:
                 correct_preferences += 1
-        
+
         error = 1.0 - (correct_preferences / N_pairs_eval)
-        
+
         print(f"Preference error: {error:.4f} ({correct_preferences}/{N_pairs_eval} correct)")
-        
+
         return {"preference_error": error}
 
 class CosineTester(BaseTester):
-    # Updated __init__ to accept embedder and pass it to super()
-    def __init__(self, scorer_model=None, embedder=None, params=None):
-        super().__init__(scorer_model, embedder, params) # Pass embedder to base class
+    # Removed scorer_model from __init__, pass embedder to super()
+    def __init__(self, embedder=None, params=None):
+        super().__init__(embedder, params) # Pass embedder to base class
         print(f"Initialized {self.__class__.__name__} with {self.params}")
-    
+
     @staticmethod
     def cosine_error(vec1, vec2): 
         vec1 = vec1.cpu()
@@ -105,7 +120,8 @@ class CosineTester(BaseTester):
         cos_sim = torch.nn.functional.cosine_similarity(vec1.flatten(), vec2.flatten(), dim=0)
         return 1 - cos_sim.item()
 
-    def run_test(self, cfg, env, estimator, theta_star, training_words_list, testing_words_list, visits=None):
+    # Added scorer_model to signature
+    def run_test(self, cfg, env, estimator, theta_star, scorer_model, training_words_list, testing_words_list, visits=None):
         print(f"Running {self.__class__.__name__}")
         if estimator is None:
             print(f"Skipping {self.__class__.__name__}: Estimator is None.")
@@ -113,12 +129,13 @@ class CosineTester(BaseTester):
         if not hasattr(estimator, 'theta_fit'):
             print(f"Skipping {self.__class__.__name__}: Estimator does not have 'theta_fit'.")
             return {}
-        if self.scorer_model is None or not hasattr(self.scorer_model, 'weight'):
-             print(f"Skipping {self.__class__.__name__}: Scorer model or its weight is missing.")
-             return {}
+        # Use the scorer_model passed directly to run_test
+        if scorer_model is None or not hasattr(scorer_model, 'weight'):
+            print(f"Skipping {self.__class__.__name__}: Scorer model passed to run_test or its weight is missing.")
+            return {}
 
         # Get the ground-truth model weights and the estimated weights
-        gt_weight = self.scorer_model.weight  # ground truth weight from scorer model
+        gt_weight = scorer_model.weight  # ground truth weight from passed scorer_model argument
         est_weight = estimator.theta_fit      # estimated weight
         error = self.cosine_error(est_weight, gt_weight)
         print(f"Cosine error: {error:.4f}")
@@ -147,19 +164,20 @@ def create_dot_product_model_from_estimator(estimator, embedder):
         raise ValueError(f"Failed to create DotProductModel from estimator: {e}")
 
 class ImageGenerationTester(BaseTester):
-    # Updated __init__ to accept embedder, beam_width and pass them to super()
-    def __init__(self, scorer_model=None, embedder=None, params=None):
+    # Removed scorer_model from __init__, pass embedder to super()
+    def __init__(self, embedder=None, params=None):
         self.params = params or {}
-        # scorer_model and embedder are passed to super() which stores them
+        # embedder is passed to super() which stores it
         self.take_best_worst_N = self.params.get('take_best_worst_N', 8) # N sequences to return
         self.use_estimator = self.params.get('use_estimator', False)
         self.beam_width = self.params.get('beam_width', 8) # Beam width for search (K in beam search)
-        # Pass scorer_model and embedder to the base class constructor
-        super().__init__(scorer_model=scorer_model, embedder=embedder, params=params)
+        # Pass embedder to the base class constructor
+        super().__init__(embedder=embedder, params=params)
         print(f"Initialized {self.__class__.__name__} with take_best_worst_N={self.take_best_worst_N}, "
               f"use_estimator={self.use_estimator}, beam_width={self.beam_width}")
 
-    def run_test(self, cfg, env, estimator, theta_star, training_words_list, testing_words_list, visits=None):
+    # Added scorer_model to signature
+    def run_test(self, cfg, env, estimator, theta_star, scorer_model, training_words_list, testing_words_list, visits=None):
         """Run the image generation test using beam search.
 
         This tester finds the top N best and worst prompts based on the scorer model or estimator,
@@ -170,18 +188,23 @@ class ImageGenerationTester(BaseTester):
         # Determine which model to use for scoring and store it for helper methods
         if self.use_estimator:
             print(f"Using estimator model for {self.__class__.__name__}")
-            self.estimator = estimator  # Store for helper methods
-        else:
-            print(f"Using ground truth model for {self.__class__.__name__}")
+            # Store the specific estimator passed for this run
+            self.current_estimator = estimator
+            # No need to store scorer_model locally, it's passed to _run_beam_search_test
+        # else: # scorer_model is passed directly, no need for self.current_scorer_model
+            # print(f"Using ground truth model for {self.__class__.__name__}")
+            # Store the specific scorer_model passed for this run
+            # self.current_scorer_model = scorer_model # REMOVED
 
-        test_rng = np.random.RandomState(42) # Keep RNG for potential future use, though not used by beam search directly
+        # test_rng = np.random.RandomState(42) # Removed unused RNG
         horizon = env.max_episode_length # Use horizon from env
         # Make sure testing_words_list is a list of lists with one list per horizon step
         if not isinstance(testing_words_list[0], list):
             testing_words_list = [testing_words_list] * horizon
-        
+
         # Beam search approach: find top N best and worst sequences
-        return self._run_beam_search_test(cfg, env, test_rng, horizon, testing_words_list)
+        # Pass the specific scorer_model for this iteration to the helper method
+        return self._run_beam_search_test(cfg, env, horizon, testing_words_list, scorer_model, estimator)
 
     def _score_sequence(self, sequence, env, horizon, testing_words_list, scoring_model):
         """Scores a potentially partial sequence by padding and using the scoring model."""
@@ -232,26 +255,31 @@ class ImageGenerationTester(BaseTester):
         # Final beams are sorted by score according to 'maximize'
         return beams # Returns list of (score, sequence_tuple)
 
-    def _run_beam_search_test(self, cfg, env, test_rng, horizon, testing_words_list):
+    # Added scorer_model and estimator arguments
+    def _run_beam_search_test(self, cfg, env, horizon, testing_words_list, scorer_model, estimator):
         """Runs beam search to find top N best and worst sequences."""
         try:
-            # Determine which scoring model to use
+            # Determine which scoring model to use based on self.use_estimator
             if self.use_estimator:
-                if self.estimator is None:
-                    raise ValueError("Cannot use estimator model when estimator is None.")
+                # Use the estimator passed to this method
+                if estimator is None:
+                    raise ValueError("Cannot use estimator model when estimator passed is None.")
                 if self.embedder is None:
                     raise ValueError("Cannot create estimator model without an embedder instance.")
-                scoring_model = create_dot_product_model_from_estimator(self.estimator, self.embedder)
+                # Use the passed estimator instance directly
+                scoring_model_to_use = create_dot_product_model_from_estimator(estimator, self.embedder)
                 print(f"Running beam search test with estimator model, horizon {horizon}, beam width {self.beam_width}")
             else:
-                if self.scorer_model is None:
-                    raise ValueError("Cannot use ground truth model when scorer_model is None.")
-                scoring_model = self.scorer_model
+                # Use the scorer_model passed to this method
+                if scorer_model is None:
+                    raise ValueError("Cannot use ground truth model when scorer_model passed is None.")
+                scoring_model_to_use = scorer_model
                 print(f"Running beam search test with ground truth model, horizon {horizon}, beam width {self.beam_width}")
 
             # Find N best sequences
             print("Starting beam search for best sequences...")
-            best_results = self._beam_search(env, horizon, testing_words_list, scoring_model, self.beam_width, maximize=True)
+            # Use the determined scoring_model_to_use
+            best_results = self._beam_search(env, horizon, testing_words_list, scoring_model_to_use, self.beam_width, maximize=True)
             # Extract top N best sequences and scores
             top_n_best = best_results[:self.take_best_worst_N]
             best_sequences = [list(seq) for score, seq in top_n_best] # Convert tuples back to lists
@@ -261,7 +289,8 @@ class ImageGenerationTester(BaseTester):
 
             # Find N worst sequences
             print("Starting beam search for worst sequences...")
-            worst_results = self._beam_search(env, horizon, testing_words_list, scoring_model, self.beam_width, maximize=False)
+            # Use the determined scoring_model_to_use
+            worst_results = self._beam_search(env, horizon, testing_words_list, scoring_model_to_use, self.beam_width, maximize=False)
             # Extract top N worst sequences and scores (top N from the ascending sort)
             top_n_worst = worst_results[:self.take_best_worst_N]
             worst_sequences = [list(seq) for score, seq in top_n_worst] # Convert tuples back to lists

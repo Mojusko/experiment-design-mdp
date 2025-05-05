@@ -7,9 +7,9 @@ from doexpy.functionals.doe_static_functionals import (
     DesignA, DesignD, MultiPolicyOrigDesignA, MultiPolicyOrigDesignD, MultiPolicyOrigDesignC
 )
 from doexpy.functionals.doe_adaptive_functionals import (
-    AdaptiveOrigDesignD, AdaptiveOrigDesignA, AdaptiveOrigDesignC 
+    AdaptiveOrigDesignA, AdaptiveOrigDesignC # Removed AdaptiveOrigDesignD
 )
-from doexpy.feedback.feedback_base import EmptyFeedback
+# from doexpy.feedback.feedback_base import EmptyFeedback # Removed EmptyFeedback
 from stpy.embeddings.polynomial_embedding import CustomEmbedding
 from stpy.regression.kernelized_features import KernelizedFeatures
 from stpy.regression.regularized_dictionary.regularized_multinomial_estimator import RegularizedMultinomialEstimator
@@ -166,7 +166,7 @@ class FeedbackFactory:
     Decides which feedback type to build + design + estimator for numerical or multinomial.
     """
     @staticmethod
-    def create(cfg, env, scorer_model, embedder): # Added embedder argument
+    def create(cfg, env, scorer_model, embedder, scorer_model_name=None): # Added scorer_model_name argument
         """
         Creates feedback components.
 
@@ -174,7 +174,8 @@ class FeedbackFactory:
             cfg: Configuration object.
             env: Environment object (LLMGrid).
             scorer_model: The ground truth scorer model instance.
-            embedder: The embedder instance. # Added embedder to docstring
+            embedder: The embedder instance.
+            scorer_model_name: The name of the scorer model (used for lambda lookup). # Added scorer_model_name to docstring
         """
         # Use embedder's dimension instead of hardcoding
         m = embedder.get_embedding_dim()
@@ -182,16 +183,21 @@ class FeedbackFactory:
 
         # Determine lambda_dsn and lambda_est based on the configuration strategy
         if cfg.feedback.name == 'multinomial' and cfg.feedback.use_model_specific_lambda:
-            # Use model-specific lambdas from the dictionary
-            scorer_model_name = cfg.experiment.scorer_model
-            # Provide default values from the main config if model not found
+            # Check if scorer_model_name was provided
+            if scorer_model_name is None:
+                raise ValueError("scorer_model_name must be provided to FeedbackFactory.create when use_model_specific_lambda is True.")
+
+            # Use model-specific lambdas from the dictionary using the provided scorer_model_name
+            # Provide default values from the main config if model not found in specific params
             default_params = {'lambda_dsn': cfg.feedback.lambda_dsn, 'lambda_est': cfg.feedback.lambda_est}
             model_params = cfg.feedback.model_specific_params.get(scorer_model_name, default_params)
-            lambda_dsn = model_params.get('lambda_dsn', cfg.feedback.lambda_dsn) # Fallback if key missing
-            lambda_est = model_params.get('lambda_est', cfg.feedback.lambda_est) # Fallback if key missing
-            print(f"Using model-specific lambdas: lambda_dsn={lambda_dsn}, lambda_est={lambda_est} for scorer_model={scorer_model_name}")
+
+            # Get lambdas, falling back to defaults if keys are missing within the model's specific params
+            lambda_dsn = model_params.get('lambda_dsn', cfg.feedback.lambda_dsn)
+            lambda_est = model_params.get('lambda_est', cfg.feedback.lambda_est)
+            print(f"Using model-specific lambdas for '{scorer_model_name}': lambda_dsn={lambda_dsn}, lambda_est={lambda_est}")
         else:
-            # Use the general lambdas (either for numerical or if flag is false for multinomial)
+            # Use the general lambdas (either for numerical or if use_model_specific_lambda is false for multinomial)
             # Ensure lambdas exist in the feedback config
             if not hasattr(cfg.feedback, 'lambda_dsn'):
                  raise ValueError(f"lambda_dsn not found in feedback config '{cfg.feedback.name}' and use_model_specific_lambda is false or feedback is not multinomial.")
