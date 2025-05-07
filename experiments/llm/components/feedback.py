@@ -300,7 +300,7 @@ class FeedbackFactory:
                     )
                     print("Using Static C-optimal design.")
                 else: # Fallback to Static A-optimal
-                    design = MultiPolicyOrigDesignA(
+                    design = MultiPolicyOrigDesignD(
                         env=env,
                         lambd=lambda_dsn,
                         dim=1,

@@ -25,13 +25,9 @@ saveFinalButton.addEventListener('click', () => {
     }
 
     // --- Prepare data for JSON ---
-    const outputData = {
-        user_prompt: userPrompt,
-        preferences: feedbackData // Store image preferences under 'preferences' key
-    // --- Prepare data for JSON ---
     // Process feedbackData to include detailed info
     const formattedPreferences = [];
-    const filenamePattern = /alg-([a-zA-Z0-9]+)_episode_(\d+)_timestep_(\d+)\.png$/i;
+    const filenamePattern = /^images\/alg-([a-zA-Z0-9]+)_episode_(\d+)_timestep_(\d+)\.png$/i;
 
     for (const filename in feedbackData) {
         if (feedbackData.hasOwnProperty(filename)) {
