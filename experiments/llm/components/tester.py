@@ -166,14 +166,14 @@ def create_dot_product_model_from_estimator(estimator, embedder):
 
 class ImageGenerationTester(BaseTester):
     # Removed scorer_model from __init__, pass embedder to super()
-    def __init__(self, embedder=None, params=None):
+    def __init__(self, env=None, embedder=None, params=None):
         self.params = params or {}
         # embedder is passed to super() which stores it
         self.take_best_worst_N = self.params.get('take_best_worst_N', 8) # N sequences to return
         self.use_estimator = self.params.get('use_estimator', False)
         self.beam_width = self.params.get('beam_width', 8) # Beam width for search (K in beam search)
-        # Pass embedder to the base class constructor
-        super().__init__(embedder=embedder, params=params)
+        # Pass env, embedder to the base class constructor
+        super().__init__(env=env, embedder=embedder, params=params)
         print(f"Initialized {self.__class__.__name__} with take_best_worst_N={self.take_best_worst_N}, "
               f"use_estimator={self.use_estimator}, beam_width={self.beam_width}")
 
