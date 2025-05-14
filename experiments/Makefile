@@ -291,7 +291,7 @@ llm-generate-image:
 	cd llm && TIMESTAMP=$(TIMESTAMP) OMP_NUM_THREADS=1 MKL_NUM_THREADS=1 $(PYTHONPATH) image_generator.py --prompt '$(PROMPT)' $(if $(OUTPUT_DIR),--output_dir '$(OUTPUT_DIR)',) $(if $(SEED),--seed $(SEED),) $(if $(IMAGE_SIZE),--image_size $(IMAGE_SIZE),) $(if $(NUM_STEPS),--num_inference_steps $(NUM_STEPS),) $(if $(GUIDANCE_PROMPT),--guidance_prompt $(GUIDANCE_PROMPT),) $(if $(GUIDANCE_ESTIMATOR),--guidance_estimator $(GUIDANCE_ESTIMATOR),) $(if $(ESTIMATOR),--estimator '$(ESTIMATOR)',)
 
 ########################### LLMS
-REPEATS_LLM=20
+REPEATS_LLM=15
 NUMBERS_LLM := $(shell seq 1 ${REPEATS_LLM})
 
 # Jobs for V comparison (non-adaptive design)
@@ -323,24 +323,93 @@ $(JOBS_LLM_DSN_ADD): job-llm-add-dsn%:
 llm-additivity: $(JOBS_LLM_ALG_ADD) $(JOBS_LLM_RAN_ADD) $(JOBS_LLM_DSN_ADD)
 
 # Jobs for feedback comparison
-JOBS_LLM_DSN_NUM := $(addprefix job-llm-feedback-dsn-num,$(NUMBERS_LLM))
-JOBS_LLM_RAN_NUM := $(addprefix job-llm-feedback-ran-num,$(NUMBERS_LLM))
+EPISODES_LLM_FEEDBACK_COMPARISON := 10 25 50 100 # Define episode counts to iterate over
 
-$(JOBS_LLM_DSN_NUM): job-llm-feedback-dsn-num%:
-	cd llm && TIMESTAMP=$(TIMESTAMP) OMP_NUM_THREADS=1 MKL_NUM_THREADS=1 $(PYTHONPATH) run_exp.py experiment=feedback_comparison algorithm=design feedback=numerical results_dir="results/feedback-comparison" experiment_id="$*" seed=$*
+# Numerical Feedback Jobs
+JOBS_LLM_DSN_NUM := \
+  $(foreach episodes,$(EPISODES_LLM_FEEDBACK_COMPARISON), \
+    $(foreach n,$(NUMBERS_LLM), \
+      job-llm-feedback-dsn-num-ep$(episodes)-$(n)))
 
-$(JOBS_LLM_RAN_NUM): job-llm-feedback-ran-num%:
-	cd llm && TIMESTAMP=$(TIMESTAMP) OMP_NUM_THREADS=1 MKL_NUM_THREADS=1 $(PYTHONPATH) run_exp.py experiment=feedback_comparison algorithm=random feedback=numerical results_dir="results/feedback-comparison" experiment_id="$*" seed=$*
+JOBS_LLM_RAN_NUM := \
+  $(foreach episodes,$(EPISODES_LLM_FEEDBACK_COMPARISON), \
+    $(foreach n,$(NUMBERS_LLM), \
+      job-llm-feedback-ran-num-ep$(episodes)-$(n)))
 
-# Split multinomial feedback jobs  
-JOBS_LLM_DSN_MULT := $(addprefix job-llm-feedback-dsn-mult,$(NUMBERS_LLM))
-JOBS_LLM_RAN_MULT := $(addprefix job-llm-feedback-ran-mult,$(NUMBERS_LLM))
+define feedback_dsn_num_job_template
+job-llm-feedback-dsn-num-ep$(1)-$(2):
+	cd llm && TIMESTAMP=$(TIMESTAMP) OMP_NUM_THREADS=1 MKL_NUM_THREADS=1 $(PYTHONPATH) run_exp.py \
+	  experiment=feedback_comparison \
+	  algorithm=design \
+	  feedback=numerical \
+	  experiment.episodes=$(1) \
+	  seed=$(2) \
+	  results_dir="results/feedback-comparison" \
+	  experiment_id="ep$(1)-$(2)"
+endef
 
-$(JOBS_LLM_DSN_MULT): job-llm-feedback-dsn-mult%:
-	cd llm && TIMESTAMP=$(TIMESTAMP) OMP_NUM_THREADS=1 MKL_NUM_THREADS=1 $(PYTHONPATH) run_exp.py experiment=feedback_comparison algorithm=design feedback=multinomial results_dir="results/feedback-comparison" experiment_id="$*" seed=$*
+define feedback_ran_num_job_template
+job-llm-feedback-ran-num-ep$(1)-$(2):
+	cd llm && TIMESTAMP=$(TIMESTAMP) OMP_NUM_THREADS=1 MKL_NUM_THREADS=1 $(PYTHONPATH) run_exp.py \
+	  experiment=feedback_comparison \
+	  algorithm=random \
+	  feedback=numerical \
+	  experiment.episodes=$(1) \
+	  seed=$(2) \
+	  results_dir="results/feedback-comparison" \
+	  experiment_id="ep$(1)-$(2)"
+endef
 
-$(JOBS_LLM_RAN_MULT): job-llm-feedback-ran-mult%:
-	cd llm && TIMESTAMP=$(TIMESTAMP) OMP_NUM_THREADS=1 MKL_NUM_THREADS=1 $(PYTHONPATH) run_exp.py experiment=feedback_comparison algorithm=random feedback=multinomial results_dir="results/feedback-comparison" experiment_id="$*" seed=$* 
+$(foreach episodes,$(EPISODES_LLM_FEEDBACK_COMPARISON), \
+  $(foreach n,$(NUMBERS_LLM), \
+    $(eval $(call feedback_dsn_num_job_template,$(episodes),$(n)))))
+
+$(foreach episodes,$(EPISODES_LLM_FEEDBACK_COMPARISON), \
+  $(foreach n,$(NUMBERS_LLM), \
+    $(eval $(call feedback_ran_num_job_template,$(episodes),$(n)))))
+
+# Multinomial Feedback Jobs
+JOBS_LLM_DSN_MULT := \
+  $(foreach episodes,$(EPISODES_LLM_FEEDBACK_COMPARISON), \
+    $(foreach n,$(NUMBERS_LLM), \
+      job-llm-feedback-dsn-mult-ep$(episodes)-$(n)))
+
+JOBS_LLM_RAN_MULT := \
+  $(foreach episodes,$(EPISODES_LLM_FEEDBACK_COMPARISON), \
+    $(foreach n,$(NUMBERS_LLM), \
+      job-llm-feedback-ran-mult-ep$(episodes)-$(n)))
+
+define feedback_dsn_mult_job_template
+job-llm-feedback-dsn-mult-ep$(1)-$(2):
+	cd llm && TIMESTAMP=$(TIMESTAMP) OMP_NUM_THREADS=1 MKL_NUM_THREADS=1 $(PYTHONPATH) run_exp.py \
+	  experiment=feedback_comparison \
+	  algorithm=design \
+	  feedback=multinomial \
+	  experiment.episodes=$(1) \
+	  seed=$(2) \
+	  results_dir="results/feedback-comparison" \
+	  experiment_id="ep$(1)-$(2)"
+endef
+
+define feedback_ran_mult_job_template
+job-llm-feedback-ran-mult-ep$(1)-$(2):
+	cd llm && TIMESTAMP=$(TIMESTAMP) OMP_NUM_THREADS=1 MKL_NUM_THREADS=1 $(PYTHONPATH) run_exp.py \
+	  experiment=feedback_comparison \
+	  algorithm=random \
+	  feedback=multinomial \
+	  experiment.episodes=$(1) \
+	  seed=$(2) \
+	  results_dir="results/feedback-comparison" \
+	  experiment_id="ep$(1)-$(2)"
+endef
+
+$(foreach episodes,$(EPISODES_LLM_FEEDBACK_COMPARISON), \
+  $(foreach n,$(NUMBERS_LLM), \
+    $(eval $(call feedback_dsn_mult_job_template,$(episodes),$(n)))))
+
+$(foreach episodes,$(EPISODES_LLM_FEEDBACK_COMPARISON), \
+  $(foreach n,$(NUMBERS_LLM), \
+    $(eval $(call feedback_ran_mult_job_template,$(episodes),$(n)))))
 
 # Combined targets
 llm-feedback-comparison-num: $(JOBS_LLM_DSN_NUM) $(JOBS_LLM_RAN_NUM)

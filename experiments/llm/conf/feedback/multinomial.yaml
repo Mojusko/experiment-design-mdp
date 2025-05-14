@@ -3,8 +3,8 @@ name: "multinomial"
 num_policies: 4
 num_components: 2
 num_rounds: 12 #static
-lambda_dsn: 1 # Default design lambda, used if use_model_specific_lambda is false
-lambda_est: 100 # Default estimation lambda, used if use_model_specific_lambda is false (Set higher based on previous findings)
+lambda_dsn: 25 # Default design lambda, used if use_model_specific_lambda is false
+lambda_est: 25 # Default estimation lambda, used if use_model_specific_lambda is false (Set higher based on previous findings)
 use_model_specific_lambda: true # Set to false to use the defaults above
 adaptive_estimation_frequency: 0
 adaptive_estimation_start: 0
@@ -36,14 +36,14 @@ C_design_keywords: [
 # These are used only if use_model_specific_lambda is true
 model_specific_params:
   japanese-text:
-    lambda_dsn: 10
+    lambda_dsn: 25
     lambda_est: 25
   ancient-text:
-    lambda_dsn: 10 # Example value
+    lambda_dsn: 25 # Example value
     lambda_est: 25 #num_policies=4 (Kept high based on previous findings)
   futuristic-text:
-    lambda_dsn: 10
+    lambda_dsn: 25
     lambda_est: 25
   asian-text:
-    lambda_dsn: 10
+    lambda_dsn: 25
     lambda_est: 25
