@@ -1085,12 +1085,18 @@ class LLMExperiment:
                                 else:
                                     # For non-float values (like the 'image_generation' dict), print without float formatting
                                     print(f"    Model '{model_name}' - {key}: {value}")
-                                # Append to corresponding list
-                                if key == "preference_error":
+
+                                # If the current tester is ImageGenerationTester,
+                                # add its results directly to the main results object's metrics.
+                                # These are not averaged across models as IGT runs only for the first model.
+                                if isinstance(tester, ImageGenerationTester):
+                                    results.add_metric(key, value)
+                                # For other testers, collect for averaging
+                                elif key == "preference_error":
                                     all_preference_errors.append(value)
                                 elif key == "cosine_error":
                                     all_cosine_errors.append(value)
-                                # Add elif for other metrics...
+                                # Add elif for other metrics that need averaging...
 
                     except Exception as e:
                         print(f"  Error running tester {tester_name} for model '{model_name}': {e}")
