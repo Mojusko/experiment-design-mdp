@@ -2,7 +2,7 @@ name: "multinomial"
 #num_policies: 4
 num_policies: 4
 num_components: 2
-num_rounds: 12 #static
+num_rounds: 24 #static
 lambda_dsn: 1 # Default design lambda, used if use_model_specific_lambda is false
 lambda_est: 100 # Default estimation lambda, used if use_model_specific_lambda is false (Set higher based on previous findings)
 use_model_specific_lambda: true # Set to false to use the defaults above
