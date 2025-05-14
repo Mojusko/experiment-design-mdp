@@ -1080,7 +1080,11 @@ class LLMExperiment:
                         # Process and store results for this model
                         if tester_results:
                             for key, value in tester_results.items():
-                                print(f"    Model '{model_name}' - {key}: {value:.4f}")
+                                if isinstance(value, float):
+                                    print(f"    Model '{model_name}' - {key}: {value:.4f}")
+                                else:
+                                    # For non-float values (like the 'image_generation' dict), print without float formatting
+                                    print(f"    Model '{model_name}' - {key}: {value}")
                                 # Append to corresponding list
                                 if key == "preference_error":
                                     all_preference_errors.append(value)
