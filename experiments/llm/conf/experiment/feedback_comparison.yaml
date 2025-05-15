@@ -1,12 +1,14 @@
 name: "feedback_comparison"
 id_prefix: "feedback"  # Used for filename prefixes
-episodes: 25
+episodes: 5
 vocab_size: 2500
-vocabulary: 
-  #- 'vocabulary2/bases.txt'
-  - 'vocabulary2/mediums.txt'
-  - 'vocabulary2/movements.txt'
-  - 'vocabulary2/emotions.txt'
+vocabulary:
+  - 'vocabulary3/bases.txt'
+  - 'vocabulary3/ambient.txt'
+  - 'vocabulary3/style.txt'
+  - 'vocabulary3/composition.txt'
+  - 'vocabulary3/lighting.txt'
+  - 'vocabulary3/detail.txt'
 # Example with multiple scorer models
-scorer_model: 'japanese-text'
+scorer_model: 'sunny'
 

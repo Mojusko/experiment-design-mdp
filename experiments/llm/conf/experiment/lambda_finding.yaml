@@ -1,16 +1,13 @@
 name: "lambda_finding"
 id_prefix: "lambda"  # Used for filename prefixes
-episodes: 50
+episodes: 5
 vocab_size: 2500
 vocabulary:
-  #- 'vocabulary2/bases.txt' # Added base prompts as the first step
-  - 'vocabulary2/mediums.txt'
-  - 'vocabulary2/movements.txt'
-  - 'vocabulary2/emotions.txt'
-scorer_model:
-  #- 'roman-text'
-  #- 'japanese-text'
-  - 'japanese-image'
-  #- 'futuristic-text'
-  #- 'ancient-text'
+  - 'vocabulary3/bases.txt'
+  - 'vocabulary3/ambient.txt'
+  - 'vocabulary3/style.txt'
+  - 'vocabulary3/composition.txt'
+  - 'vocabulary3/lighting.txt'
+  - 'vocabulary3/detail.txt'
+scorer_model: 'sunny'
 

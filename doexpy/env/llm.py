@@ -424,105 +424,35 @@ def get_scorer_model(model_name: str, env: LLMGrid, embedder: BaseEmbedder) -> V
     Returns:
         An instance of VisionLanguageScorer (e.g., DotProductModel).
     """
-    emissions_env = env.emissions # Embeddings of the unique elements/actions
+    if model_name == 'sunny':
+        # Path relative to project root is assumed for consistency with other configs.
+        sunny_sentences_path = 'experiments/llm/models/sunny.txt' 
+        
+        if not os.path.exists(sunny_sentences_path):
+            raise FileNotFoundError(f"Sunny sentences file not found: {sunny_sentences_path}. Please ensure the path is correct relative to your project root.")
 
-    if model_name == 'japanese-text':
-        # Use the embedder to get the weight vector from text
-        prompt = 'japan'
-        weight_vector = embedder.embed_text(prompt)
-        return DotProductModel(embedder, weight_vector).eval()
+        normalized_embeddings = []
+        # Ensure to use utf-8 encoding for reading text files
+        with open(sunny_sentences_path, 'r', encoding='utf-8') as f:
+            for line in f:
+                sentence = line.strip()
+                if sentence: # Process non-empty lines
+                    embedding = embedder.embed_text(sentence) # Expected to be [1, dim]
+                    # The embedder's `embed_text` method handles normalization
+                    # if its `normalize` attribute is True.
+                    normalized_embeddings.append(embedding)
 
-    elif model_name == 'ancient-text':
-        # Use the embedder to get the weight vector from text
-        prompt = "An image depicting ancient symbols, historical artifacts, or elements of old cultures."
-        weight_vector = embedder.embed_text(prompt)
-        return DotProductModel(embedder, weight_vector).eval()
+        if not normalized_embeddings:
+            # This case handles empty file or file with only empty lines/problematic embeddings
+            raise ValueError(f"No valid sentences found in '{sunny_sentences_path}' to create 'sunny' model.")
 
-    elif model_name == 'futuristic-text':
-        # Use the embedder to get the weight vector from text
-        prompt = "A futuristic scene with advanced society using advanced technologies"
-        weight_vector = embedder.embed_text(prompt)
-        return DotProductModel(embedder, weight_vector).eval()
-
-    elif model_name == 'roman-text':
-        # Use the embedder to get the weight vector from text
-        prompt = "An image in the style of Ancient Roman art, featuring classical architecture, sculptures, or scenes from Roman life."
-        weight_vector = embedder.embed_text(prompt)
-        return DotProductModel(embedder, weight_vector).eval()
-
-    elif model_name == 'asian-text':
-        # Use the embedder to get the weight vector from text
-        prompt = 'Asian style'
-        weight_vector = embedder.embed_text(prompt)
-        return DotProductModel(embedder, weight_vector).eval()
-
-    elif model_name == 'japanese-image':
-        # Use the embedder to get the weight vector from an image
-        from PIL import Image
-        import os
-
-        image_path = 'japan.jpg' # Assumed relative to execution or in PYTHONPATH
-        potential_paths = [image_path, os.path.join(os.path.dirname(__file__), image_path)]
-        found_path = None
-        for p in potential_paths:
-            if os.path.exists(p):
-                found_path = p
-                break
-        if not found_path:
-             raise FileNotFoundError(f"Image file not found: {image_path} in likely locations.")
-
-        image = Image.open(found_path).convert("RGB") # Ensure RGB
-        weight_vector = embedder.embed_image(image)
-        return DotProductModel(embedder, weight_vector).eval()
-
-    elif model_name == 'aesthetics':
-        # Aesthetics scorer relies on weights trained specifically for CLIP ViT-L/14
-        if not isinstance(embedder, CLIPEmbedder) or 'vit-large-patch14' not in embedder.model_id.lower():
-             raise ValueError(f"The 'aesthetics' scorer requires a CLIP ViT-L/14 embedder, but got {embedder.__class__.__name__} with model ID '{embedder.model_id}'.")
-
-        print("Using 'aesthetics' scorer (requires CLIP ViT-L/14 compatible embedder).")
-        try:
-            # Pass device from embedder
-            aes_weight = load_aesthetics_embedding(device=embedder.device)
-            # Check dimension compatibility explicitly
-            expected_dim = embedder.get_embedding_dim()
-            if aes_weight.shape[1] != expected_dim:
-                raise ValueError(f"Aesthetics weight dimension ({aes_weight.shape[1]}) does not match embedder dimension ({expected_dim}). Ensure you are using the correct CLIP model (ViT-L/14).")
-            # Bias is typically not used or is 0 for these models
-            return DotProductModel(embedder, aes_weight, bias=None).eval()
-        except FileNotFoundError as e:
-            print(f"Error: {e}. Aesthetics scorer requires weights file.")
-            raise
-        except ValueError as e:
-             # Catch dimension mismatch if DotProductModel raises it
-             print(f"Error initializing aesthetics scorer: {e}")
-             print("Ensure the embedder's dimension matches the aesthetics weights.")
-             raise
-
-    elif model_name == 'random_combination':
-        # Create a weight vector as a random combination of action embeddings
-        rng = np.random.RandomState(42)
-        device = embedder.device
-        dtype = emissions_env.dtype # Use dtype from existing emissions
-
-        num_actions = emissions_env.shape[0]
-        k = min(25, num_actions) # Ensure k is not larger than the number of actions
-        if k == 0:
-             raise ValueError("Cannot create random combination scorer with zero actions/emissions.")
-
-        selected_indices = rng.choice(num_actions, k, replace=False)
-
-        # Create coefficients on the correct device and dtype
-        random_coeffs = torch.zeros(num_actions, device=device, dtype=dtype)
-        selected_coeffs = 2 * torch.rand(k, device=device, dtype=dtype) - 1 # Uniform in [-1, 1]
-        random_coeffs[selected_indices] = selected_coeffs
-
-        # Calculate the weighted combination of emissions
-        # random_coeffs shape: [num_actions]
-        # emissions_env shape: [num_actions, embedding_dim]
-        # Result shape: [embedding_dim] -> view as [1, embedding_dim]
-        weight_vector = torch.matmul(random_coeffs.unsqueeze(0), emissions_env) # [1, num_actions] @ [num_actions, dim] -> [1, dim]
-
+        # Stack embeddings into a 2D tensor [num_sentences, embedding_dim]
+        stacked_embeddings = torch.stack(normalized_embeddings)
+        
+        # Compute the mean embedding. Ensure it's on the correct device and dtype.
+        # DotProductModel expects weights to be torch.double.
+        weight_vector = stacked_embeddings.mean(dim=0).to(device=embedder.device, dtype=torch.double)
+        
         return DotProductModel(embedder, weight_vector).eval()
 
     raise ValueError(f"Unknown scorer model name: {model_name}")

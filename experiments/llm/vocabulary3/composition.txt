@@ -1,0 +1,15 @@
+close-up
+wide-angle
+symmetrical-composition
+dynamic-angle
+rule-of-thirds
+birds-eye-view
+worms-eye-view
+leading-lines
+centered-subject
+off-center-subject
+portrait-shot
+landscape-shot
+fisheye-lens
+telephoto-shot
+Dutch-angle

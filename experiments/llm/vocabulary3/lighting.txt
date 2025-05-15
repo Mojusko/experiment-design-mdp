@@ -1,0 +1,15 @@
+dramatic-lighting
+soft-lighting
+backlit
+golden-hour-glow
+neon-glow
+moonlit-scene
+studio-lighting
+chiaroscuro-effect
+rim-lighting
+volumetric-lighting
+natural-daylight
+overcast-lighting
+underwater-lighting
+firelight
+silhouette-lighting

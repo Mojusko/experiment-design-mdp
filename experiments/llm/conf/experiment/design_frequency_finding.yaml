@@ -3,9 +3,12 @@
 name: "design_frequency_finding"
 id_prefix: "design-freq"  # Used for filename prefixes
 vocab_size: 2000
-vocabulary: 
-  - 'vocabulary2/mediums.txt'
-  - 'vocabulary2/movements.txt'
-  - 'vocabulary2/emotions.txt'
-scorer_model: 'japanese-text'
+vocabulary:
+  - 'vocabulary3/bases.txt'
+  - 'vocabulary3/ambient.txt'
+  - 'vocabulary3/style.txt'
+  - 'vocabulary3/composition.txt'
+  - 'vocabulary3/lighting.txt'
+  - 'vocabulary3/detail.txt'
+scorer_model: 'sunny'
 episodes: 50 # Default value, overridden in Makefile

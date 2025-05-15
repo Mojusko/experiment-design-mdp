@@ -1,0 +1,15 @@
+photorealistic
+impressionistic
+cartoonish
+abstract
+minimalist
+surreal
+gothic
+steampunk
+cyberpunk
+watercolor-painting
+oil-painting
+sketch-art
+pixel-art
+cel-shaded
+art-nouveau
