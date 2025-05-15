@@ -1,6 +1,6 @@
 name: "feedback_comparison"
 id_prefix: "feedback"  # Used for filename prefixes
-episodes: 10
+episodes: 25
 vocab_size: 2500
 vocabulary: 
   #- 'vocabulary2/bases.txt'
@@ -8,10 +8,5 @@ vocabulary:
   - 'vocabulary2/movements.txt'
   - 'vocabulary2/emotions.txt'
 # Example with multiple scorer models
-scorer_model:
-  - 'roman-text'
-  - 'japanese-text'
-  #- 'futuristic-text'
-  - 'ancient-text'
-# scorer_model: 'roman-text' # Example with single scorer model (will be wrapped in list)
+scorer_model: 'japanese-text'
 
