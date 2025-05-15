@@ -50,8 +50,29 @@ class TabularDensity(DensityEstimator):
                 temp = torch.tensor(v0, dtype=torch.float64).sum(dim = -1)
                 
                 p_pi = (self.env.get_transition_matrix() * torch.unsqueeze(policy.p, dim=2)).sum(dim = 1)
+                sums_p_pi = p_pi.sum(dim=1)
 
-                assert (torch.allclose(p_pi.sum(dim=1), torch.ones_like(p_pi.sum(dim = 1)), rtol=1e-05, atol=1e-05))
+                for s_idx_check in range(self.env.states_num):
+                    # Check if the sum of probabilities for the current state is not close to 1.
+                    is_sum_not_one = not torch.isclose(
+                        sums_p_pi[s_idx_check],
+                        torch.tensor(1.0, dtype=sums_p_pi.dtype, device=sums_p_pi.device),
+                        rtol=1e-05,
+                        atol=1e-05
+                    )
+                    if is_sum_not_one:
+                        # If the sum is not 1, check if this is due to no available actions from this state.
+                        if not self.env.available_actions(s_idx_check):
+                            raise ValueError(
+                                f"State {s_idx_check} has no available actions. "
+                                f"This results in p_pi.sum(dim=1)[{s_idx_check}] = {sums_p_pi[s_idx_check].item()}, "
+                                f"which is expected to be 1. "
+                                f"Ensure environment setup (e.g., vocabulary) allows actions from all relevant states."
+                            )
+                
+                # This assertion now primarily catches cases where sums_p_pi is not 1 for reasons
+                # other than a state having no available actions (which would have been caught above).
+                assert torch.allclose(sums_p_pi, torch.ones_like(sums_p_pi), rtol=1e-05, atol=1e-05)
 
                 for _ in range(self.env.max_episode_length):
                     temp = p_pi.T @ temp
