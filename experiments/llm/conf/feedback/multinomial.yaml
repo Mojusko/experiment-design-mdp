@@ -9,7 +9,7 @@ use_model_specific_lambda: true # Set to false to use the defaults above
 adaptive_estimation_frequency: 0
 adaptive_estimation_start: 0
 #adaptive_design_frequency: 100 
-adaptive_design_frequency: '/3' 
+adaptive_design_frequency: '/4' 
 #pass_V: true
 pass_V: false
 
