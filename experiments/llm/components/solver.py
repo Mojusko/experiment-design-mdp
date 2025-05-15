@@ -12,6 +12,24 @@ class SolverFactory:
         adaptive_estimation_start = cfg.feedback.adaptive_estimation_start if cfg.algorithm != 'random' else 0
         total_episodes = cfg.experiment.episodes
 
+        # Parse adaptive_design_frequency
+        parsed_adaptive_design_freq = 0
+        raw_adf = cfg.feedback.adaptive_design_frequency
+        if isinstance(raw_adf, str) and raw_adf.startswith('/'):
+            try:
+                divisor = int(raw_adf[1:])
+                if divisor > 0:
+                    # total_episodes is already defined above
+                    parsed_adaptive_design_freq = total_episodes // divisor
+                else:
+                    warnings.warn(f"adaptive_design_frequency divisor must be positive, got {divisor}. Defaulting to 0 (non-adaptive).")
+            except ValueError:
+                warnings.warn(f"Malformed adaptive_design_frequency string '{raw_adf}'. Expected format '/n'. Defaulting to 0 (non-adaptive).")
+        elif isinstance(raw_adf, int):
+            parsed_adaptive_design_freq = raw_adf
+        else:
+            warnings.warn(f"Unexpected type for adaptive_design_frequency: {type(raw_adf)}. Expected int or string like '/n'. Defaulting to 0 (non-adaptive).")
+
         use_random_initially = adaptive_estimation_start > 0 and total_episodes > adaptive_estimation_start
 
         if use_random_initially:
@@ -42,7 +60,7 @@ class SolverFactory:
         }
         if explorer_cls is MdpExploreMultiPolicy:
             explorer_kwargs['num_policies'] = num_policies
-            explorer_kwargs['adaptive_design_frequency'] = cfg.feedback.adaptive_design_frequency
+            explorer_kwargs['adaptive_design_frequency'] = parsed_adaptive_design_freq # Use parsed value
             # Remove the flag if it was added generically, as it's specific to MdpExploreMultiPolicy
             # explorer_kwargs.pop('same_first_action_in_episode', None) # Keep it, MdpExploreMultiPolicy needs it
         else:

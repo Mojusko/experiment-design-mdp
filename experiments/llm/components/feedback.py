@@ -14,6 +14,7 @@ from stpy.embeddings.polynomial_embedding import CustomEmbedding
 from stpy.regression.kernelized_features import KernelizedFeatures
 from stpy.regression.regularized_dictionary.regularized_multinomial_estimator import RegularizedMultinomialEstimator
 from stpy.probability.multinomial_likelihood import MultinomialLikelihood
+import warnings
 from stpy.regularization.regularizer import L2Regularizer
 from abc import abstractmethod
 
@@ -218,6 +219,26 @@ class FeedbackFactory:
             # If KernelizedFeatures needed lambda_est, it would be passed during fit or set as attribute
             fb = NumericalFeedback(env, design, estimator)
         else: # Multinomial feedback
+            # Parse adaptive_design_frequency
+            parsed_adaptive_design_freq = 0
+            raw_adf = cfg.feedback.adaptive_design_frequency
+            if isinstance(raw_adf, str) and raw_adf.startswith('/'):
+                try:
+                    divisor = int(raw_adf[1:])
+                    if divisor > 0:
+                        total_episodes = cfg.experiment.episodes
+                        parsed_adaptive_design_freq = total_episodes // divisor
+                    else:
+                        warnings.warn(f"adaptive_design_frequency divisor must be positive, got {divisor}. Defaulting to 0 (non-adaptive).")
+                except ValueError:
+                    warnings.warn(f"Malformed adaptive_design_frequency string '{raw_adf}'. Expected format '/n'. Defaulting to 0 (non-adaptive).")
+                except AttributeError: # Handle missing cfg.experiment.episodes for safety
+                    warnings.warn(f"cfg.experiment.episodes not found. Cannot calculate adaptive_design_frequency from '{raw_adf}'. Defaulting to 0.")
+            elif isinstance(raw_adf, int):
+                parsed_adaptive_design_freq = raw_adf
+            else:
+                warnings.warn(f"Unexpected type for adaptive_design_frequency: {type(raw_adf)}. Expected int or string like '/n'. Defaulting to 0 (non-adaptive).")
+
             V = None
             if cfg.feedback.pass_V:
                 # Calculate V by summing state-specific V_h matrices (used for A-optimal)
@@ -270,7 +291,7 @@ class FeedbackFactory:
                 print("Using A-optimal design (C_design_keywords not provided or empty).")
 
             # --- Select Adaptive or Static Design ---
-            if cfg.feedback.adaptive_design_frequency > 0:
+            if parsed_adaptive_design_freq > 0:
                 # Adaptive Designs
                 if c_vectors: # Check if c_vectors were successfully generated
                     design = AdaptiveOrigDesignC(
@@ -278,17 +299,18 @@ class FeedbackFactory:
                         lambd=lambda_dsn, # Use lambda_dsn
                         dim=1,
                         C=c_vectors, # Use embedded keywords
-                        adaptive_estimation_frequency=cfg.feedback.adaptive_estimation_frequency
+                        adaptive_design_frequency=parsed_adaptive_design_freq
                     )
-                    print("Using Adaptive C-optimal design.")
+                    print(f"Using Adaptive C-optimal design with frequency: {parsed_adaptive_design_freq}.")
                 else: # Fallback to Adaptive A-optimal
                     design = AdaptiveOrigDesignA(
                         env=env,
                         lambd=lambda_dsn, # Use lambda_dsn
                         dim=1,
-                        V=V
+                        V=V,
+                        adaptive_design_frequency=parsed_adaptive_design_freq
                     )
-                    print("Using Adaptive A-optimal design (fallback).")
+                    print(f"Using Adaptive A-optimal design (fallback) with frequency: {parsed_adaptive_design_freq}.")
             else:
                 # Static Designs
                 if c_vectors: # Check if c_vectors were successfully generated (i.e., keywords were provided)
