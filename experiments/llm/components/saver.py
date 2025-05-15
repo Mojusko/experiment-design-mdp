@@ -19,6 +19,7 @@ from omegaconf import DictConfig # Keep DictConfig for type hints
 from doexpy.env.llm import create_prompt
 # Moved imports to top level:
 from experiments.llm.image_generator import StableDiffusionGenerator, _get_seed_from_prompt, DEFAULT_CONFIG
+from experiments.llm.components.tester import create_dot_product_model_from_estimator # Add this import
 
 
 def _convert_to_serializable(obj):
@@ -189,12 +190,12 @@ class ImageGenerationSaver(BaseSaver):
             # Extract image generation data
             image_gen_data = results.metrics["image_generation"]
             best_prompts = image_gen_data["best_prompts"]
-            best_scores = image_gen_data["best_scores"]
+            best_scores = image_gen_data["best_scores"] # These are prompt scores from the tester
             worst_prompts = image_gen_data["worst_prompts"]
-            worst_scores = image_gen_data["worst_scores"]
+            worst_scores = image_gen_data["worst_scores"] # These are prompt scores from the tester
             
-            # Generate images
-            self._generate_images(best_prompts, best_scores, worst_prompts, worst_scores, images_dir)
+            # Generate images and potentially calculate new image scores
+            self._generate_images(best_prompts, best_scores, worst_prompts, worst_scores, images_dir, results) # Pass results
             
             # Save image metrics separately
             self._save_image_metrics(results)
@@ -216,17 +217,7 @@ class ImageGenerationSaver(BaseSaver):
             image_metrics['best_prompts_count'] = len(image_gen.get('best_prompts', []))
             image_metrics['worst_prompts_count'] = len(image_gen.get('worst_prompts', []))
             
-            if image_gen.get('best_scores'):
-                image_metrics['best_scores_range'] = [
-                    min(image_gen['best_scores']), 
-                    max(image_gen['best_scores'])
-                ]
-                
-            if image_gen.get('worst_scores'):
-                image_metrics['worst_scores_range'] = [
-                    min(image_gen['worst_scores']), 
-                    max(image_gen['worst_scores'])
-                ]
+            # Removed saving of best_scores_range and worst_scores_range as they are prompt scores
         
         # Save to file
         if image_metrics:
@@ -240,15 +231,16 @@ class ImageGenerationSaver(BaseSaver):
             except TypeError as e:
                 print(f"Error saving image metrics: {e}")
     
-    def _generate_images(self, best_prompts, best_scores, worst_prompts, worst_scores, images_dir):
+    def _generate_images(self, best_prompts, best_scores, worst_prompts, worst_scores, images_dir, results):
         """Generate images from lists of best and worst prompts (internal method)
         
         Args:
             best_prompts: List of best prompts to generate images for
-            best_scores: List of scores for each best prompt
+            best_scores: List of scores for each best prompt (prompt scores from tester)
             worst_prompts: List of worst prompts to generate images for
-            worst_scores: List of scores for each worst prompt
+            worst_scores: List of scores for each worst prompt (prompt scores from tester)
             images_dir: Directory to save images to
+            results: ExperimentResults object, used to access estimator for image scoring
         """
         # Create experiment-specific subdirectory if experiment_id is provided
         if self.experiment_id:
@@ -276,44 +268,64 @@ class ImageGenerationSaver(BaseSaver):
         if self.debug_mode:
             print(f"DEBUG MODE: Generating smaller images ({self.image_size}x{self.image_size}) with fewer steps ({self.num_inference_steps})")
         
+        # Determine scoring model for images if add_image_score is True
+        scoring_model_for_images = None
+        if self.add_image_score:
+            if results.estimators and results.estimators[0] and self.embedder:
+                try:
+                    scoring_model_for_images = create_dot_product_model_from_estimator(results.estimators[0], self.embedder)
+                    print("ImageGenerationSaver: Will calculate image scores using the first learned estimator.")
+                except Exception as e:
+                    print(f"Warning: Could not create model from estimator for image scoring: {e}")
+            else:
+                print("Warning: Cannot calculate image scores. First estimator or embedder not available in results.")
+
+        actual_best_image_scores = []
         print("Generating images for BEST prompts:")
-        for i, (full_prompt, score) in enumerate(zip(best_prompts, best_scores)):
+        for i, (full_prompt, prompt_score) in enumerate(zip(best_prompts, best_scores)): # Renamed score to prompt_score
             print(f"Generating best image {i+1}/{len(best_prompts)} for prompt: {full_prompt}")
-            # Pass the embedder instance to the sample method
             image, image_embedding = generator.sample(full_prompt, embedder=self.embedder)
-            # Image score calculation is removed from saver.
-            image_score = None # Image score is always None now within the saver
+            
+            current_image_score = None
+            if scoring_model_for_images:
+                try:
+                    # Ensure image_embedding is on the correct device for the model
+                    img_score_tensor = scoring_model_for_images.score_embedding(image_embedding.to(self.embedder.device))
+                    current_image_score = img_score_tensor.item()
+                except Exception as e:
+                    print(f"Warning: Failed to score image for prompt '{full_prompt[:30]}...': {e}")
+            actual_best_image_scores.append(current_image_score)
 
-            # Save the image with prompt score in filename
-            score_text = f"prompt_{score:.4f}"
-            # Removed image score from filename:
-            # if image_score is not None:
-            #     score_text += f"_image_{image_score:.4f}"
-            img_path = os.path.join(images_dir, f"best_{i+1}_{score_text}.png")
+            filename_parts = [f"best_{i+1}"]
+            if current_image_score is not None:
+                filename_parts.append(f"image_{current_image_score:.4f}")
+            img_filename = "_".join(filename_parts) + ".png"
+            img_path = os.path.join(images_dir, img_filename)
             PIL.Image.fromarray(image).save(img_path)
-
             best_generated_images.append(image)
         
-        # Generate images for the worst prompts
-        worst_generated_images = []
-        # worst_image_scores = [] # Removed unused variable
-
+        worst_generated_images = [] # Initialize the list here
+        actual_worst_image_scores = []
         print("\nGenerating images for WORST prompts:")
-        for i, (full_prompt, score) in enumerate(zip(worst_prompts, worst_scores)):
+        for i, (full_prompt, prompt_score) in enumerate(zip(worst_prompts, worst_scores)): # Renamed score to prompt_score
             print(f"Generating worst image {i+1}/{len(worst_prompts)} for prompt: {full_prompt}")
-            # Pass the embedder instance to the sample method
             image, image_embedding = generator.sample(full_prompt, embedder=self.embedder)
-            # Image score calculation is removed from saver.
-            image_score = None # Image score is always None now within the saver
 
-            # Save the image with prompt score in filename
-            score_text = f"prompt_{score:.4f}"
-            # Removed image score from filename:
-            # if image_score is not None:
-            #     score_text += f"_image_{image_score:.4f}"
-            img_path = os.path.join(images_dir, f"worst_{i+1}_{score_text}.png")
+            current_image_score = None
+            if scoring_model_for_images:
+                try:
+                    img_score_tensor = scoring_model_for_images.score_embedding(image_embedding.to(self.embedder.device))
+                    current_image_score = img_score_tensor.item()
+                except Exception as e:
+                    print(f"Warning: Failed to score image for prompt '{full_prompt[:30]}...': {e}")
+            actual_worst_image_scores.append(current_image_score)
+
+            filename_parts = [f"worst_{i+1}"]
+            if current_image_score is not None:
+                filename_parts.append(f"image_{current_image_score:.4f}")
+            img_filename = "_".join(filename_parts) + ".png"
+            img_path = os.path.join(images_dir, img_filename)
             PIL.Image.fromarray(image).save(img_path)
-
             worst_generated_images.append(image)
 
         # Create a summary image with generated images and their scores
@@ -330,69 +342,59 @@ class ImageGenerationSaver(BaseSaver):
 
         fig, axes = plt.subplots(n_rows, n_cols, figsize=(4*n_cols, 4*n_rows), squeeze=False) # Adjust height per row
 
-        # Image scores are already calculated during image generation
         # Plot best images in the first row (axes[0, :])
-        for i, (img, prompt_score, full_prompt) in enumerate(zip(best_generated_images, best_scores, best_prompts)):
+        for i, (img, _prompt_score, full_prompt, img_score) in enumerate(zip(best_generated_images, best_scores, best_prompts, actual_best_image_scores)): # _prompt_score is unused
            ax = axes[0, i]
            ax.imshow(img)
-           title = f"Best {i+1}: Prompt {prompt_score:.4f}"
-           # Image score is removed
+           title = f"Best {i+1}"
+           if img_score is not None:
+               title += f" (Image Score: {img_score:.2f})"
            ax.set_title(title)
-           # Wrap prompt text using textwrap for better readability
-           wrapped_prompt = textwrap.fill(full_prompt, width=40) # Wrap at 40 characters
-           ax.set_xlabel(wrapped_prompt, fontsize=8, labelpad=10) # Add padding
+           wrapped_prompt = textwrap.fill(full_prompt, width=40)
+           ax.set_xlabel(wrapped_prompt, fontsize=8, labelpad=10)
            ax.set_xticks([])
            ax.set_yticks([])
 
-        # Hide any unused subplots in the first row
         for i in range(len(best_generated_images), n_cols):
             axes[0, i].axis('off')
 
-        # Plot worst images in the second row ONLY if save_worst is True and worst images exist
         if self.save_worst and worst_generated_images:
-            for i, (img, prompt_score, full_prompt) in enumerate(zip(worst_generated_images, worst_scores, worst_prompts)):
+            for i, (img, _prompt_score, full_prompt, img_score) in enumerate(zip(worst_generated_images, worst_scores, worst_prompts, actual_worst_image_scores)): # _prompt_score is unused
                ax = axes[1, i]
                ax.imshow(img)
-               title = f"Worst {i+1}: Prompt {prompt_score:.4f}"
-               # Image score is removed
+               title = f"Worst {i+1}"
+               if img_score is not None:
+                   title += f" (Image Score: {img_score:.2f})"
                ax.set_title(title)
-               # Wrap prompt text using textwrap for better readability
-               wrapped_prompt = textwrap.fill(full_prompt, width=40) # Wrap at 40 characters
-               ax.set_xlabel(wrapped_prompt, fontsize=8, labelpad=10) # Add padding
+               wrapped_prompt = textwrap.fill(full_prompt, width=40)
+               ax.set_xlabel(wrapped_prompt, fontsize=8, labelpad=10)
                ax.set_xticks([])
                ax.set_yticks([])
 
-            # Hide any unused subplots in the second row
             for i in range(len(worst_generated_images), n_cols):
                 axes[1, i].axis('off')
-        elif n_rows == 2: # If we allocated 2 rows but aren't saving worst, hide the whole row
+        elif n_rows == 2:
              for i in range(n_cols):
                   axes[1, i].axis('off')
 
-        # Use subplots_adjust for more control over spacing, similar to VisitsImageSaver
-        # Increase bottom margin and hspace to accommodate wrapped text labels
         plt.subplots_adjust(bottom=0.2, wspace=0.4, hspace=0.5)
-        # plt.tight_layout() # Replaced with subplots_adjust
-
         summary_path = os.path.join(images_dir, "summary.png")
         plt.savefig(summary_path)
         plt.close()
 
-        # Save scores and prompts to a text file
         with open(os.path.join(images_dir, "results.txt"), "w") as f:
             f.write("BEST PROMPTS:\n")
-            f.write("Rank\tPrompt Score\tPrompt\n") # Image Score column header already removed
-            for i, (prompt_score, prompt) in enumerate(zip(best_scores, best_prompts)):
-               # Image score already removed
-               f.write(f"{i+1}\t{prompt_score:.6f}\t{prompt}\n") # Write without image score
+            f.write("Rank\tImage Score\tPrompt\n") # Removed Prompt Score column
+            for i, (_prompt_score, prompt, img_score) in enumerate(zip(best_scores, best_prompts, actual_best_image_scores)): # _prompt_score is unused
+               img_score_str = f"{img_score:.6f}" if img_score is not None else "N/A"
+               f.write(f"{i+1}\t{img_score_str}\t{prompt}\n") # Removed prompt_score
 
-            # Write worst prompts section only if save_worst is True
             if self.save_worst and worst_prompts:
                 f.write("\nWORST PROMPTS:\n")
-                f.write("Rank\tPrompt Score\tPrompt\n") # Image Score column header already removed
-                for i, (prompt_score, prompt) in enumerate(zip(worst_scores, worst_prompts)):
-                    # Image score already removed
-                    f.write(f"{i+1}\t{prompt_score:.6f}\t{prompt}\n") # Write without image score
+                f.write("Rank\tImage Score\tPrompt\n") # Removed Prompt Score column
+                for i, (_prompt_score, prompt, img_score) in enumerate(zip(worst_scores, worst_prompts, actual_worst_image_scores)): # _prompt_score is unused
+                    img_score_str = f"{img_score:.6f}" if img_score is not None else "N/A"
+                    f.write(f"{i+1}\t{img_score_str}\t{prompt}\n") # Removed prompt_score
 
 class LearnedEstimatorSaver(BaseSaver):
     """Saves the learned estimator theta vector to a file."""
