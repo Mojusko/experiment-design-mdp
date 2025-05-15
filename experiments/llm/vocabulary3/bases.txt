@@ -34,3 +34,60 @@ A vintage train chugging through snowy mountains
 A hidden library filled with ancient scrolls
 A musician composing a symphony under the stars
 A dancer performing on a floating stage
+A philosopher debating with a robot
+An artist sculpting with light
+A gardener tending to a bioluminescent forest
+A time traveler witnessing a historical event
+A chef cooking with exotic alien ingredients
+A detective investigating a crime in a virtual world
+A musician playing an instrument made of crystal
+A group of adventurers exploring a lost temple
+A lone lighthouse keeper on a stormy night
+A bustling intergalactic spaceport
+A tranquil underwater city
+A majestic griffin soaring over mountains
+A playful sprite hiding in a flower
+A hidden alchemist's laboratory
+A scholar deciphering an ancient prophecy
+A spaceship crew encountering a cosmic anomaly
+A child befriending a gentle giant
+A mythical phoenix rising from ashes
+A steampunk city powered by clockwork and steam
+A group of animals operating a complex machine
+A lone wanderer crossing a vast desert
+A futuristic city with flying vehicles
+A serene monastery nestled in high mountains
+A cyberpunk street food vendor
+A giant kraken attacking a sailing ship
+A secret garden hidden behind a waterfall
+A musician leading a parade of fantastical creatures
+A dancer made of stars and nebulae
+A king holding court in a crystal palace
+A robot butler serving tea to a cyborg
+An explorer discovering a new species of glowing fungi
+A sorcerer battling a shadow monster
+A pilot navigating an asteroid field
+A group of children playing in a zero-gravity playground
+A chef preparing a meal for gods
+A detective in a film noir setting
+A musician whose music can alter reality
+A knight defending a village from a mechanical dragon
+A scientist creating a miniature black hole
+A cat piloting a small submarine
+A wizard teaching magic to a group of squirrels
+An alien diplomat addressing a council of planets
+A chef whose restaurant is on a comet
+A detective solving a case on a generation ship
+A musician playing a concert for an audience of ghosts
+A group of friends on a road trip through a dreamscape
+A lone tree on a floating island
+A city built on the back of a colossal turtle
+```
+
+```text
+experiments/llm/vocabulary3/lighting.txt
+<<<<<<< SEARCH
+blown-out-highlights
+crushed-blacks
+high-dynamic-range-lighting
+low-dynamic-range-lighting
