@@ -425,11 +425,14 @@ def get_scorer_model(model_name: str, env: LLMGrid, embedder: BaseEmbedder) -> V
         An instance of VisionLanguageScorer (e.g., DotProductModel).
     """
     if model_name == 'sunny':
-        # Path relative to project root is assumed for consistency with other configs.
-        sunny_sentences_path = 'experiments/llm/models/sunny.txt' 
+        # Construct path relative to this file's location to ensure robustness
+        current_script_dir = os.path.dirname(os.path.abspath(__file__)) # .../doexpy/env
+        project_root_dir = os.path.abspath(os.path.join(current_script_dir, "..", "..")) # .../experiment-design-mdp
+        sunny_sentences_path = os.path.join(project_root_dir, 'experiments', 'llm', 'models', 'sunny.txt')
         
         if not os.path.exists(sunny_sentences_path):
-            raise FileNotFoundError(f"Sunny sentences file not found: {sunny_sentences_path}. Please ensure the path is correct relative to your project root.")
+            # Provide more context in the error if the file is still not found
+            raise FileNotFoundError(f"Sunny sentences file not found at constructed path: {sunny_sentences_path}. Please ensure the file exists at experiment-design-mdp/experiments/llm/models/sunny.txt.")
 
         normalized_embeddings = []
         # Ensure to use utf-8 encoding for reading text files
