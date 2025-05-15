@@ -324,7 +324,7 @@ llm-additivity: $(JOBS_LLM_ALG_ADD) $(JOBS_LLM_RAN_ADD) $(JOBS_LLM_DSN_ADD)
 
 # Jobs for feedback comparison
 #EPISODES_LLM_FEEDBACK_COMPARISON := 10 25 50 100 # Define episode counts to iterate over
-EPISODES_LLM_FEEDBACK_COMPARISON := 25 50 75 100
+EPISODES_LLM_FEEDBACK_COMPARISON := 100 200 300 400
 
 # Numerical Feedback Jobs
 JOBS_LLM_DSN_NUM := \
