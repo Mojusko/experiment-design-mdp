@@ -146,3 +146,11 @@ grid-spot-lighting
 projection-mapping-light
 light-painting-photography
 kinetic-light-sculpture
+sun-drenched
+solar-flare-light
+sunbeam-shafts
+heliographic-rays
+golden-hour-sun
+midday-sun-harshness
+setting-sun-glow
+rising-sun-hue
