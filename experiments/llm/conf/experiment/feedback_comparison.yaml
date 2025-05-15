@@ -9,5 +9,6 @@ vocabulary:
   - 'vocabulary2/emotions.txt'
 # Example with multiple scorer models
 #scorer_model: 'japanese-text'
-scorer_model: 'japanese-image'
+#scorer_model: 'japanese-image'
+scorer_model: 'roman-text'
 
