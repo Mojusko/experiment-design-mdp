@@ -306,8 +306,8 @@ class AdaptiveOrigDesignA(MultiPolicyOrigDesignA):
     """
     Adaptive A-optimal design for original design functionals.
     """
-    def __init__(self, env, lambd=1e-3, dim=0, uniform_alpha=False, V=None):
-        super().__init__(env, lambd, dim)
+    def __init__(self, env, lambd=1e-3, dim=0, uniform_alpha=False, V=None, **kwargs):
+        super().__init__(env, lambd, dim, **kwargs)
         self.type = "adaptive"
         self.uniform_alpha = uniform_alpha
         self.V = V

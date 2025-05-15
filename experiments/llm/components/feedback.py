@@ -299,18 +299,18 @@ class FeedbackFactory:
                         lambd=lambda_dsn, # Use lambda_dsn
                         dim=1,
                         C=c_vectors, # Use embedded keywords
-                        adaptive_design_frequency=parsed_adaptive_design_freq
+                        adaptive_estimation_frequency=cfg.feedback.adaptive_estimation_frequency # Corrected: Use estimation_frequency for C updates
                     )
-                    print(f"Using Adaptive C-optimal design with frequency: {parsed_adaptive_design_freq}.")
+                    print(f"Using Adaptive C-optimal design. Design re-optimization frequency (explorer controlled): {parsed_adaptive_design_freq}.")
                 else: # Fallback to Adaptive A-optimal
                     design = AdaptiveOrigDesignA(
                         env=env,
                         lambd=lambda_dsn, # Use lambda_dsn
                         dim=1,
-                        V=V,
-                        adaptive_design_frequency=parsed_adaptive_design_freq
+                        V=V
+                        # adaptive_design_frequency is NOT a parameter for the design functional itself
                     )
-                    print(f"Using Adaptive A-optimal design (fallback) with frequency: {parsed_adaptive_design_freq}.")
+                    print(f"Using Adaptive A-optimal design (fallback). Design re-optimization frequency (explorer controlled): {parsed_adaptive_design_freq}.")
             else:
                 # Static Designs
                 if c_vectors: # Check if c_vectors were successfully generated (i.e., keywords were provided)
