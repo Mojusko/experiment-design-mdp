@@ -152,15 +152,3 @@ cavalier-projection
 military-projection
 planometric-view
 worm's-eye-map-view
-```
-
-```text
-experiments/llm/vocabulary3/style.txt
-<<<<<<< SEARCH
-minimal-art
-post-minimalism
-conceptual-art
-performance-art
-land-art
-earthworks
-fluxus

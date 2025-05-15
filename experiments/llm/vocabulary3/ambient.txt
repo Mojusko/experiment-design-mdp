@@ -150,11 +150,3 @@ virtual-reality
 augmented-reality
 dream-sequence
 nightmare-fuel
-```
-
-```text
-experiments/llm/vocabulary3/detail.txt
-<<<<<<< SEARCH
-subsurface-scattering
-translucent-materials
-frosted-glass-effect

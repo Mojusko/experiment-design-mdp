@@ -82,12 +82,3 @@ A musician playing a concert for an audience of ghosts
 A group of friends on a road trip through a dreamscape
 A lone tree on a floating island
 A city built on the back of a colossal turtle
-```
-
-```text
-experiments/llm/vocabulary3/lighting.txt
-<<<<<<< SEARCH
-blown-out-highlights
-crushed-blacks
-high-dynamic-range-lighting
-low-dynamic-range-lighting
