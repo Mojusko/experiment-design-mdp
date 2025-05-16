@@ -311,11 +311,12 @@ class LLMExperiment:
 
                     # Calculate and print cosine error for this model
                     if self.estimators[i] and hasattr(self.estimators[i], 'theta_fit') and hasattr(scorer_model, 'weight'):
-                        est_weight = self.estimators[i].theta_fit
-                        gt_weight = scorer_model.weight
-                        error = self.calculate_cosine_error(est_weight, gt_weight)
-                        l2_norm = torch.linalg.norm(est_weight).item()
-                        print(f"Episode {ep_idx + 1} partial re-fit complete for model '{model_name}'. Cosine error: {error:.4f}, Estimator L2 Norm: {l2_norm:.4f}")
+                        # The detailed print below includes this information, so this simpler print is removed.
+                        # est_weight = self.estimators[i].theta_fit
+                        # gt_weight = scorer_model.weight
+                        # error = self.calculate_cosine_error(est_weight, gt_weight)
+                        # l2_norm = torch.linalg.norm(est_weight).item()
+                        # print(f"Episode {ep_idx + 1} partial re-fit complete for model '{model_name}'. Cosine error: {error:.4f}, Estimator L2 Norm: {l2_norm:.4f}")
 
                         # Current estimator's performance
                         current_est_weight = self.estimators[i].theta_fit
