@@ -413,11 +413,10 @@ class AdaptiveOrigDesignC(MultiPolicyOrigDesignC):
         self.type = "adaptive"
         self.uniform_alpha = uniform_alpha
 
-    def update_estimator(self, estimator, emissions, scorer_model_gt_weight=None):
+    def update_estimator(self, estimator, emissions):
         """
         Update the C vector based on the estimator, if adaptive_estimation_frequency > 0
         and update_C_from_estimator is True.
-        Passes scorer_model_gt_weight to super for logging.
         """
         if self.adaptive_estimation_frequency == 0:
             logger.info(f"adaptive_estimation_frequency is 0 for {type(self).__name__}. Skipping C update from estimator.")
@@ -429,10 +428,7 @@ class AdaptiveOrigDesignC(MultiPolicyOrigDesignC):
             return
         
         # If we reach here, adaptive_estimation_frequency > 0 AND update_C_from_estimator is True
-        logger.info(f"adaptive_estimation_frequency is {self.adaptive_estimation_frequency} and "
-                    f"update_C_from_estimator is True for {type(self).__name__}. "
-                    f"Proceeding with C update from estimator via super call.")
-        super().update_estimator(estimator, emissions, scorer_model_gt_weight=scorer_model_gt_weight)
+        super().update_estimator(estimator, emissions)
 
     def eval(self, emissions, distributions, visitations_per_policy, episodes):
         # Compute agg_densities for each policy's visitation history

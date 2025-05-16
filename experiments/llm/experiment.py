@@ -1,6 +1,7 @@
 import os
 import re # Added import for regular expressions
 import torch
+import torch.nn.functional as F # Added for cosine_similarity
 import numpy as np
 import datetime
 import sys
@@ -299,7 +300,8 @@ class LLMExperiment:
                         est_weight = self.estimators[i].theta_fit
                         gt_weight = scorer_model.weight
                         error = self.calculate_cosine_error(est_weight, gt_weight)
-                        print(f"Episode {ep_idx + 1} partial re-fit complete for model '{model_name}'. Cosine error: {error:.4f}")
+                        l2_norm = torch.linalg.norm(est_weight).item()
+                        print(f"Episode {ep_idx + 1} partial re-fit complete for model '{model_name}'. Cosine error: {error:.4f}, Estimator L2 Norm: {l2_norm:.4f}")
 
                         # Update the design's C vector if it's AdaptiveOrigDesignC
                         current_design = self.designs[i]
@@ -310,9 +312,26 @@ class LLMExperiment:
                                     "is not supported when multiple scorer models are configured. "
                                     "The update_estimator logic currently assumes a single ground truth for comparison."
                                 )
-                            # Pass the estimator, emissions, and the ground truth weight of the current scorer model
+                            
                             print(f"Updating C in design {type(current_design).__name__} for model '{model_name}'.")
-                            current_design.update_estimator(self.estimators[i], self.env.emissions, scorer_model_gt_weight=gt_weight)
+                            
+                            old_C_before_update = None
+                            if current_design.C is not None and isinstance(current_design.C, torch.Tensor):
+                                old_C_before_update = current_design.C.detach().clone()
+
+                            # Call update_estimator without gt_weight
+                            current_design.update_estimator(self.estimators[i], self.env.emissions)
+                            
+                            new_C_after_update = current_design.C # This should be the updated C
+
+                            # Log cosine similarities against GT using the helper method
+                            self._log_c_vector_similarity_vs_gt(
+                                old_C_before_update, gt_weight, "Old C", type(current_design).__name__, model_name
+                            )
+                            self._log_c_vector_similarity_vs_gt(
+                                new_C_after_update, gt_weight, "New C", type(current_design).__name__, model_name
+                            )
+
                         elif est_freq > 0 : # est_freq > 0 implies adaptive_estimation_frequency > 0
                              # Log if adaptive estimation is on but design is not AdaptiveOrigDesignC
                              logger.info(f"Adaptive estimation is active, but design {type(current_design).__name__} is not AdaptiveOrigDesignC. Design's C vector not updated from estimator.")
@@ -387,10 +406,29 @@ class LLMExperiment:
                 est_weight = self.estimators[i].theta_fit
                 gt_weight = scorer_model.weight
                 error = self.calculate_cosine_error(est_weight, gt_weight)
-                print(f"Final estimation for model '{model_name}' after {total_episodes} episodes complete. Cosine error: {error:.4f}")
+                l2_norm = torch.linalg.norm(est_weight).item()
+                print(f"Final estimation for model '{model_name}' after {total_episodes} episodes complete. Cosine error: {error:.4f}, Estimator L2 Norm: {l2_norm:.4f}")
             else:
                 print(f"Could not calculate final cosine error for model '{model_name}' (estimator or ground truth weight missing).")
         print("------------------------------\n")
+
+    def _log_c_vector_similarity_vs_gt(self, c_vector, gt_weight, c_vector_label, design_instance_name, model_name):
+        """Helper to log cosine similarity of a C vector against ground truth."""
+        if c_vector is None or not isinstance(c_vector, torch.Tensor):
+            logger.debug(f"  {c_vector_label} for {design_instance_name} (model '{model_name}') is None or not a Tensor. Skipping GT comparison.")
+            return
+
+        try:
+            gt_weight_flat = gt_weight.detach().clone().to(c_vector.device).flatten()
+            c_vector_flat = c_vector.detach().clone().flatten() # Already on correct device from design
+
+            if c_vector_flat.shape == gt_weight_flat.shape and c_vector_flat.numel() > 0 and gt_weight_flat.numel() > 0:
+                cos_sim = F.cosine_similarity(c_vector_flat, gt_weight_flat, dim=0).item()
+                print(f"  Cosine Similarity ({c_vector_label} in {design_instance_name} vs GT for model '{model_name}'): {cos_sim:.4f}")
+            else:
+                logger.warning(f"  Could not compare {c_vector_label} (shape {c_vector_flat.shape}) with GT weight (shape {gt_weight_flat.shape}) for {design_instance_name}, model '{model_name}'. Shapes or numel mismatch.")
+        except Exception as e:
+            logger.warning(f"  Could not compute/log cosine similarity for {c_vector_label} in {design_instance_name} (model '{model_name}'): {e}")
 
     def run_explore_only(self):
         """Runs only the exploration phase and saves visits/images."""

@@ -219,15 +219,12 @@ class MultiPolicyOrigDesignD(RewardFunctional):
         self.estimator = None
         self.dim = dim
 
-    def update_estimator(self, estimator, emissions, scorer_model_gt_weight=None):
+    def update_estimator(self, estimator, emissions):
         """
         Update the C vector based on the estimator's theta_fit.
-        Logs cosine similarity of old and new C against scorer_model_gt_weight if provided.
         """
-        logger.info(f"Attempting to update C vector in {type(self).__name__} based on estimator {type(estimator).__name__}.")
-
         if not hasattr(estimator, 'theta_fit') or estimator.theta_fit is None:
-            logger.warning("Estimator has no 'theta_fit' or it's None. Cannot update C.")
+            logger.warning(f"Estimator {type(estimator).__name__} has no 'theta_fit' or it's None. Cannot update C in {type(self).__name__}.")
             return
 
         new_C_candidate = estimator.theta_fit.detach().clone()
@@ -237,38 +234,19 @@ class MultiPolicyOrigDesignD(RewardFunctional):
         if norm > 1e-9:  # Avoid division by zero
             normalized_new_C = (new_C_candidate / norm)
         else:
-            logger.error("New C candidate (estimator.theta_fit) has near-zero norm. Cannot use for C-optimal design. C will not be updated.")
+            logger.error(f"New C candidate (estimator.theta_fit) for {type(self).__name__} has near-zero norm. C will not be updated.")
             return
 
         # Ensure normalized_new_C is a column vector (d, 1)
-        # This assumes C is a single vector. If C can be a list, this part needs adjustment.
         if normalized_new_C.dim() == 1:
             normalized_new_C = normalized_new_C.unsqueeze(1) # Make it (d,1)
         elif normalized_new_C.dim() == 2 and normalized_new_C.shape[0] == 1: # if (1,d)
             normalized_new_C = normalized_new_C.T # Make it (d,1)
-        # If it's already (d,1), it's fine. If (d, k) where k!=1, it might be an issue for single C.
-
-        if scorer_model_gt_weight is not None:
-            gt_weight_flat = scorer_model_gt_weight.detach().clone().to(normalized_new_C.device).flatten()
-
-            if hasattr(self, 'C') and self.C is not None:
-                # Assuming self.C is a tensor that can be flattened for comparison
-                old_C_flat = self.C.detach().clone().to(gt_weight_flat.device).flatten()
-                if old_C_flat.shape == gt_weight_flat.shape and old_C_flat.numel() > 0 :
-                    cos_sim_old = F.cosine_similarity(old_C_flat, gt_weight_flat, dim=0)
-                    logger.info(f"  Old C vs GT weight: Cosine Similarity = {cos_sim_old.item():.4f}")
-                else:
-                    logger.warning(f"  Could not compare Old C (shape {old_C_flat.shape}, numel {old_C_flat.numel()}) with GT weight (shape {gt_weight_flat.shape}, numel {gt_weight_flat.numel()}). Old C might be a list or incompatible.")
-
-            new_C_flat = normalized_new_C.detach().clone().to(gt_weight_flat.device).flatten()
-            if new_C_flat.shape == gt_weight_flat.shape and new_C_flat.numel() > 0:
-                cos_sim_new = F.cosine_similarity(new_C_flat, gt_weight_flat, dim=0)
-                logger.info(f"  New C vs GT weight: Cosine Similarity = {cos_sim_new.item():.4f}")
-            else:
-                 logger.warning(f"  Could not compare New C (shape {new_C_flat.shape}) with GT weight (shape {gt_weight_flat.shape}).")
-
+        elif not (normalized_new_C.dim() == 2 and normalized_new_C.shape[1] == 1): # if not (d,1)
+            logger.warning(f"New C for {type(self).__name__} after normalization is not a column vector (d,1), shape is {normalized_new_C.shape}. Using as is.")
+            
         self.C = normalized_new_C  # Update self.C
-        logger.info(f"C vector in {type(self).__name__} updated. New C shape: {self.C.shape}, L2 norm: {torch.linalg.norm(self.C).item():.4f}")
+        logger.debug(f"C vector in {type(self).__name__} updated from estimator. New C shape: {self.C.shape}")
 
     # def _compute_diagonal_terms(self, emissions, prob_matrix, d1_h, d2_h):
     #     """Compute diagonal terms of the Fisher."""
