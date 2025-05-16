@@ -422,23 +422,51 @@ class MultiPolicyOrigDesignC(MultiPolicyOrigDesignD):
             logger.debug(f"{type(self).__name__}._compute_c_optimal_value: C is None, using A-optimal criterion.")
             return -torch.trace(inv_z_reg)
 
-        # Handle C being a list of vectors
-        if isinstance(self.C, list):
-            # Assume each C_item is a (1, d) tensor
-            # Move each C_item to the target device before computation
-            traces = []
-            for i, C_item in enumerate(self.C):
-                C_item_dev = C_item.to(target_device)
-                # Calculate precision in direction C_item
-                traces.append(torch.trace(torch.linalg.inv(C_item_dev @ inv_z_reg @ C_item_dev.T)))
-            # Return the mean of the precisions instead of the max
-            #return torch.mean(torch.stack(traces)) # Original: Mean
-            return torch.log(torch.stack(traces)).sum() # New: Log-Product (Sum of Logs)
+        # Handle C being a single tensor by converting it to a list containing its transpose,
+        # or process C if it's already a list.
+        if not isinstance(self.C, list):
+            # self.C is a single tensor. update_estimator makes it (d,1).
+            # Transpose to (1,d) to match the list item expectation for c M_inv c.T formula.
+            if not (self.C.dim() == 2 and self.C.shape[1] == 1):
+                # This case should ideally not happen if C is set by update_estimator
+                # or initialized as a proper column vector.
+                logger.warning(f"Single self.C is not a column vector (d,1), shape is {self.C.shape}. Attempting transpose anyway.")
+            C_list_to_process = [self.C.T]
+            was_single_c = True
+        else:
+            # self.C is already a list of tensors.
+            C_list_to_process = self.C
+            was_single_c = False
 
-        # Handle C being a single vector
-        # Assume self.C is a (1, d) tensor
-        C_dev = self.C.to(target_device) # Move self.C to the target device
-        return torch.trace(torch.linalg.inv(C_dev @ inv_z_reg @ C_dev.T))
+        processed_traces = []
+        for C_item_from_list in C_list_to_process:
+            # Each item in C_list_to_process should be a row vector (1,d)
+            # for the formula: trace(inv(c @ M_inv @ c.T))
+            if not (C_item_from_list.dim() == 2 and C_item_from_list.shape[0] == 1 and C_item_from_list.shape[1] == inv_z_reg.shape[0]):
+                error_msg = (f"Item in C list (or transformed single C) is expected to be a row vector (1,d) "
+                             f"matching inv_z_reg dim {inv_z_reg.shape[0]}, but got shape {C_item_from_list.shape}.")
+                if was_single_c: # Add info about original self.C if it was a single tensor
+                    error_msg += f" Original self.C shape was {self.C.shape}."
+                logger.error(error_msg)
+                raise ValueError(error_msg)
+            
+            C_item_dev = C_item_from_list.to(target_device)
+            
+            # scalar_variance_term = C_item_dev @ inv_z_reg @ C_item_dev.T
+            # This term is (1,d) @ (d,d) @ (d,1) -> (1,1)
+            # It represents the variance in the direction of C_item_dev.
+            # We want to maximize 1/variance (precision).
+            # torch.linalg.inv of a (1,1) tensor is its reciprocal.
+            precision_val = torch.linalg.inv(C_item_dev @ inv_z_reg @ C_item_dev.T)
+            processed_traces.append(torch.trace(precision_val)) # trace of (1,1) is the element itself
+
+        if was_single_c:
+            # If originally a single C, return its computed precision value directly.
+            return processed_traces[0]
+        else:
+            # If originally a list of C vectors, return the sum of log-precisions.
+            # This matches the previous behavior for a list of C.
+            return torch.log(torch.stack(processed_traces)).sum()
 
     def eval(self, emissions, distributions, episodes):
         """
