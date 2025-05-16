@@ -139,6 +139,7 @@ class LLMExperiment:
                     experiment_id = f"{self.cfg.experiment.id_prefix}-{algorithm_code}-{feedback_code}"
 
         self.experiment_id = experiment_id # Initial experiment_id (e.g., from Makefile)
+        self.previous_theta_fits = [None] * self.num_scorer_models # For logging previous estimator performance
 
         # --- Override experiment_id and algorithm if in test/inspect mode ---
         if self.cfg.get('test_only', False):
@@ -291,9 +292,22 @@ class LLMExperiment:
 
                     print(f"Collecting labels for model: {model_name}")
                     feedback.collect_labels(self.cfg, recent_visits_buffer, theta_star)
+                    
+                    # Print theta_fit id before fitting
+                    if self.estimators[i] and hasattr(self.estimators[i], 'theta_fit') and self.estimators[i].theta_fit is not None:
+                        print(f"  Model '{model_name}': Estimator theta_fit id BEFORE fit: {id(self.estimators[i].theta_fit)}")
+                    else:
+                        print(f"  Model '{model_name}': Estimator theta_fit BEFORE fit: N/A (no estimator or theta_fit yet)")
+
                     print(f"Fitting estimator for model: {model_name}")
                     feedback.fit_estimator()
                     self.estimators[i] = feedback.estimator # Update the specific estimator
+
+                    # Print theta_fit id after fitting
+                    if self.estimators[i] and hasattr(self.estimators[i], 'theta_fit') and self.estimators[i].theta_fit is not None:
+                        print(f"  Model '{model_name}': Estimator theta_fit id AFTER fit: {id(self.estimators[i].theta_fit)}")
+                    else:
+                        print(f"  Model '{model_name}': Estimator theta_fit AFTER fit: N/A (no estimator or theta_fit)")
 
                     # Calculate and print cosine error for this model
                     if self.estimators[i] and hasattr(self.estimators[i], 'theta_fit') and hasattr(scorer_model, 'weight'):
@@ -303,41 +317,55 @@ class LLMExperiment:
                         l2_norm = torch.linalg.norm(est_weight).item()
                         print(f"Episode {ep_idx + 1} partial re-fit complete for model '{model_name}'. Cosine error: {error:.4f}, Estimator L2 Norm: {l2_norm:.4f}")
 
-                        # Update the design's C vector if it's AdaptiveOrigDesignC
+                        # Current estimator's performance
+                        current_est_weight = self.estimators[i].theta_fit
+                        current_gt_weight = scorer_model.weight # Renamed for clarity within this block
+                        current_estimator_error = self.calculate_cosine_error(current_est_weight, current_gt_weight)
+                        current_l2_norm = torch.linalg.norm(current_est_weight).item()
+
+                        log_msg_parts = [
+                            f"Episode {ep_idx + 1} partial re-fit for model '{model_name}':",
+                            f"Current Estimator Cosine Error: {current_estimator_error:.4f}, L2 Norm: {current_l2_norm:.4f}"
+                        ]
+
+                        # Previous estimator's performance (if available)
+                        previous_theta = self.previous_theta_fits[i]
+                        if previous_theta is not None:
+                            try:
+                                previous_estimator_error = self.calculate_cosine_error(previous_theta, current_gt_weight)
+                                log_msg_parts.append(f"Previous Estimator Cosine Error: {previous_estimator_error:.4f}")
+                            except Exception as e:
+                                logger.warning(f"Could not calculate Previous Estimator cosine error for model '{model_name}': {e}")
+                                log_msg_parts.append("Previous Estimator Cosine Error: N/A")
+                        else:
+                            log_msg_parts.append("Previous Estimator Cosine Error: N/A (first fit or not available)")
+                        
+                        # Update design if applicable (using the current estimator)
                         current_design = self.designs[i]
                         if isinstance(current_design, AdaptiveOrigDesignC):
                             if self.num_scorer_models > 1:
                                 raise ValueError(
                                     "Adaptive C-optimal design with estimator updates (adaptive_estimation_frequency > 0) "
-                                    "is not supported when multiple scorer models are configured. "
-                                    "The update_estimator logic currently assumes a single ground truth for comparison."
+                                    "is not supported when multiple scorer models are configured."
                                 )
-                            
-                            print(f"Updating C in design {type(current_design).__name__} for model '{model_name}'.")
-                            
-                            old_C_before_update = None
-                            if current_design.C is not None and isinstance(current_design.C, torch.Tensor):
-                                old_C_before_update = current_design.C.detach().clone()
-
-                            # Call update_estimator without gt_weight
+                            # The design update uses self.estimators[i] which now holds the current estimator
                             current_design.update_estimator(self.estimators[i], self.env.emissions)
-                            
-                            new_C_after_update = current_design.C # This should be the updated C
-
-                            # Log cosine similarities against GT using the helper method
-                            self._log_c_vector_similarity_vs_gt(
-                                old_C_before_update, gt_weight, "Old C", type(current_design).__name__, model_name
-                            )
-                            self._log_c_vector_similarity_vs_gt(
-                                new_C_after_update, gt_weight, "New C", type(current_design).__name__, model_name
-                            )
-
-                        elif est_freq > 0 : # est_freq > 0 implies adaptive_estimation_frequency > 0
-                             # Log if adaptive estimation is on but design is not AdaptiveOrigDesignC
-                             logger.info(f"Adaptive estimation is active, but design {type(current_design).__name__} is not AdaptiveOrigDesignC. Design's C vector not updated from estimator.")
+                            # No C-vector specific logging added to log_msg_parts here.
+                        
+                        elif est_freq > 0: # Log if adaptive estimation is on but design is not AdaptiveOrigDesignC
+                             logger.info(f"Adaptive estimation is active for model '{model_name}', but design {type(current_design).__name__} is not AdaptiveOrigDesignC. Design's C vector not updated from estimator.")
+                        
+                        print(" ".join(log_msg_parts))
 
                     else:
+                        # This else corresponds to: if self.estimators[i] and hasattr(self.estimators[i], 'theta_fit') ...
                         print(f"Could not calculate cosine error for model '{model_name}' (estimator or ground truth weight missing). Design's C not updated.")
+                    
+                    # Store the current theta_fit as the "previous" for the next adaptive step for this model
+                    if self.estimators[i] and hasattr(self.estimators[i], 'theta_fit') and self.estimators[i].theta_fit is not None:
+                        self.previous_theta_fits[i] = self.estimators[i].theta_fit.detach().clone()
+                    else:
+                        self.previous_theta_fits[i] = None
 
                 # Clear the buffer after processing all models for this frequency step
                 print("Clearing recent visits buffer.")
@@ -412,23 +440,7 @@ class LLMExperiment:
                 print(f"Could not calculate final cosine error for model '{model_name}' (estimator or ground truth weight missing).")
         print("------------------------------\n")
 
-    def _log_c_vector_similarity_vs_gt(self, c_vector, gt_weight, c_vector_label, design_instance_name, model_name):
-        """Helper to log cosine similarity of a C vector against ground truth."""
-        if c_vector is None or not isinstance(c_vector, torch.Tensor):
-            logger.debug(f"  {c_vector_label} for {design_instance_name} (model '{model_name}') is None or not a Tensor. Skipping GT comparison.")
-            return
-
-        try:
-            gt_weight_flat = gt_weight.detach().clone().to(c_vector.device).flatten()
-            c_vector_flat = c_vector.detach().clone().flatten() # Already on correct device from design
-
-            if c_vector_flat.shape == gt_weight_flat.shape and c_vector_flat.numel() > 0 and gt_weight_flat.numel() > 0:
-                cos_sim = F.cosine_similarity(c_vector_flat, gt_weight_flat, dim=0).item()
-                print(f"  Cosine Similarity ({c_vector_label} in {design_instance_name} vs GT for model '{model_name}'): {cos_sim:.4f}")
-            else:
-                logger.warning(f"  Could not compare {c_vector_label} (shape {c_vector_flat.shape}) with GT weight (shape {gt_weight_flat.shape}) for {design_instance_name}, model '{model_name}'. Shapes or numel mismatch.")
-        except Exception as e:
-            logger.warning(f"  Could not compute/log cosine similarity for {c_vector_label} in {design_instance_name} (model '{model_name}'): {e}")
+    # Removed _log_c_vector_similarity_vs_gt helper method
 
     def run_explore_only(self):
         """Runs only the exploration phase and saves visits/images."""

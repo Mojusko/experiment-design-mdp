@@ -159,7 +159,7 @@ class MultinomialFeedback(BaseFeedback):
 
         # Fit the estimator directly with the embeddings and labels
         # No need to load env.emissions or specify sum_dim
-        print(f"Fitting MultinomialFeedback estimator with {all_embeddings.shape[0]} samples.")
+        print(f"Fitting MultinomialFeedback estimator with accumulated data: Embeddings shape {all_embeddings.shape}, Labels shape {all_labels.shape}")
         self.estimator.fit(comparison_embeddings=all_embeddings, labels=all_labels)
 
 class FeedbackFactory:
