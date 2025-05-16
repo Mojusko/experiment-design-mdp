@@ -62,5 +62,6 @@ while IFS= read -r line || [ -n "$line" ]; do
 
    COMMAND="$PRE_CMD && sbatch $MODIFIED_LINE"
    echo "Executing on $SERVER: $COMMAND"
-   ssh -f "$SERVER" "$COMMAND"
+   ssh -o BatchMode=yes -f "$SERVER" "$COMMAND"
+   #sleep 1 # Add a 1-second pause
 done < "$INPUT_SOURCE"
