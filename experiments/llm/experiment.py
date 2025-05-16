@@ -303,11 +303,11 @@ class LLMExperiment:
                     feedback.fit_estimator()
                     self.estimators[i] = feedback.estimator # Update the specific estimator
 
-                    # Print theta_fit id after fitting
-                    if self.estimators[i] and hasattr(self.estimators[i], 'theta_fit') and self.estimators[i].theta_fit is not None:
-                        print(f"  Model '{model_name}': Estimator theta_fit id AFTER fit: {id(self.estimators[i].theta_fit)}")
-                    else:
-                        print(f"  Model '{model_name}': Estimator theta_fit AFTER fit: N/A (no estimator or theta_fit)")
+                    # Print theta_fit id after fitting - REMOVED THIS PRINT BLOCK
+                    # if self.estimators[i] and hasattr(self.estimators[i], 'theta_fit') and self.estimators[i].theta_fit is not None:
+                    #     print(f"  Model '{model_name}': Estimator theta_fit id AFTER fit: {id(self.estimators[i].theta_fit)}")
+                    # else:
+                    #     print(f"  Model '{model_name}': Estimator theta_fit AFTER fit: N/A (no estimator or theta_fit)")
 
                     # Calculate and print cosine error for this model
                     if self.estimators[i] and hasattr(self.estimators[i], 'theta_fit') and hasattr(scorer_model, 'weight'):
@@ -322,11 +322,11 @@ class LLMExperiment:
                         current_est_weight = self.estimators[i].theta_fit
                         current_gt_weight = scorer_model.weight # Renamed for clarity within this block
                         current_estimator_error = self.calculate_cosine_error(current_est_weight, current_gt_weight)
-                        current_l2_norm = torch.linalg.norm(current_est_weight).item()
+                        current_l2_norm = torch.linalg.norm(current_est_weight).item() # Keep calculation for potential future use
 
                         log_msg_parts = [
                             f"Episode {ep_idx + 1} partial re-fit for model '{model_name}':",
-                            f"Current Estimator Cosine Error: {current_estimator_error:.4f}, L2 Norm: {current_l2_norm:.4f}"
+                            f"Current Estimator Cosine Error: {current_estimator_error:.4f}" # Removed L2 Norm from print
                         ]
 
                         # Previous estimator's performance (if available)
@@ -433,10 +433,30 @@ class LLMExperiment:
             # Calculate and print final cosine error for this model
             if self.estimators[i] and hasattr(self.estimators[i], 'theta_fit') and hasattr(scorer_model, 'weight'):
                 est_weight = self.estimators[i].theta_fit
+                current_est_weight = self.estimators[i].theta_fit # This is the estimator after the final fit
                 gt_weight = scorer_model.weight
-                error = self.calculate_cosine_error(est_weight, gt_weight)
-                l2_norm = torch.linalg.norm(est_weight).item()
-                print(f"Final estimation for model '{model_name}' after {total_episodes} episodes complete. Cosine error: {error:.4f}, Estimator L2 Norm: {l2_norm:.4f}")
+                current_estimator_error = self.calculate_cosine_error(current_est_weight, gt_weight)
+                
+                log_msg_parts = [
+                    f"Final estimation for model '{model_name}' after {total_episodes} episodes complete:",
+                    f"Current Estimator Cosine Error: {current_estimator_error:.4f}"
+                ]
+
+                # Previous estimator's performance (from the last adaptive step)
+                previous_theta = self.previous_theta_fits[i]
+                if previous_theta is not None:
+                    try:
+                        previous_estimator_error = self.calculate_cosine_error(previous_theta, gt_weight)
+                        log_msg_parts.append(f"Previous Estimator Cosine Error: {previous_estimator_error:.4f}")
+                    except Exception as e:
+                        logger.warning(f"Could not calculate Previous Estimator cosine error for final log (model '{model_name}'): {e}")
+                        log_msg_parts.append("Previous Estimator Cosine Error: N/A")
+                else:
+                    # This case might occur if adaptive estimation never ran (e.g., est_freq=0 or est_start >= total_episodes)
+                    log_msg_parts.append("Previous Estimator Cosine Error: N/A (no prior adaptive fit)")
+                
+                print(" ".join(log_msg_parts))
+
             else:
                 print(f"Could not calculate final cosine error for model '{model_name}' (estimator or ground truth weight missing).")
         print("------------------------------\n")
