@@ -12,33 +12,17 @@ def parse_filename(filename):
     if "withV" in base or "noV" in base:
         v_type = "With V" if "withV" in base else "No V"
         return ("v_comparison", v_type)
-    # Match new lambda format with dsn and est: metrics-lambda-dsn-mult-mul-dsn0.1-est1000-6.json
-    elif match := re.search(r"dsn([\d.]+)-est([\d.]+)-(\d+)\.json$", base):
-        dsn_val = float(match.group(1))
-        est_val = float(match.group(2))
-        # seed = int(match.group(3)) # Seed not used for grouping key
-        return ("lambda_dsn_est", (dsn_val, est_val))
-    # Match old single lambda format: metrics-mul-lambda-0.1-1.json or metrics-mul-0.1-1.json
-    elif "lambda" in base or re.search(r"mul-([\d.]+)-(\d+)\.json$", base) or re.search(r"num-([\d.]+)-(\d+)\.json$", base):
-        # Extract lambda value robustly
-        match_lambda = re.search(r"lambda-([\d.]+)", base)
-        match_mul = re.search(r"mul-([\d.]+)-(\d+)\.json$", base)
-        match_num = re.search(r"num-([\d.]+)-(\d+)\.json$", base)
-        if match_lambda:
-            lambda_val = float(match_lambda.group(1))
-        elif match_mul:
-            lambda_val = float(match_mul.group(1))
-        elif match_num:
-            lambda_val = float(match_num.group(1))
-        else:
-             # Fallback if pattern is unexpected, try finding the last number before the seed
-             parts = base.split('-')
-             try:
-                 # Assume format like *-<lambda>-<seed>.json
-                 lambda_val = float(parts[-2])
-             except (ValueError, IndexError):
-                 print(f"Warning: Could not extract lambda from fallback pattern in {base}. Skipping.")
-                 return ("unknown", base) # Return an identifiable unknown type
+    # Match single lambda format.
+    # e.g., metrics-lambda-dsn-mult-mul-lambda15-6.json or metrics-mul-lambda1-3.json
+    elif (match := re.search(r"lambda([\d.]+)-(\d+)\.json$", base)):
+        lambda_val = float(match.group(1))
+        # seed = int(match.group(2))
+        return ("lambda", lambda_val)
+    # Match old single lambda format where "lambda" isn't in the value part:
+    # e.g. metrics-mul-0.1-1.json or metrics-num-0.1-1.json
+    elif (match := re.search(r"(?:mul|num)-([\d.]+)-(\d+)\.json$", base)):
+        lambda_val = float(match.group(1))
+        # seed = int(match.group(2))
         return ("lambda", lambda_val)
     # Match design frequency filenames like metrics-design-freq-dsn-mult-ep25-df10-1.json
     elif match := re.search(r"ep(\d+)-df(\d+)-(\d+)\.json$", base):
@@ -277,6 +261,51 @@ def plot_lambda_dsn_est_results(lambda_results):
     plt.tight_layout() # Adjust layout to prevent labels overlapping
 
 
+# This function is no longer needed as lambda_dsn_est experiment type is removed.
+# def plot_lambda_dsn_est_results(lambda_results):
+#     # Create a single grouped bar chart comparing metrics for each (dsn, est) pair.
+#     
+#     # Sort keys first by dsn, then by est
+#     sorted_keys = sorted(lambda_results.keys(), key=lambda x: (x[0], x[1]))
+#     
+#     labels = [f"Dsn={dsn}, Est={est}" for dsn, est in sorted_keys]
+#     
+#     preference_means = []
+#     preference_sems = [] # Changed from stds to sems
+#     cosine_means = []
+#     cosine_sems = [] # Changed from stds to sems
+
+#     for key in sorted_keys:
+#         data_list = lambda_results[key]
+#         pref_errors = [d["preference_error"] for d in data_list if isinstance(d, dict) and "preference_error" in d]
+#         cos_errors = [d["cosine_error"] for d in data_list if isinstance(d, dict) and "cosine_error" in d]
+#         
+#         n_pref = len(pref_errors)
+#         n_cos = len(cos_errors)
+#         
+#         preference_means.append(np.mean(pref_errors) if n_pref > 0 else 0)
+#         preference_sems.append((np.std(pref_errors) / np.sqrt(n_pref)) if n_pref > 1 else 0) # Calculate SEM
+#         cosine_means.append(np.mean(cos_errors) if n_cos > 0 else 0)
+#         cosine_sems.append((np.std(cos_errors) / np.sqrt(n_cos)) if n_cos > 1 else 0) # Calculate SEM
+
+#     x = np.arange(len(labels))
+#     width = 0.35
+
+#     # Adjust figure size based on the number of bars
+#     fig_width = max(12, len(labels) * 0.8) # Ensure minimum width, scale with number of labels
+#     plt.figure(figsize=(fig_width, 7)) 
+#     
+#     plt.bar(x - width/2, preference_means, width, yerr=preference_sems, capsize=5, label="Preference Error") # Use sems
+#     plt.bar(x + width/2, cosine_means, width, yerr=cosine_sems, capsize=5, label="Cosine Error") # Use sems
+
+#     plt.xlabel("Lambda Configuration (Design, Estimation)")
+#     plt.ylabel("Error")
+#     plt.xticks(x, labels, rotation=45, ha="right") # Rotate labels for better readability
+#     plt.title("Error vs Lambda Configuration (Design & Estimation)")
+#     plt.legend()
+#     plt.tight_layout() # Adjust layout to prevent labels overlapping
+
+
 def plot_feedback_results(feedback_results):
     # Create a grouped bar chart comparing both metrics for each algorithm.
     labels = list(feedback_results.keys())
@@ -457,7 +486,7 @@ def plot_results(directory):
         "frequency": {}, # Old frequency key, might be unused now
         "rounds": {},
         "design_frequency": {}, # New key for design frequency results
-        "lambda_dsn_est": {},   # New key for dsn/est lambda experiments
+        # "lambda_dsn_est": {}, # Removed as this experiment type is no longer used
         "feedback": {}          # For feedback comparison experiments (dsn-mult vs rand-mult etc.)
     }
 
@@ -500,18 +529,18 @@ def plot_results(directory):
             # or returns "unknown" for unhandled patterns.
             print(f"Warning: Unrecognized experiment type '{exp_type}' for file {os.path.basename(f)} with key {key_info}")
 
-    # Plot non-feedback experiments (excluding design_frequency, feedback, and lambda_dsn_est)
+    # Plot non-feedback experiments (excluding design_frequency and feedback)
     for exp_type in results_by_type:
-        if exp_type not in ["design_frequency", "feedback", "lambda_dsn_est"] and results_by_type[exp_type]:
+        if exp_type not in ["design_frequency", "feedback"] and results_by_type[exp_type]:
             plot_results_with_type(results_by_type[exp_type], exp_type)
  
     # Plot design frequency results separately
     if results_by_type["design_frequency"]:
         plot_design_frequency_results(results_by_type["design_frequency"])
 
-    # Plot lambda_dsn_est results separately
-    if results_by_type["lambda_dsn_est"]:
-        plot_lambda_dsn_est_results(results_by_type["lambda_dsn_est"])
+    # Plot lambda_dsn_est results separately - This section is removed as the function and type are removed.
+    # if results_by_type["lambda_dsn_est"]:
+    #     plot_lambda_dsn_est_results(results_by_type["lambda_dsn_est"])
  
     # Plot feedback results using the new dispatcher
     if results_by_type["feedback"]:

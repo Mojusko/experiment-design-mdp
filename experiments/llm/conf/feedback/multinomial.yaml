@@ -4,28 +4,17 @@ num_policies: 4
 num_components: 2
 num_rounds: 15 #static
 lambda: 15 # Single lambda parameter for both design and estimation
-adaptive_estimation_frequency: 0
+adaptive_estimation_frequency: 50
 adaptive_estimation_start: 0
 #adaptive_design_frequency: 100 
-adaptive_design_frequency: '/2' 
+adaptive_design_frequency: 50 
 #pass_V: true
 pass_V: false
 
-# Keywords for C-optimal design. If null or empty, A-optimal design will be used.
-# The code will embed each keyword and use the resulting vectors for C-optimal design.
-# Example: ["old", "classic", "traditional", "eternal"]
-#C_design_keywords: [
-#  "modern", "ancient",        # 1
-#  "colorful", "monochromatic", # 2
-#  "complex", "simple",         # 3
-##"vibrant", "muted",          # 4
-##  "dynamic", "static",         # 5
-##  "natural", "urban",          # 6
-#  "detailed", "minimalist",    # 7
-#  "bright", "dark",            # 8
-##  "warm", "cool",              # 9
-#  "abstract", "realistic",      # 10
-#  "asian", "chinese", "japanese", "indian", "european", "french", "italian",
-#  "egyptian", "latin", "african", "roman", "greek"
-#]
-C_design_keywords: null
+# Objective for the design: "A" for A-optimal, "C" for C-optimal.
+# If "C" is chosen, C_design_keywords must be provided.
+objective: "A"
+
+# C_design_keywords are no longer used.
+# For C-optimal adaptive design, the C vector is derived from the estimator.
+# Static C-optimal design is not supported as it would require a pre-defined C vector.

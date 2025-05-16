@@ -389,30 +389,26 @@ class AdaptiveOrigDesignC(MultiPolicyOrigDesignC):
         self.adaptive_estimation_frequency = adaptive_estimation_frequency
         self.update_C_from_estimator = update_C_from_estimator
         # Initialize the parent MultiPolicyOrigDesignC first
-        # We temporarily allow C=None here, but log a warning if estimation freq is > 0.
-        # We handle the C=None case specifically for the adaptive scenario.
-        try:
-            super().__init__(env, lambd, dim, C=C, **kwargs)
-        except ValueError as e:
-            # If C is None and estimation frequency is > 0, it's an issue unless update_estimator is called first.
-            if C is None and self.adaptive_estimation_frequency > 0:
-                logger.warning("AdaptiveOrigDesignC initialized with C=None and adaptive_estimation_frequency > 0. "
-                               "Expecting `update_estimator` to be called before evaluation.")
-                # Call grandparent init to set up basic attributes
-                super(MultiPolicyOrigDesignC, self).__init__(env, lambd, dim, **kwargs)
-                self.C = None # Explicitly set C to None
-            # If C is None and frequency is 0, this is an error because C won't be updated.
-            elif C is None and self.adaptive_estimation_frequency == 0:
-                 logger.error("AdaptiveOrigDesignC initialized with C=None and adaptive_estimation_frequency=0. "
-                              "C must be provided if no updates are planned.")
-                 raise ValueError("C cannot be None for AdaptiveOrigDesignC when adaptive_estimation_frequency is 0.")
-            else:
-                # If C was not None and still failed, re-raise the error
-                raise e
-        else:
-            pass
-             # If super().__init__ succeeded (meaning C was not None)
-             # Log update behavior based on frequency
+        super().__init__(env, lambd, dim, C=C, **kwargs) # This will set self.C
+
+        self.adaptive_estimation_frequency = adaptive_estimation_frequency
+        self.update_C_from_estimator = update_C_from_estimator
+        
+        # Log behavior if C is None at initialization
+        if self.C is None:
+            if self.adaptive_estimation_frequency > 0 and self.update_C_from_estimator:
+                logger.warning(f"{type(self).__name__} initialized with C=None. "
+                               "Evaluation will use A-optimal design until `update_estimator` provides a C vector.")
+            elif self.adaptive_estimation_frequency == 0 and not self.update_C_from_estimator : # C is None, will not be updated by estimator
+                 logger.warning(f"{type(self).__name__} initialized with C=None, adaptive_estimation_frequency=0 and update_C_from_estimator=False. "
+                               "Evaluation will permanently use A-optimal design unless C is set externally.")
+            elif self.adaptive_estimation_frequency == 0 and self.update_C_from_estimator : # C is None, will not be updated by estimator as freq is 0
+                 logger.warning(f"{type(self).__name__} initialized with C=None and adaptive_estimation_frequency=0. "
+                               "Evaluation will permanently use A-optimal design unless C is set externally, as estimator updates are off.")
+            elif not self.update_C_from_estimator: # C is None, freq > 0, but update_C_from_estimator is False
+                 logger.warning(f"{type(self).__name__} initialized with C=None and update_C_from_estimator=False. "
+                                "Evaluation will permanently use A-optimal design unless C is set externally, as C will not be updated from estimator.")
+
 
         self.type = "adaptive"
         self.uniform_alpha = uniform_alpha
@@ -477,6 +473,10 @@ class AdaptiveOrigDesignC(MultiPolicyOrigDesignC):
         eye = torch.eye(z.shape[0], device=z.device, dtype=z.dtype)
         z_reg = z + self.lambd/(self.horizon*episodes) * eye
         
+        if self.C is None:
+            logger.debug(f"{type(self).__name__}.eval: C is None, using A-optimal criterion.")
+            return -torch.trace(torch.linalg.inv(z_reg))
+
         # Compute inverse of regularized z
         inv_z_reg = torch.linalg.inv(z_reg)
         
@@ -485,9 +485,14 @@ class AdaptiveOrigDesignC(MultiPolicyOrigDesignC):
 
     def eval_full(self, emissions, distributions, episodes):
         # For final evaluation - directly use the provided distributions
-        z = super()._calculate_z(emissions, distributions, episodes)
+        z = super()._calculate_z(emissions, distributions, episodes) # Calls MultiPolicyOrigDesignC._calculate_z
         eye = torch.eye(z.shape[0], device=z.device, dtype=z.dtype)
         z_reg = z + self.lambd/(self.horizon*episodes) * eye
+
+        if self.C is None:
+            logger.debug(f"{type(self).__name__}.eval_full: C is None, using A-optimal criterion.")
+            return -torch.trace(torch.linalg.inv(z_reg))
+        
         inv_z_reg = torch.linalg.inv(z_reg)
         
         # Use parent class method to compute C-optimal value

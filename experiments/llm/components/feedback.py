@@ -207,15 +207,36 @@ class FeedbackFactory:
                         total_episodes = cfg.experiment.episodes
                         parsed_adaptive_design_freq = total_episodes // divisor
                     else:
-                        warnings.warn(f"adaptive_design_frequency divisor must be positive, got {divisor}. Defaulting to 0 (non-adaptive).")
+                        warnings.warn(f"adaptive_design_frequency divisor must be positive, got {divisor}. Defaulting to 0 (non-adaptive design).")
                 except ValueError:
-                    warnings.warn(f"Malformed adaptive_design_frequency string '{raw_adf}'. Expected format '/n'. Defaulting to 0 (non-adaptive).")
+                    warnings.warn(f"Malformed adaptive_design_frequency string '{raw_adf}'. Expected format '/n'. Defaulting to 0 (non-adaptive design).")
                 except AttributeError: # Handle missing cfg.experiment.episodes for safety
-                    warnings.warn(f"cfg.experiment.episodes not found. Cannot calculate adaptive_design_frequency from '{raw_adf}'. Defaulting to 0.")
+                    warnings.warn(f"cfg.experiment.episodes not found. Cannot calculate adaptive_design_frequency from '{raw_adf}'. Defaulting to 0 (non-adaptive design).")
             elif isinstance(raw_adf, int):
                 parsed_adaptive_design_freq = raw_adf
             else:
-                warnings.warn(f"Unexpected type for adaptive_design_frequency: {type(raw_adf)}. Expected int or string like '/n'. Defaulting to 0 (non-adaptive).")
+                warnings.warn(f"Unexpected type for adaptive_design_frequency: {type(raw_adf)}. Expected int or string like '/n'. Defaulting to 0 (non-adaptive design).")
+
+            # Parse adaptive_estimation_frequency
+            parsed_adaptive_estimation_freq = 0
+            raw_aef = cfg.feedback.adaptive_estimation_frequency
+            if isinstance(raw_aef, str) and raw_aef.startswith('/'):
+                try:
+                    divisor = int(raw_aef[1:])
+                    if divisor > 0:
+                        total_episodes = cfg.experiment.episodes
+                        parsed_adaptive_estimation_freq = total_episodes // divisor
+                    else:
+                        warnings.warn(f"adaptive_estimation_frequency divisor must be positive, got {divisor}. Defaulting to 0 (non-adaptive estimation).")
+                except ValueError:
+                    warnings.warn(f"Malformed adaptive_estimation_frequency string '{raw_aef}'. Expected format '/n'. Defaulting to 0 (non-adaptive estimation).")
+                except AttributeError: # Handle missing cfg.experiment.episodes for safety
+                    warnings.warn(f"cfg.experiment.episodes not found. Cannot calculate adaptive_estimation_frequency from '{raw_aef}'. Defaulting to 0 (non-adaptive estimation).")
+            elif isinstance(raw_aef, int):
+                parsed_adaptive_estimation_freq = raw_aef
+            else:
+                warnings.warn(f"Unexpected type for adaptive_estimation_frequency: {type(raw_aef)}. Expected int or string like '/n'. Defaulting to 0 (non-adaptive estimation).")
+
 
             V = None
             if cfg.feedback.pass_V:
@@ -258,54 +279,51 @@ class FeedbackFactory:
                     # Add to the total V
                     V += V_h
 
-            # --- Determine Design based on C_design_keywords ---
-            c_vectors = None
-            keywords = cfg.feedback.get('C_design_keywords')
-            if keywords and len(keywords) > 0:
-                print(f"Using C-optimal design with keywords: {keywords}")
-                # Embed each keyword directly
-                c_vectors = [embedder.embed_text(kw) for kw in keywords]
-            else:
-                print("Using A-optimal design (C_design_keywords not provided or empty).")
+            # --- Determine Design based on cfg.feedback.objective ---
+            design_objective = cfg.feedback.get('objective', 'A').upper() # Default to 'A' if not specified
+
+            if design_objective not in ['A', 'C']:
+                warnings.warn(f"Invalid design_objective '{cfg.feedback.get('objective')}'. Defaulting to A-optimal design.")
+                design_objective = 'A'
 
             # --- Select Adaptive or Static Design ---
-            if parsed_adaptive_design_freq > 0:
-                # Adaptive Designs
-                if c_vectors: # Check if c_vectors were successfully generated
-                    design = AdaptiveOrigDesignC(
-                        env=env,
-                        lambd=lambda_val, # Use single lambda_val
-                        dim=1,
-                        C=c_vectors, # Use embedded keywords
-                        adaptive_estimation_frequency=cfg.feedback.adaptive_estimation_frequency
-                    )
-                    print(f"Using Adaptive C-optimal design. Design re-optimization frequency (explorer controlled): {parsed_adaptive_design_freq}.")
-                else: # Fallback to Adaptive A-optimal
+            if design_objective == 'A':
+                if parsed_adaptive_design_freq > 0: # Adaptive A-optimal design
                     design = AdaptiveOrigDesignA(
                         env=env,
-                        lambd=lambda_val, # Use single lambda_val
+                        lambd=lambda_val,
                         dim=1,
                         V=V
                     )
-                    print(f"Using Adaptive A-optimal design (fallback). Design re-optimization frequency (explorer controlled): {parsed_adaptive_design_freq}.")
-            else:
-                # Static Designs
-                if c_vectors: # Check if c_vectors were successfully generated (i.e., keywords were provided)
-                    design = MultiPolicyOrigDesignC(
-                        env=env,
-                        lambd=lambda_val, # Use single lambda_val
-                        dim=1,
-                        C=c_vectors # Use embedded keywords
-                    )
-                    print("Using Static C-optimal design.")
-                else: # Fallback to Static A-optimal
+                    print(f"Using Adaptive A-optimal design. Design re-optimization frequency (explorer controlled): {parsed_adaptive_design_freq}.")
+                else: # Static A-optimal design
                     design = MultiPolicyOrigDesignA(
                         env=env,
-                        lambd=lambda_val, # Use single lambda_val
+                        lambd=lambda_val,
                         dim=1,
                         V=V
                     )
-                    print("Using Static A-optimal design (fallback).")
+                    print("Using Static A-optimal design.")
+            elif design_objective == 'C':
+                if parsed_adaptive_design_freq > 0 and parsed_adaptive_estimation_freq > 0:
+                    # Adaptive C-optimal design (both design and C vector are adaptive)
+                    design = AdaptiveOrigDesignC(
+                        env=env,
+                        lambd=lambda_val,
+                        dim=1,
+                        C=None,  # C will be set by update_estimator
+                        adaptive_estimation_frequency=parsed_adaptive_estimation_freq, # This controls C updates
+                        update_C_from_estimator=True
+                    )
+                    print(f"Using Adaptive C-optimal design. C vector updated every {parsed_adaptive_estimation_freq} (estimator) steps. "
+                          f"Design re-optimized every {parsed_adaptive_design_freq} (explorer) steps.")
+                else:
+                    # Error for C-optimal if not fully adaptive
+                    raise ValueError("C-optimal design (objective='C') requires both adaptive_design_frequency > 0 AND "
+                                     "adaptive_estimation_frequency > 0. "
+                                     f"Current settings: adaptive_design_frequency={parsed_adaptive_design_freq}, "
+                                     f"adaptive_estimation_frequency={parsed_adaptive_estimation_freq}.")
+            # No 'else' needed here as design_objective is guaranteed to be 'A' or 'C' by prior checks.
 
             likelihood = MultinomialLikelihood()
             regularizer = L2Regularizer(lam=lambda_val) # Use single lambda_val for estimation regularization

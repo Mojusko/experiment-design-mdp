@@ -403,25 +403,24 @@ class MultiPolicyOrigDesignC(MultiPolicyOrigDesignD):
         # Note: time_weigh is no longer accepted by the parent __init__
         super().__init__(env, lambd, dim, **kwargs) 
         # Set the C attribute specific to this class
-        if C is None:
-            raise ValueError("C cannot be None for MultiPolicyOrigDesignC. It must be provided or set via update_estimator.")
         self.C = C
 
     def _compute_c_optimal_value(self, inv_z_reg):
         """
         Compute C-optimal design value using the inverse regularized z matrix.
+        If self.C is None, computes A-optimal design value instead.
         
         Parameters:
         - inv_z_reg (torch.Tensor): The inverse of the regularized z matrix.
         
         Returns:
-        - float: The C-optimal value (trace or max trace).
+        - float: The C-optimal value (trace or max trace), or A-optimal value if C is None.
         """
         target_device = inv_z_reg.device  # Get the device of inv_z_reg
 
         if self.C is None:
-             # This case should ideally not be reached due to checks in __init__ and update_estimator
-             raise ValueError("C is None during C-optimal value computation. This should not happen.")
+            logger.debug(f"{type(self).__name__}._compute_c_optimal_value: C is None, using A-optimal criterion.")
+            return -torch.trace(inv_z_reg)
 
         # Handle C being a list of vectors
         if isinstance(self.C, list):

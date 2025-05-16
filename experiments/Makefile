@@ -455,7 +455,7 @@ llm-find-rounds: $(JOBS_LLM_ROUNDS)
 LAMBDA_VALUES := 1 10 15 25 50
 
 # Generate job names for multinomial feedback
-JOBS_LLM_LAMBDAS_MUL := \
+JOBS_LLM_LAMBDA_MUL := \
   $(foreach lambda_val,$(LAMBDA_VALUES), \
     $(foreach n,$(NUMBERS_LLM), \
       job-llm-lambda-mul-$(lambda_val)-$(n)))
@@ -501,9 +501,9 @@ $(foreach lambda_val,$(LAMBDA_VALUES), \
     $(eval $(call lambda_job_template_num,$(lambda_val),$(n)))))
 
 # Split targets to run multinomial and numerical separately
-llm-find-lambdas-mul: $(JOBS_LLM_LAMBDAS_MUL)
+llm-find-lambda-mul: $(JOBS_LLM_LAMBDA_MUL)
 llm-find-lambda-num: $(JOBS_LLM_LAMBDA_NUM) # Keep numerical target name consistent for now
-llm-find-lambda: llm-find-lambdas-mul llm-find-lambda-num
+llm-find-lambda: llm-find-lambda-mul llm-find-lambda-num
 
 # Design Frequency Finding (using lambda_finding base config)
 # Iterates over episodes and adaptive_design_frequency
