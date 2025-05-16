@@ -182,41 +182,19 @@ class FeedbackFactory:
         m = embedder.get_embedding_dim()
         embedding = CustomEmbedding(m, lambda x: x, m)
 
-        # Determine lambda_dsn and lambda_est based on the configuration strategy
-        if cfg.feedback.name == 'multinomial' and cfg.feedback.use_model_specific_lambda:
-            # Check if scorer_model_name was provided
-            if scorer_model_name is None:
-                raise ValueError("scorer_model_name must be provided to FeedbackFactory.create when use_model_specific_lambda is True.")
-
-            # Use model-specific lambdas from the dictionary using the provided scorer_model_name
-            # Provide default values from the main config if model not found in specific params
-            default_params = {'lambda_dsn': cfg.feedback.lambda_dsn, 'lambda_est': cfg.feedback.lambda_est}
-            model_params = cfg.feedback.model_specific_params.get(scorer_model_name, default_params)
-
-            # Get lambdas, falling back to defaults if keys are missing within the model's specific params
-            lambda_dsn = model_params.get('lambda_dsn', cfg.feedback.lambda_dsn)
-            lambda_est = model_params.get('lambda_est', cfg.feedback.lambda_est)
-            print(f"Using model-specific lambdas for '{scorer_model_name}': lambda_dsn={lambda_dsn}, lambda_est={lambda_est}")
-        else:
-            # Use the general lambdas (either for numerical or if use_model_specific_lambda is false for multinomial)
-            # Ensure lambdas exist in the feedback config
-            if not hasattr(cfg.feedback, 'lambda_dsn'):
-                 raise ValueError(f"lambda_dsn not found in feedback config '{cfg.feedback.name}' and use_model_specific_lambda is false or feedback is not multinomial.")
-            if not hasattr(cfg.feedback, 'lambda_est'):
-                 raise ValueError(f"lambda_est not found in feedback config '{cfg.feedback.name}' and use_model_specific_lambda is false or feedback is not multinomial.")
-            lambda_dsn = cfg.feedback.lambda_dsn
-            lambda_est = cfg.feedback.lambda_est
-            print(f"Using general lambdas: lambda_dsn={lambda_dsn}, lambda_est={lambda_est} (numerical feedback or use_model_specific_lambda=false)")
-
+        # Get the single lambda value
+        if not hasattr(cfg.feedback, 'lambda'):
+            raise ValueError(f"lambda not found in feedback config '{cfg.feedback.name}'. A single 'lambda' parameter is expected.")
+        lambda_val = cfg.feedback['lambda'] # Use dictionary-style access for the key 'lambda'
+        print(f"Using single lambda value: {lambda_val} for both design and estimation regularization.")
 
         # Decide which feedback type
         if cfg.feedback.name == 'numerical':
             # Numerical feedback uses DesignD (A-optimal is similar, D is often preferred)
-            # Note: Numerical feedback still uses lambda_dsn for design and lambda_est for estimator if needed
-            design = DesignD(env=env, lambd=lambda_dsn, dim=1) # Use lambda_dsn for design
+            design = DesignD(env=env, lambd=lambda_val, dim=1)
             # KernelizedFeatures doesn't use lambda directly in constructor, it's set during fit if needed
             estimator = KernelizedFeatures(embedding, m)
-            # If KernelizedFeatures needed lambda_est, it would be passed during fit or set as attribute
+            # If KernelizedFeatures needed lambda_val for estimation, it would be passed during fit or set as attribute
             fb = NumericalFeedback(env, design, estimator)
         else: # Multinomial feedback
             # Parse adaptive_design_frequency
@@ -296,19 +274,18 @@ class FeedbackFactory:
                 if c_vectors: # Check if c_vectors were successfully generated
                     design = AdaptiveOrigDesignC(
                         env=env,
-                        lambd=lambda_dsn, # Use lambda_dsn
+                        lambd=lambda_val, # Use single lambda_val
                         dim=1,
                         C=c_vectors, # Use embedded keywords
-                        adaptive_estimation_frequency=cfg.feedback.adaptive_estimation_frequency # Corrected: Use estimation_frequency for C updates
+                        adaptive_estimation_frequency=cfg.feedback.adaptive_estimation_frequency
                     )
                     print(f"Using Adaptive C-optimal design. Design re-optimization frequency (explorer controlled): {parsed_adaptive_design_freq}.")
                 else: # Fallback to Adaptive A-optimal
                     design = AdaptiveOrigDesignA(
                         env=env,
-                        lambd=lambda_dsn, # Use lambda_dsn
+                        lambd=lambda_val, # Use single lambda_val
                         dim=1,
                         V=V
-                        # adaptive_design_frequency is NOT a parameter for the design functional itself
                     )
                     print(f"Using Adaptive A-optimal design (fallback). Design re-optimization frequency (explorer controlled): {parsed_adaptive_design_freq}.")
             else:
@@ -316,7 +293,7 @@ class FeedbackFactory:
                 if c_vectors: # Check if c_vectors were successfully generated (i.e., keywords were provided)
                     design = MultiPolicyOrigDesignC(
                         env=env,
-                        lambd=lambda_dsn,
+                        lambd=lambda_val, # Use single lambda_val
                         dim=1,
                         C=c_vectors # Use embedded keywords
                     )
@@ -324,14 +301,14 @@ class FeedbackFactory:
                 else: # Fallback to Static A-optimal
                     design = MultiPolicyOrigDesignA(
                         env=env,
-                        lambd=lambda_dsn,
+                        lambd=lambda_val, # Use single lambda_val
                         dim=1,
-                        V=V # Use lambda_dsn
+                        V=V
                     )
                     print("Using Static A-optimal design (fallback).")
 
             likelihood = MultinomialLikelihood()
-            regularizer = L2Regularizer(lam=lambda_est) # Use lambda_est for estimation regularization
+            regularizer = L2Regularizer(lam=lambda_val) # Use single lambda_val for estimation regularization
             estimator = RegularizedMultinomialEstimator(embedding, likelihood, regularizer)
             fb = MultinomialFeedback(env, design, estimator)
 

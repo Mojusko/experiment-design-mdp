@@ -7,6 +7,7 @@ from doexpy.env.discrete_env import Environment
 from doexpy.functionals.reward_functional import RewardFunctional
 import torch.linalg as la
 import logging
+import torch.nn.functional as F # Added for cosine_similarity
 from stpy.regression.regularized_dictionary.regularized_multinomial_estimator import RegularizedMultinomialEstimator
 
 logger = logging.getLogger(__name__)
@@ -218,18 +219,56 @@ class MultiPolicyOrigDesignD(RewardFunctional):
         self.estimator = None
         self.dim = dim
 
-    def update_estimator(self, estimator, emissions):
-        """Update the estimator and set C to be the parameter vector."""
-        self.estimator = estimator
-        theta_fit = estimator.theta_fit  # Direct access to theta_fit
-        
-        # Ensure theta_fit is properly shaped for C-optimal calculations
-        # For C-optimal design, we typically need a row vector (1xN)
-        # If theta_fit is a column vector (Nx1), reshape it to a row vector
-        if theta_fit.dim() == 2 and theta_fit.shape[1] == 1:
-            self.C = theta_fit  # Keep as column vector, we'll transpose when needed
+    def update_estimator(self, estimator, emissions, scorer_model_gt_weight=None):
+        """
+        Update the C vector based on the estimator's theta_fit.
+        Logs cosine similarity of old and new C against scorer_model_gt_weight if provided.
+        """
+        logger.info(f"Attempting to update C vector in {type(self).__name__} based on estimator {type(estimator).__name__}.")
+
+        if not hasattr(estimator, 'theta_fit') or estimator.theta_fit is None:
+            logger.warning("Estimator has no 'theta_fit' or it's None. Cannot update C.")
+            return
+
+        new_C_candidate = estimator.theta_fit.detach().clone()
+
+        # Normalize the new C candidate
+        norm = torch.linalg.norm(new_C_candidate)
+        if norm > 1e-9:  # Avoid division by zero
+            normalized_new_C = (new_C_candidate / norm)
         else:
-            self.C = theta_fit
+            logger.error("New C candidate (estimator.theta_fit) has near-zero norm. Cannot use for C-optimal design. C will not be updated.")
+            return
+
+        # Ensure normalized_new_C is a column vector (d, 1)
+        # This assumes C is a single vector. If C can be a list, this part needs adjustment.
+        if normalized_new_C.dim() == 1:
+            normalized_new_C = normalized_new_C.unsqueeze(1) # Make it (d,1)
+        elif normalized_new_C.dim() == 2 and normalized_new_C.shape[0] == 1: # if (1,d)
+            normalized_new_C = normalized_new_C.T # Make it (d,1)
+        # If it's already (d,1), it's fine. If (d, k) where k!=1, it might be an issue for single C.
+
+        if scorer_model_gt_weight is not None:
+            gt_weight_flat = scorer_model_gt_weight.detach().clone().to(normalized_new_C.device).flatten()
+
+            if hasattr(self, 'C') and self.C is not None:
+                # Assuming self.C is a tensor that can be flattened for comparison
+                old_C_flat = self.C.detach().clone().to(gt_weight_flat.device).flatten()
+                if old_C_flat.shape == gt_weight_flat.shape and old_C_flat.numel() > 0 :
+                    cos_sim_old = F.cosine_similarity(old_C_flat, gt_weight_flat, dim=0)
+                    logger.info(f"  Old C vs GT weight: Cosine Similarity = {cos_sim_old.item():.4f}")
+                else:
+                    logger.warning(f"  Could not compare Old C (shape {old_C_flat.shape}, numel {old_C_flat.numel()}) with GT weight (shape {gt_weight_flat.shape}, numel {gt_weight_flat.numel()}). Old C might be a list or incompatible.")
+
+            new_C_flat = normalized_new_C.detach().clone().to(gt_weight_flat.device).flatten()
+            if new_C_flat.shape == gt_weight_flat.shape and new_C_flat.numel() > 0:
+                cos_sim_new = F.cosine_similarity(new_C_flat, gt_weight_flat, dim=0)
+                logger.info(f"  New C vs GT weight: Cosine Similarity = {cos_sim_new.item():.4f}")
+            else:
+                 logger.warning(f"  Could not compare New C (shape {new_C_flat.shape}) with GT weight (shape {gt_weight_flat.shape}).")
+
+        self.C = normalized_new_C  # Update self.C
+        logger.info(f"C vector in {type(self).__name__} updated. New C shape: {self.C.shape}, L2 norm: {torch.linalg.norm(self.C).item():.4f}")
 
     # def _compute_diagonal_terms(self, emissions, prob_matrix, d1_h, d2_h):
     #     """Compute diagonal terms of the Fisher."""
@@ -367,44 +406,6 @@ class MultiPolicyOrigDesignC(MultiPolicyOrigDesignD):
         if C is None:
             raise ValueError("C cannot be None for MultiPolicyOrigDesignC. It must be provided or set via update_estimator.")
         self.C = C
-
-    def update_estimator(self, estimator, emissions):
-        """
-        Update the estimator and set C based on the estimator's parameters.
-        
-        NOTE: This method is currently commented out. The intention is to use
-        the C vector(s) provided during initialization (a priori) and not
-        update them based on the fitted estimator during the experiment run.
-        If adaptive C-optimality based on the estimator is desired, this
-        method needs to be uncommented and potentially revised.
-
-        Parameters:
-        - estimator: A RegularizedMultinomialEstimator with theta_fit property
-        - emissions: The emissions tensor
-        """
-        # # Log update intention
-        # logger.info(f"Updating C vector in {type(self).__name__}.")
-        #
-        # # Call parent's update_estimator method (if applicable, though not strictly needed here as we override C logic)
-        # super().update_estimator(estimator, emissions)
-        #
-        # # Get the fitted parameter vector
-        # theta_fit = estimator.theta_fit
-        #
-        # # Normalize the parameter vector before using it as C
-        # norm = torch.linalg.norm(theta_fit)
-        # if norm > 1e-9: # Avoid division by zero or near-zero
-        #     # Assume theta_fit is a 1D vector or (d, 1) or (1, d). Normalize and reshape to (1, d).
-        #     new_C = (theta_fit / norm).view(1, -1)
-        #     new_c_norm_l2 = torch.linalg.norm(new_C).item() # Should be ~1.0
-        #     new_c_norm_l1 = torch.linalg.norm(new_C, ord=1).item()
-        #     logger.info(f"New C vector set from estimator {type(estimator).__name__} (reshaped to {new_C.shape}): L2 norm={new_c_norm_l2:.4f}, L1 norm={new_c_norm_l1:.4f}")
-        #     self.C = new_C
-        # else:
-        #     # Handle zero vector case - raise error as C cannot be None or zero for C-optimality trace calculation
-        #     logger.error("Estimator theta_fit has near-zero norm. Cannot compute C-optimal design. Raising ValueError.")
-        #     raise ValueError("Estimator theta_fit has near-zero norm, cannot set C for C-optimal design.")
-        pass # Method is disabled
 
     def _compute_c_optimal_value(self, inv_z_reg):
         """

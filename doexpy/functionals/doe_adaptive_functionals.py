@@ -371,7 +371,7 @@ class AdaptiveOrigDesignC(MultiPolicyOrigDesignC):
     Adaptive C-optimal design for original design functionals.
     Updates C based on estimator unless adaptive_estimation_frequency is 0.
     """
-    def __init__(self, env, lambd=1e-3, dim=0, uniform_alpha=False, C=None, adaptive_estimation_frequency=1, **kwargs):
+    def __init__(self, env, lambd=1e-3, dim=0, uniform_alpha=False, C=None, adaptive_estimation_frequency=1, update_C_from_estimator: bool = True, **kwargs):
         """
         Initializes AdaptiveOrigDesignC.
 
@@ -382,9 +382,12 @@ class AdaptiveOrigDesignC(MultiPolicyOrigDesignC):
             uniform_alpha: Flag for alpha weighting.
             C: Initial C vector (e.g., prior or GT weights). If None, expects update_estimator.
             adaptive_estimation_frequency: Frequency of estimator updates. If 0, C will not be updated.
+            update_C_from_estimator: If True (default), C will be updated from the estimator
+                                     when adaptive_estimation_frequency > 0.
             **kwargs: Additional arguments for parent classes.
         """
         self.adaptive_estimation_frequency = adaptive_estimation_frequency
+        self.update_C_from_estimator = update_C_from_estimator
         # Initialize the parent MultiPolicyOrigDesignC first
         # We temporarily allow C=None here, but log a warning if estimation freq is > 0.
         # We handle the C=None case specifically for the adaptive scenario.
@@ -414,17 +417,26 @@ class AdaptiveOrigDesignC(MultiPolicyOrigDesignC):
         self.type = "adaptive"
         self.uniform_alpha = uniform_alpha
 
-    def update_estimator(self, estimator, emissions):
+    def update_estimator(self, estimator, emissions, scorer_model_gt_weight=None):
         """
-        Update the C vector based on the estimator, unless adaptive_estimation_frequency is 0.
+        Update the C vector based on the estimator, if adaptive_estimation_frequency > 0
+        and update_C_from_estimator is True.
+        Passes scorer_model_gt_weight to super for logging.
         """
         if self.adaptive_estimation_frequency == 0:
-            logger.info("adaptive_estimation_frequency is 0. Skipping update_estimator for AdaptiveOrigDesignC.")
+            logger.info(f"adaptive_estimation_frequency is 0 for {type(self).__name__}. Skipping C update from estimator.")
             return
-        else:
-            pass
-            # Proceed with the normal update from the estimator via the parent method
-            #super().update_estimator(estimator, emissions)
+
+        if not self.update_C_from_estimator:
+            logger.info(f"update_C_from_estimator is False for {type(self).__name__}. "
+                        f"Skipping C update from estimator, even though adaptive_estimation_frequency is {self.adaptive_estimation_frequency}.")
+            return
+        
+        # If we reach here, adaptive_estimation_frequency > 0 AND update_C_from_estimator is True
+        logger.info(f"adaptive_estimation_frequency is {self.adaptive_estimation_frequency} and "
+                    f"update_C_from_estimator is True for {type(self).__name__}. "
+                    f"Proceeding with C update from estimator via super call.")
+        super().update_estimator(estimator, emissions, scorer_model_gt_weight=scorer_model_gt_weight)
 
     def eval(self, emissions, distributions, visitations_per_policy, episodes):
         # Compute agg_densities for each policy's visitation history

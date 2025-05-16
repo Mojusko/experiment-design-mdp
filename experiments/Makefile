@@ -291,7 +291,7 @@ llm-generate-image:
 	cd llm && TIMESTAMP=$(TIMESTAMP) OMP_NUM_THREADS=1 MKL_NUM_THREADS=1 $(PYTHONPATH) image_generator.py --prompt '$(PROMPT)' $(if $(OUTPUT_DIR),--output_dir '$(OUTPUT_DIR)',) $(if $(SEED),--seed $(SEED),) $(if $(IMAGE_SIZE),--image_size $(IMAGE_SIZE),) $(if $(NUM_STEPS),--num_inference_steps $(NUM_STEPS),) $(if $(GUIDANCE_PROMPT),--guidance_prompt $(GUIDANCE_PROMPT),) $(if $(GUIDANCE_ESTIMATOR),--guidance_estimator $(GUIDANCE_ESTIMATOR),) $(if $(ESTIMATOR),--estimator '$(ESTIMATOR)',)
 
 ########################### LLMS
-REPEATS_LLM=15
+REPEATS_LLM=10
 NUMBERS_LLM := $(shell seq 1 ${REPEATS_LLM})
 
 # Jobs for V comparison (non-adaptive design)
@@ -451,40 +451,32 @@ $(foreach rounds,$(ROUNDS_VALUES), \
 llm-find-rounds: $(JOBS_LLM_ROUNDS)
 
 # Lambda-finding
-# Define the ranges for the two lambdas
-# Design lambda range
-LAMBDA_DSN_VALUES := 0.1 1 5 
-# Estimation lambda range (wider, larger values)
-LAMBDA_EST_VALUES := 0.1 1 5 
-# Numerical lambda values (separate range)
-LAMBDA_VALUES_NUM :=  0.001 0.01 0.1 1 10
+# Define the range for the single lambda parameter
+LAMBDA_VALUES := 1 10 15 25 50
 
-# Generate job names for each (lambda_dsn, lambda_est, seed) triplet for multinomial
+# Generate job names for multinomial feedback
 JOBS_LLM_LAMBDAS_MUL := \
-  $(foreach lambda_dsn,$(LAMBDA_DSN_VALUES), \
-    $(foreach lambda_est,$(LAMBDA_EST_VALUES), \
-      $(foreach n,$(NUMBERS_LLM), \
-        job-llm-lambda-mul-dsn$(lambda_dsn)-est$(lambda_est)-$(n))))
-
-# Generate job names for numerical (using lambda_dsn only for now, assuming estimator lambda isn't tuned here)
-JOBS_LLM_LAMBDA_NUM := \
-  $(foreach lambda,$(LAMBDA_VALUES_NUM), \
+  $(foreach lambda_val,$(LAMBDA_VALUES), \
     $(foreach n,$(NUMBERS_LLM), \
-      job-llm-lambda-num-$(lambda)-$(n)))
+      job-llm-lambda-mul-$(lambda_val)-$(n)))
+
+# Generate job names for numerical feedback
+JOBS_LLM_LAMBDA_NUM := \
+  $(foreach lambda_val,$(LAMBDA_VALUES), \
+    $(foreach n,$(NUMBERS_LLM), \
+      job-llm-lambda-num-$(lambda_val)-$(n)))
 
 # Macros to define each job type
 define lambda_job_template_mul
-job-llm-lambda-mul-dsn$(1)-est$(2)-$(3):
+job-llm-lambda-mul-$(1)-$(2):
 	cd llm && TIMESTAMP=$(TIMESTAMP) OMP_NUM_THREADS=1 MKL_NUM_THREADS=1 $(PYTHONPATH) run_exp.py \
 	  experiment=lambda_finding \
 	  feedback=multinomial \
 	  algorithm=design \
-	  feedback.lambda_dsn=$(1) \
-	  feedback.lambda_est=$(2) \
-	  feedback.use_model_specific_lambda=false \
-	  seed=$(3) \
+	  feedback.lambda=$(1) \
+	  seed=$(2) \
 	  results_dir="results/lambda-finding" \
-	  experiment_id="mul-dsn$(1)-est$(2)-$(3)"
+	  experiment_id="mul-lambda$(1)-$(2)"
 endef
 
 define lambda_job_template_num
@@ -493,23 +485,20 @@ job-llm-lambda-num-$(1)-$(2):
 	  experiment=lambda_finding \
 	  feedback=numerical \
 	  algorithm=design \
-	  feedback.lambda_dsn=$(1) \
-	  feedback.lambda_est=1000 \
-	  feedback.use_model_specific_lambda=false \
+	  feedback.lambda=$(1) \
 	  seed=$(2) \
 	  results_dir="results/lambda-finding" \
-	  experiment_id="num-$(1)-$(2)"
+	  experiment_id="num-lambda$(1)-$(2)"
 endef
 
 # Instantiate all jobs from the macros
-$(foreach lambda_dsn,$(LAMBDA_DSN_VALUES), \
-  $(foreach lambda_est,$(LAMBDA_EST_VALUES), \
-    $(foreach n,$(NUMBERS_LLM), \
-      $(eval $(call lambda_job_template_mul,$(lambda_dsn),$(lambda_est),$(n))))))
-
-$(foreach lambda,$(LAMBDA_VALUES_NUM), \
+$(foreach lambda_val,$(LAMBDA_VALUES), \
   $(foreach n,$(NUMBERS_LLM), \
-    $(eval $(call lambda_job_template_num,$(lambda),$(n)))))
+    $(eval $(call lambda_job_template_mul,$(lambda_val),$(n)))))
+
+$(foreach lambda_val,$(LAMBDA_VALUES), \
+  $(foreach n,$(NUMBERS_LLM), \
+    $(eval $(call lambda_job_template_num,$(lambda_val),$(n)))))
 
 # Split targets to run multinomial and numerical separately
 llm-find-lambdas-mul: $(JOBS_LLM_LAMBDAS_MUL)

@@ -28,6 +28,10 @@ from components.saver import BaseSaver, VisitsSaver, VisitsImageSaver, ConfSaver
 # from stpy.regularization.regularizer import L2Regularizer
 from stpy.embeddings.polynomial_embedding import CustomEmbedding # Corrected import path
 # Removed unused json and re imports
+from doexpy.functionals.doe_adaptive_functionals import AdaptiveOrigDesignC # Added import
+import logging # Added import
+
+logger = logging.getLogger(__name__) # Added logger instance
 
 class LLMExperiment:
     """
@@ -296,8 +300,25 @@ class LLMExperiment:
                         gt_weight = scorer_model.weight
                         error = self.calculate_cosine_error(est_weight, gt_weight)
                         print(f"Episode {ep_idx + 1} partial re-fit complete for model '{model_name}'. Cosine error: {error:.4f}")
+
+                        # Update the design's C vector if it's AdaptiveOrigDesignC
+                        current_design = self.designs[i]
+                        if isinstance(current_design, AdaptiveOrigDesignC):
+                            if self.num_scorer_models > 1:
+                                raise ValueError(
+                                    "Adaptive C-optimal design with estimator updates (adaptive_estimation_frequency > 0) "
+                                    "is not supported when multiple scorer models are configured. "
+                                    "The update_estimator logic currently assumes a single ground truth for comparison."
+                                )
+                            # Pass the estimator, emissions, and the ground truth weight of the current scorer model
+                            print(f"Updating C in design {type(current_design).__name__} for model '{model_name}'.")
+                            current_design.update_estimator(self.estimators[i], self.env.emissions, scorer_model_gt_weight=gt_weight)
+                        elif est_freq > 0 : # est_freq > 0 implies adaptive_estimation_frequency > 0
+                             # Log if adaptive estimation is on but design is not AdaptiveOrigDesignC
+                             logger.info(f"Adaptive estimation is active, but design {type(current_design).__name__} is not AdaptiveOrigDesignC. Design's C vector not updated from estimator.")
+
                     else:
-                        print(f"Could not calculate cosine error for model '{model_name}' (estimator or ground truth weight missing).")
+                        print(f"Could not calculate cosine error for model '{model_name}' (estimator or ground truth weight missing). Design's C not updated.")
 
                 # Clear the buffer after processing all models for this frequency step
                 print("Clearing recent visits buffer.")
