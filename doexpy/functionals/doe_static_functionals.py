@@ -33,10 +33,17 @@ class ExperimentDesignFunctional(RewardFunctional):
         # Move distribution to same device as emissions
         distribution = distribution.to(emissions.device)
 
-        if self.dim == 0:
+        # If distribution is 2D (e.g., S x A), add a singleton horizon dimension
+        # to make it compatible with the 3D summation logic (H x S x A).
+        if distribution.ndim == 2:
+            distribution = distribution.unsqueeze(0)
+
+        if self.dim == 0: # Sum over actions and horizon to get marginal state distribution d(s)
+            # Input distribution is (H,S,A). Sum over A (dim 2), then H (dim 0) -> (S,)
             distribution = torch.sum(torch.sum(distribution, dim = 2), dim = 0)
         
-        elif self.dim == 1: # actions matter 
+        elif self.dim == 1: # Sum over states and horizon to get marginal action distribution d(a)
+            # Input distribution is (H,S,A). Sum over S (dim 1), then H (dim 0) -> (A,)
             distribution = torch.sum(torch.sum(distribution, dim = 1), dim = 0)
         z = torch.einsum('ij,j,jk->ik', emissions.T, distribution/ Sigma**2, emissions)
         return z

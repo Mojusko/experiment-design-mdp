@@ -30,6 +30,8 @@ from components.saver import BaseSaver, VisitsSaver, VisitsImageSaver, ConfSaver
 from stpy.embeddings.polynomial_embedding import CustomEmbedding # Corrected import path
 # Removed unused json and re imports
 from doexpy.functionals.doe_adaptive_functionals import AdaptiveOrigDesignC # Added import
+from doexpy.mdpexplore import MdpExplore, MdpExploreMultiPolicy # Added for type checking
+from components.solver import TwoPhaseExplorer # Added for type checking
 import logging # Added import
 
 logger = logging.getLogger(__name__) # Added logger instance
@@ -374,11 +376,19 @@ class LLMExperiment:
                     recent_visits_buffer[p_i].clear()
                 print("-----------------------------------------------------\n")
 
-        results = self.explorer.run(
-            episodes=total_episodes,
-            return_visitations=True,
-            update_callback=update_callback
-        )
+        run_kwargs = {
+            'episodes': total_episodes,
+            'return_visitations': True
+        }
+
+        if isinstance(self.explorer, MdpExploreMultiPolicy):
+            run_kwargs['update_callback'] = update_callback
+            run_kwargs['start_ep_idx'] = 0 # Defaulting to 0 as it wasn't passed before
+        elif isinstance(self.explorer, TwoPhaseExplorer):
+            run_kwargs['update_callback'] = update_callback
+        # For MdpExplore, no additional arguments beyond episodes and return_visitations are passed.
+            
+        results = self.explorer.run(**run_kwargs)
         # Extract only the visitations (third element) from the results tuple
         # MdpExploreMultiPolicy.run returns (objective_values, opt, visitations_per_policy)
         # Ensure results is a tuple and has 3 elements before accessing index 2

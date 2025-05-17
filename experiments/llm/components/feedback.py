@@ -7,7 +7,7 @@ from doexpy.functionals.doe_static_functionals import (
     DesignA, DesignD, MultiPolicyOrigDesignA, MultiPolicyOrigDesignD, MultiPolicyOrigDesignC
 )
 from doexpy.functionals.doe_adaptive_functionals import (
-    AdaptiveOrigDesignA, AdaptiveOrigDesignC # Removed AdaptiveOrigDesignD
+    AdaptiveDesignA, AdaptiveOrigDesignA, AdaptiveOrigDesignC # Removed AdaptiveOrigDesignD
 )
 # from doexpy.feedback.feedback_base import EmptyFeedback # Removed EmptyFeedback
 from stpy.embeddings.polynomial_embedding import CustomEmbedding
@@ -242,11 +242,14 @@ class FeedbackFactory:
 
 
             if parsed_adaptive_design_freq_numerical > 0:
-                design = AdaptiveOrigDesignA(env=env, lambd=lambda_val, dim=1, V=V_numerical) # Assuming dim=1 for LLM embeddings
-                print(f"Using Adaptive A-optimal design for Numerical Feedback. Design re-optimization frequency: {parsed_adaptive_design_freq_numerical}.")
+                # Using AdaptiveDesignA as per request for numerical adaptive cases.
+                # V_numerical and dim=1 are not applicable to AdaptiveDesignA's presumed constructor (like AdaptiveDesignD).
+                design = AdaptiveDesignA(env=env, lambd=lambda_val) # Default scale_reg=True, uniform_alpha=False, sigma=1.0
+                print(f"Using Adaptive A-optimal design (AdaptiveDesignA) for Numerical Feedback. Design re-optimization frequency: {parsed_adaptive_design_freq_numerical}.")
             else:
-                design = MultiPolicyOrigDesignA(env=env, lambd=lambda_val, dim=1, V=V_numerical) # Assuming dim=1
-                print("Using Static A-optimal design for Numerical Feedback.")
+                # Using DesignA as per request for numerical static cases.
+                design = DesignA(env=env, lambd=lambda_val, dim=1, V=V_numerical) # dim=1 for action embeddings, V_numerical if applicable
+                print("Using Static A-optimal design (DesignA) for Numerical Feedback.")
 
             estimator = KernelizedFeatures(embedding, m) # m is embedding_dim
             fb = NumericalFeedback(env, design, estimator)
