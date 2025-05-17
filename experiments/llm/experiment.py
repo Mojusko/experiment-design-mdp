@@ -398,16 +398,22 @@ class LLMExperiment:
         # --- Final Estimation Loop ---
         print("\n--- Running Final Estimation ---")
         # Determine which visits buffer to use for final collection
-        final_visits_to_process = None
-        if any(len(buf) > 0 for buf in recent_visits_buffer):
+        # This variable will hold data in the format List[List[Tuple(s,a)]]
+        visits_for_final_feedback_collection = None 
+
+        if isinstance(self.explorer, MdpExplore): # MdpExplore does not use update_callback
+            print("Using self.visits for final estimation (MdpExplore was used).")
+            # self.visits is List[Tuple(s,a)]. Wrap it to List[List[Tuple(s,a)]]
+            # Ensure self.visits is not None before wrapping
+            visits_for_final_feedback_collection = [self.visits] if self.visits is not None else [[]]
+        elif any(len(buf) > 0 for buf in recent_visits_buffer): # Check if MdpExploreMultiPolicy callback populated buffer
             print("Using remaining recent visits buffer for final estimation.")
-            final_visits_to_process = recent_visits_buffer
-        elif est_start == 0: # If estimation never happened adaptively, use all visits
-            print("Using all visits for final estimation (adaptive estimation start was 0).")
-            final_visits_to_process = all_visits
-        else:
-            print("No remaining visits in buffer and adaptive estimation occurred. Final estimation based on last adaptive fit.")
-            # In this case, estimators are already fitted, just print final errors below.
+            visits_for_final_feedback_collection = recent_visits_buffer
+        elif est_start == 0: # Fallback for MdpExploreMultiPolicy if buffer is empty but no adaptive est ran
+            print("Using all_visits for final estimation (adaptive estimation start was 0).")
+            visits_for_final_feedback_collection = all_visits
+        # If none of the above, visits_for_final_feedback_collection remains None (no new data to process)
+
 
         # Loop through each scorer model for final label collection (if needed) and fitting
         for i in range(self.num_scorer_models):
@@ -421,10 +427,14 @@ class LLMExperiment:
                 print(f"Skipping final estimation for model '{model_name}': Missing components.")
                 continue
 
-            # Collect labels only if there are visits to process from this run
-            if final_visits_to_process:
+            # Collect labels only if there are new visits to process for this model
+            # Check outer list, then index i, then if policy i's visit list is non-empty
+            if visits_for_final_feedback_collection and \
+               i < len(visits_for_final_feedback_collection) and \
+               visits_for_final_feedback_collection[i]: 
                 print(f"Collecting final labels for model: {model_name}")
-                feedback.collect_labels(self.cfg, final_visits_to_process, theta_star)
+                # feedback.collect_labels expects List[List[Tuple(s,a)]]
+                feedback.collect_labels(self.cfg, visits_for_final_feedback_collection, theta_star)
                 print(f"Fitting final estimator for model: {model_name}")
                 feedback.fit_estimator()
                 self.estimators[i] = feedback.estimator # Update the specific estimator

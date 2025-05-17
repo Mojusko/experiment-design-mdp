@@ -56,39 +56,70 @@ class BaseFeedback:
         return theta
 
 class NumericalFeedback(BaseFeedback):
-    def collect_labels(self, cfg, new_visits, theta_star):
-        # Use horizon from the environment
-        # Use horizon from the environment
+    def collect_labels(self, cfg, new_visits_per_policy, theta_star):
+        # new_visits_per_policy is List[List[Tuple(states, actions)]]
+        # For numerical feedback, we expect the outer list to have 1 element.
+        if not new_visits_per_policy or len(new_visits_per_policy) == 0:
+            warnings.warn("NumericalFeedback.collect_labels received an empty list of policies' visits. Skipping.")
+            return
+        if len(new_visits_per_policy) > 1: # Only warn if more than 1, allow 1.
+            warnings.warn(f"NumericalFeedback expected visits for 1 policy, got {len(new_visits_per_policy)}. Using the first.")
+        
+        visits_for_single_policy = new_visits_per_policy[0] # This is List[Tuple(states, actions)]
+        
         horizon = self.env.max_episode_length
-        # For NumericalFeedback, new_visits is List[Tuple(states, actions)]
-        # So, num_episodes is len(new_visits)
-        num_episodes = len(new_visits) 
-        prefix_range = range(1, horizon+1) if cfg.dense_feedback else range(horizon, horizon+1)
-        # Expected samples: num_episodes * number of prefixes considered
-        expected_samples = num_episodes * len(prefix_range)
-        print(f"Collect Labels (Numerical): num_episodes = {num_episodes}, horizon = {horizon}, dense={cfg.dense_feedback}, expected_samples = {expected_samples}")
+        num_episodes_collected = len(visits_for_single_policy)
+        
+        prefix_range = range(1, horizon + 1) if cfg.dense_feedback else range(horizon, horizon + 1)
+        expected_samples = num_episodes_collected * len(prefix_range)
+        
+        print(f"Collect Labels (Numerical): num_episodes_collected = {num_episodes_collected}, horizon = {horizon}, dense={cfg.dense_feedback}, expected_samples = {expected_samples}")
 
         x_list, y_list = [], []
-        for ep in range(num_episodes):
-            # new_visits[ep] is a tuple (states, actions)
-            # actions = new_visits[ep][1] # Assuming new_visits[ep] is (states, actions)
-            # If new_visits is just a list of action sequences for numerical (num_policies=1):
-            actions = new_visits[ep][1] if isinstance(new_visits[ep], tuple) else new_visits[ep]
+        actual_collected_samples_count = 0
 
+        for ep_idx in range(num_episodes_collected):
+            current_visit_tuple = visits_for_single_policy[ep_idx]
+            actions_for_episode_raw = current_visit_tuple[1] 
+
+            actions_for_episode = []
+            if isinstance(actions_for_episode_raw, torch.Tensor):
+                actions_for_episode = actions_for_episode_raw.cpu().tolist()
+            elif isinstance(actions_for_episode_raw, list):
+                actions_for_episode = actions_for_episode_raw
+            else:
+                warnings.warn(f"NumericalFeedback: Episode {ep_idx} has actions of unexpected type {type(actions_for_episode_raw)}. Skipping.")
+                continue
+            
+            actions_for_episode = [int(a) for a in actions_for_episode]
+
+            if not actions_for_episode:
+                warnings.warn(f"NumericalFeedback: Episode {ep_idx} has an empty action list after processing. Skipping prefixes for this episode.")
+                continue
 
             for prefix_len in prefix_range:
-                truncated_actions = actions[:prefix_len]
-                # theta_star returns (score_tensor, embedding_tensor)
+                current_prefix_len = min(prefix_len, len(actions_for_episode))
+                truncated_actions = actions_for_episode[:current_prefix_len]
+                
+                if not truncated_actions and current_prefix_len > 0 : # Should only be empty if current_prefix_len was 0, which means actions_for_episode was empty (caught above) or prefix_len was 0 (not possible)
+                     warnings.warn(f"NumericalFeedback: Episode {ep_idx}, prefix_len {prefix_len} resulted in unexpectedly empty truncated_actions. Original: {actions_for_episode}. Skipping.")
+                     continue
+                
                 score_tensor, embedding_tensor = theta_star(truncated_actions)
                 x_list.append(embedding_tensor.detach().cpu())
-                y_list.append(score_tensor.detach().cpu()) # Store the score tensor
+                y_list.append(score_tensor.detach().cpu())
+                actual_collected_samples_count +=1
         
-        print(f"Collect Labels (Numerical): Actual collected samples = {len(x_list)}")
-        if len(x_list) != expected_samples:
-            print(f"Warning (Numerical): Mismatch! Expected {expected_samples} samples, but collected {len(x_list)}.")
+        print(f"Collect Labels (Numerical): Actual collected samples = {actual_collected_samples_count}")
+        if actual_collected_samples_count != expected_samples:
+            print(f"Warning (Numerical): Mismatch! Expected {expected_samples} samples, but collected {actual_collected_samples_count}.")
 
-        x_torch = torch.vstack(x_list) # Shape [num_samples, embedding_dim]
-        y_torch = torch.vstack(y_list) # Shape [num_samples, 1] (scores)
+        if not x_list:
+            warnings.warn("NumericalFeedback: No data collected to add to _collected_data (x_list is empty).")
+            return
+
+        x_torch = torch.vstack(x_list)
+        y_torch = torch.vstack(y_list)
         self._collected_data.append((x_torch, y_torch))
 
     def fit_estimator(self, preloaded_theta=None):
