@@ -1,6 +1,6 @@
 name: "numerical"
 num_policies: 1
-num_components: 1200
+num_components: 300
 lambda: 0.01
 adaptive_estimation_frequency: 0
 adaptive_estimation_start: 0
