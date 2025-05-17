@@ -1,9 +1,9 @@
 name: "numerical"
 num_policies: 1
-num_components: 20
+num_components: 1200
 lambda: 0.01
 adaptive_estimation_frequency: 0
 adaptive_estimation_start: 0
 adaptive_design_frequency: 0 
-pass_V: true
+pass_V: false
 objective: "A"
