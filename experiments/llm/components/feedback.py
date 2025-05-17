@@ -36,18 +36,33 @@ class BaseFeedback:
         """
         Provides a standardized way to access the learned theta (parameters)
         from the estimator.
-        Returns None if the estimator or theta_fit is not available.
+        Tries 'theta_fit' attribute first, then 'theta_ml()' method.
+        Returns None if theta cannot be obtained.
         """
-        if self.estimator is not None and hasattr(self.estimator, 'theta_fit'):
-            # Ensure theta_fit is not None before returning
-            if self.estimator.theta_fit is not None:
-                return self.estimator.theta_fit
-            else:
-                warnings.warn(f"Estimator of type {type(self.estimator).__name__} has 'theta_fit' attribute, but it is None.")
-                return None
-        else:
-            warnings.warn(f"Estimator of type {type(self.estimator).__name__} does not have 'theta_fit' attribute or estimator is None.")
+        if self.estimator is None:
+            warnings.warn("Cannot get learned theta: Estimator is None.")
             return None
+
+        theta = None
+        estimator_type_name = type(self.estimator).__name__
+
+        # Try direct attribute access 'theta_fit'
+        if hasattr(self.estimator, 'theta_fit'):
+            theta = self.estimator.theta_fit
+            if theta is None:
+                warnings.warn(f"Estimator of type {estimator_type_name} has 'theta_fit' attribute, but it is None.")
+        # If 'theta_fit' wasn't found or was None, try 'theta_ml()' method
+        elif hasattr(self.estimator, 'theta_ml'):
+            try:
+                theta = self.estimator.theta_ml()
+                if theta is None:
+                    warnings.warn(f"Estimator of type {estimator_type_name} returned None from 'theta_ml()'.")
+            except Exception as e:
+                warnings.warn(f"Error calling 'theta_ml()' on estimator of type {estimator_type_name}: {e}")
+        else:
+            warnings.warn(f"Estimator of type {estimator_type_name} has neither 'theta_fit' attribute nor 'theta_ml()' method.")
+        
+        return theta
 
 class NumericalFeedback(BaseFeedback):
     def collect_labels(self, cfg, new_visits, theta_star):
