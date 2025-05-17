@@ -32,6 +32,23 @@ class BaseFeedback:
     def fit_estimator(self):
         pass
 
+    def get_learned_theta(self):
+        """
+        Provides a standardized way to access the learned theta (parameters)
+        from the estimator.
+        Returns None if the estimator or theta_fit is not available.
+        """
+        if self.estimator is not None and hasattr(self.estimator, 'theta_fit'):
+            # Ensure theta_fit is not None before returning
+            if self.estimator.theta_fit is not None:
+                return self.estimator.theta_fit
+            else:
+                warnings.warn(f"Estimator of type {type(self.estimator).__name__} has 'theta_fit' attribute, but it is None.")
+                return None
+        else:
+            warnings.warn(f"Estimator of type {type(self.estimator).__name__} does not have 'theta_fit' attribute or estimator is None.")
+            return None
+
 class NumericalFeedback(BaseFeedback):
     def collect_labels(self, cfg, new_visits, theta_star):
         # Use horizon from the environment
