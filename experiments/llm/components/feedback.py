@@ -45,7 +45,10 @@ class BaseFeedback:
 
         estimator_type_name = type(self.estimator).__name__
         if not hasattr(self.estimator, 'theta_fit'):
-            warnings.warn(f"Estimator of type {estimator_type_name} does not have 'theta_fit' attribute.")
+            # Suppress warning for KernelizedFeatures if theta_fit is missing,
+            # as it might not be expected to have this attribute.
+            if not isinstance(self.estimator, KernelizedFeatures):
+                warnings.warn(f"Estimator of type {estimator_type_name} does not have 'theta_fit' attribute.")
             return None
         
         # Return the value of theta_fit, which could be a tensor or None
