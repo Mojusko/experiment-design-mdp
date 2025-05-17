@@ -230,7 +230,8 @@ class LLMExperiment:
                     experiment_id=self.experiment_id, # Pass experiment_id explicitly
                     seed=self.seed,           # Pass seed explicitly
                     total_repeats=self.cfg.experiment.get('repeats', 1), # Pass total_repeats explicitly
-                    algorithm=self.cfg.algorithm # Pass algorithm explicitly
+                    algorithm=self.cfg.algorithm, # Pass algorithm explicitly
+                    num_policies=self.cfg.feedback.num_policies # Pass num_policies for savers that need it
                     # scorer_model is not passed here
                 )
                 self.savers.append(saver)
@@ -312,19 +313,12 @@ class LLMExperiment:
                     #     print(f"  Model '{model_name}': Estimator theta_fit AFTER fit: N/A (no estimator or theta_fit)")
 
                     # Calculate and print cosine error for this model
-                    if self.estimators[i] and hasattr(self.estimators[i], 'theta_fit') and hasattr(scorer_model, 'weight'):
-                        # The detailed print below includes this information, so this simpler print is removed.
-                        # est_weight = self.estimators[i].theta_fit
-                        # gt_weight = scorer_model.weight
-                        # error = self.calculate_cosine_error(est_weight, gt_weight)
-                        # l2_norm = torch.linalg.norm(est_weight).item()
-                        # print(f"Episode {ep_idx + 1} partial re-fit complete for model '{model_name}'. Cosine error: {error:.4f}, Estimator L2 Norm: {l2_norm:.4f}")
-
-                        # Current estimator's performance
-                        current_est_weight = self.estimators[i].theta_fit
+                    # Check if theta can be retrieved from feedback and if scorer_model has weight
+                    current_est_weight = self.feedbacks[i].get_learned_theta()
+                    if current_est_weight is not None and hasattr(scorer_model, 'weight'):
                         current_gt_weight = scorer_model.weight # Renamed for clarity within this block
                         current_estimator_error = self.calculate_cosine_error(current_est_weight, current_gt_weight)
-                        current_l2_norm = torch.linalg.norm(current_est_weight).item() # Keep calculation for potential future use
+                        # current_l2_norm = torch.linalg.norm(current_est_weight).item() # Keep calculation for potential future use
 
                         log_msg_parts = [
                             f"Episode {ep_idx + 1} partial re-fit for model '{model_name}':",
@@ -343,7 +337,7 @@ class LLMExperiment:
                         else:
                             log_msg_parts.append("Previous Estimator Cosine Error: N/A (first fit or not available)")
                         
-                        # Update design if applicable (using the current estimator)
+                        # Update design if applicable (using the current estimator object from feedback)
                         current_design = self.designs[i]
                         if isinstance(current_design, AdaptiveOrigDesignC):
                             if self.num_scorer_models > 1:
@@ -351,8 +345,8 @@ class LLMExperiment:
                                     "Adaptive C-optimal design with estimator updates (adaptive_estimation_frequency > 0) "
                                     "is not supported when multiple scorer models are configured."
                                 )
-                            # The design update uses self.estimators[i] which now holds the current estimator
-                            current_design.update_estimator(self.estimators[i], self.env.emissions)
+                            # The design update uses self.feedbacks[i].estimator
+                            current_design.update_estimator(self.feedbacks[i].estimator, self.env.emissions)
                             # No C-vector specific logging added to log_msg_parts here.
                         
                         elif est_freq > 0: # Log if adaptive estimation is on but design is not AdaptiveOrigDesignC
@@ -361,12 +355,13 @@ class LLMExperiment:
                         print(" ".join(log_msg_parts))
 
                     else:
-                        # This else corresponds to: if self.estimators[i] and hasattr(self.estimators[i], 'theta_fit') ...
-                        print(f"Could not calculate cosine error for model '{model_name}' (estimator or ground truth weight missing). Design's C not updated.")
+                        # This else corresponds to: if current_est_weight is not None and hasattr(scorer_model, 'weight'):
+                        print(f"Could not calculate cosine error for model '{model_name}' (learned theta or ground truth weight missing). Design's C not updated.")
                     
                     # Store the current theta_fit as the "previous" for the next adaptive step for this model
-                    if self.estimators[i] and hasattr(self.estimators[i], 'theta_fit') and self.estimators[i].theta_fit is not None:
-                        self.previous_theta_fits[i] = self.estimators[i].theta_fit.detach().clone()
+                    # current_est_weight already holds the learned theta or None
+                    if current_est_weight is not None:
+                        self.previous_theta_fits[i] = current_est_weight.detach().clone()
                     else:
                         self.previous_theta_fits[i] = None
 
@@ -441,9 +436,8 @@ class LLMExperiment:
                      continue # Skip error calculation if no estimator exists
 
             # Calculate and print final cosine error for this model
-            if self.estimators[i] and hasattr(self.estimators[i], 'theta_fit') and hasattr(scorer_model, 'weight'):
-                est_weight = self.estimators[i].theta_fit
-                current_est_weight = self.estimators[i].theta_fit # This is the estimator after the final fit
+            current_est_weight = self.feedbacks[i].get_learned_theta() # This is the estimator after the final fit
+            if current_est_weight is not None and hasattr(scorer_model, 'weight'):
                 gt_weight = scorer_model.weight
                 current_estimator_error = self.calculate_cosine_error(current_est_weight, gt_weight)
                 
@@ -1014,8 +1008,9 @@ class LLMExperiment:
         from components.results import ExperimentResults
         results = ExperimentResults()
 
-        # Set the list of estimators and visits
+        # Set the list of estimators, feedbacks and visits
         results.set_estimators(self.estimators) # Use the list of estimators
+        results.set_feedbacks(self.feedbacks)   # Set the list of feedback objects
         # Ensure visits are valid before setting
         valid_visits = self.visits and isinstance(self.visits, list) and self.visits[0]
         results.set_visits(self.visits if valid_visits else None) # Set to None if invalid/empty
@@ -1168,16 +1163,21 @@ class LLMExperiment:
                     # -------------------------------------------------------------
 
                     try:
-                        # Run the test with the components for the current model
-                        tester_results = tester.run_test(
-                           cfg=self.cfg,
-                           env=self.env,
-                           estimator=estimator, # Pass the specific estimator for this model
-                           theta_star=theta_star, # Pass the specific theta_star for this model
-                           scorer_model=scorer_model, # RE-ADDED - Pass the specific scorer_model for this iteration
-                           training_words_list=self.training_words,
-                           testing_words_list=self.testing_words
-                       )
+                        # Prepare arguments for tester.run_test()
+                        test_args = {
+                            'cfg': self.cfg,
+                            'env': self.env,
+                            'estimator': estimator, # Pass the specific estimator for this model
+                            'theta_star': theta_star, # Pass the specific theta_star for this model
+                            'scorer_model': scorer_model, # Pass the specific scorer_model
+                            'training_words_list': self.training_words,
+                            'testing_words_list': self.testing_words
+                        }
+                        # Add feedback object if the tester is CosineTester
+                        if isinstance(tester, CosineTester):
+                            test_args['feedback'] = self.feedbacks[i]
+
+                        tester_results = tester.run_test(**test_args)
 
                         # Process and store results for this model
                         if tester_results:

@@ -41,11 +41,17 @@ class SolverFactory:
         else:
             random_solver = None
 
+        # Determine FrankWolfe step argument based on feedback type
+        fw_step_arg = {}
+        if cfg.feedback.name == 'multinomial':
+            fw_step_arg['step'] = 'line-search'
+        # For numerical or other types, 'step' is not passed, FrankWolfe uses its default
+
         optimized_solver = FrankWolfe(
-            step='line-search',
             env=env, objective=design,
             num_components=cfg.feedback.num_components if cfg.algorithm != 'random' else 1,
             num_summarized_policies=num_policies, initial_policy=cfg.algorithm=='random', solver=DP,
+            **fw_step_arg,  # Pass step argument only if defined
             SummarizedPolicyType=DensityPolicy, accuracy=cfg.accuracy,
             num_rounds=cfg.feedback.get('num_rounds', -1), stationary=True
         )

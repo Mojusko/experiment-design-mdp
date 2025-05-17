@@ -121,23 +121,27 @@ class CosineTester(BaseTester):
         cos_sim = torch.nn.functional.cosine_similarity(vec1.flatten(), vec2.flatten(), dim=0)
         return 1 - cos_sim.item()
 
-    # Added scorer_model to signature
-    def run_test(self, cfg, env, estimator, theta_star, scorer_model, training_words_list, testing_words_list, visits=None):
+    # Added scorer_model and feedback to signature
+    def run_test(self, cfg, env, estimator, feedback, theta_star, scorer_model, training_words_list, testing_words_list, visits=None):
         print(f"Running {self.__class__.__name__}")
-        if estimator is None:
-            print(f"Skipping {self.__class__.__name__}: Estimator is None.")
+
+        if feedback is None:
+            print(f"Skipping {self.__class__.__name__}: Feedback object is None.")
             return {}
-        if not hasattr(estimator, 'theta_fit'):
-            print(f"Skipping {self.__class__.__name__}: Estimator does not have 'theta_fit'.")
+
+        est_weight = feedback.get_learned_theta()
+        if est_weight is None:
+            print(f"Skipping {self.__class__.__name__}: Learned theta not available from feedback object.")
             return {}
+
         # Use the scorer_model passed directly to run_test
         if scorer_model is None or not hasattr(scorer_model, 'weight'):
             print(f"Skipping {self.__class__.__name__}: Scorer model passed to run_test or its weight is missing.")
             return {}
 
-        # Get the ground-truth model weights and the estimated weights
+        # Get the ground-truth model weights
         gt_weight = scorer_model.weight  # ground truth weight from passed scorer_model argument
-        est_weight = estimator.theta_fit      # estimated weight
+        
         error = self.cosine_error(est_weight, gt_weight)
         print(f"Cosine error: {error:.4f}")
         return {"cosine_error": error}

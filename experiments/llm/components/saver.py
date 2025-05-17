@@ -797,6 +797,7 @@ class ReadableVisitsSaver(BaseSaver):
                  experiment_id=None,
                  skip_existing: bool = False,
                  # Core objects/config passed explicitly from LLMExperiment
+                 num_policies: int = 1, # Added num_policies argument
                  # (seed, total_repeats, algorithm are accepted by kwargs)
                  **kwargs): # Accept kwargs for BaseSaver
         # Pass common arguments to BaseSaver
@@ -816,6 +817,7 @@ class ReadableVisitsSaver(BaseSaver):
              raise ValueError(f"{self.__class__.__name__} requires the 'env' object.")
         # --- Derive/Store configuration ---
         self.horizon = self.env.max_episode_length # Derive horizon from env
+        self.num_policies = num_policies # Store num_policies
         # Get dense_feedback from params (passed by Hydra)
         self.dense_feedback = self.params.get('dense_feedback', False) # Default to False if not in params
 
@@ -824,55 +826,75 @@ class ReadableVisitsSaver(BaseSaver):
              raise ValueError(f"{self.__class__.__name__} derived an invalid horizon ({self.horizon}) from env.")
 
         print(f"Initialized {self.__class__.__name__} with params: {self.params}, "
-              f"dense_feedback: {self.dense_feedback}, horizon: {self.horizon}")
+              f"num_policies: {self.num_policies}, dense_feedback: {self.dense_feedback}, horizon: {self.horizon}")
 
     def save_result(self, results):
         print(f"Running {self.__class__.__name__}")
 
-        # Visits should now be loaded into results.visits by LLMExperiment.run_test_only if needed.
-        # This saver now relies solely on results.visits.
-        visits_to_process = results.visits
+        raw_visits = results.visits
+        visits_for_processing = []
 
-        # Check if visits are available and valid
-        # Use explicit checks instead of relying on truthiness of arrays/lists
-        if visits_to_process is None:
+        # Check if raw_visits are available
+        if raw_visits is None:
             print(f"Error: No visits data available in results object for {self.__class__.__name__}. Skipping.")
             return
-        if not isinstance(visits_to_process, list):
-             print(f"Error: Expected visits to be a list, but got {type(visits_to_process).__name__}. Skipping.")
-             return
-        if len(visits_to_process) == 0:
-             print(f"Error: Visits list is empty. Skipping.")
-             return
-        if len(visits_to_process[0]) == 0:
-             print(f"Error: Visits list for the first policy is empty. Skipping.")
-             return
-        # Add a check for the expected tuple structure (states, actions)
-        try:
-             first_visit_data = visits_to_process[0][0]
-             if not isinstance(first_visit_data, tuple) or len(first_visit_data) != 2:
-                  raise TypeError("Expected (states, actions) tuple")
-             _ = first_visit_data[1] # Check actions access
-        except (TypeError, IndexError) as e:
-             print(f"Error: Invalid visit data structure: {e}. Expected List[List[Tuple(states, actions)]]. Skipping.")
-             return
+        if not isinstance(raw_visits, list):
+            print(f"Error: Expected raw_visits to be a list, but got {type(raw_visits).__name__}. Skipping.")
+            return
+        if len(raw_visits) == 0:
+            print(f"Error: Raw visits list is empty. Skipping.")
+            return
 
+        # Adapt structure based on self.num_policies
+        if self.num_policies == 1:
+            # Expected structure: List[Tuple(states, actions)]
+            # We wrap it to be List[List[Tuple(states, actions)]] for uniform processing
+            if not raw_visits: # Handles case where raw_visits = [[]] which is invalid for single policy
+                print(f"Error: Raw visits for single policy is empty or malformed. Skipping.")
+                return
+            # Check if the first element is a tuple (indicative of single policy structure)
+            if isinstance(raw_visits[0], tuple):
+                visits_for_processing = [raw_visits]
+            elif isinstance(raw_visits[0], list) and len(raw_visits) == 1 and isinstance(raw_visits[0][0], tuple):
+                # This could be an already wrapped single policy, e.g. from a previous multi-policy run now treated as single
+                visits_for_processing = raw_visits
+            else:
+                print(f"Error: Invalid visits structure for single policy. Expected List[Tuple(s,a)], got List[{type(raw_visits[0]).__name__}]. Skipping.")
+                return
+        else: # self.num_policies > 1
+            # Expected structure: List[List[Tuple(states, actions)]]
+            if not isinstance(raw_visits[0], list):
+                print(f"Error: Invalid visits structure for multi-policy. Expected List[List[Tuple(s,a)]], got List[{type(raw_visits[0]).__name__}]. Skipping.")
+                return
+            visits_for_processing = raw_visits
+
+        # Validate the standardized visits_for_processing structure
+        if not visits_for_processing or not visits_for_processing[0]:
+            print(f"Error: Visits data (after standardization) is empty or first policy has no visits. Skipping.")
+            return
+        try:
+            first_visit_data = visits_for_processing[0][0] # Should now be List[List[Tuple(s,a)]]
+            if not isinstance(first_visit_data, tuple) or len(first_visit_data) != 2:
+                raise TypeError("Expected (states, actions) tuple in standardized visits structure")
+            _ = first_visit_data[1] # Check actions access
+        except (TypeError, IndexError) as e:
+            print(f"Error: Invalid visit data structure after standardization: {e}. Expected List[List[Tuple(states, actions)]]. Skipping.")
+            return
 
         # --- Process and Prepare Output ---
         output_lines = []
         try:
-            # Determine structure: visits[policy_idx][episode_idx] = (states, actions)
-            # Use visits_to_process directly
-            num_policies = len(visits_to_process)
-            num_episodes = len(visits_to_process[0])
-            print(f"Processing {num_policies} policies and {num_episodes} episodes.")
+            # Determine structure from the standardized visits_for_processing
+            num_policies_in_data = len(visits_for_processing)
+            num_episodes = len(visits_for_processing[0]) # Assumes all policies have same num_episodes
+            print(f"Processing {num_policies_in_data} policies and {num_episodes} episodes.")
 
-            # Determine the range of horizons to generate prompts for using self.horizon and self.dense_feedback (from explicit args)
-            horizon = self.horizon # Use horizon from explicit arg
+            # Determine the range of horizons to generate prompts for
+            horizon = self.horizon
             h_range = range(1, horizon + 1) if self.dense_feedback else range(horizon, horizon + 1)
 
             # Iterate through each policy and save to a separate file
-            for p_idx in range(num_policies):
+            for p_idx in range(num_policies_in_data): # Use num_policies_in_data
                 policy_output_lines = []
                 policy_output_lines.append(f"--- Readable Visits: Policy {p_idx + 1} ---")
                 policy_output_lines.append(f"Number of Episodes: {num_episodes}")
@@ -882,9 +904,8 @@ class ReadableVisitsSaver(BaseSaver):
                 for ep_idx in range(num_episodes):
                     policy_output_lines.append(f"\n  Episode {ep_idx + 1}:")
                     try:
-                        # visits[policy_idx][ep_idx] = (states, actions)
-                        # Use visits_to_process directly for accessing data
-                        full_actions = visits_to_process[p_idx][ep_idx][1]
+                        # Use visits_for_processing for accessing data
+                        full_actions = visits_for_processing[p_idx][ep_idx][1]
                         if isinstance(full_actions, torch.Tensor):
                             full_actions = full_actions.cpu().numpy()
                         full_actions = list(map(int, full_actions)) # Ensure list of ints
@@ -939,10 +960,10 @@ class ReadableVisitsSaver(BaseSaver):
                  try:
                      with open(error_path, 'w') as f:
                          f.write(f"Error during visit processing:\n{e}\n")
-                         # Use visits_to_process for error reporting
-                         f.write(f"Processed visits type: {type(visits_to_process)}\n")
-                         if isinstance(visits_to_process, tuple):
-                             f.write(f"Tuple lengths: {[len(el) if hasattr(el, '__len__') else 'N/A' for el in visits_to_process]}\n")
+                         # Use visits_for_processing for error reporting
+                         f.write(f"Processed visits type: {type(visits_for_processing)}\n")
+                         if isinstance(visits_for_processing, tuple):
+                             f.write(f"Tuple lengths: {[len(el) if hasattr(el, '__len__') else 'N/A' for el in visits_for_processing]}\n")
                  except Exception as e2:
                      print(f"Could not save error file: {e2}")
 

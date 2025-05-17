@@ -7,6 +7,7 @@ class ExperimentResults:
         self.metrics = {}         # Test metrics (preference_error, cosine_error, etc.)
         self.visits = None        # All exploration visits
         self.estimators = None    # List of trained estimator models (one per scorer model)
+        self.feedbacks = None     # List of feedback objects
         self.metadata = {}        # Any other experiment metadata
 
     def add_metric(self, name, value):
@@ -25,6 +26,10 @@ class ExperimentResults:
         """Set the list of trained estimators"""
         self.estimators = estimators
 
+    def set_feedbacks(self, feedbacks: list):
+        """Set the list of feedback objects"""
+        self.feedbacks = feedbacks
+
     def get_estimators(self) -> list:
         """Get the list of trained estimators"""
         return self.estimators
@@ -34,12 +39,18 @@ class ExperimentResults:
         self.metadata[key] = value
 
     def get_thetas(self) -> list:
-        """Extract theta from each estimator in the list if available"""
+        """Extract learned theta from each feedback object in the list if available"""
         thetas = []
-        if self.estimators:
-            for estimator in self.estimators:
-                if estimator and hasattr(estimator, 'theta_ml'):
-                    thetas.append(estimator.theta_ml())
+        if self.feedbacks:
+            for feedback in self.feedbacks:
+                if feedback:
+                    thetas.append(feedback.get_learned_theta())
                 else:
-                    thetas.append(None) # Append None if estimator or theta_ml is missing
+                    thetas.append(None) # Append None if feedback object is missing
+        else:
+            # Fallback or warning if feedbacks list itself is not set
+            # This case should ideally be handled by ensuring set_feedbacks is called.
+            # For robustness, one might iterate self.estimators if self.feedbacks is None,
+            # but the new abstraction is via feedback.
+            pass # Or log a warning: print("Warning: Feedbacks list not set in ExperimentResults for get_thetas.")
         return thetas
