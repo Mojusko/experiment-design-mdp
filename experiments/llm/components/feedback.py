@@ -261,6 +261,51 @@ class FeedbackFactory:
         lambda_val = cfg.feedback['lambda'] # Use dictionary-style access for the key 'lambda'
         print(f"Using single lambda value: {lambda_val} for both design and estimation regularization.")
 
+        # --- Calculate V matrix if pass_V is true ---
+        V = None
+        if cfg.feedback.pass_V:
+            print("Calculating V matrix for A-optimal design.")
+            # Calculate V by summing state-specific V_h matrices (used for A-optimal)
+            # V_h considers differences only between actions valid for state h
+            embedding_dim = env.get_dim()
+            V = torch.zeros((embedding_dim, embedding_dim), 
+                            dtype=env.emissions.dtype, 
+                            device=env.emissions.device)
+
+            for h_state_idx in range(env.max_episode_length): # Iterate through possible states (h_state_idx represents a state)
+                # Find valid action indices for state h_state_idx
+                valid_action_indices = [
+                    action_idx for action_idx in range(env.actions_num) 
+                    if env.is_valid_action(action_idx, h_state_idx) # Use h_state_idx as the state
+                ]
+                
+                if not valid_action_indices:
+                    continue # Skip if no valid actions for this state
+
+                # Extract corresponding emissions for valid actions
+                X_h = env.emissions[valid_action_indices, :] # Shape: [n_h x embedding_dim]
+                n_h = X_h.shape[0]
+
+                if n_h <= 1:
+                    continue # Need at least 2 actions to compute differences
+
+                # Compute sum of rows for state h_state_idx
+                S_h = torch.sum(X_h, dim=0)  # Shape: [embedding_dim]
+                
+                # Compute X_h.T @ X_h
+                XTX_h = torch.mm(X_h.T, X_h)  # Shape: [embedding_dim x embedding_dim]
+                
+                # Compute the outer product S_h @ S_h.T
+                S_outer_h = torch.outer(S_h, S_h)  # Shape: [embedding_dim x embedding_dim]
+                
+                # Compute V_h for state h_state_idx
+                V_h_contrib = 2 * n_h * XTX_h - 2 * S_outer_h  # Shape: [embedding_dim x embedding_dim]
+                
+                # Add to the total V
+                V += V_h_contrib
+        else:
+            print("pass_V is false. V matrix will not be calculated or used.")
+
         # Decide which feedback type
         if cfg.feedback.name == 'numerical':
             design_objective = cfg.feedback.get('objective', 'A').upper()
@@ -287,25 +332,16 @@ class FeedbackFactory:
             else:
                 warnings.warn(f"Numerical feedback: Unexpected type for adaptive_design_frequency: {type(raw_adf_numerical)}. Defaulting to 0.")
             
-            # V matrix for A-optimal (can be None if pass_V is false)
-            V_numerical = None
-            if cfg.feedback.get('pass_V', False): # Check if pass_V is true in numerical.yaml
-                # Calculation logic for V is complex and currently in the multinomial block.
-                # For now, we'll assume if pass_V is true, it implies a pre-calculated V or specific setup.
-                # If V calculation is needed here, it should be refactored.
-                # For simplicity, if pass_V is true but V calculation isn't here, it will default to V=None if not set.
-                # This part might need refinement if pass_V=true is used with numerical.
-                warnings.warn("pass_V=true for numerical feedback, but V calculation logic is not explicitly implemented here. V might be None.")
-
+            # V matrix is now calculated above and stored in 'V'.
+            # It will be None if cfg.feedback.pass_V was false.
 
             if parsed_adaptive_design_freq_numerical > 0:
-                # Using AdaptiveDesignA as per request for numerical adaptive cases.
-                # V_numerical and dim=1 are not applicable to AdaptiveDesignA's presumed constructor (like AdaptiveDesignD).
-                design = AdaptiveDesignA(env=env, lambd=lambda_val) # Default scale_reg=True, uniform_alpha=False, sigma=1.0
+                # AdaptiveDesignA does not take V.
+                design = AdaptiveDesignA(env=env, lambd=lambda_val) 
                 print(f"Using Adaptive A-optimal design (AdaptiveDesignA) for Numerical Feedback. Design re-optimization frequency: {parsed_adaptive_design_freq_numerical}.")
             else:
-                # Using DesignA as per request for numerical static cases.
-                design = DesignA(env=env, lambd=lambda_val, dim=1, V=V_numerical) # dim=1 for action embeddings, V_numerical if applicable
+                # Static DesignA takes V.
+                design = DesignA(env=env, lambd=lambda_val, dim=1, V=V) # Pass the common V
                 print("Using Static A-optimal design (DesignA) for Numerical Feedback.")
 
             estimator = KernelizedFeatures(embedding, m) # m is embedding_dim
@@ -351,47 +387,8 @@ class FeedbackFactory:
             else:
                 warnings.warn(f"Unexpected type for adaptive_estimation_frequency: {type(raw_aef)}. Expected int or string like '/n'. Defaulting to 0 (non-adaptive estimation).")
 
-
-            V = None
-            if cfg.feedback.pass_V:
-                # Calculate V by summing state-specific V_h matrices (used for A-optimal)
-                # V_h considers differences only between actions valid for state h
-                embedding_dim = env.get_dim()
-                V = torch.zeros((embedding_dim, embedding_dim), 
-                                dtype=env.emissions.dtype, 
-                                device=env.emissions.device)
-
-                for h in range(env.max_episode_length):
-                    # Find valid action indices for state h
-                    valid_action_indices = [
-                        action_idx for action_idx in range(env.actions_num) 
-                        if env.is_valid_action(action_idx, h)
-                    ]
-                    
-                    if not valid_action_indices:
-                        continue # Skip if no valid actions for this state
-
-                    # Extract corresponding emissions
-                    X_h = env.emissions[valid_action_indices, :] # Shape: [n_h x 768]
-                    n_h = X_h.shape[0]
-
-                    if n_h <= 1:
-                        continue # Need at least 2 actions to compute differences
-
-                    # Compute sum of rows for state h
-                    S_h = torch.sum(X_h, dim=0)  # Shape: [768]
-                    
-                    # Compute X_h.T @ X_h
-                    XTX_h = torch.mm(X_h.T, X_h)  # Shape: [768 x 768]
-                    
-                    # Compute the outer product S_h @ S_h.T
-                    S_outer_h = torch.outer(S_h, S_h)  # Shape: [768 x 768]
-                    
-                    # Compute V_h for state h
-                    V_h = 2 * n_h * XTX_h - 2 * S_outer_h  # Shape: [768 x 768]
-                    
-                    # Add to the total V
-                    V += V_h
+            # V matrix is now calculated above and stored in 'V'.
+            # It will be None if cfg.feedback.pass_V was false.
 
             # --- Determine Design based on cfg.feedback.objective ---
             design_objective = cfg.feedback.get('objective', 'A').upper() # Default to 'A' if not specified

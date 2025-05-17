@@ -79,21 +79,28 @@ def safe_load_data(filename):
     # Try to load as a JSON dump.
     try:
         with open(filename, 'r') as f:
-            data_dict = json.load(f)
-        # If both keys are present, return the entire dictionary.
-        if "preference_error" in data_dict and "cosine_error" in data_dict:
-            return data_dict
-        elif "cosine_error" in data_dict:
-            return {"cosine_error": data_dict["cosine_error"]}
-        else:
-            # Return the first numeric value encountered.
-            for value in data_dict.values():
+            loaded_json = json.load(f)
+        
+        # If the loaded JSON is a dictionary and contains typical metric keys, return it as is.
+        if isinstance(loaded_json, dict) and \
+           ("preference_error" in loaded_json or "cosine_error" in loaded_json):
+            return loaded_json # Return the dictionary
+            
+        # If it's a dictionary but doesn't have the specific metric keys,
+        # try to extract a single numeric value (original fallback behavior).
+        elif isinstance(loaded_json, dict):
+            for value in loaded_json.values():
                 if isinstance(value, (int, float)):
-                    return value
-    except Exception:
+                    return value # Return the first numeric value found
+        
+        # If the loaded JSON is directly a number (e.g. file contains just "0.5")
+        elif isinstance(loaded_json, (int, float)):
+            return loaded_json
+
+    except Exception: # Handles json.load errors or other issues
         pass
 
-    return None
+    return None # If all attempts fail
 
 def plot_results_with_type(results, plot_type):
     # This function handles non-feedback experiments with numeric data.

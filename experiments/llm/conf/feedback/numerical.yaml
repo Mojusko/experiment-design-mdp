@@ -5,5 +5,5 @@ lambda: 0.01
 adaptive_estimation_frequency: 0
 adaptive_estimation_start: 0
 adaptive_design_frequency: 0 
-pass_V: false
+pass_V: true
 objective: "A"
