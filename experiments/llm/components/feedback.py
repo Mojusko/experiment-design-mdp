@@ -35,21 +35,37 @@ class BaseFeedback:
 class NumericalFeedback(BaseFeedback):
     def collect_labels(self, cfg, new_visits, theta_star):
         # Use horizon from the environment
+        # Use horizon from the environment
         horizon = self.env.max_episode_length
+        # For NumericalFeedback, new_visits is List[Tuple(states, actions)]
+        # So, num_episodes is len(new_visits)
+        num_episodes = len(new_visits) 
         prefix_range = range(1, horizon+1) if cfg.dense_feedback else range(horizon, horizon+1)
-        num_episodes = len(new_visits)
+        # Expected samples: num_episodes * number of prefixes considered
+        expected_samples = num_episodes * len(prefix_range)
+        print(f"Collect Labels (Numerical): num_episodes = {num_episodes}, horizon = {horizon}, dense={cfg.dense_feedback}, expected_samples = {expected_samples}")
 
         x_list, y_list = [], []
         for ep in range(num_episodes):
-            actions = new_visits[ep][1]
+            # new_visits[ep] is a tuple (states, actions)
+            # actions = new_visits[ep][1] # Assuming new_visits[ep] is (states, actions)
+            # If new_visits is just a list of action sequences for numerical (num_policies=1):
+            actions = new_visits[ep][1] if isinstance(new_visits[ep], tuple) else new_visits[ep]
+
+
             for prefix_len in prefix_range:
-                truncated = actions[:prefix_len]
-                yy, xx = theta_star(truncated)
-                x_list.append(xx.detach().cpu())
-                y_list.append(yy.detach().cpu())
+                truncated_actions = actions[:prefix_len]
+                # theta_star returns (score_tensor, embedding_tensor)
+                score_tensor, embedding_tensor = theta_star(truncated_actions)
+                x_list.append(embedding_tensor.detach().cpu())
+                y_list.append(score_tensor.detach().cpu()) # Store the score tensor
         
-        x_torch = torch.vstack(x_list)
-        y_torch = torch.vstack(y_list)
+        print(f"Collect Labels (Numerical): Actual collected samples = {len(x_list)}")
+        if len(x_list) != expected_samples:
+            print(f"Warning (Numerical): Mismatch! Expected {expected_samples} samples, but collected {len(x_list)}.")
+
+        x_torch = torch.vstack(x_list) # Shape [num_samples, embedding_dim]
+        y_torch = torch.vstack(y_list) # Shape [num_samples, 1] (scores)
         self._collected_data.append((x_torch, y_torch))
 
     def fit_estimator(self, preloaded_theta=None):
@@ -190,11 +206,49 @@ class FeedbackFactory:
 
         # Decide which feedback type
         if cfg.feedback.name == 'numerical':
-            # Numerical feedback uses DesignD (A-optimal is similar, D is often preferred)
-            design = DesignD(env=env, lambd=lambda_val, dim=1)
-            # KernelizedFeatures doesn't use lambda directly in constructor, it's set during fit if needed
-            estimator = KernelizedFeatures(embedding, m)
-            # If KernelizedFeatures needed lambda_val for estimation, it would be passed during fit or set as attribute
+            design_objective = cfg.feedback.get('objective', 'A').upper()
+            if design_objective != 'A':
+                raise ValueError(f"Numerical feedback currently only supports A-optimal design. Objective '{design_objective}' is not supported.")
+
+            # Parse adaptive_design_frequency for numerical A-optimal design
+            parsed_adaptive_design_freq_numerical = 0
+            raw_adf_numerical = cfg.feedback.adaptive_design_frequency
+            if isinstance(raw_adf_numerical, str) and raw_adf_numerical.startswith('/'):
+                try:
+                    divisor = int(raw_adf_numerical[1:])
+                    if divisor > 0:
+                        total_episodes = cfg.experiment.episodes
+                        parsed_adaptive_design_freq_numerical = total_episodes // divisor
+                    else:
+                        warnings.warn(f"Numerical feedback: adaptive_design_frequency divisor must be positive, got {divisor}. Defaulting to 0.")
+                except ValueError:
+                    warnings.warn(f"Numerical feedback: Malformed adaptive_design_frequency string '{raw_adf_numerical}'. Defaulting to 0.")
+                except AttributeError:
+                    warnings.warn(f"Numerical feedback: cfg.experiment.episodes not found. Cannot calculate adaptive_design_frequency. Defaulting to 0.")
+            elif isinstance(raw_adf_numerical, int):
+                parsed_adaptive_design_freq_numerical = raw_adf_numerical
+            else:
+                warnings.warn(f"Numerical feedback: Unexpected type for adaptive_design_frequency: {type(raw_adf_numerical)}. Defaulting to 0.")
+            
+            # V matrix for A-optimal (can be None if pass_V is false)
+            V_numerical = None
+            if cfg.feedback.get('pass_V', False): # Check if pass_V is true in numerical.yaml
+                # Calculation logic for V is complex and currently in the multinomial block.
+                # For now, we'll assume if pass_V is true, it implies a pre-calculated V or specific setup.
+                # If V calculation is needed here, it should be refactored.
+                # For simplicity, if pass_V is true but V calculation isn't here, it will default to V=None if not set.
+                # This part might need refinement if pass_V=true is used with numerical.
+                warnings.warn("pass_V=true for numerical feedback, but V calculation logic is not explicitly implemented here. V might be None.")
+
+
+            if parsed_adaptive_design_freq_numerical > 0:
+                design = AdaptiveOrigDesignA(env=env, lambd=lambda_val, dim=1, V=V_numerical) # Assuming dim=1 for LLM embeddings
+                print(f"Using Adaptive A-optimal design for Numerical Feedback. Design re-optimization frequency: {parsed_adaptive_design_freq_numerical}.")
+            else:
+                design = MultiPolicyOrigDesignA(env=env, lambd=lambda_val, dim=1, V=V_numerical) # Assuming dim=1
+                print("Using Static A-optimal design for Numerical Feedback.")
+
+            estimator = KernelizedFeatures(embedding, m) # m is embedding_dim
             fb = NumericalFeedback(env, design, estimator)
         else: # Multinomial feedback
             # Parse adaptive_design_frequency
