@@ -1307,7 +1307,7 @@ class LLMExperiment:
             
             # Add to lists
             training_words_lists.append([full_list[i] for i in train_idx])
-            # testing_words_lists.append([full_list[i] for i in test_idx]) # Original line for test set
-            testing_words_lists.append([full_list[i] for i in train_idx]) # TEMPORARY: Use training set for testing
+            testing_words_lists.append([full_list[i] for i in test_idx]) # Original line for test set
+            # testing_words_lists.append([full_list[i] for i in train_idx]) # TEMPORARY: Use training set for testing
         
         return training_words_lists, testing_words_lists, []
