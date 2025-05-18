@@ -103,14 +103,26 @@ class LLMGrid(DiscreteEnv):
         self.state = self.next(self.state, action)
         return self.state
 
-    def is_valid_action(self, action, state) -> bool:
-        if action == 0 and state > 0:
-            return True
+    def is_valid_action(self, action_id: int, current_depth_state: int) -> bool:
+        """
+        Checks if an action (token) is valid for the current depth in the prompt.
+        - At depth 0, tokens must come from the first vocabulary list (bases.txt).
+        - At depth > 0, tokens can come from any *other* vocabulary list.
+        """
+        token_str = self.unique_elements[action_id]
+        # original_vocab_indices_for_token lists the indices of vocabulary files
+        # (e.g., 0 for bases.txt, 1 for ambient.txt) where this token appears.
+        original_vocab_indices_for_token = self.tokens[token_str]
+
+        if current_depth_state == 0:
+            # For the first token of the prompt (depth 0),
+            # it must be from the first vocabulary list (index 0).
+            return 0 in original_vocab_indices_for_token
         else:
-            if state in self.tokens[self.unique_elements[action]]:
-                return True
-            else:
-                return False
+            # For subsequent tokens (depth > 0),
+            # it must be from any vocabulary list *other than* the first one.
+            # This includes the special ' ' token, which is in self.tokens[' '] = [1, ..., H-1].
+            return any(k_idx > 0 for k_idx in original_vocab_indices_for_token)
 
     def p_next(self, state, action):
         probs = {min(state + 1, self.max_episode_length - 1): 1}
