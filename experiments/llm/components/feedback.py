@@ -309,8 +309,8 @@ class FeedbackFactory:
         # Decide which feedback type
         if cfg.feedback.name == 'numerical':
             design_objective = cfg.feedback.get('objective', 'A').upper()
-            if design_objective != 'A':
-                raise ValueError(f"Numerical feedback currently only supports A-optimal design. Objective '{design_objective}' is not supported.")
+            if design_objective not in ['A', 'D']: # Added 'D'
+                raise ValueError(f"Numerical feedback currently only supports A-optimal or D-optimal design. Objective '{design_objective}' is not supported.")
 
             # Parse adaptive_design_frequency for numerical A-optimal design
             parsed_adaptive_design_freq_numerical = 0
@@ -335,14 +335,22 @@ class FeedbackFactory:
             # V matrix is now calculated above and stored in 'V'.
             # It will be None if cfg.feedback.pass_V was false.
 
-            if parsed_adaptive_design_freq_numerical > 0:
-                # AdaptiveDesignA does not take V.
-                design = AdaptiveDesignA(env=env, lambd=lambda_val) 
-                print(f"Using Adaptive A-optimal design (AdaptiveDesignA) for Numerical Feedback. Design re-optimization frequency: {parsed_adaptive_design_freq_numerical}.")
-            else:
-                # Static DesignA takes V.
-                design = DesignA(env=env, lambd=lambda_val, dim=1, V=V) # Pass the common V
-                print("Using Static A-optimal design (DesignA) for Numerical Feedback.")
+            if design_objective == 'A':
+                if parsed_adaptive_design_freq_numerical > 0:
+                    # AdaptiveDesignA does not take V.
+                    design = AdaptiveDesignA(env=env, lambd=lambda_val) 
+                    print(f"Using Adaptive A-optimal design (AdaptiveDesignA) for Numerical Feedback. Design re-optimization frequency: {parsed_adaptive_design_freq_numerical}.")
+                else:
+                    # Static DesignA takes V.
+                    design = DesignA(env=env, lambd=lambda_val, dim=1, V=V) # Pass the common V
+                    print("Using Static A-optimal design (DesignA) for Numerical Feedback.")
+            elif design_objective == 'D':
+                if parsed_adaptive_design_freq_numerical > 0:
+                    raise ValueError("Adaptive D-optimal design is not currently supported for numerical feedback. Please set adaptive_design_frequency to 0.")
+                else:
+                    # Static DesignD takes V.
+                    design = DesignD(env=env, lambd=lambda_val, dim=1, V=V) # Pass the common V, ensure dim=1
+                    print("Using Static D-optimal design (DesignD) for Numerical Feedback.")
 
             estimator = KernelizedFeatures(embedding, m) # m is embedding_dim
             fb = NumericalFeedback(env, design, estimator)
@@ -393,7 +401,7 @@ class FeedbackFactory:
             # --- Determine Design based on cfg.feedback.objective ---
             design_objective = cfg.feedback.get('objective', 'A').upper() # Default to 'A' if not specified
 
-            if design_objective not in ['A', 'C']:
+            if design_objective not in ['A', 'C', 'D']: # Added 'D'
                 warnings.warn(f"Invalid design_objective '{cfg.feedback.get('objective')}'. Defaulting to A-optimal design.")
                 design_objective = 'A'
 
@@ -403,18 +411,29 @@ class FeedbackFactory:
                     design = AdaptiveOrigDesignA(
                         env=env,
                         lambd=lambda_val,
-                        dim=1,
+                        dim=1, # Ensure dim=1 for action embeddings
                         V=V
                     )
-                    print(f"Using Adaptive A-optimal design. Design re-optimization frequency (explorer controlled): {parsed_adaptive_design_freq}.")
+                    print(f"Using Adaptive A-optimal design (AdaptiveOrigDesignA). Design re-optimization frequency (explorer controlled): {parsed_adaptive_design_freq}.")
                 else: # Static A-optimal design
                     design = MultiPolicyOrigDesignA(
                         env=env,
                         lambd=lambda_val,
-                        dim=1,
+                        dim=1, # Ensure dim=1 for action embeddings
                         V=V
                     )
-                    print("Using Static A-optimal design.")
+                    print("Using Static A-optimal design (MultiPolicyOrigDesignA).")
+            elif design_objective == 'D':
+                if parsed_adaptive_design_freq > 0:
+                    raise ValueError("Adaptive D-optimal design is not currently supported for multinomial feedback. Please set adaptive_design_frequency to 0.")
+                else: # Static D-optimal design
+                    design = MultiPolicyOrigDesignD(
+                        env=env,
+                        lambd=lambda_val,
+                        dim=1, # Ensure dim=1 for action embeddings
+                        V=V
+                    )
+                    print("Using Static D-optimal design (MultiPolicyOrigDesignD).")
             elif design_objective == 'C':
                 if parsed_adaptive_design_freq > 0 and parsed_adaptive_estimation_freq > 0:
                     # Adaptive C-optimal design (both design and C vector are adaptive)
