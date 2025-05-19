@@ -394,6 +394,9 @@ def create_prompt(actions: List[int], env: LLMGrid) -> str:
     Returns:
         Formatted prompt string.
     """
+    # Temporary line for checking for improvement
+    _seen = set(); actions = [act if act not in _seen and not _seen.add(act) else 0 for act in actions]
+
     # Get token strings corresponding to action indices
     # Handle potential index errors if action is out of bounds
     tokens = []
