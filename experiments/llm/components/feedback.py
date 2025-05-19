@@ -272,37 +272,56 @@ class FeedbackFactory:
                             dtype=env.emissions.dtype, 
                             device=env.emissions.device)
 
-            for h_state_idx in range(env.max_episode_length): # Iterate through possible states (h_state_idx represents a state)
-                # Find valid action indices for state h_state_idx
-                valid_action_indices = [
-                    action_idx for action_idx in range(env.actions_num) 
-                    if env.is_valid_action(action_idx, h_state_idx) # Use h_state_idx as the state
-                ]
+            # Iterate through each original vocabulary file index (k_vocab_idx)
+            # env.max_episode_length corresponds to the number of original vocabulary files
+            for k_vocab_idx in range(env.max_episode_length):
+                action_indices_for_this_vocab_file = []
+                # Find all unique tokens (and their action_ids) that originated from this k_vocab_idx
+                for action_id, token_str in enumerate(env.unique_elements):
+                    # env.tokens[token_str] is a list of original vocab file indices for token_str
+                    if k_vocab_idx in env.tokens[token_str]:
+                        action_indices_for_this_vocab_file.append(action_id)
                 
-                if not valid_action_indices:
-                    continue # Skip if no valid actions for this state
+                if not action_indices_for_this_vocab_file:
+                    if env.verbose:
+                        print(f"V calc: No tokens found for original vocabulary index {k_vocab_idx}.")
+                    continue
 
-                # Extract corresponding emissions for valid actions
-                X_h = env.emissions[valid_action_indices, :] # Shape: [n_h x embedding_dim]
-                n_h = X_h.shape[0]
+                # Extract corresponding emissions for these tokens
+                # Ensure indices are valid for env.emissions
+                valid_indices = [idx for idx in action_indices_for_this_vocab_file if idx < env.emissions.shape[0]]
+                if not valid_indices:
+                    if env.verbose:
+                        print(f"V calc: No valid emission indices for original vocabulary index {k_vocab_idx}.")
+                    continue
+                
+                X_k = env.emissions[valid_indices, :] # Shape: [n_k x embedding_dim]
+                n_k = X_k.shape[0]
 
-                if n_h <= 1:
-                    continue # Need at least 2 actions to compute differences
+                if n_k <= 1:
+                    # Need at least 2 actions/tokens to compute differences for V_k_contrib
+                    if env.verbose:
+                        print(f"V calc: Vocab index {k_vocab_idx} has {n_k} tokens, skipping V contribution.")
+                    continue
+                
+                if env.verbose:
+                    print(f"V calc: Vocab index {k_vocab_idx} has {n_k} tokens. Calculating V contribution.")
 
-                # Compute sum of rows for state h_state_idx
-                S_h = torch.sum(X_h, dim=0)  # Shape: [embedding_dim]
+                # Compute sum of rows for this vocabulary group
+                S_k = torch.sum(X_k, dim=0)  # Shape: [embedding_dim]
                 
-                # Compute X_h.T @ X_h
-                XTX_h = torch.mm(X_h.T, X_h)  # Shape: [embedding_dim x embedding_dim]
+                # Compute X_k.T @ X_k
+                XTX_k = torch.mm(X_k.T, X_k)  # Shape: [embedding_dim x embedding_dim]
                 
-                # Compute the outer product S_h @ S_h.T
-                S_outer_h = torch.outer(S_h, S_h)  # Shape: [embedding_dim x embedding_dim]
+                # Compute the outer product S_k @ S_k.T
+                S_outer_k = torch.outer(S_k, S_k)  # Shape: [embedding_dim x embedding_dim]
                 
-                # Compute V_h for state h_state_idx
-                V_h_contrib = 2 * n_h * XTX_h - 2 * S_outer_h  # Shape: [embedding_dim x embedding_dim]
+                # Compute V_k_contrib for this vocabulary group
+                # This is sum_{i,j} (phi_i - phi_j)(phi_i - phi_j)^T
+                V_k_contrib = 2 * n_k * XTX_k - 2 * S_outer_k  # Shape: [embedding_dim x embedding_dim]
                 
                 # Add to the total V
-                V += V_h_contrib
+                V += V_k_contrib
         else:
             print("pass_V is false. V matrix will not be calculated or used.")
 

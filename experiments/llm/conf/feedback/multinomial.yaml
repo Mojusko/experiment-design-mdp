@@ -13,7 +13,7 @@ pass_V: false
 
 # Objective for the design: "A" for A-optimal, "C" for C-optimal.
 # If "C" is chosen, C_design_keywords must be provided.
-objective: "D"
+objective: "A"
 
 # C_design_keywords are no longer used.
 # For C-optimal adaptive design, the C vector is derived from the estimator.
