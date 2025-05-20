@@ -507,6 +507,40 @@ llm-find-lambda-mul: $(JOBS_LLM_LAMBDA_MUL)
 llm-find-lambda-num: $(JOBS_LLM_LAMBDA_NUM) # Keep numerical target name consistent for now
 llm-find-lambda: llm-find-lambda-mul llm-find-lambda-num
 
+
+# Lambda Sparsity-finding (similar to lambda-finding, but tunes lambda_sparsity)
+# Define the range for the lambda_sparsity parameter
+LAMBDA_SPARSITY_VALUES := 0 0.1 1 10 100
+
+# Generate job names for multinomial feedback (sparsity tuning)
+JOBS_LLM_LAMBDA_SPARSITY_MUL := \
+  $(foreach lambda_s_val,$(LAMBDA_SPARSITY_VALUES), \
+    $(foreach n,$(NUMBERS_LLM), \
+      job-llm-lambda-sparsity-mul-$(lambda_s_val)-$(n)))
+
+# Macros to define each job type for lambda_sparsity tuning
+define lambda_sparsity_job_template_mul
+job-llm-lambda-sparsity-mul-$(1)-$(2):
+	cd llm && TIMESTAMP=$(TIMESTAMP) OMP_NUM_THREADS=1 MKL_NUM_THREADS=1 $(PYTHONPATH) run_exp.py \
+	  experiment=lambda_finding \
+	  feedback=multinomial \
+	  algorithm=design \
+	  feedback.lambda_sparsity=$(1) \
+	  seed=$(2) \
+	  results_dir="results/lambda-sparsity-finding" \
+	  experiment_id="muls-lambda_sparsity$(1)-$(2)"
+endef
+
+# Instantiate all lambda_sparsity jobs from the macros
+$(foreach lambda_s_val,$(LAMBDA_SPARSITY_VALUES), \
+  $(foreach n,$(NUMBERS_LLM), \
+    $(eval $(call lambda_sparsity_job_template_mul,$(lambda_s_val),$(n)))))
+
+# Aggregate targets for lambda_sparsity tuning
+llm-find-lambda-sparsity-mul: $(JOBS_LLM_LAMBDA_SPARSITY_MUL)
+llm-find-lambda-sparsity: llm-find-lambda-sparsity-mul
+
+
 # Design Frequency Finding (using lambda_finding base config)
 # Iterates over episodes and adaptive_design_frequency
 EPISODES_DESIGN_FREQ := 50 100 

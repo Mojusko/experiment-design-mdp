@@ -227,14 +227,36 @@ class MultiPolicyOrigDesignD(RewardFunctional):
         self.dim = dim
         self.lambda_sparsity = lambda_sparsity # Store sparsity regularization strength
 
-    def _calculate_sparsity_regularizer(self, distributions: List[torch.Tensor]) -> torch.Tensor:
+    def _calculate_sparsity_regularizer(self, distributions: List[torch.Tensor], episodes: int) -> torch.Tensor: # Added episodes
         if self.lambda_sparsity == 0.0:
             # Ensure tensor is on the same device and dtype as distributions if they exist, else default
             device = distributions[0].device if distributions and len(distributions) > 0 else torch.device("cpu")
             dtype = distributions[0].dtype if distributions and len(distributions) > 0 else torch.float64
             return torch.tensor(0.0, device=device, dtype=dtype)
 
-        total_sparsity_term = torch.tensor(0.0, device=distributions[0].device, dtype=distributions[0].dtype)
+        if episodes == 0: # Avoid division by zero if episodes is 0
+            # Return 0 or a very large value depending on desired behavior for prior.
+            # For consistency with lambda, an infinite penalty might be implied,
+            # but practically, returning 0 or a large fixed penalty might be safer if this case is hit.
+            # Given lambda/(H*episodes) would also divide by zero, let's make this term 0 if episodes is 0.
+            # Or, if we want it to dominate like the main lambda term, it should be large.
+            # Let's assume episodes > 0 for meaningful sparsity calculation. If not, the penalty is not well-defined here.
+            # For now, if episodes is 0, we'll return 0 for the sparsity part to avoid NaN/inf propagation
+            # if the main objective can handle episodes=0 gracefully.
+            # This is a tricky case; if lambda/(H*episodes) is meant to be infinite, then this should be too.
+            # Let's assume the caller ensures episodes > 0 for meaningful eval.
+            # If not, this will lead to division by zero, same as the main lambda term.
+            # To prevent outright crash if episodes is 0 and horizon is also 0 (unlikely):
+            if self.horizon * episodes == 0:
+                # This case implies no data and no time, penalty is ill-defined or infinite.
+                # Returning 0 for the sparsity part to avoid specific crash here,
+                # assuming main objective handles the overall episodes=0 scenario.
+                device = distributions[0].device if distributions and len(distributions) > 0 else torch.device("cpu")
+                dtype = distributions[0].dtype if distributions and len(distributions) > 0 else torch.float64
+                return torch.tensor(0.0, device=device, dtype=dtype)
+
+
+        sum_of_squares = torch.tensor(0.0, device=distributions[0].device, dtype=distributions[0].dtype)
         for policy_distribution_hs_a in distributions:
             # Assuming H=1 as per _calculate_z logic for these "Orig" designs
             # policy_distribution_hs_a has shape (1, S, A)
@@ -245,8 +267,17 @@ class MultiPolicyOrigDesignD(RewardFunctional):
             else:
                 raise ValueError(f"Unexpected shape for policy distribution: {policy_distribution_hs_a.shape}. Expected (1,S,A) or (S,A).")
             
-            total_sparsity_term += torch.sum(policy_distribution_s_a ** 2)
-        return self.lambda_sparsity * total_sparsity_term
+            sum_of_squares += torch.sum(policy_distribution_s_a ** 2)
+        
+        # Scale lambda_sparsity the same way as lambda
+        scaling_factor = self.horizon * episodes
+        # Ensure scaling_factor is not zero to prevent division by zero
+        if scaling_factor == 0:
+            # This case should ideally be handled by the caller or by returning a very large penalty
+            # For now, return 0 to avoid NaN, assuming the main objective's handling of episodes=0 dominates.
+            return torch.tensor(0.0, device=sum_of_squares.device, dtype=sum_of_squares.dtype)
+            
+        return (self.lambda_sparsity / scaling_factor) * sum_of_squares
 
     def update_estimator(self, estimator, emissions):
         """
@@ -380,7 +411,7 @@ class MultiPolicyOrigDesignD(RewardFunctional):
             # Note: V is typically not used with D-optimality in this manner. Retaining existing logic.
             main_objective = torch.linalg.slogdet((self.V @ z) + self.lambd/(self.horizon*episodes) * eye)[1]
         
-        sparsity_reg = self._calculate_sparsity_regularizer(distributions)
+        sparsity_reg = self._calculate_sparsity_regularizer(distributions, episodes) # Pass episodes
         return main_objective + sparsity_reg
 
     def eval_full(self, emissions, distributions, episodes):
@@ -396,7 +427,7 @@ class MultiPolicyOrigDesignA(MultiPolicyOrigDesignD):
         else:
             main_objective = -torch.trace(self.V @ la.inv(z + self.lambd/(self.horizon*episodes) * eye))
 
-        sparsity_reg = self._calculate_sparsity_regularizer(distributions) # Call helper from parent
+        sparsity_reg = self._calculate_sparsity_regularizer(distributions, episodes) # Pass episodes
         return main_objective + sparsity_reg
 
     def eval_full(self, emissions, distributions, episodes):
