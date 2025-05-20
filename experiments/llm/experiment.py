@@ -560,7 +560,8 @@ class LLMExperiment:
             embedder=self.embedder, # Pass the embedder instance
             base_prompt=self.cfg.base_prompt,
             include_base_prompt_in_first_tokens=self.cfg.include_base_prompt_in_first_tokens,
-            verbose=self.cfg.verbose
+            verbose=self.cfg.verbose,
+            rng=self.rng # Pass the experiment's rng to LLMGrid
         )
 
         # Initialize lists for models and thetas

@@ -24,12 +24,14 @@ class LLMGrid(DiscreteEnv):
         base_prompt: str = '',
         verbose: bool = False,
         include_base_prompt_in_first_tokens: bool = True,
+        rng=None, # Add rng argument
     ):
         self.verbose = verbose
         self.constrained = False
         super().__init__(init_state=0)
 
         self.embedder = embedder # Store the embedder instance
+        self.rng = rng if rng is not None else np.random.RandomState() # Store rng
         self.device = self.embedder.device # Get device from embedder
         # No need for separate processor/tokenizer storage if accessed via embedder
         # self.cache_dir = self.embedder.cache_dir # Can get from embedder if needed
@@ -147,6 +149,34 @@ class LLMGrid(DiscreteEnv):
     def reset(self) -> None:
         self.state = self.init_state
         self.h = 0
+
+    def _handle_duplicate_actions(self, actions: List[int]) -> List[int]:
+        """
+        Processes a list of actions to handle duplicates.
+        Duplicate non-zero actions are replaced with 0, keeping only one instance
+        chosen uniformly at random from its occurrences.
+        Uses self.rng for the random choice.
+        """
+        if not actions:
+            return []
+
+        # Ensure actions are integers for Counter and dictionary keys
+        processed_actions = [int(act) for act in actions]
+        
+        counts = Counter(processed_actions)
+        keep_map = {}
+
+        for action_value, count in counts.items():
+            if count > 1 and action_value != 0: # Only handle duplicates of non-zero actions
+                indices = [i for i, x in enumerate(processed_actions) if x == action_value]
+                # Use self.rng.choice (assuming self.rng is np.random.RandomState or similar)
+                keep_map[action_value] = self.rng.choice(indices)
+        
+        final_actions = [
+            act if act not in keep_map or i == keep_map[act] else 0
+            for i, act in enumerate(processed_actions)
+        ]
+        return final_actions
 
 # Removed CLIPEmbedder class definition (moved to components/embedder.py)
 
@@ -342,12 +372,8 @@ def create_prompt(actions: List[int], env: LLMGrid) -> str:
     Returns:
         Formatted prompt string.
     """
-    # Temporary line for checking for improvement
-    # START TEMPORARY DUPLICATE HANDLING
-    if actions: # Only process if actions list is not empty
-        _counts = Counter(actions); _keep_map = {v: random.choice([i for i, x in enumerate(actions) if x == v]) for v, c in _counts.items() if c > 1 and v != 0}
-        actions = [act if act not in _keep_map or i == _keep_map[act] else 0 for i, act in enumerate(actions)]
-    # END TEMPORARY DUPLICATE HANDLING
+    # Handle duplicate actions using the method from the env instance
+    actions = env._handle_duplicate_actions(actions)
 
     # Get token strings corresponding to action indices
     # Handle potential index errors if action is out of bounds
