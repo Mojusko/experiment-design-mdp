@@ -22,7 +22,7 @@ from components.solver import SolverFactory
 from components.tester import BaseTester, ImageGenerationTester
 # Import specific saver types needed for validation and estimator creation
 # Removed LearnedEstimatorSaver from direct import here, will handle skipping later
-from components.saver import BaseSaver, VisitsSaver, VisitsImageSaver, ConfSaver
+from components.saver import BaseSaver, VisitsSaver, VisitsImageSaver, ConfSaver, MetricsSaver # Added MetricsSaver
 # Removed unused estimator/likelihood/regularizer imports here, they are used within factories/components
 # from stpy.regression.regularized_dictionary.regularized_multinomial_estimator import RegularizedMultinomialEstimator
 # from stpy.probability.multinomial_likelihood import MultinomialLikelihood
@@ -1126,10 +1126,10 @@ class LLMExperiment:
         results.add_metadata('config_dict', config_dict)
 
         # --- Run Testers and Collect Metrics (Looping through models) ---
-        # Initialize lists to store metrics across all models
-        all_preference_errors = []
-        all_cosine_errors = []
-        # Add lists for other potential metrics here
+        # Dictionary to store metrics per model for individual saving
+        per_model_metrics_collection = {}
+        # Averaging lists (all_preference_errors, all_cosine_errors) are removed.
+        # Add lists for other potential metrics here if they need different handling
         # ...
 
         # Skip testers if in inspection or human feedback training mode
@@ -1203,12 +1203,12 @@ class LLMExperiment:
                                 # These are not averaged across models as IGT runs only for the first model.
                                 if isinstance(tester, ImageGenerationTester):
                                     results.add_metric(key, value)
-                                # For other testers, collect for averaging
-                                elif key == "preference_error":
-                                    all_preference_errors.append(value)
-                                elif key == "cosine_error":
-                                    all_cosine_errors.append(value)
-                                # Add elif for other metrics that need averaging...
+                                # For other testers, collect for per-model saving
+                                else:
+                                    if model_name not in per_model_metrics_collection:
+                                        per_model_metrics_collection[model_name] = {}
+                                    per_model_metrics_collection[model_name][key] = value
+                                    # Removed appending to all_preference_errors and all_cosine_errors
 
                     except Exception as e:
                         print(f"  Error running tester {tester_name} for model '{model_name}': {e}")
@@ -1216,24 +1216,45 @@ class LLMExperiment:
             print("--------------------------------------\n")
         # Removed redundant else block here
 
-        # --- Calculate Averaged Metrics ---
-        averaged_metrics = {}
-        if all_preference_errors:
-            avg_pref_error = np.mean(all_preference_errors)
-            averaged_metrics["preference_error"] = avg_pref_error
-            print(f"Average Preference Error across models: {avg_pref_error:.4f}")
-        if all_cosine_errors:
-            avg_cosine_error = np.mean(all_cosine_errors)
-            averaged_metrics["cosine_error"] = avg_cosine_error
-            print(f"Average Cosine Error across models: {avg_cosine_error:.4f}")
-        # Calculate averages for other metrics...
-
-        # Add averaged metrics to the results container
-        if averaged_metrics:
-            results.add_metrics(averaged_metrics)
+        # --- Averaged Metrics Calculation Removed ---
+        # The main results.metrics will now only contain non-model-specific metrics
+        # (e.g., from ImageGenerationTester if it runs for the first model).
 
         # --- Run Savers ---
         print("\n--- Running Savers ---")
+        
+        # Find the MetricsSaver instance first to handle per-model metric saving
+        metrics_saver_instance = None
+        for saver_instance in self.savers:
+            if isinstance(saver_instance, MetricsSaver): # Ensure MetricsSaver is imported
+                metrics_saver_instance = saver_instance
+                break
+        
+        # Save per-model metrics if MetricsSaver exists and there are per-model metrics
+        if metrics_saver_instance and per_model_metrics_collection and self.num_scorer_models > 1:
+            print("Saving per-model metrics...")
+            original_metrics_saver_exp_id = metrics_saver_instance.experiment_id
+            for model_name, model_metrics_dict in per_model_metrics_collection.items():
+                if not model_metrics_dict: # Skip if no metrics for this model
+                    continue
+
+                # Create a model-specific experiment_id
+                model_specific_exp_id = f"{original_metrics_saver_exp_id}-{model_name}" if original_metrics_saver_exp_id else model_name
+                metrics_saver_instance.experiment_id = model_specific_exp_id
+                
+                temp_model_results = ExperimentResults()
+                temp_model_results.add_metrics(model_metrics_dict) # Add this model's specific metrics
+                
+                print(f"  Saving metrics for '{model_name}' with experiment_id '{model_specific_exp_id}'")
+                try:
+                    metrics_saver_instance.save_result(temp_model_results)
+                except Exception as e:
+                    print(f"  Error saving metrics for model '{model_name}': {e}")
+            
+            metrics_saver_instance.experiment_id = original_metrics_saver_exp_id # Restore original experiment_id
+            print("Finished saving per-model metrics.")
+
+        # Now run all savers (MetricsSaver will run again for averaged metrics if it's in the list)
         for saver in self.savers:
             saver_name = type(saver).__name__
 

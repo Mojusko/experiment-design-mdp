@@ -305,60 +305,6 @@ def generate_emissions(unique_elements: List[str], embedder: BaseEmbedder, verbo
     return emissions.double()
 
 
-def load_aesthetics_embedding(weights_path='vit_14_weights.pth', device=None):
-    """Load aesthetics model weights.
-
-    Note: These weights are specific to CLIP ViT-L/14. Using them with other
-          embedders (like SigLIP or different CLIP models) will likely yield
-          meaningless results due to dimension and embedding space mismatch.
-
-    Args:
-        weights_path: Path to aesthetics weights file (e.g., vit_l_14_weights.pth).
-        device: Target device ('cuda', 'cpu', or None for auto-detect).
-
-    Returns:
-        torch.Tensor: Weight tensor on the specified device.
-    """
-    target_device = device or ('cuda' if torch.cuda.is_available() else 'cpu')
-
-    if not os.path.exists(weights_path):
-         # Try common locations if just filename is given
-         potential_paths = [
-             weights_path,
-             os.path.join(os.path.dirname(__file__), weights_path), # Relative to this file
-             os.path.join(os.path.expanduser("~/.cache"), weights_path) # A common cache spot
-         ]
-         found = False
-         for p in potential_paths:
-             if os.path.exists(p):
-                 weights_path = p
-                 found = True
-                 break
-         if not found:
-            raise FileNotFoundError(f"Could not find aesthetics weights file: {weights_path} in likely locations.")
-
-    try:
-        # Aesthetics models usually don't have a bias term saved this way
-        state = torch.load(weights_path, map_location=target_device)
-        # Check common keys for the weight tensor
-        if 'weight' in state:
-            weight = state['weight']
-        elif 'linear.weight' in state: # Another common pattern
-            weight = state['linear.weight']
-        else:
-            # If it's just a tensor saved directly
-            if isinstance(state, torch.Tensor):
-                 weight = state
-            else:
-                 raise KeyError("Could not find weight tensor in the aesthetics state dictionary.")
-
-        # Bias is typically not included or handled differently for aesthetics scores
-        return weight.to(target_device).double() # Return only weight, ensure dtype
-    except Exception as e:
-        print(f"Error loading aesthetics weights from {weights_path}: {e}")
-        raise
-
-
 # Removed setup_clip_model function (handled by embedder factory)
 
 
@@ -436,8 +382,7 @@ def get_scorer_model(model_name: str, env: LLMGrid, embedder: BaseEmbedder) -> V
     """Initialize the scoring model based on the specified type.
 
     Args:
-        model_name: Scorer type ('japanese-text', 'japanese-image',
-                    'aesthetics', 'random_combination').
+        model_name: Scorer type (e.g., 'sunny', 'medieval').
         env: The LLMGrid environment instance (used for emissions).
         embedder: The embedder instance (used for embedding prompts/images
                   and determining dimensions/device).
@@ -445,19 +390,19 @@ def get_scorer_model(model_name: str, env: LLMGrid, embedder: BaseEmbedder) -> V
     Returns:
         An instance of VisionLanguageScorer (e.g., DotProductModel).
     """
-    if model_name == 'sunny':
+    if model_name == 'sunny' or model_name == 'medieval' or model_name == 'technological':
         # Construct path relative to this file's location to ensure robustness
         current_script_dir = os.path.dirname(os.path.abspath(__file__)) # .../doexpy/env
         project_root_dir = os.path.abspath(os.path.join(current_script_dir, "..", "..")) # .../experiment-design-mdp
-        sunny_sentences_path = os.path.join(project_root_dir, 'experiments', 'llm', 'models', 'sunny.txt')
+        sentences_file_path = os.path.join(project_root_dir, 'experiments', 'llm', 'models', f'{model_name}.txt')
         
-        if not os.path.exists(sunny_sentences_path):
+        if not os.path.exists(sentences_file_path):
             # Provide more context in the error if the file is still not found
-            raise FileNotFoundError(f"Sunny sentences file not found at constructed path: {sunny_sentences_path}. Please ensure the file exists at experiment-design-mdp/experiments/llm/models/sunny.txt.")
+            raise FileNotFoundError(f"{model_name.capitalize()} sentences file not found at constructed path: {sentences_file_path}. Please ensure the file exists at experiment-design-mdp/experiments/llm/models/{model_name}.txt.")
 
         normalized_embeddings = []
         # Ensure to use utf-8 encoding for reading text files
-        with open(sunny_sentences_path, 'r', encoding='utf-8') as f:
+        with open(sentences_file_path, 'r', encoding='utf-8') as f:
             for line in f:
                 sentence = line.strip()
                 if sentence: # Process non-empty lines
@@ -468,7 +413,7 @@ def get_scorer_model(model_name: str, env: LLMGrid, embedder: BaseEmbedder) -> V
 
         if not normalized_embeddings:
             # This case handles empty file or file with only empty lines/problematic embeddings
-            raise ValueError(f"No valid sentences found in '{sunny_sentences_path}' to create 'sunny' model.")
+            raise ValueError(f"No valid sentences found in '{sentences_file_path}' to create '{model_name}' model.")
 
         # Stack embeddings into a 2D tensor [num_sentences, embedding_dim]
         stacked_embeddings = torch.stack(normalized_embeddings)
