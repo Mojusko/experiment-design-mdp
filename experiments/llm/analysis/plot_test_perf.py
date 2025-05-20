@@ -631,7 +631,7 @@ def plot_results(directory, cli_model_name=None): # Added cli_model_name
 
         val = safe_load_data(f)
         if val is None:
-            print(f"Warning: Could not load data from {f}. Skipping.")
+            # print(f"Warning: Could not load data from {f}. Skipping.") # Removed this line
             continue
 
         if exp_type == "feedback":
