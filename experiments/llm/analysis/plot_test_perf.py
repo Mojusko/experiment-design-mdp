@@ -24,6 +24,11 @@ def parse_filename(filename):
         lambda_val = float(match.group(1))
         # seed = int(match.group(2))
         return ("lambda", lambda_val)
+    # Match lambda_sparsity format: metrics-muls-lambda_sparsity0.01-1.json
+    elif (match := re.search(r"lambda_sparsity([\d.]+)-(\d+)\.json$", base)):
+        lambda_sparsity_val = float(match.group(1))
+        # seed = int(match.group(2))
+        return ("lambda_sparsity", lambda_sparsity_val)
     # Match design frequency filenames like metrics-design-freq-dsn-mult-ep25-df10-1.json
     elif match := re.search(r"ep(\d+)-df(\d+)-(\d+)\.json$", base):
         episodes = int(match.group(1))
@@ -130,6 +135,8 @@ def plot_results_with_type(results, plot_type):
 
         if plot_type == "lambda":
             plt.xlabel("Lambda Value")
+        elif plot_type == "lambda_sparsity": # Added case for lambda_sparsity
+            plt.xlabel("Lambda Sparsity Value")
         elif plot_type == "frequency":
             plt.xlabel("Estimation Frequency")
         elif plot_type == "rounds":
@@ -493,6 +500,7 @@ def plot_results(directory):
         "frequency": {}, # Old frequency key, might be unused now
         "rounds": {},
         "design_frequency": {}, # New key for design frequency results
+        "lambda_sparsity": {},  # Added key for lambda_sparsity experiments
         # "lambda_dsn_est": {}, # Removed as this experiment type is no longer used
         "feedback": {}          # For feedback comparison experiments (dsn-mult vs rand-mult etc.)
     }

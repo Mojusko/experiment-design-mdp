@@ -291,7 +291,7 @@ llm-generate-image:
 	cd llm && TIMESTAMP=$(TIMESTAMP) OMP_NUM_THREADS=1 MKL_NUM_THREADS=1 $(PYTHONPATH) image_generator.py --prompt '$(PROMPT)' $(if $(OUTPUT_DIR),--output_dir '$(OUTPUT_DIR)',) $(if $(SEED),--seed $(SEED),) $(if $(IMAGE_SIZE),--image_size $(IMAGE_SIZE),) $(if $(NUM_STEPS),--num_inference_steps $(NUM_STEPS),) $(if $(GUIDANCE_PROMPT),--guidance_prompt $(GUIDANCE_PROMPT),) $(if $(GUIDANCE_ESTIMATOR),--guidance_estimator $(GUIDANCE_ESTIMATOR),) $(if $(ESTIMATOR),--estimator '$(ESTIMATOR)',)
 
 ########################### LLMS
-REPEATS_LLM=20
+REPEATS_LLM=30
 NUMBERS_LLM := $(shell seq 1 ${REPEATS_LLM})
 
 # Jobs for V comparison (non-adaptive design)
@@ -510,7 +510,7 @@ llm-find-lambda: llm-find-lambda-mul llm-find-lambda-num
 
 # Lambda Sparsity-finding (similar to lambda-finding, but tunes lambda_sparsity)
 # Define the range for the lambda_sparsity parameter
-LAMBDA_SPARSITY_VALUES := 0 0.1 1 10 100
+LAMBDA_SPARSITY_VALUES := 0 0.01 0.1 0.5 1 10
 
 # Generate job names for multinomial feedback (sparsity tuning)
 JOBS_LLM_LAMBDA_SPARSITY_MUL := \
