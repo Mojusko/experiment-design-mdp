@@ -216,7 +216,7 @@ class MultiPolicyAggDesignD(MultiPolicyAggDesignA):
         return torch.linalg.slogdet(z + self.lambd/episodes * eye)[1]
 
 class MultiPolicyOrigDesignD(RewardFunctional):
-    def __init__(self, env, lambd=1e-3, dim=0, V=None):
+    def __init__(self, env, lambd=1e-3, dim=0, V=None, lambda_sparsity=0.0): # Added lambda_sparsity
         super().__init__()
         self.lambd = lambd
         self.type = "static"
@@ -225,6 +225,28 @@ class MultiPolicyOrigDesignD(RewardFunctional):
         self.horizon = env.max_episode_length # Keep horizon for regularization scaling
         self.estimator = None
         self.dim = dim
+        self.lambda_sparsity = lambda_sparsity # Store sparsity regularization strength
+
+    def _calculate_sparsity_regularizer(self, distributions: List[torch.Tensor]) -> torch.Tensor:
+        if self.lambda_sparsity == 0.0:
+            # Ensure tensor is on the same device and dtype as distributions if they exist, else default
+            device = distributions[0].device if distributions and len(distributions) > 0 else torch.device("cpu")
+            dtype = distributions[0].dtype if distributions and len(distributions) > 0 else torch.float64
+            return torch.tensor(0.0, device=device, dtype=dtype)
+
+        total_sparsity_term = torch.tensor(0.0, device=distributions[0].device, dtype=distributions[0].dtype)
+        for policy_distribution_hs_a in distributions:
+            # Assuming H=1 as per _calculate_z logic for these "Orig" designs
+            # policy_distribution_hs_a has shape (1, S, A)
+            if policy_distribution_hs_a.ndim == 3 and policy_distribution_hs_a.shape[0] == 1:
+                policy_distribution_s_a = policy_distribution_hs_a[0] # Shape (S, A)
+            elif policy_distribution_hs_a.ndim == 2: # If H=1 was already squeezed
+                policy_distribution_s_a = policy_distribution_hs_a
+            else:
+                raise ValueError(f"Unexpected shape for policy distribution: {policy_distribution_hs_a.shape}. Expected (1,S,A) or (S,A).")
+            
+            total_sparsity_term += torch.sum(policy_distribution_s_a ** 2)
+        return self.lambda_sparsity * total_sparsity_term
 
     def update_estimator(self, estimator, emissions):
         """
@@ -351,23 +373,31 @@ class MultiPolicyOrigDesignD(RewardFunctional):
     def eval(self, emissions, distributions, episodes):
         z = self._calculate_z(emissions, distributions, episodes)
         eye = torch.eye(z.shape[0], device=z.device, dtype=z.dtype)
+        main_objective = 0.0
         if self.V is None:
-            return torch.linalg.slogdet(z + self.lambd/(self.horizon*episodes) * eye)[1]
+            main_objective = torch.linalg.slogdet(z + self.lambd/(self.horizon*episodes) * eye)[1]
         else:
-            return torch.linalg.slogdet((self.V @ z) + self.lambd/(self.horizon*episodes) * eye)[1]
+            # Note: V is typically not used with D-optimality in this manner. Retaining existing logic.
+            main_objective = torch.linalg.slogdet((self.V @ z) + self.lambd/(self.horizon*episodes) * eye)[1]
+        
+        sparsity_reg = self._calculate_sparsity_regularizer(distributions)
+        return main_objective + sparsity_reg
 
     def eval_full(self, emissions, distributions, episodes):
         return self.eval(emissions, distributions, episodes)
 
 class MultiPolicyOrigDesignA(MultiPolicyOrigDesignD):
     def eval(self, emissions, distributions, episodes):
-
-        z = self._calculate_z(emissions, distributions, episodes)
+        z = self._calculate_z(emissions, distributions, episodes) # _calculate_z is from parent
         eye = torch.eye(z.shape[0], device=z.device, dtype=z.dtype)
+        main_objective = 0.0
         if self.V is None:
-            return -torch.trace(la.inv(z + self.lambd/(self.horizon*episodes) * eye))
+            main_objective = -torch.trace(la.inv(z + self.lambd/(self.horizon*episodes) * eye))
         else:
-            return -torch.trace(self.V @ la.inv(z + self.lambd/(self.horizon*episodes) * eye))
+            main_objective = -torch.trace(self.V @ la.inv(z + self.lambd/(self.horizon*episodes) * eye))
+
+        sparsity_reg = self._calculate_sparsity_regularizer(distributions) # Call helper from parent
+        return main_objective + sparsity_reg
 
     def eval_full(self, emissions, distributions, episodes):
         return self.eval(emissions, distributions, episodes)
