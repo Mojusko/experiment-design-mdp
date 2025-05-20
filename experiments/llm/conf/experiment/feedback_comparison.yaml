@@ -12,5 +12,5 @@ vocabulary:
 # Example with multiple scorer models
 # scorer_model: 'sunny'
 # scorer_model: ['sunny', 'medieval', 'technological']
-scorer_model: ['medieval'] # Default to sunny, can be changed to ['sunny', 'medieval', 'technological'] or just 'technological'
+scorer_model: ['medieval', 'technological'] # Default to sunny, can be changed to ['sunny', 'medieval', 'technological'] or just 'technological'
 
