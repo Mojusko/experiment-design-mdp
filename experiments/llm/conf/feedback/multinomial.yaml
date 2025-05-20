@@ -10,7 +10,7 @@ adaptive_estimation_start: 0
 adaptive_design_frequency: 0 
 #pass_V: true
 pass_V: true
-lambda_sparsity: 5 # Strength of the L2 sparsity regularizer on P(s,a)
+lambda_sparsity: 0 # Strength of the L2 sparsity regularizer on P(s,a)
 
 # Objective for the design: "A" for A-optimal, "C" for C-optimal.
 # If "C" is chosen, C_design_keywords must be provided.
