@@ -53,8 +53,8 @@ tester:
     params: null
   - _target_: components.tester.ImageGenerationTester
     params:
-       take_best_worst_N: 8 # Default N
-       use_estimator: true # Use the loaded estimator for generating best/worst prompts
+       take_best_worst_N: 5 # Default N
+       use_estimator: false # Use the ground truth scorer_model
        save_worst: false # Default is false
 
 # --- Savers (Enabled for Inference Results) ---
@@ -69,8 +69,8 @@ savers:
       filename: "config_resolved.yaml"
   - _target_: components.saver.ImageGenerationSaver # Saves images and image_metrics.json
     params:
-      take_best_worst_N: 8 # Match tester N
-      add_image_score: true # Score generated images using the estimator
+      take_best_worst_N: 5 # Match tester N
+      add_image_score: false # Do not score images with the estimator in this GT-focused run
       save_worst: false # Match tester setting
   - _target_: components.saver.LearnedEstimatorSaver # Save the estimator trained from visits
     params:

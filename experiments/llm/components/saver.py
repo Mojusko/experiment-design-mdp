@@ -148,6 +148,11 @@ class MetricsSaver(BaseSaver):
             
         # Convert non-serializable objects to JSON-compatible types
         serializable_dict = _convert_to_serializable(metrics_dict)
+
+        # Only save the file if there are metrics to save
+        if not serializable_dict:
+            print(f"Skipping save for {file_path} as there are no metrics to save after filtering.")
+            return
         
         # Save to file
         try:
