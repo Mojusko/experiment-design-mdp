@@ -312,25 +312,18 @@ class LLMExperiment:
             # that the `VisitsImageSaver` saves images with a consistent policy index that can be mapped back.
             # For simplicity, let's assume we find the policy_idx that matches alg_name_from_key.
             # This is a placeholder for more robust policy mapping.
-            
-            # Find the policy index in self.visits that corresponds to alg_name_from_key
-            # This is a simplified assumption. In a real multi-algorithm visit collection,
-            # self.visits might be structured differently or require a mapping.
-            # For now, we assume self.cfg.algorithm matches the alg_name_from_key
-            # or that self.visits contains data for multiple algorithms and we need to find the right one.
-            # Let's assume self.visits is a list of lists, where outer list is per-policy/algorithm.
-            # We need to map alg_name_from_key to an index in self.visits.
-            # This is tricky without knowing the exact structure of self.visits if it contains multiple algorithms.
-            # For now, let's assume self.visits corresponds to the *current* self.cfg.algorithm
-            # and that benchmark keys are for this algorithm.
-            
-            # A more robust approach would be if VisitsImageSaver stored images in subdirs per algorithm,
-            # and the episode_key directly related to that.
-            # Given the current structure, we'll assume the benchmark keys are for the primary algorithm
-            # for which visits were generated and stored in self.visits.
-            # If self.visits is List[List[Tuple(s,a)]] (multi-policy for one algo type)
-            # or List[Tuple(s,a)] (single-policy for one algo type, wrapped to List[List[...]])
 
+            # Check if the algorithm from the benchmark key matches the algorithm of the loaded visits data.
+            # self.cfg.algorithm should reflect the algorithm of the loaded self.visits.
+            if alg_name_from_key.lower() != self.cfg.algorithm.lower():
+                raise ValueError(f"Algorithm mismatch for benchmark episode: Key '{episode_key}' indicates algorithm '{alg_name_from_key}', "
+                                 f"but current experiment visits (from {self.cfg.visits_path if self.cfg.visits_path else 'unknown source'}) "
+                                 f"are for algorithm '{self.cfg.algorithm}'. This indicates an issue with visit data or benchmark key generation.")
+
+            # If algorithms match, proceed with evaluation using self.visits.
+            # self.visits contains trajectories for self.cfg.algorithm.
+            # The ep_idx from the benchmark key refers to an episode within these trajectories.
+            
             num_policies_in_visits = len(self.visits)
 
             for h_prefix_len in range(1, self.env.max_episode_length + 1): # Iterate all timesteps

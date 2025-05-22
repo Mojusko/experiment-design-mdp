@@ -778,33 +778,14 @@ class VisitsImageSaver(BaseSaver):
                         axes[0, i].axis('off')
 
                     # --- Determine the main title ---
-                    title_prefix = "Base Prompt:"
-                    base_prompt_content = ""
+                    # Using absolute episode index (ep_idx) and current timestep (h)
+                    # Omit algorithm name for blindness in human feedback studies.
+                    title_text = f"Episode: {ep_idx + 1}, Timestep: {h}"
                     
-                    # Try to get base_prompt from env first
-                    if hasattr(self.env, 'base_prompt') and self.env.base_prompt:
-                        base_prompt_content = self.env.base_prompt
-                    else:
-                        # Fall back to first policy's first action
-                        try:
-                            first_policy_actions = visits[0][ep_idx][1]
-                            if isinstance(first_policy_actions, torch.Tensor):
-                                first_policy_actions = first_policy_actions.cpu().numpy()
-                            first_policy_actions = list(map(int, first_policy_actions))
-                            
-                            if first_policy_actions:
-                                first_timestep_actions = first_policy_actions[:1]
-                                base_prompt_content = create_prompt(first_timestep_actions, self.env)
-                            else:
-                                base_prompt_content = "[No actions for h=1]"
-                        except Exception as e:
-                            print(f"    Warning: Could not determine prompt for title: {e}")
-                            base_prompt_content = f"Episode {ep_idx}"
-
                     # Wrap the determined title text
-                    wrapped_title = textwrap.fill(f"{title_prefix} '{base_prompt_content}'", width=60) # Adjust width as needed
+                    wrapped_title = textwrap.fill(title_text, width=80) # Adjust width as needed
                     # Increase font size, make bold, lower position (adjust y value)
-                    plt.suptitle(wrapped_title, fontsize=16, fontweight='bold', y=0.95)
+                    plt.suptitle(wrapped_title, fontsize=14, fontweight='bold', y=0.96)
                     # -----------------------------------------
 
                     # Adjust subplot parameters: increase bottom margin slightly to accommodate xlabels, adjust spacing
