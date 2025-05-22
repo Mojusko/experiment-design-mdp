@@ -64,7 +64,7 @@ savers:
     params:
       filename: "metrics.json"
       # Explicitly list metrics to save from testers
-      metrics_keys: ["preference_error", "cosine_error"] # Image metrics are saved by ImageGenerationSaver
+      metrics_keys: ["benchmark_accuracy", "benchmark_comparisons_count"] # Save benchmark metrics
   - _target_: components.saver.ConfSaver
     params:
       filename: "config_resolved.yaml"
