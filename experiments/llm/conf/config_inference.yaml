@@ -39,8 +39,9 @@ experiment:
     - 'vocabulary3/composition.txt'
     - 'vocabulary3/lighting.txt'
     - 'vocabulary3/detail.txt'
-  # Other experiment settings like name, id_prefix, vocab_size, scorer_model
+  # Other experiment settings like name, id_prefix, vocab_size
   # are inherited from feedback_comparison.yaml unless overridden here.
+  scorer_model: 'sunny' # Override to a single model for this inference config
 
 # --- Testers (Enabled for Inference) ---
 tester:
@@ -50,11 +51,11 @@ tester:
       N_pairs_eval: 5000
   - _target_: components.tester.CosineTester
     params: null
-  #  - _target_: components.tester.ImageGenerationTester
-  #    params:
-  #       take_best_worst_N: 8 # Default N
-  #       use_estimator: true # Use the loaded estimator
-  #       save_worst: false # Default is false
+  - _target_: components.tester.ImageGenerationTester
+    params:
+       take_best_worst_N: 8 # Default N
+       use_estimator: true # Use the loaded estimator for generating best/worst prompts
+       save_worst: false # Default is false
 
 # --- Savers (Enabled for Inference Results) ---
 savers:
@@ -62,13 +63,17 @@ savers:
     params:
       filename: "metrics.json"
       # Explicitly list metrics to save from testers
-      metrics_keys: ["preference_error", "cosine_error"] # Removed prompt-score-based image metrics
+      metrics_keys: ["preference_error", "cosine_error"] # Image metrics are saved by ImageGenerationSaver
   - _target_: components.saver.ConfSaver
     params:
       filename: "config_resolved.yaml"
-  #  - _target_: components.saver.ImageGenerationSaver
-  #    params:
-  #      take_best_worst_N: 8 # Match tester N
-  #      add_image_score: true
-  #      save_worst: false # Match tester setting
-  # VisitsSaver, LearnedEstimatorSaver, ReadableVisitsSaver are not needed for inference testing.
+  - _target_: components.saver.ImageGenerationSaver # Saves images and image_metrics.json
+    params:
+      take_best_worst_N: 8 # Match tester N
+      add_image_score: true # Score generated images using the estimator
+      save_worst: false # Match tester setting
+  - _target_: components.saver.LearnedEstimatorSaver # Save the estimator trained from visits
+    params:
+      filename: "estimator.pt"
+  # VisitsSaver, ReadableVisitsSaver are not typically needed for this inference mode,
+  # as visits are an input.

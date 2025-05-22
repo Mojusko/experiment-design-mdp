@@ -152,7 +152,7 @@ def safe_load_data(filename):
 
     return None # If all attempts fail
 
-def plot_results_with_type(results, plot_type, model_name_filter=None): # Added model_name_filter
+def plot_results_with_type(results, plot_type, model_name_filter=None, save_plots=False, output_dir="."): # Added save_plots, output_dir
     # This function handles non-feedback experiments with numeric data.
     if not results:
         return
@@ -199,11 +199,16 @@ def plot_results_with_type(results, plot_type, model_name_filter=None): # Added 
         plt.title(title)
         plt.xticks(rotation=45)
         plt.tight_layout()
+        if save_plots:
+            filename = os.path.join(output_dir, f"plot_{plot_type}{'_' + model_name_filter if model_name_filter else ''}.png")
+            plt.savefig(filename)
+            print(f"Saved plot to {filename}")
+            plt.close()
     else:
         # Handle dictionary data (like v_comparison with multiple metrics)
-        plot_comparison_results(valid_data, plot_type, model_name_filter=model_name_filter)
+        plot_comparison_results(valid_data, plot_type, model_name_filter=model_name_filter, save_plots=save_plots, output_dir=output_dir)
 
-def plot_comparison_results(results, plot_type, model_name_filter=None): # Added model_name_filter
+def plot_comparison_results(results, plot_type, model_name_filter=None, save_plots=False, output_dir="."): # Added save_plots, output_dir
     # For experiments with multiple metrics (e.g., preference_error, cosine_error)
     labels = list(results.keys())
     
@@ -241,8 +246,13 @@ def plot_comparison_results(results, plot_type, model_name_filter=None): # Added
     plt.xticks(x, labels)
     plt.legend()
     plt.tight_layout()
+    if save_plots:
+        filename = os.path.join(output_dir, f"plot_{plot_type}_comparison{'_' + model_name_filter if model_name_filter else ''}.png")
+        plt.savefig(filename)
+        print(f"Saved plot to {filename}")
+        plt.close()
 
-def plot_design_frequency_results(design_freq_results, model_name_filter=None): # Added model_name_filter
+def plot_design_frequency_results(design_freq_results, model_name_filter=None, save_plots=False, output_dir="."): # Added save_plots, output_dir
     # Create a grouped bar chart comparing both metrics for each (episodes, frequency) pair.
     # Sort keys first by episodes, then by frequency for consistent plotting order
     labels = sorted(design_freq_results.keys(), key=lambda x: (x[0], x[1]))
@@ -284,6 +294,11 @@ def plot_design_frequency_results(design_freq_results, model_name_filter=None): 
     plt.xticks(x, x_labels, rotation=45, ha="right") # Rotate labels for better readability
     plt.legend()
     plt.tight_layout()
+    if save_plots:
+        filename = os.path.join(output_dir, f"plot_design_frequency{'_' + model_name_filter if model_name_filter else ''}.png")
+        plt.savefig(filename)
+        print(f"Saved plot to {filename}")
+        plt.close()
 
 
 def plot_lambda_dsn_est_results(lambda_results):
@@ -412,7 +427,7 @@ def plot_feedback_results(feedback_results):
     plt.legend()
     plt.tight_layout()
 
-def plot_feedback_over_episodes(data, episodes_x_axis, error_type_to_plot, model_name_filter=None): # Added model_name_filter
+def plot_feedback_over_episodes(data, episodes_x_axis, error_type_to_plot, model_name_filter=None, save_plots=False, output_dir="."): # Added save_plots, output_dir
     """
     Plots feedback experiment results for a specific error type (errors vs. number of episodes) as a line graph.
 
@@ -421,7 +436,7 @@ def plot_feedback_over_episodes(data, episodes_x_axis, error_type_to_plot, model
         episodes_x_axis (list): Sorted list of unique episode values for the x-axis.
         error_type_to_plot (str): The specific error type to plot (e.g., "preference_error").
     """
-    plt.figure(figsize=(12, 8))
+    plt.figure(figsize=(12, 8)) # Increased height from 6 to 8
     algorithms = sorted(data.keys()) # e.g., ["Design", "Random"]
     
     # Define distinct colors, markers, and linestyles
@@ -438,8 +453,9 @@ def plot_feedback_over_episodes(data, episodes_x_axis, error_type_to_plot, model
         }
     }
     
-    font_size_axis = 14
-    font_size_title = 16
+    font_size_axis = 22  # Increased from 18
+    font_size_title = 24 # Increased from 20
+    font_size_ticks_legend = 20 # Increased from 16
 
     for alg in algorithms:
         means = []
@@ -485,13 +501,19 @@ def plot_feedback_over_episodes(data, episodes_x_axis, error_type_to_plot, model
     plt.title(plot_title, fontsize=font_size_title)
     
     if episodes_x_axis: # Avoid error if episodes_x_axis is empty
-        plt.xticks(episodes_x_axis, fontsize=font_size_axis-2) 
-    plt.yticks(fontsize=font_size_axis-2)
-    plt.legend(loc='best', fontsize=font_size_axis-2)
+        plt.xticks(episodes_x_axis, fontsize=font_size_ticks_legend) 
+    plt.yticks(fontsize=font_size_ticks_legend)
+    plt.legend(loc='best', fontsize=font_size_ticks_legend)
     plt.grid(True, linestyle=':', alpha=0.7)
     plt.tight_layout()
+    if save_plots:
+        error_suffix = "pref" if "preference" in error_type_to_plot else "cosine"
+        filename = os.path.join(output_dir, f"plot_feedback_episodes_{error_suffix}{'_' + model_name_filter if model_name_filter else ''}.png")
+        plt.savefig(filename)
+        print(f"Saved plot to {filename}")
+        plt.close()
 
-def plot_feedback_comparison_bar(data, episode_filter, title_suffix="", model_name_filter=None): # Added model_name_filter
+def plot_feedback_comparison_bar(data, episode_filter, title_suffix="", model_name_filter=None, save_plots=False, output_dir="."): # Added save_plots, output_dir
     """
     Plots feedback experiment results as a bar chart for a single episode configuration.
 
@@ -549,8 +571,15 @@ def plot_feedback_comparison_bar(data, episode_filter, title_suffix="", model_na
     ax.legend()
     ax.grid(True, linestyle=':', alpha=0.7, axis='y')
     fig.tight_layout()
+    if save_plots:
+        ep_suffix = f"_ep{episode_filter}" if episode_filter != -1 else "_legacy"
+        filename = os.path.join(output_dir, f"plot_feedback_bar{ep_suffix}{'_' + model_name_filter if model_name_filter else ''}.png")
+        plt.savefig(filename)
+        print(f"Saved plot to {filename}")
+        plt.close(fig) # Close the specific figure
 
-def plot_results(directory, cli_model_name=None): # Added cli_model_name
+def plot_results(directory, cli_model_name=None, save_plots=False): # Added save_plots
+    output_dir = directory # Save plots in the same directory as the data
     pattern = os.path.join(directory, "*.json")
     files = glob.glob(pattern)
 
@@ -661,11 +690,11 @@ def plot_results(directory, cli_model_name=None): # Added cli_model_name
     # Plot non-feedback experiments (excluding design_frequency and feedback)
     for exp_type in results_by_type:
         if exp_type not in ["design_frequency", "feedback"] and results_by_type[exp_type]:
-            plot_results_with_type(results_by_type[exp_type], exp_type, model_name_filter=target_model_name)
+            plot_results_with_type(results_by_type[exp_type], exp_type, model_name_filter=target_model_name, save_plots=save_plots, output_dir=output_dir)
  
     # Plot design frequency results separately
     if results_by_type["design_frequency"]:
-        plot_design_frequency_results(results_by_type["design_frequency"], model_name_filter=target_model_name)
+        plot_design_frequency_results(results_by_type["design_frequency"], model_name_filter=target_model_name, save_plots=save_plots, output_dir=output_dir)
 
     # Plot lambda_dsn_est results separately - This section is removed as the function and type are removed.
     # if results_by_type["lambda_dsn_est"]:
@@ -703,28 +732,29 @@ def plot_results(directory, cli_model_name=None): # Added cli_model_name
 
         if len(unique_episodes_for_plot) > 1:
             # Plot Preference Error
-            plot_feedback_over_episodes(processed_feedback_data, unique_episodes_for_plot, "preference_error", model_name_filter=target_model_name)
-            plt.show(block=False) # Show first plot, allow script to continue for the next one
+            plot_feedback_over_episodes(processed_feedback_data, unique_episodes_for_plot, "preference_error", model_name_filter=target_model_name, save_plots=save_plots, output_dir=output_dir)
+            if not save_plots:
+                plt.show(block=False) # Show first plot, allow script to continue for the next one
             
             # Plot Cosine Error
-            plot_feedback_over_episodes(processed_feedback_data, unique_episodes_for_plot, "cosine_error", model_name_filter=target_model_name)
-            # The final plt.show() at the end of plot_results will handle blocking for this one.
+            plot_feedback_over_episodes(processed_feedback_data, unique_episodes_for_plot, "cosine_error", model_name_filter=target_model_name, save_plots=save_plots, output_dir=output_dir)
         elif len(unique_episodes_for_plot) == 1:
             single_episode_val = unique_episodes_for_plot[0]
-            plot_feedback_comparison_bar(processed_feedback_data, episode_filter=single_episode_val, title_suffix=f" (Episodes: {single_episode_val})", model_name_filter=target_model_name)
+            plot_feedback_comparison_bar(processed_feedback_data, episode_filter=single_episode_val, title_suffix=f" (Episodes: {single_episode_val})", model_name_filter=target_model_name, save_plots=save_plots, output_dir=output_dir)
         elif has_legacy_data and not unique_episodes_for_plot: # Only legacy data
-            plot_feedback_comparison_bar(processed_feedback_data, episode_filter=-1, title_suffix=" (Legacy Format)", model_name_filter=target_model_name)
+            plot_feedback_comparison_bar(processed_feedback_data, episode_filter=-1, title_suffix=" (Legacy Format)", model_name_filter=target_model_name, save_plots=save_plots, output_dir=output_dir)
         else:
             if results_by_type["feedback"]: # Check if there was any feedback data at all
                  print("No feedback data suitable for plotting (e.g., only one legacy data point per alg/error type).")
 
-
-    plt.show()
+    if not save_plots:
+        plt.show()
 
 if __name__ == "__main__":
     parser = argparse.ArgumentParser(description="Plot experiment results.")
     parser.add_argument('directory', help='Directory containing experiment result .json files.')
     parser.add_argument('--model_name', type=str, default=None,
                         help='Specific model name to filter results for. If not provided, attempts to auto-detect or plots aggregated results.')
+    parser.add_argument('--save', action='store_true', help='Save plots to files instead of displaying them.')
     args = parser.parse_args()
-    plot_results(args.directory, args.model_name)
+    plot_results(args.directory, args.model_name, args.save)

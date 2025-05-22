@@ -1221,6 +1221,15 @@ class LLMExperiment:
         # The main results.metrics will now only contain non-model-specific metrics
         # (e.g., from ImageGenerationTester if it runs for the first model).
 
+        # If there's only one model, merge its metrics from per_model_metrics_collection
+        # into the main results.metrics so MetricsSaver can pick them up.
+        if self.num_scorer_models == 1 and per_model_metrics_collection:
+            single_model_name = self.scorer_model_names[0]
+            if single_model_name in per_model_metrics_collection:
+                print(f"Merging metrics from single model '{single_model_name}' into main results for saving.")
+                for key, value in per_model_metrics_collection[single_model_name].items():
+                    results.add_metric(key, value)
+
         # --- Run Savers ---
         print("\n--- Running Savers ---")
         
