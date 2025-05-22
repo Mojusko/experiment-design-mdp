@@ -36,7 +36,7 @@ JOBS_BELS_TRACK := $(addprefix job-bels-adaptive-track,${NUMBERS_BELS})
 
 ${JOBS_BELS_ADAOPT}: job-bels-adaptive-opt%: ; cd beilschmiedia && OMP_NUM_THREADS=1 MKL_NUM_THREADS=1 ${PYTHONPATH} run_beilschmiedia.py --repeats=1 --save="results/adaptive-$*.txt" --num_components=${ADA_COMPONENTS_BEL} --episodes=${BELS_EPISODES} --adaptive="Bayes" --policy="density" --cores=1 --seed=$*
 ${JOBS_BELS_ADAAPP}: job-bels-adaptive-app%: ; cd beilschmiedia && OMP_NUM_THREADS=1 MKL_NUM_THREADS=1 ${PYTHONPATH} run_beilschmiedia.py --repeats=1 --save="results/adaptive-1-$*.txt" --num_components=1 --episodes=${BELS_EPISODES} --adaptive="Bayes" --policy="density" --cores=1 --seed=$* --accuracy=0.05
-${JOBS_BELS_DEN}: job-bels-adaptive-den%: ; cd beilschmiedia && OMP_NUM_THREADS=1 MKL_NUM_THREADS=1 ${PYTHONPATH} run_beilschmiedia.py --repeats=1 --save="results/density-$*.txt" --num_components=${NUM_COMPONENTS_BEL} --episodes=${BELS_EPISODES} --adaptive="No" --policy="density" --cores=1 --seed=$* --accuracy=0.05
+${JOBS_BELS_DEN}: job-bels-adaptive-den%: ; cd beilschmiedia && OMP_NUM_THREADS=1 MKL_NUM_THREADS=1 ${PYTHONPATH} run_beilschmiedia.py --repeats=1 --save="results/density-$*.txt" --num_components=${NUM_COMPONENTS_BEL} --episodes=${BELS_#EPISODES} --adaptive="No" --policy="density" --cores=1 --seed=$* --accuracy=0.05
 ${JOBS_BELS_MIX}: job-bels-adaptive-mix%: ; cd beilschmiedia && OMP_NUM_THREADS=1 MKL_NUM_THREADS=1 ${PYTHONPATH} run_beilschmiedia.py --repeats=1 --save="results/mixture-$*.txt" --num_components=${NUM_COMPONENTS_BEL} --episodes=${BELS_EPISODES} --adaptive="No" --policy="mixed" --cores=1 --seed=$* --accuracy=0.05
 ${JOBS_BELS_TRACK}: job-bels-adaptive-track%: ; cd beilschmiedia && OMP_NUM_THREADS=1 MKL_NUM_THREADS=1 ${PYTHONPATH} run_beilschmiedia.py --repeats=1 --save="results/tracking-$*.txt" --num_components=${NUM_COMPONENTS_BEL} --episodes=${BELS_EPISODES} --adaptive="No" --policy="tracking" --cores=1 --seed=$* --accuracy=0.05 --linesearch=None
 ${JOBS_BELS_RANDOM}: job-bels-adaptive-ran%: ; cd beilschmiedia && OMP_NUM_THREADS=1 MKL_NUM_THREADS=1 ${PYTHONPATH} run_beilschmiedia.py --repeats=1 --save="results/random-$*.txt" --num_components=${NUM_COMPONENTS_BEL} --episodes=${BELS_EPISODES} --adaptive="No" --policy="mixed" --cores=1 --seed=$* --accuracy=0.05 --random="true"
@@ -291,7 +291,7 @@ llm-generate-image:
 	cd llm && TIMESTAMP=$(TIMESTAMP) OMP_NUM_THREADS=1 MKL_NUM_THREADS=1 $(PYTHONPATH) image_generator.py --prompt '$(PROMPT)' $(if $(OUTPUT_DIR),--output_dir '$(OUTPUT_DIR)',) $(if $(SEED),--seed $(SEED),) $(if $(IMAGE_SIZE),--image_size $(IMAGE_SIZE),) $(if $(NUM_STEPS),--num_inference_steps $(NUM_STEPS),) $(if $(GUIDANCE_PROMPT),--guidance_prompt $(GUIDANCE_PROMPT),) $(if $(GUIDANCE_ESTIMATOR),--guidance_estimator $(GUIDANCE_ESTIMATOR),) $(if $(ESTIMATOR),--estimator '$(ESTIMATOR)',)
 
 ########################### LLMS
-REPEATS_LLM=30
+REPEATS_LLM=20
 NUMBERS_LLM := $(shell seq 1 ${REPEATS_LLM})
 
 # Jobs for V comparison (non-adaptive design)

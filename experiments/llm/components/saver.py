@@ -413,28 +413,50 @@ class LearnedEstimatorSaver(BaseSaver):
     """Saves the learned estimator theta vector to a file."""
     
     def save_result(self, results):
-        # Note: This saver is skipped if num_scorer_models > 1 in LLMExperiment.test_and_save
-        # If it runs, it means there's only one model/estimator.
-        file_path = self.get_output_path(self.params.get('filename', 'estimator.pt'))
-        if file_path is None: # Handle skip_existing
-             print(f"Skipping save for {self.params.get('filename', 'estimator.pt')} as it already exists.")
-             return
-
-        # Get the list of thetas (should contain only one if this saver runs)
+        # Get the list of thetas and corresponding model names
         thetas = results.get_thetas()
+        model_names = results.metadata.get('scorer_model_names', [])
 
-        # Check if the list is valid and contains at least one theta
-        if thetas and thetas[0] is not None:
-            theta_to_save = thetas[0] # Get the first (and only) theta
+        if not thetas:
+            print("Error: No theta vectors found in results for LearnedEstimatorSaver.")
+            return
+
+        if len(thetas) != len(model_names) and model_names: # Only warn if model_names were expected
+            print(f"Warning: Mismatch between number of thetas ({len(thetas)}) and model names ({len(model_names)}). Filenames might be affected.")
+        
+        base_filename_param = self.params.get('filename', 'estimator.pt')
+        base_name, base_ext = os.path.splitext(base_filename_param)
+
+        for i, theta_to_save in enumerate(thetas):
+            if theta_to_save is None:
+                model_name_info = f"for model '{model_names[i]}'" if i < len(model_names) else f"at index {i}"
+                print(f"Skipping save for estimator {model_name_info} as theta is None.")
+                continue
+
+            # Construct model-specific filename
+            model_suffix = f"-{model_names[i]}" if i < len(model_names) and model_names[i] else f"-{i}"
+            # Ensure model_suffix is not empty if model_names list was shorter than thetas list
+            if not model_names and len(thetas) > 1: # Multiple thetas but no model names
+                 model_specific_filename = f"{base_name}{model_suffix}{base_ext}"
+            elif len(thetas) == 1 and not model_names: # Single theta, no model names (original behavior)
+                 model_specific_filename = base_filename_param
+            elif i < len(model_names) and model_names[i]: # Model name available
+                 model_specific_filename = f"{base_name}-{model_names[i]}{base_ext}"
+            else: # Fallback if model_names is short or entry is empty
+                 model_specific_filename = f"{base_name}{model_suffix}{base_ext}"
+
+
+            file_path = self.get_output_path(filename=model_specific_filename)
+            
+            if file_path is None: # Handle skip_existing
+                print(f"Skipping save for {model_specific_filename} as it already exists and skip_existing is True.")
+                continue
+            
             try:
-                # Use the correct variable theta_to_save
                 torch.save(theta_to_save, file_path)
                 print(f"Saved estimator theta (shape: {theta_to_save.shape}) to {file_path}")
             except Exception as e:
-                print(f"Error saving estimator: {e}")
-        else:
-            # Update the error message for clarity
-            print("Error: No valid theta vector found in results for LearnedEstimatorSaver.")
+                print(f"Error saving estimator to {file_path}: {e}")
 
 class VisitsSaver(BaseSaver):
     """Saves exploration visits to a file."""

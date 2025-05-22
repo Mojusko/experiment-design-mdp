@@ -153,36 +153,49 @@ class LLMExperiment:
                     filename = os.path.basename(abs_input_path)
                     print(f"Attempting to parse original info from input filename: {filename}")
 
-                    # Regex to capture prefix, alg, feed, seed from visits/estimator files
-                    # Example: visits-feedback-rand-mult-1.pkl
-                    # Example: estimator-feedback-dsn-num-5.pt
-                    pattern = re.compile(r"^(?:visits|estimator)-(.+)-(\w+)-(\w+)-(\d+)\.(?:pkl|pt)$")
+                    # Regex to capture prefix, alg, feed, optional episode, and seed from visits/estimator files
+                    # Example: visits-feedback-rand-mult-ep30-1.pkl
+                    # Example: visits-feedback-dsn-num-5.pkl (no episode part)
+                    # Example: estimator-feedback-dsn-num-ep50-5.pt
+                    pattern = re.compile(r"^(?:visits|estimator)-(.+?)-(\w+)-(\w+)(?:-ep(\d+))?-(\d+)\.(?:pkl|pt)$")
                     match = pattern.match(filename)
 
                     if match:
-                        original_prefix = match.group(1)
-                        original_alg_code = match.group(2)
-                        original_feed_code = match.group(3)
-                        original_seed = match.group(4)
+                        original_prefix_part = match.group(1) # e.g., "feedback"
+                        original_alg_code = match.group(2)    # e.g., "rand"
+                        original_feed_code = match.group(3)   # e.g., "mult"
+                        original_episodes = match.group(4)    # e.g., "30" or None
+                        original_seed = match.group(5)        # e.g., "1"
 
                         # Reconstruct the original experiment ID
-                        parsed_original_id = f"{original_prefix}-{original_alg_code}-{original_feed_code}-{original_seed}"
+                        parsed_original_id = f"{original_prefix_part}-{original_alg_code}-{original_feed_code}"
+                        if original_episodes:
+                            parsed_original_id += f"-ep{original_episodes}"
+                        parsed_original_id += f"-{original_seed}"
+
+                        # Map alg_code back to algorithm name
+                        alg_map = {"dsn": "design", "rand": "random", "opt": "optim"}
+                        parsed_original_id = f"{original_prefix_part}-{original_alg_code}-{original_feed_code}"
+                        if original_episodes:
+                            parsed_original_id += f"-ep{original_episodes}"
+                        parsed_original_id += f"-{original_seed}"
+                        
+                        print(f"  Parsed Original ID from filename: {parsed_original_id}")
+                        print(f"  Overriding self.experiment_id from '{self.experiment_id}' to '{parsed_original_id}'")
+                        self.experiment_id = parsed_original_id # Always update if filename parsed
 
                         # Map alg_code back to algorithm name
                         alg_map = {"dsn": "design", "rand": "random", "opt": "optim"}
                         parsed_original_algorithm = alg_map.get(original_alg_code)
 
                         if parsed_original_algorithm:
-                            print(f"  Parsed Original ID: {parsed_original_id}")
                             print(f"  Parsed Original Algorithm: {parsed_original_algorithm} (from code '{original_alg_code}')")
-
-                            # Override the experiment ID and algorithm used internally
-                            print(f"  Overriding self.experiment_id from '{self.experiment_id}' to '{parsed_original_id}'")
-                            self.experiment_id = parsed_original_id
                             print(f"  Overriding self.cfg.algorithm from '{self.cfg.algorithm}' to '{parsed_original_algorithm}'")
-                            self.cfg.algorithm = parsed_original_algorithm # Modify the config object directly
+                            self.cfg.algorithm = parsed_original_algorithm
                         else:
                             print(f"  Warning: Could not map parsed algorithm code '{original_alg_code}' to a known algorithm name.")
+                            print(f"  Setting self.cfg.algorithm to 'unknown'. Original value was '{self.cfg.algorithm}'.")
+                            self.cfg.algorithm = "unknown" # Set to "unknown" if not mapped
                     else:
                         print(f"  Warning: Could not parse original ID and algorithm from filename '{filename}' using pattern.")
                 except Exception as e:
@@ -1267,11 +1280,6 @@ class LLMExperiment:
         # Now run all savers (MetricsSaver will run again for averaged metrics if it's in the list)
         for saver in self.savers:
             saver_name = type(saver).__name__
-
-            # Skip LearnedEstimatorSaver if multiple models were used
-            if isinstance(saver, LearnedEstimatorSaver) and self.num_scorer_models > 1:
-                print(f"Skipping saver: {saver_name} (multiple scorer models configured)")
-                continue
 
             # Pass the results object containing potentially loaded estimators/visits
             print(f"Running saver: {saver_name}")
