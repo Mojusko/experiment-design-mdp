@@ -57,6 +57,8 @@ tester:
        take_best_worst_N: 5 # Default N
        use_estimator: true # Use the loaded estimator for generating best/worst prompts
        save_worst: false # Default is false
+  - _target_: components.tester.HumanFeedbackBenchmarkTester
+    params: {} # No specific params needed in YAML, uses cfg and passed objects
 
 # --- Savers (Enabled for Inference Results) ---
 savers:

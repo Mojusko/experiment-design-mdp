@@ -1180,12 +1180,79 @@ class LLMExperiment:
             # Proceed to testing with potentially modified environment
             self.test_and_save(current_mode=mode)
             return True
+        
+        # --- Pre-tester setup for modes that might need feedback_path or visits_path ---
+        # This block runs for 'load_estimator_and_feedback' and if HumanFeedbackBenchmarkTester is active.
+        from components.tester import HumanFeedbackBenchmarkTester # Import locally for isinstance check
+        is_hf_benchmark_tester_active = any(isinstance(t, HumanFeedbackBenchmarkTester) for t in self.testers)
+
+        if mode == "load_estimator_and_feedback" or is_hf_benchmark_tester_active:
+            if not feedback_path or not os.path.exists(to_absolute_path(feedback_path)):
+                print(f"Error: Feedback file not found or not provided ({feedback_path}), but required for mode '{mode}' or HumanFeedbackBenchmarkTester.")
+                return False
+            
+            abs_feedback_path = to_absolute_path(feedback_path)
+            print(f"Loading feedback data from: {abs_feedback_path} for mode '{mode}' or HumanFeedbackBenchmarkTester.")
+            try:
+                import json
+                with open(abs_feedback_path, 'r') as f:
+                    loaded_feedback_json = json.load(f)
+                
+                user_prompt_from_feedback = loaded_feedback_json.get("user_prompt")
+                if user_prompt_from_feedback is not None and isinstance(user_prompt_from_feedback, str):
+                    print(f"  Updating env.base_prompt to '{user_prompt_from_feedback}' from feedback file.")
+                    self.env.base_prompt = user_prompt_from_feedback
+                    # Note: If include_base_prompt_in_first_tokens was true during LLMGrid init,
+                    # this change alone might not be enough if vocab/emissions depend on it.
+                    # However, config_inference.yaml has include_base_prompt_in_first_tokens: false.
+                else:
+                    print(f"  'user_prompt' not found in {abs_feedback_path} or not a string. Using existing env.base_prompt: '{self.env.base_prompt}'")
+                
+                # Store the full feedback_data if other components might need it (HFBenchmarkTester loads it itself)
+                # self.feedback_data = loaded_feedback_json 
+
+            except Exception as e:
+                print(f"Error loading feedback data from {abs_feedback_path} or updating env: {e}")
+                return False
+
+        if is_hf_benchmark_tester_active: # Also load visits if HFBenchmarkTester is active
+            if not visits_path or not os.path.exists(to_absolute_path(visits_path)):
+                print(f"Error: Visits file not found or not provided ({visits_path}), but required for HumanFeedbackBenchmarkTester.")
+                return False
+            abs_visits_path = to_absolute_path(visits_path)
+            print(f"Loading visits from: {abs_visits_path} for HumanFeedbackBenchmarkTester.")
+            try:
+                self.visits = torch.load(abs_visits_path) # Load into self.visits
+                if not isinstance(self.visits, list) or not self.visits or \
+                   not (isinstance(self.visits[0], list) and self.visits[0]) or \
+                   not (isinstance(self.visits[0][0], tuple)): # Check structure List[List[Tuple(s,a)]]
+                    print(f"Warning: Loaded visits from {abs_visits_path} appear empty or invalid for HumanFeedbackBenchmarkTester. Expected List[List[Tuple(s,a)]].")
+                    # Allow proceeding, tester will handle it or error more specifically.
+            except Exception as e:
+                print(f"Error loading visits from {abs_visits_path} for HumanFeedbackBenchmarkTester: {e}")
+                return False
+        # --- End pre-tester setup ---
+
 
         # --- Mode 5: Train Human Feedback ---
         elif mode == "train_human_feedback":
-            if not visits_path or not os.path.exists(visits_path):
-                print(f"Error: Visits file not found or not provided: {visits_path}")
-                return False
+            if not visits_path or not os.path.exists(visits_path): # Path existence checked by to_absolute_path earlier if HFBenchmarkTester active
+                abs_visits_path = to_absolute_path(visits_path) if visits_path else "None"
+                if not os.path.exists(abs_visits_path): # Re-check if not loaded above
+                    print(f"Error: Visits file not found or not provided: {abs_visits_path}")
+                    return False
+            if not feedback_path or not os.path.exists(to_absolute_path(feedback_path)):
+                abs_feedback_path = to_absolute_path(feedback_path) if feedback_path else "None"
+                if not os.path.exists(abs_feedback_path): # Re-check
+                    print(f"Error: Feedback file not found or not provided: {abs_feedback_path}")
+                    return False
+            
+            # Paths are now absolute
+            abs_visits_path = to_absolute_path(visits_path)
+            abs_feedback_path = to_absolute_path(feedback_path)
+
+
+            print(f"Loading visits from: {abs_visits_path}")
             if not feedback_path or not os.path.exists(feedback_path):
                 print(f"Error: Feedback file not found or not provided: {feedback_path}")
                 return False
@@ -1419,7 +1486,8 @@ class LLMExperiment:
                             'theta_star': theta_star, # Pass the specific theta_star for this model
                             'scorer_model': scorer_model, # Pass the specific scorer_model
                             'training_words_list': self.training_words,
-                            'testing_words_list': self.testing_words
+                            'testing_words_list': self.testing_words,
+                            'visits': self.visits if hasattr(self, 'visits') else None # Pass loaded visits
                         }
                         # Add feedback object if the tester is CosineTester
                         if isinstance(tester, CosineTester):
