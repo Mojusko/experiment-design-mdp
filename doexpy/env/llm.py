@@ -25,6 +25,7 @@ class LLMGrid(DiscreteEnv):
         verbose: bool = False,
         include_base_prompt_in_first_tokens: bool = True,
         rng=None, # Add rng argument
+        handle_duplicate_action: bool = True,
     ):
         self.verbose = verbose
         self.constrained = False
@@ -32,6 +33,7 @@ class LLMGrid(DiscreteEnv):
 
         self.embedder = embedder # Store the embedder instance
         self.rng = rng if rng is not None else np.random.RandomState() # Store rng
+        self.handle_duplicate_action = handle_duplicate_action # Store the flag
         self.device = self.embedder.device # Get device from embedder
         # No need for separate processor/tokenizer storage if accessed via embedder
         # self.cache_dir = self.embedder.cache_dir # Can get from embedder if needed
@@ -157,6 +159,9 @@ class LLMGrid(DiscreteEnv):
         chosen uniformly at random from its occurrences.
         Uses self.rng for the random choice.
         """
+        if not self.handle_duplicate_action:
+            return actions # Return original actions if handling is disabled
+
         if not actions:
             return []
 
