@@ -179,6 +179,7 @@ class ImageGenerationSaver(BaseSaver):
         self.add_image_score = self.params.get('add_image_score', False)  # Whether to add image scores
         self.metrics_filename = self.params.get('metrics_filename', 'image_metrics.json')
         self.save_worst = self.params.get('save_worst', False) # Add save_worst flag, default to False
+        self.score_with_gt = self.params.get('score_with_gt', False) # New parameter, default to False
         
     def save_result(self, results):
         """Save the results to a JSON file and generate images if image data is present
@@ -276,14 +277,21 @@ class ImageGenerationSaver(BaseSaver):
         # Determine scoring model for images if add_image_score is True
         scoring_model_for_images = None
         if self.add_image_score:
-            if results.estimators and results.estimators[0] and self.embedder:
-                try:
-                    scoring_model_for_images = create_dot_product_model_from_estimator(results.estimators[0], self.embedder)
-                    print("ImageGenerationSaver: Will calculate image scores using the first learned estimator.")
-                except Exception as e:
-                    print(f"Warning: Could not create model from estimator for image scoring: {e}")
-            else:
-                print("Warning: Cannot calculate image scores. First estimator or embedder not available in results.")
+            if self.score_with_gt:
+                if self.scorer_model: # self.scorer_model is the GT model instance
+                    scoring_model_for_images = self.scorer_model
+                    print("ImageGenerationSaver: Will calculate image scores using the ground truth scorer model.")
+                else:
+                    print("Warning: ImageGenerationSaver.score_with_gt is true, but ground truth scorer_model is not available.")
+            else: # Try to use learned estimator
+                if results.estimators and results.estimators[0] and self.embedder:
+                    try:
+                        scoring_model_for_images = create_dot_product_model_from_estimator(results.estimators[0], self.embedder)
+                        print("ImageGenerationSaver: Will calculate image scores using the first learned estimator.")
+                    except Exception as e:
+                        print(f"Warning: Could not create model from estimator for image scoring: {e}")
+                else:
+                    print("Warning: Cannot calculate image scores with estimator. First estimator or embedder not available, and score_with_gt is false.")
 
         actual_best_image_scores = []
         print("Generating images for BEST prompts:")
