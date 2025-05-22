@@ -840,15 +840,28 @@ class LLMExperiment:
         skipped_count = 0
         error_count = 0
 
-        # --- Access the nested 'preferences' dictionary ---
-        preferences_dict = feedback_data.get("preferences")
-        if not preferences_dict or not isinstance(preferences_dict, dict):
-            print("Error: 'preferences' key not found or is not a dictionary in feedback data.")
+        # --- Access the 'preferences' list ---
+        preferences_list = feedback_data.get("preferences")
+        if not preferences_list or not isinstance(preferences_list, list):
+            print("Error: 'preferences' key not found or is not a list in feedback data.")
             return None, None
         # -------------------------------------------------
 
-        # Iterate through the items in the preferences dictionary
-        for image_filename, preferred_policy_idx_1based in preferences_dict.items():
+        # Iterate through the items in the preferences list
+        for preference_entry in preferences_list:
+            if not isinstance(preference_entry, dict):
+                print(f"Warning: Skipping invalid preference entry (not a dict): {preference_entry}")
+                skipped_count += 1
+                continue
+
+            image_filename = preference_entry.get("filename")
+            preferred_policy_idx_1based = preference_entry.get("preference")
+
+            if image_filename is None or preferred_policy_idx_1based is None:
+                print(f"Warning: Skipping preference entry with missing 'filename' or 'preference': {preference_entry}")
+                skipped_count += 1
+                continue
+            
             match = filename_pattern.search(image_filename)
             if not match:
                 # print(f"Warning: Skipping feedback entry, could not parse filename: {image_filename}")
