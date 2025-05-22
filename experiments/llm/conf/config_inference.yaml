@@ -34,7 +34,7 @@ override_results_dir: false # Default
 # Use standard vocabulary including bases.txt
 experiment:
   vocabulary:
-    - 'vocabulary3/bases.txt'
+    #    - 'vocabulary3/bases.txt'
     - 'vocabulary3/ambient.txt'
     - 'vocabulary3/style.txt'
     - 'vocabulary3/composition.txt'
@@ -46,12 +46,12 @@ experiment:
 
 # --- Testers (Enabled for Inference) ---
 tester:
-  - _target_: components.tester.PreferenceTester
-    params:
-      N_test_prompts: 1000
-      N_pairs_eval: 5000
-  - _target_: components.tester.CosineTester
-    params: null
+  #  - _target_: components.tester.PreferenceTester
+  #    params:
+  #      N_test_prompts: 1000
+  #      N_pairs_eval: 5000
+  #  - _target_: components.tester.CosineTester
+  #    params: null
   - _target_: components.tester.ImageGenerationTester
     params:
        take_best_worst_N: 5 # Default N
@@ -74,8 +74,8 @@ savers:
       add_image_score: true # Score images
       score_with_gt: false   # Use learned estimator for scoring images
       save_worst: false # Match tester setting
-  - _target_: components.saver.LearnedEstimatorSaver # Save the estimator trained from visits
-    params:
-      filename: "estimator.pt"
+  #  - _target_: components.saver.LearnedEstimatorSaver # Save the estimator trained from visits
+  #    params:
+  #      filename: "estimator.pt"
   # VisitsSaver, ReadableVisitsSaver are not typically needed for this inference mode,
   # as visits are an input.
