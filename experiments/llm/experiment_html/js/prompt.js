@@ -55,9 +55,16 @@ saveFinalButton.addEventListener('click', () => {
         return a.timestep - b.timestep;
     });
 
+    // Retrieve benchmark episode keys from localStorage
+    const benchmarkEpisodeKeys = JSON.parse(localStorage.getItem('benchmarkEpisodeKeys')) || [];
+    if (benchmarkEpisodeKeys.length > 0) {
+        console.log("Retrieved benchmarkEpisodeKeys from localStorage:", benchmarkEpisodeKeys);
+    }
+
     const outputData = {
         user_prompt: userPrompt,
-        preferences: formattedPreferences // Store the detailed, formatted preferences
+        preferences: formattedPreferences, // Store the detailed, formatted preferences
+        benchmark_episode_keys: benchmarkEpisodeKeys // Add benchmark keys
     };
 
     const outputJson = JSON.stringify(outputData, null, 2); // Pretty print JSON

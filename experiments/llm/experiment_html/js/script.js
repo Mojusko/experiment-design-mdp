@@ -72,13 +72,43 @@ function initializeQuestionnaire() {
     }
     console.log("Shuffled episode order:", episodeKeys);
 
-    // 5. Create the final displayOrder based on the shuffled keys
+    const NUM_BENCHMARK_EPISODES = 5; // Number of episodes to reserve for benchmark
+    let benchmarkEpisodeKeys = [];
+    let userEpisodeKeys = [...episodeKeys]; // Start with all episodes
+
+    if (episodeKeys.length > NUM_BENCHMARK_EPISODES) {
+        // Take the last NUM_BENCHMARK_EPISODES from the shuffled list as benchmarks
+        benchmarkEpisodeKeys = episodeKeys.slice(-NUM_BENCHMARK_EPISODES);
+        // The rest are for the user
+        userEpisodeKeys = episodeKeys.slice(0, episodeKeys.length - NUM_BENCHMARK_EPISODES);
+        
+        console.log("Benchmark episodes (keys, not shown to user):", benchmarkEpisodeKeys);
+        console.log("User-answerable episodes (keys):", userEpisodeKeys);
+    } else {
+        console.warn(`Not enough episodes (${episodeKeys.length}) to reserve ${NUM_BENCHMARK_EPISODES} for benchmark. All episodes will be user-answerable.`);
+        // All episodes remain in userEpisodeKeys, benchmarkEpisodeKeys is empty
+    }
+
+    // 5. Create the final displayOrder based on the USER episode keys
     displayOrder = [];
-    episodeKeys.forEach(key => {
+    userEpisodeKeys.forEach(key => { // Use userEpisodeKeys here
         displayOrder.push(...groupedByEpisode[key]); // Add all timesteps for this shuffled episode
     });
 
-    console.log(`Initialization complete. Total questions (images): ${displayOrder.length}`);
+    if (benchmarkEpisodeKeys.length > 0) {
+        console.log(`Reserved ${benchmarkEpisodeKeys.length} episodes for benchmark. User will see ${userEpisodeKeys.length} episodes.`);
+        // Save benchmarkEpisodeKeys to localStorage for prompt.js
+        try {
+            localStorage.setItem('benchmarkEpisodeKeys', JSON.stringify(benchmarkEpisodeKeys));
+            console.log("Saved benchmarkEpisodeKeys to localStorage.");
+        } catch (e) {
+            console.error("Error saving benchmarkEpisodeKeys to localStorage:", e);
+        }
+    } else {
+        // Ensure localStorage is cleared or set to empty if no benchmark keys
+        localStorage.setItem('benchmarkEpisodeKeys', JSON.stringify([]));
+    }
+    console.log(`Initialization complete. Total questions to be displayed to user: ${displayOrder.length}`);
 
     // 6. Start the display
     updateImage();
@@ -100,24 +130,8 @@ function updateImage() {
     imageInfoElement.textContent = `Question ${currentQuestionIndex + 1} / ${displayOrder.length}`;
     progressElement.textContent = `${currentQuestionIndex + 1} / ${displayOrder.length}`;
 
-    // --- Timestep 1 Handling ---
-    const isTimestepOne = currentImageData.timestep === 1;
-    feedbackForm.classList.toggle('disabled-feedback', isTimestepOne); // Add/remove class for styling
-
-    policyRadioButtons.forEach((radio, index) => {
-        radio.disabled = isTimestepOne;
-        if (isTimestepOne && index === 0) {
-            radio.checked = true; // Default check Policy 1
-        }
-    });
-
-    if (isTimestepOne) {
-        saveFeedback(); // Save the default feedback for timestep 1
-    } else {
-        // Load user's previous feedback only if not timestep 1
-        loadFeedback();
-    }
-    // --- End Timestep 1 Handling ---
+    // Load user's previous feedback
+    loadFeedback();
 
     // Update button states
     prevButton.disabled = currentQuestionIndex === 0;
