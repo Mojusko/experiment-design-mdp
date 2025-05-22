@@ -13,6 +13,7 @@ accuracy: 1e-14 # Needed for estimator initialization? Check if required.
 experiment_id: "" # Define top-level key to allow overriding from Makefile
 base_prompt: "" # Add base_prompt for LLMGrid initialization
 include_base_prompt_in_first_tokens: false # Add for LLMGrid initialization
+num_benchmark_episodes: 5 # Number of episodes to reserve for benchmarking (consistent with config.yaml)
 
 # --- Experiment Settings Override ---
 # Inherit from feedback_comparison via defaults, but override prefix and scorer_model
