@@ -80,45 +80,66 @@ class LLMExperiment:
         elif OmegaConf.is_list(scorer_model_config): # Handle OmegaConf ListConfig
              self.scorer_model_names = OmegaConf.to_container(scorer_model_config, resolve=True)
              print(f"Using multiple scorer models (from ListConfig): {self.scorer_model_names}")
+        elif scorer_model_config is None:
+            print("No scorer_model configured. Will proceed without ground truth scorer.")
+            self.scorer_model_names = []
         else:
-            raise ValueError(f"scorer_model in config must be a string or a list, got {type(scorer_model_config)}")
+            raise ValueError(f"scorer_model in config must be a string, a list, or None, got {type(scorer_model_config)}")
         self.num_scorer_models = len(self.scorer_model_names)
 
         # --- Load Data & Initialize Environment ---
         self.training_words, self.testing_words, self.model_words = self._load_data()
         # _init_env now uses self.embedder and populates _scorer_models and _theta_stars
-        self.env = self._init_env() # Initializes self._scorer_models and self._theta_stars
+        # self._scorer_models and self._theta_stars will be empty if self.scorer_model_names is empty
+        self.env = self._init_env() 
 
         # --- Initialize Core Components (Lists for multiple models) ---
         self.feedbacks = []
         self.designs = []
-        self.estimators = [] # Will hold estimator instances for each model
+        self.estimators = [] # Will hold estimator instances
 
-        # Create feedback, design, and estimator for each scorer model
-        for i, model_name in enumerate(self.scorer_model_names):
-            print(f"Initializing components for scorer model: {model_name}")
-            # Pass the specific scorer model instance and name to the factory
+        if self.num_scorer_models > 0:
+            # Create feedback, design, and estimator for each configured scorer model
+            for i, model_name in enumerate(self.scorer_model_names):
+                print(f"Initializing components for scorer model: {model_name}")
+                feedback, design, estimator = FeedbackFactory.create(
+                    cfg,
+                    self.env,
+                    self._scorer_models[i], # Pass the specific model instance
+                    self.embedder,
+                    scorer_model_name=model_name
+                )
+                self.feedbacks.append(feedback)
+                self.designs.append(design)
+                self.estimators.append(estimator)
+        else:
+            # No scorer models configured (e.g., for human feedback training without GT comparison)
+            # Initialize a single set of components without a specific scorer model
+            print("Initializing a single set of feedback/design/estimator components (no scorer model).")
             feedback, design, estimator = FeedbackFactory.create(
                 cfg,
                 self.env,
-                self._scorer_models[i], # Pass the specific model instance
+                None, # No scorer model instance
                 self.embedder,
-                scorer_model_name=model_name # Pass the name for lambda lookup
+                scorer_model_name=None # No specific model name
             )
             self.feedbacks.append(feedback)
             self.designs.append(design)
-            self.estimators.append(estimator) # Add the initial estimator instance
+            self.estimators.append(estimator)
 
         # --- Initialize Solver ---
-        # The explorer uses the design and feedback from the *first* scorer model
-        # The exploration path is the same, but estimation differs per model later
-        print(f"Initializing explorer using components from the first model: {self.scorer_model_names[0]}")
+        # The explorer uses the design and feedback from the *first* available set of components.
+        if not self.designs or not self.feedbacks:
+            raise RuntimeError("Cannot initialize explorer: No design or feedback components were created.")
+        
+        first_model_name_for_explorer = self.scorer_model_names[0] if self.scorer_model_names else "N/A (no scorer model)"
+        print(f"Initializing explorer using components (design[0], feedback[0]). Associated model (if any): {first_model_name_for_explorer}")
         self.explorer = SolverFactory.create(
             cfg,
             self.env,
-            self.designs[0], # Use first design
-            self.feedbacks[0], # Use first feedback
-            same_first_action_in_episode=cfg.get('same_first_action_in_episode', False) # Read from config
+            self.designs[0], 
+            self.feedbacks[0], 
+            same_first_action_in_episode=cfg.get('same_first_action_in_episode', False)
         )
 
         # Note: self.estimator is now self.estimators (a list)
@@ -1144,6 +1165,64 @@ class LLMExperiment:
                  return False
 
             # Proceed to testing with potentially modified environment
+            self.test_and_save(current_mode=mode)
+            return True
+
+        # --- Mode 5: Train Human Feedback ---
+        elif mode == "train_human_feedback":
+            if not visits_path or not os.path.exists(visits_path):
+                print(f"Error: Visits file not found or not provided: {visits_path}")
+                return False
+            if not feedback_path or not os.path.exists(feedback_path):
+                print(f"Error: Feedback file not found or not provided: {feedback_path}")
+                return False
+
+            print(f"Loading visits from: {visits_path}")
+            try:
+                visits_data = torch.load(visits_path)
+                if not isinstance(visits_data, list) or not visits_data: # Basic check
+                     print(f"Warning: Loaded visits from {visits_path} appear empty or invalid.")
+                     # Allow proceeding, _process_human_feedback will handle empty/invalid visits
+            except Exception as e:
+                 print(f"Error loading visits from {visits_path}: {e}")
+                 return False
+
+            print(f"Loading human feedback data from: {feedback_path}")
+            try:
+                import json # Ensure json is imported
+                with open(feedback_path, 'r') as f:
+                    self.feedback_data = json.load(f) # Store loaded feedback data
+                if not self.feedback_data:
+                    print("Error: Loaded feedback data is empty.")
+                    return False
+            except Exception as e:
+                print(f"Error loading feedback data from {feedback_path}: {e}")
+                return False
+
+            print("Processing human feedback to generate training data...")
+            comparison_embeddings, labels = self._process_human_feedback(visits_data, self.feedback_data)
+
+            if comparison_embeddings is None or labels is None:
+                print("Error: Failed to process human feedback into training data. Skipping estimator fitting.")
+                return False
+            
+            if not self.feedbacks or self.feedbacks[0] is None:
+                print("Error: Feedback component (self.feedbacks[0]) not initialized. Cannot fit estimator.")
+                return False
+
+            print("Fitting estimator using processed human feedback...")
+            try:
+                # Populate _collected_data for the first feedback component
+                self.feedbacks[0]._collected_data = [(comparison_embeddings, labels)]
+                self.feedbacks[0].fit_estimator()
+                # Update the main estimator list
+                self.estimators[0] = self.feedbacks[0].estimator
+                print("Estimator fitted successfully with human feedback.")
+            except Exception as e:
+                print(f"Error fitting estimator with human feedback: {e}")
+                return False
+            
+            # Proceed to testing and saving (which includes benchmark evaluation)
             self.test_and_save(current_mode=mode)
             return True
         else:

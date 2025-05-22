@@ -61,6 +61,10 @@ def main(cfg: DictConfig):
                 mode = "load_estimator_and_feedback"
                 print("Mode: Load Estimator and Feedback")
                 input_path_for_dir = estimator_path # Use estimator path as base
+            elif not estimator_path and visits_path and feedback_path:
+                 mode = "train_human_feedback"
+                 print("Mode: Train Human Feedback")
+                 input_path_for_dir = visits_path # Use visits path as base for dir derivation
             else:
                  # Invalid combination if not inspection mode
                  print("\nError: Invalid combination of paths for test_only mode.")
