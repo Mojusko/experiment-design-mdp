@@ -7,7 +7,7 @@ from doexpy.env.llm import create_prompt_from_tokens, DotProductModel # Removed 
 def generate_test_sequence(rng, word_lists, horizon):
     """Generate a test sequence using the appropriate word list for each horizon step"""
     return [
-        " " if rng.random() < 0.1 else rng.choice(word_lists[i])
+        " " if rng.random() < 0.3 else rng.choice(word_lists[i])
         for i in range(horizon)
     ]
 
