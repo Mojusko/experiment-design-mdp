@@ -175,7 +175,7 @@ class ImageGenerationTester(BaseTester):
         # embedder is passed to super() which stores it
         self.take_best_worst_N = self.params.get('take_best_worst_N', 8) # N sequences to return
         self.use_estimator = self.params.get('use_estimator', False)
-        self.beam_width = self.params.get('beam_width', 8) # Beam width for search (K in beam search)
+        self.beam_width = self.params.get('beam_width', 15) # Beam width for search (K in beam search)
         # Pass env, embedder to the base class constructor
         super().__init__(env=env, embedder=embedder, params=params)
         print(f"Initialized {self.__class__.__name__} with take_best_worst_N={self.take_best_worst_N}, "
