@@ -17,7 +17,7 @@ accuracy: 0.00000001
 dense_feedback: true
 #same_first_action_in_episode: true # If true, all policies use the same action at h=0 within an episode
 same_first_action_in_episode: false # If true, all policies use the same action at h=0 within an episode
-handle_duplicate_action: false # If true, duplicate non-zero actions in a sequence are replaced by 0 (keeping one random instance)
+handle_duplicate_action: true # If true, duplicate non-zero actions in a sequence are replaced by 0 (keeping one random instance)
 # Results directory path
 results_dir: "results/dummy"
 # Experiment identifier (can be overridden from Makefile)
