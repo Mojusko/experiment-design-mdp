@@ -287,138 +287,6 @@ class LLMExperiment:
                     raise ValueError(f"Saver type '{type(saver).__name__}' is not allowed in explore_only mode. "
                                      f"Only {', '.join(s.__name__ for s in allowed_savers)} are permitted.")
 
-    def _evaluate_on_benchmark_episodes(self, benchmark_episode_keys):
-        """
-        Evaluates the trained estimator on the benchmark episodes.
-        Compares estimator predictions against a ground truth scorer model if available.
-        """
-        if not self.estimators or self.estimators[0] is None:
-            print("Benchmark Evaluation: Estimator not available. Skipping.")
-            return 0.0, 0
-
-        # Use the first estimator (trained from human feedback)
-        trained_estimator = self.estimators[0]
-        
-        # Check if a ground truth scorer model is available for comparison
-        gt_scorer_model = self._scorer_models[0] if self._scorer_models and self._scorer_models[0] else None
-        gt_theta_star = self._theta_stars[0] if self._theta_stars and self._theta_stars[0] else None
-
-        if gt_scorer_model is None or gt_theta_star is None:
-            print("Benchmark Evaluation: Ground truth scorer model not available. Cannot calculate accuracy. Skipping.")
-            return 0.0, 0
-
-        correct_predictions = 0
-        total_comparisons = 0
-        
-        # Parse episode_key "alg-episode_idx"
-        # Example key: "design-0", "random-10"
-        key_pattern = re.compile(r"([a-zA-Z0-9]+)-(\d+)")
-
-        for episode_key in benchmark_episode_keys:
-            match = key_pattern.match(episode_key)
-            if not match:
-                print(f"Warning: Could not parse benchmark episode key: {episode_key}")
-                continue
-            
-            alg_name_from_key = match.group(1) # Algorithm name part of the key
-            ep_idx = int(match.group(2))       # Episode index part of the key
-
-            # Determine which policy set in self.visits corresponds to alg_name_from_key
-            # This requires knowing how self.visits is structured or matching alg_name_from_key
-            # to the algorithm that generated the visits.
-            # For now, assume self.visits[0] is 'design', self.visits[1] is 'random' if multiple algos were run
-            # This part might need refinement if self.visits structure is more complex or
-            # if alg_name_from_key doesn't directly map to an index.
-            # A safer way would be to ensure self.visits is indexed by algorithm name or
-            # that the `VisitsImageSaver` saves images with a consistent policy index that can be mapped back.
-            # For simplicity, let's assume we find the policy_idx that matches alg_name_from_key.
-            # This is a placeholder for more robust policy mapping.
-
-            # Check if the algorithm from the benchmark key matches the algorithm of the loaded visits data.
-            # self.cfg.algorithm should reflect the algorithm of the loaded self.visits.
-            if alg_name_from_key.lower() != self.cfg.algorithm.lower():
-                raise ValueError(f"Algorithm mismatch for benchmark episode: Key '{episode_key}' indicates algorithm '{alg_name_from_key}', "
-                                 f"but current experiment visits (from {self.cfg.visits_path if self.cfg.visits_path else 'unknown source'}) "
-                                 f"are for algorithm '{self.cfg.algorithm}'. This indicates an issue with visit data or benchmark key generation.")
-
-            # If algorithms match, proceed with evaluation using self.visits.
-            # self.visits contains trajectories for self.cfg.algorithm.
-            # The ep_idx from the benchmark key refers to an episode within these trajectories.
-            
-            num_policies_in_visits = len(self.visits)
-
-            for h_prefix_len in range(1, self.env.max_episode_length + 1): # Iterate all timesteps
-                comparison_embeddings_list = []
-                actions_for_comparison = [] # For debug/info
-
-                valid_comparison_point = True
-                for policy_idx in range(num_policies_in_visits):
-                    try:
-                        # self.visits[policy_idx][ep_idx] = (states, actions)
-                        actions_for_policy = self.visits[policy_idx][ep_idx][1]
-                        if isinstance(actions_for_policy, torch.Tensor):
-                            actions_for_policy = actions_for_policy.cpu().numpy()
-                        actions_for_policy = list(map(int, actions_for_policy))
-
-                        if h_prefix_len > len(actions_for_policy):
-                            # This timestep is not applicable for this episode's length
-                            valid_comparison_point = False
-                            break 
-                        
-                        truncated_actions = actions_for_policy[:h_prefix_len]
-                        actions_for_comparison.append(truncated_actions)
-
-                        prompt = create_prompt(truncated_actions, self.env)
-                        embedding = self.embedder.embed_text(prompt)
-                        comparison_embeddings_list.append(embedding.detach().cpu())
-                    except IndexError:
-                        # print(f"Warning: Missing visit data for benchmark: alg {alg_name_from_key}, ep {ep_idx}, policy {policy_idx}, h {h_prefix_len}")
-                        valid_comparison_point = False
-                        break
-                    except Exception as e:
-                        print(f"Error processing benchmark data: alg {alg_name_from_key}, ep {ep_idx}, policy {policy_idx}, h {h_prefix_len}: {e}")
-                        valid_comparison_point = False
-                        break
-                
-                if not valid_comparison_point or not comparison_embeddings_list:
-                    continue
-
-                # Ensure we have embeddings for all policies for this comparison point
-                if len(comparison_embeddings_list) != num_policies_in_visits:
-                    # print(f"Warning: Mismatch in number of embeddings for benchmark comparison at ep {ep_idx}, h {h_prefix_len}. Skipping.")
-                    continue
-
-                comparison_embeddings_tensor = torch.cat(comparison_embeddings_list, dim=0) # [num_policies, dim]
-                
-                # Predict with trained estimator
-                # predict_proba expects [1, num_policies, dim] or [num_policies, dim] if sum_dim=0
-                # Reshape to [1, num_policies, dim] for RegularizedMultinomialEstimator
-                reshaped_embeddings = comparison_embeddings_tensor.unsqueeze(0)
-                predicted_probs = trained_estimator.predict_proba(reshaped_embeddings) # Shape [1, num_policies]
-                predicted_preferred_idx = torch.argmax(predicted_probs.squeeze()).item()
-
-                # Get "true" preference from ground truth scorer
-                gt_scores = []
-                for policy_actions in actions_for_comparison: # actions_for_comparison has one list of actions per policy
-                    score, _ = gt_theta_star(policy_actions) # gt_theta_star takes list of action indices
-                    gt_scores.append(score)
-                
-                if not gt_scores:
-                    continue
-
-                gt_scores_tensor = torch.cat(gt_scores, dim=0) # Shape [num_policies]
-                true_preferred_idx = torch.argmax(gt_scores_tensor).item()
-
-                if predicted_preferred_idx == true_preferred_idx:
-                    correct_predictions += 1
-                total_comparisons += 1
-
-        if total_comparisons == 0:
-            return 0.0, 0
-        
-        benchmark_accuracy = correct_predictions / total_comparisons
-        return benchmark_accuracy, total_comparisons
-
     def calculate_cosine_error(self, est_weight, gt_weight):
         """Calculate cosine error between two weight vectors."""
         # Ensure weights are tensors before moving to CPU
@@ -1527,21 +1395,9 @@ class LLMExperiment:
         # (e.g., from ImageGenerationTester if it runs for the first model).
 
         # --- Benchmark Episode Evaluation (for human feedback training mode) ---
-        if current_mode == "train_human_feedback" and self.cfg.num_benchmark_episodes > 0:
-            print("\n--- Evaluating on Benchmark Episodes ---")
-            benchmark_episode_keys_from_json = self.feedback_data.get("benchmark_episode_keys", [])
-            
-            if benchmark_episode_keys_from_json and self.visits:
-                benchmark_accuracy, num_benchmark_comparisons = self._evaluate_on_benchmark_episodes(benchmark_episode_keys_from_json)
-                if num_benchmark_comparisons > 0:
-                    results.add_metric("benchmark_accuracy", benchmark_accuracy)
-                    results.add_metric("benchmark_comparisons_count", num_benchmark_comparisons)
-                    print(f"Benchmark Accuracy: {benchmark_accuracy:.4f} ({num_benchmark_comparisons} comparisons)")
-                else:
-                    print("No benchmark comparisons were made.")
-            else:
-                print("Skipping benchmark evaluation: No benchmark_episode_keys in feedback.json or no visits data.")
-            print("-------------------------------------\n")
+        # This is now handled by HumanFeedbackBenchmarkTester if it's active in the config.
+        # The results from that tester will be added to results.metrics directly by the tester loop.
+        # No specific code needed here for train_human_feedback mode regarding benchmark evaluation.
         # --------------------------------------------------------------------
 
         # If there's only one model, merge its metrics from per_model_metrics_collection

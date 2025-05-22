@@ -1,4 +1,4 @@
-# import os # Removed unused import
+import os # Added os import
 import torch
 import numpy as np
 from abc import ABC, abstractmethod
@@ -346,128 +346,135 @@ class HumanFeedbackBenchmarkTester(BaseTester):
         print(f"Initialized {self.__class__.__name__}")
 
     def run_test(self, cfg, env, estimator, theta_star, scorer_model, training_words_list, testing_words_list, visits=None):
-        print(f"Running {self.__class__.__name__}")
+        # For this benchmark, theta_star and scorer_model (ground truth) are not used to determine correctness.
+        # Correctness is based on matching the human's recorded preference.
+        print(f"Running {self.__class__.__name__} (Comparing estimator to human choices on benchmark episodes)")
 
         if estimator is None:
             print(f"  Skipping {self.__class__.__name__}: Estimator (human-trained) is None.")
             return {}
-        if theta_star is None: # theta_star is the GT scoring function
-            print(f"  Skipping {self.__class__.__name__}: theta_star (ground truth scoring function) is None.")
-            return {}
         if visits is None:
             print(f"  Skipping {self.__class__.__name__}: visits data is None (must be loaded by LLMExperiment).")
             return {}
-        if not hasattr(cfg, 'feedback_path') or not cfg.feedback_path or not os.path.exists(to_absolute_path(cfg.feedback_path)):
-            feedback_p = cfg.feedback_path if hasattr(cfg, 'feedback_path') else "Not in Cfg"
-            print(f"  Skipping {self.__class__.__name__}: feedback_path not provided in cfg or file not found: {feedback_p}")
+        
+        # Ensure feedback_path is available in cfg
+        feedback_path_str = getattr(cfg, 'feedback_path', None)
+        if not feedback_path_str:
+            print(f"  Skipping {self.__class__.__name__}: feedback_path not found in configuration.")
+            return {}
+        
+        # Resolve feedback_path using Hydra's utility
+        from hydra.utils import to_absolute_path
+        abs_feedback_path = to_absolute_path(feedback_path_str)
+        if not os.path.exists(abs_feedback_path):
+            print(f"  Skipping {self.__class__.__name__}: feedback_path file not found: {abs_feedback_path}")
             return {}
 
-        # Load feedback.json to get benchmark_episode_keys
+        # Load feedback.json to get benchmark_episode_keys and human preferences
         try:
-            import json # Ensure json is imported
-            import re # Ensure re is imported
-            from hydra.utils import to_absolute_path # For resolving path
+            import json 
+            import re 
             from doexpy.env.llm import create_prompt # For creating prompts
 
-            abs_feedback_path = to_absolute_path(cfg.feedback_path)
             with open(abs_feedback_path, 'r') as f:
                 feedback_data = json.load(f)
+            
             benchmark_episode_keys = feedback_data.get("benchmark_episode_keys", [])
+            human_preferences_list = feedback_data.get("preferences", [])
+
             if not benchmark_episode_keys:
                 print(f"  Warning: No 'benchmark_episode_keys' found in {abs_feedback_path}. Nothing to test.")
                 return {"benchmark_accuracy": 0.0, "benchmark_comparisons_count": 0}
+            if not human_preferences_list:
+                print(f"  Warning: No 'preferences' list found in {abs_feedback_path}. Cannot determine human choices for benchmark.")
+                return {"benchmark_accuracy": 0.0, "benchmark_comparisons_count": 0}
         except Exception as e:
-            print(f"  Error loading or parsing feedback_path {cfg.feedback_path}: {e}")
+            print(f"  Error loading or parsing feedback_path {abs_feedback_path}: {e}")
             return {}
 
         print(f"  Base prompt for benchmark evaluation (from env): '{env.base_prompt}'")
-        print(f"  Evaluating on {len(benchmark_episode_keys)} benchmark episode keys.")
+        print(f"  Evaluating on {len(benchmark_episode_keys)} benchmark episode keys using human feedback as ground truth.")
 
         correct_predictions = 0
         total_comparisons = 0
-        # Regex for parsing episode keys like "design-0", "random-10"
-        key_pattern = re.compile(r"([a-zA-Z0-9_]+)-(\d+)") # Allow underscore in alg name
+        
+        episode_key_pattern = re.compile(r"([a-zA-Z0-9_]+)-(\d+)") # For "alg-ep_idx"
+        # Filename pattern from feedback.json: "images/alg-design_episode_000_timestep_01.png"
+        feedback_filename_pattern = re.compile(r"images/alg-([a-zA-Z0-9_]+)_episode_(\d+)_timestep_(\d+)\.png$")
+
+        # Create a lookup for human preferences: (alg_name, ep_idx_str, ts_str) -> human_choice_1_based
+        human_choices_lookup = {}
+        for pref_entry in human_preferences_list:
+            filename = pref_entry.get("filename", "")
+            fn_match = feedback_filename_pattern.search(filename)
+            if fn_match:
+                alg, ep_str, ts_str = fn_match.groups()
+                human_choices_lookup[(alg, ep_str, ts_str)] = pref_entry.get("preference")
+        
+        num_policies_in_visits = len(visits)
+        if num_policies_in_visits == 0:
+            print("    Error: Visits data is empty (no policies). Cannot proceed with benchmark.")
+            return {"benchmark_accuracy": 0.0, "benchmark_comparisons_count": 0, "error": "Empty visits data"}
 
         for episode_key in benchmark_episode_keys:
-            match = key_pattern.match(episode_key)
-            if not match:
+            ep_key_match = episode_key_pattern.match(episode_key)
+            if not ep_key_match:
                 print(f"    Warning: Could not parse benchmark episode key: {episode_key}")
                 continue
             
-            alg_name_from_key = match.group(1)
-            ep_idx = int(match.group(2))
+            alg_name_from_key = ep_key_match.group(1)
+            ep_idx_from_key = int(ep_key_match.group(2)) # This is the 0-based episode index from the key
 
-            # LLMExperiment should have already validated this or raised an error.
-            # This is a secondary check within the tester.
             if alg_name_from_key.lower() != cfg.algorithm.lower():
                 print(f"    Critical Error: Benchmark episode key '{episode_key}' (alg: {alg_name_from_key}) "
-                      f"does not match current experiment algorithm '{cfg.algorithm}'. "
-                      f"This should have been caught by LLMExperiment. Skipping this episode.")
+                      f"does not match current experiment algorithm '{cfg.algorithm}'. Skipping this episode.")
                 continue
-            
-            num_policies_in_visits = len(visits)
-            if num_policies_in_visits == 0:
-                print("    Error: Visits data is empty (no policies). Cannot proceed with benchmark.")
-                return {"benchmark_accuracy": 0.0, "benchmark_comparisons_count": 0, "error": "Empty visits data"}
-
 
             for h_prefix_len in range(1, env.max_episode_length + 1):
+                # Key for human_choices_lookup: (alg_name, "000"-padded ep_idx, "00"-padded ts)
+                lookup_key = (alg_name_from_key, f"{ep_idx_from_key:03d}", f"{h_prefix_len:02d}")
+                human_preferred_policy_1_based = human_choices_lookup.get(lookup_key)
+
+                if human_preferred_policy_1_based is None:
+                    continue # No human feedback for this specific comparison point
+                
+                human_preferred_policy_0_based = human_preferred_policy_1_based - 1
+
                 comparison_embeddings_list = []
-                actions_for_comparison = []
                 valid_comparison_point = True
 
                 for policy_idx in range(num_policies_in_visits):
                     try:
-                        # visits[policy_idx] is a list of (states, actions) tuples for that policy
-                        # visits[policy_idx][ep_idx] is the (states, actions) tuple for a specific episode
-                        actions_for_policy_raw = visits[policy_idx][ep_idx][1] # Get actions part
+                        actions_for_policy_raw = visits[policy_idx][ep_idx_from_key][1]
                         actions_for_policy = list(map(int, actions_for_policy_raw.cpu().tolist() if isinstance(actions_for_policy_raw, torch.Tensor) else actions_for_policy_raw))
 
                         if h_prefix_len > len(actions_for_policy):
-                            valid_comparison_point = False
-                            break 
+                            valid_comparison_point = False; break
                         
                         truncated_actions = actions_for_policy[:h_prefix_len]
-                        actions_for_comparison.append(truncated_actions)
-                        
                         prompt = create_prompt(truncated_actions, env)
                         embedding = self.embedder.embed_text(prompt)
                         comparison_embeddings_list.append(embedding.detach().cpu())
-
                     except IndexError:
-                        # This might happen if ep_idx is out of bounds for a policy's visits
-                        # print(f"    Debug: IndexError for policy {policy_idx}, ep_idx {ep_idx}, h {h_prefix_len}. Visits len: {len(visits[policy_idx])}")
                         valid_comparison_point = False; break
                     except Exception as e:
-                        print(f"    Error processing benchmark data for policy {policy_idx}, ep {ep_idx}, h {h_prefix_len}: {e}")
+                        print(f"    Error processing benchmark data for policy {policy_idx}, ep {ep_idx_from_key}, h {h_prefix_len}: {e}")
                         valid_comparison_point = False; break
                 
                 if not valid_comparison_point or not comparison_embeddings_list or len(comparison_embeddings_list) != num_policies_in_visits:
                     continue
 
                 comparison_embeddings_tensor = torch.cat(comparison_embeddings_list, dim=0)
-                reshaped_embeddings = comparison_embeddings_tensor.unsqueeze(0) # For RegularizedMultinomialEstimator
+                reshaped_embeddings = comparison_embeddings_tensor.unsqueeze(0)
                 
-                # Predict with human-trained estimator
                 predicted_probs = estimator.predict_proba(reshaped_embeddings)
-                predicted_preferred_idx = torch.argmax(predicted_probs.squeeze()).item()
+                estimator_predicted_policy_0_based = torch.argmax(predicted_probs.squeeze()).item()
 
-                # Get "true" preference from ground truth scorer (theta_star)
-                gt_scores = []
-                for policy_actions_list_for_one_policy in actions_for_comparison:
-                    # theta_star expects a list of action indices for one policy
-                    score_tensor, _ = theta_star(policy_actions_list_for_one_policy) 
-                    gt_scores.append(score_tensor)
-                
-                if not gt_scores: continue
-                gt_scores_tensor = torch.cat(gt_scores, dim=0) # Shape [num_policies]
-                true_preferred_idx = torch.argmax(gt_scores_tensor).item()
-
-                if predicted_preferred_idx == true_preferred_idx:
+                if estimator_predicted_policy_0_based == human_preferred_policy_0_based:
                     correct_predictions += 1
                 total_comparisons += 1
         
         benchmark_accuracy = (correct_predictions / total_comparisons) if total_comparisons > 0 else 0.0
-        print(f"  Benchmark Accuracy: {benchmark_accuracy:.4f} ({correct_predictions}/{total_comparisons} comparisons)")
+        print(f"  Human Feedback Benchmark Accuracy: {benchmark_accuracy:.4f} ({correct_predictions}/{total_comparisons} comparisons)")
         return {"benchmark_accuracy": benchmark_accuracy, "benchmark_comparisons_count": total_comparisons}
 

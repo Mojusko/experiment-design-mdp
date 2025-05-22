@@ -89,14 +89,18 @@ function initializeQuestionnaire() {
         // All episodes remain in userEpisodeKeys, benchmarkEpisodeKeys is empty
     }
 
-    // 5. Create the final displayOrder based on the USER episode keys
+    // 5. Create the final displayOrder based on ALL shuffled episode keys
+    // All episodes will be shown to the user for feedback.
+    // benchmarkEpisodeKeys are still identified and saved to localStorage
+    // so that prompt.js can mark them in feedback.json for later benchmark evaluation.
     displayOrder = [];
-    userEpisodeKeys.forEach(key => { // Use userEpisodeKeys here
+    episodeKeys.forEach(key => { // Use the full episodeKeys list here
         displayOrder.push(...groupedByEpisode[key]); // Add all timesteps for this shuffled episode
     });
 
     if (benchmarkEpisodeKeys.length > 0) {
-        console.log(`Reserved ${benchmarkEpisodeKeys.length} episodes for benchmark. User will see ${userEpisodeKeys.length} episodes.`);
+        // Log that these episodes are marked for benchmark, but will still be shown.
+        console.log(`Identified ${benchmarkEpisodeKeys.length} episodes for benchmark evaluation (will still be shown to user).`);
         // Save benchmarkEpisodeKeys to localStorage for prompt.js
         try {
             localStorage.setItem('benchmarkEpisodeKeys', JSON.stringify(benchmarkEpisodeKeys));
@@ -108,7 +112,8 @@ function initializeQuestionnaire() {
         // Ensure localStorage is cleared or set to empty if no benchmark keys
         localStorage.setItem('benchmarkEpisodeKeys', JSON.stringify([]));
     }
-    console.log(`Initialization complete. Total questions to be displayed to user: ${displayOrder.length}`);
+    // This now reflects the total number of questions the user will answer.
+    console.log(`Initialization complete. Total questions to be displayed to user (all episodes): ${displayOrder.length}`);
 
     // 6. Start the display
     updateImage();
