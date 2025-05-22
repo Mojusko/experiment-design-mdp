@@ -140,7 +140,19 @@ class MetricsSaver(BaseSaver):
                 if key in results.metrics:
                     metrics_dict[key] = results.metrics[key]
                 else:
-                    print(f"Warning: Requested metric '{key}' not found in results")
+                    # Check context before warning to avoid benign warnings in multi-model main save
+                    is_multi_model_main_save_context = False
+                    # The main 'results' object will have 'scorer_model_names' in its metadata.
+                    # Temporary 'results' objects for per-model saves typically won't.
+                    if 'scorer_model_names' in results.metadata and \
+                       isinstance(results.metadata['scorer_model_names'], list) and \
+                       len(results.metadata['scorer_model_names']) > 1:
+                        is_multi_model_main_save_context = True
+                    
+                    known_per_model_keys = ["preference_error", "cosine_error"] # Keys handled per-model
+
+                    if not (is_multi_model_main_save_context and key in known_per_model_keys):
+                        print(f"Warning: Requested metric '{key}' not found in results")
         else:
             # Otherwise, include all metrics except excluded ones
             metrics_dict = {k: v for k, v in results.metrics.items() 

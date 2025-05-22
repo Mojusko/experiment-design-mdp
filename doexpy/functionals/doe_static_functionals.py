@@ -234,27 +234,6 @@ class MultiPolicyOrigDesignD(RewardFunctional):
             dtype = distributions[0].dtype if distributions and len(distributions) > 0 else torch.float64
             return torch.tensor(0.0, device=device, dtype=dtype)
 
-        if episodes == 0: # Avoid division by zero if episodes is 0
-            # Return 0 or a very large value depending on desired behavior for prior.
-            # For consistency with lambda, an infinite penalty might be implied,
-            # but practically, returning 0 or a large fixed penalty might be safer if this case is hit.
-            # Given lambda/(H*episodes) would also divide by zero, let's make this term 0 if episodes is 0.
-            # Or, if we want it to dominate like the main lambda term, it should be large.
-            # Let's assume episodes > 0 for meaningful sparsity calculation. If not, the penalty is not well-defined here.
-            # For now, if episodes is 0, we'll return 0 for the sparsity part to avoid NaN/inf propagation
-            # if the main objective can handle episodes=0 gracefully.
-            # This is a tricky case; if lambda/(H*episodes) is meant to be infinite, then this should be too.
-            # Let's assume the caller ensures episodes > 0 for meaningful eval.
-            # If not, this will lead to division by zero, same as the main lambda term.
-            # To prevent outright crash if episodes is 0 and horizon is also 0 (unlikely):
-            if self.horizon * episodes == 0:
-                # This case implies no data and no time, penalty is ill-defined or infinite.
-                # Returning 0 for the sparsity part to avoid specific crash here,
-                # assuming main objective handles the overall episodes=0 scenario.
-                device = distributions[0].device if distributions and len(distributions) > 0 else torch.device("cpu")
-                dtype = distributions[0].dtype if distributions and len(distributions) > 0 else torch.float64
-                return torch.tensor(0.0, device=device, dtype=dtype)
-
 
         sum_of_squares = torch.tensor(0.0, device=distributions[0].device, dtype=distributions[0].dtype)
         for policy_distribution_hs_a in distributions:
