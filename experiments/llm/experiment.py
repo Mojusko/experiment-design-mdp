@@ -1232,13 +1232,13 @@ class LLMExperiment:
                     if not estimators_available:
                         raise ValueError(f"Tester '{tester_name}' requires an estimator, but none were loaded or available.")
                 elif isinstance(tester, ImageGenerationTester):
-                     # ImageGenerationTester needs scorer_model OR estimator if use_estimator=True
-                     if tester.use_estimator and not estimators_available:
-                         raise ValueError(f"Tester '{tester_name}' is configured with use_estimator=True, but no estimator is available.")
-                     # Check if *any* scorer model is available if needed
+                     # ImageGenerationTester needs an estimator if prompt_ranking_model is not 'gt'
+                     if tester.prompt_ranking_model != 'gt' and not estimators_available:
+                         raise ValueError(f"Tester '{tester_name}' is configured with prompt_ranking_model='{tester.prompt_ranking_model}', but no estimator is available.")
+                     # Check if *any* scorer model is available if prompt_ranking_model is 'gt'
                      scorer_models_available = self._scorer_models and any(sm is not None for sm in self._scorer_models)
-                     if not tester.use_estimator and not scorer_models_available:
-                          raise ValueError(f"Tester '{tester_name}' is configured to use the scorer_model, but none are available.")
+                     if tester.prompt_ranking_model == 'gt' and not scorer_models_available:
+                          raise ValueError(f"Tester '{tester_name}' is configured with prompt_ranking_model='gt', but no ground truth scorer models are available.")
                      if self.embedder is None: # Also needs embedder
                           raise ValueError(f"Tester '{tester_name}' requires an embedder, but it's not available.")
                 # Add checks for other testers if they have specific requirements
@@ -1338,8 +1338,9 @@ class LLMExperiment:
                     if isinstance(tester, (PreferenceTester, CosineTester)) and estimator is None:
                         print(f"  Skipping {tester_name} for model '{model_name}': Estimator not available.")
                         continue
-                    if isinstance(tester, ImageGenerationTester) and tester.use_estimator and estimator is None:
-                         print(f"  Skipping {tester_name} (use_estimator=True) for model '{model_name}': Estimator not available.")
+                    # For ImageGenerationTester, check if it needs an estimator (prompt_ranking_model != 'gt') and if that estimator is available
+                    if isinstance(tester, ImageGenerationTester) and tester.prompt_ranking_model != 'gt' and estimator is None:
+                         print(f"  Skipping {tester_name} (prompt_ranking_model='{tester.prompt_ranking_model}') for model '{model_name}': Estimator not available.")
                          continue
 
                     # --- Skip ImageGenerationTester for subsequent models (i > 0) ---
