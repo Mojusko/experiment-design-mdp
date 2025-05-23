@@ -64,7 +64,6 @@ class LLMGrid(DiscreteEnv):
                 else:
                     self.tokens[token] += [order]
 
-        import ipdb; ipdb.set_trace()
         total_tokens = len(self.unique_elements)
 
         self.states_num = self.max_episode_length
