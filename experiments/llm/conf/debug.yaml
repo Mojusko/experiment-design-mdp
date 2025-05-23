@@ -10,6 +10,7 @@ feedback:
   adaptive_estimation_start: 0
   adaptive_design_frequency: 0
 experiment:
+   scorer_model: ['sunny']
    episodes: 20
    vocab_size: 50
 # Results directory for debug mode
@@ -31,6 +32,11 @@ tester:
       N_pairs_eval: 500
   - _target_: components.tester.CosineTester
     params: null
+  - _target_: components.tester.ImageGenerationTester
+    params:
+      take_best_worst_N: 4 # Debug specific N
+      prompt_ranking_model: 'sunny' # Match config.yaml
+      # save_worst: false # Default is false
 
 # Use a list of savers with debug settings
 # Only VisitsSaver, VisitsImageSaver, ConfSaver are allowed in explore_only mode
@@ -61,11 +67,15 @@ savers:
   #      # image_size and num_inference_steps are now taken from image_generator defaults
   #      seed_per_prompt: true # Keep deterministic generation per prompt
 
-  #  - _target_: components.saver.ImageGenerationSaver
-  #    params:
-  #      seed: "${seed}"
-  #      take_best_worst_N: 4
-  #      debug_mode: true
-  #      image_size: 32
-  #      num_inference_steps: 20
+  - _target_: components.saver.ImageGenerationSaver
+    params:
+      # seed: "${seed}" # Seed is handled internally by the saver
+      take_best_worst_N: 4 # Debug specific N
+      debug_mode: true # Keep debug mode true
+      image_size: 32 # Keep small image size for debug
+      num_inference_steps: 20 # Keep few inference steps for debug
+      add_scores: ['prompt'] # Match config.yaml
+      secondary_gt_prompt_score_for_model: 'sunny' # Match config.yaml
+      # score_images_with_model: 'gt' # Not used if add_scores does not include 'image'.
+      # prompt_ranking_model: 'gt' # This parameter is unused by the saver
 

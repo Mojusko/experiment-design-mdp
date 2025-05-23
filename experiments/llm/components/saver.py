@@ -192,6 +192,7 @@ class ImageGenerationSaver(BaseSaver):
         self.metrics_filename = self.params.get('metrics_filename', 'image_metrics.json')
         self.save_worst = self.params.get('save_worst', False) # Add save_worst flag, default to False
         self.score_images_with_model = self.params.get('score_images_with_model', 'gt') # 'gt' or scorer_model name
+        self.secondary_gt_prompt_score_for_model = self.params.get('secondary_gt_prompt_score_for_model', None) # 'gt' or scorer_model name for secondary prompt scoring
         # prompt_ranking_model is not directly used by saver, it relies on tester's output (best_scores/worst_scores)
         
     def save_result(self, results):
@@ -289,7 +290,7 @@ class ImageGenerationSaver(BaseSaver):
         
         # Determine scoring model for images if 'image' in self.add_scores
         scoring_model_for_images = None
-        if 'image' in self.add_scores:
+        if 'image' in self.add_scores: # This block is for SCORING GENERATED IMAGES
             if self.score_images_with_model == 'gt':
                 # Assuming ImageGenerationTester runs for the first model, so GT image scoring also uses the first GT model.
                 # LLMExperiment should add 'all_gt_scorer_models' to results.metadata
@@ -322,10 +323,30 @@ class ImageGenerationSaver(BaseSaver):
                         except Exception as e:
                             print(f"Warning: ImageGenerationSaver: Could not create model from estimator for image scoring ('{model_name_for_image_scoring}'): {e}")
 
+        # Determine secondary GT model for prompt scoring if configured
+        secondary_gt_model_for_prompts = None
+        if self.secondary_gt_prompt_score_for_model and 'prompt' in self.add_scores:
+            model_name_for_secondary_prompt_scoring = self.secondary_gt_prompt_score_for_model
+            available_gt_models = results.metadata.get('all_gt_scorer_models')
+            experiment_model_names = results.metadata.get('scorer_model_names', [])
+
+            if not available_gt_models or not experiment_model_names:
+                print(f"Warning: ImageGenerationSaver: Cannot get secondary GT prompt scores for '{model_name_for_secondary_prompt_scoring}'. GT models or names not in results metadata.")
+            elif model_name_for_secondary_prompt_scoring not in experiment_model_names:
+                print(f"Warning: ImageGenerationSaver: Secondary GT prompt scoring model '{model_name_for_secondary_prompt_scoring}' not found in experiment's scorer_model list: {experiment_model_names}")
+            else:
+                model_idx = experiment_model_names.index(model_name_for_secondary_prompt_scoring)
+                if model_idx >= len(available_gt_models) or available_gt_models[model_idx] is None:
+                    print(f"Warning: ImageGenerationSaver: Secondary GT scorer model '{model_name_for_secondary_prompt_scoring}' (index {model_idx}) is not available from all_gt_scorer_models list.")
+                else:
+                    secondary_gt_model_for_prompts = available_gt_models[model_idx]
+                    print(f"ImageGenerationSaver: Will calculate secondary prompt scores using the ground truth scorer model for '{model_name_for_secondary_prompt_scoring}'.")
+
         actual_best_image_scores = [] # Stores actual scores of generated images
+        actual_best_secondary_prompt_scores = [] # Stores secondary GT scores for best prompts
         print("Generating images for BEST prompts:")
-        # best_scores contains prompt scores from the tester
-        for i, (full_prompt, prompt_score_from_tester) in enumerate(zip(best_prompts, best_scores)):
+        # best_scores contains primary prompt scores from the tester
+        for i, (full_prompt, primary_prompt_score) in enumerate(zip(best_prompts, best_scores)):
             print(f"Generating best image {i+1}/{len(best_prompts)} for prompt: {full_prompt}")
             image, image_embedding = generator.sample(full_prompt, embedder=self.embedder)
             
@@ -338,9 +359,21 @@ class ImageGenerationSaver(BaseSaver):
                     print(f"Warning: Failed to score image for prompt '{full_prompt[:30]}...': {e}")
             actual_best_image_scores.append(current_image_score)
 
+            current_secondary_prompt_score = None
+            if secondary_gt_model_for_prompts:
+                try:
+                    # score_prompt returns (score_tensor, embedding_tensor)
+                    score_tensor, _ = secondary_gt_model_for_prompts.score_prompt(full_prompt)
+                    current_secondary_prompt_score = score_tensor.item()
+                except Exception as e:
+                    print(f"Warning: Failed to get secondary GT prompt score for '{full_prompt[:30]}...': {e}")
+            actual_best_secondary_prompt_scores.append(current_secondary_prompt_score)
+
             filename_parts = [f"best_{i+1}"]
             if 'prompt' in self.add_scores:
-                filename_parts.append(f"pscore_{prompt_score_from_tester:.4f}")
+                filename_parts.append(f"pscore_{primary_prompt_score:.4f}")
+                if current_secondary_prompt_score is not None:
+                    filename_parts.append(f"sec_pscore_{current_secondary_prompt_score:.4f}")
             if 'image' in self.add_scores and current_image_score is not None:
                 filename_parts.append(f"iscore_{current_image_score:.4f}")
             img_filename = "_".join(filename_parts) + ".png"
@@ -350,9 +383,10 @@ class ImageGenerationSaver(BaseSaver):
         
         worst_generated_images = []
         actual_worst_image_scores = [] # Stores actual scores of generated images
+        actual_worst_secondary_prompt_scores = [] # Stores secondary GT scores for worst prompts
         print("\nGenerating images for WORST prompts:")
-        # worst_scores contains prompt scores from the tester
-        for i, (full_prompt, prompt_score_from_tester) in enumerate(zip(worst_prompts, worst_scores)):
+        # worst_scores contains primary prompt scores from the tester
+        for i, (full_prompt, primary_prompt_score) in enumerate(zip(worst_prompts, worst_scores)):
             print(f"Generating worst image {i+1}/{len(worst_prompts)} for prompt: {full_prompt}")
             image, image_embedding = generator.sample(full_prompt, embedder=self.embedder)
 
@@ -365,9 +399,20 @@ class ImageGenerationSaver(BaseSaver):
                     print(f"Warning: Failed to score image for prompt '{full_prompt[:30]}...': {e}")
             actual_worst_image_scores.append(current_image_score)
 
+            current_secondary_prompt_score = None
+            if secondary_gt_model_for_prompts:
+                try:
+                    score_tensor, _ = secondary_gt_model_for_prompts.score_prompt(full_prompt)
+                    current_secondary_prompt_score = score_tensor.item()
+                except Exception as e:
+                    print(f"Warning: Failed to get secondary GT prompt score for '{full_prompt[:30]}...': {e}")
+            actual_worst_secondary_prompt_scores.append(current_secondary_prompt_score)
+
             filename_parts = [f"worst_{i+1}"]
             if 'prompt' in self.add_scores:
-                filename_parts.append(f"pscore_{prompt_score_from_tester:.4f}")
+                filename_parts.append(f"pscore_{primary_prompt_score:.4f}")
+                if current_secondary_prompt_score is not None:
+                    filename_parts.append(f"sec_pscore_{current_secondary_prompt_score:.4f}")
             if 'image' in self.add_scores and current_image_score is not None:
                 filename_parts.append(f"iscore_{current_image_score:.4f}")
             img_filename = "_".join(filename_parts) + ".png"
@@ -390,14 +435,17 @@ class ImageGenerationSaver(BaseSaver):
         fig, axes = plt.subplots(n_rows, n_cols, figsize=(4*n_cols, 4*n_rows), squeeze=False) # Adjust height per row
 
         # Plot best images in the first row (axes[0, :])
-        # best_scores contains prompt_scores_from_tester
+        # best_scores contains primary_prompt_scores_from_tester
         # actual_best_image_scores contains actual scores of generated images
-        for i, (img, p_score, full_prompt, i_score) in enumerate(zip(best_generated_images, best_scores, best_prompts, actual_best_image_scores)):
+        # actual_best_secondary_prompt_scores contains secondary GT prompt scores
+        for i, (img, p_score, sec_p_score, full_prompt, i_score) in enumerate(zip(best_generated_images, best_scores, actual_best_secondary_prompt_scores, best_prompts, actual_best_image_scores)):
            ax = axes[0, i]
            ax.imshow(img)
            title_parts = [f"Best {i+1}"]
            if 'prompt' in self.add_scores:
                title_parts.append(f"PScr: {p_score:.2f}")
+               if sec_p_score is not None:
+                   title_parts.append(f"SecPScr: {sec_p_score:.2f}")
            if 'image' in self.add_scores and i_score is not None:
                title_parts.append(f"IScr: {i_score:.2f}")
            ax.set_title(" ".join(title_parts))
@@ -410,14 +458,17 @@ class ImageGenerationSaver(BaseSaver):
             axes[0, i].axis('off')
 
         if self.save_worst and worst_generated_images:
-            # worst_scores contains prompt_scores_from_tester
+            # worst_scores contains primary_prompt_scores_from_tester
             # actual_worst_image_scores contains actual scores of generated images
-            for i, (img, p_score, full_prompt, i_score) in enumerate(zip(worst_generated_images, worst_scores, worst_prompts, actual_worst_image_scores)):
+            # actual_worst_secondary_prompt_scores contains secondary GT prompt scores
+            for i, (img, p_score, sec_p_score, full_prompt, i_score) in enumerate(zip(worst_generated_images, worst_scores, actual_worst_secondary_prompt_scores, worst_prompts, actual_worst_image_scores)):
                ax = axes[1, i]
                ax.imshow(img)
                title_parts = [f"Worst {i+1}"]
                if 'prompt' in self.add_scores:
                    title_parts.append(f"PScr: {p_score:.2f}")
+                   if sec_p_score is not None:
+                       title_parts.append(f"SecPScr: {sec_p_score:.2f}")
                if 'image' in self.add_scores and i_score is not None:
                    title_parts.append(f"IScr: {i_score:.2f}")
                ax.set_title(" ".join(title_parts))
@@ -440,14 +491,20 @@ class ImageGenerationSaver(BaseSaver):
         with open(os.path.join(images_dir, "results.txt"), "w") as f:
             f.write("BEST PROMPTS:\n")
             header_parts = ["Rank"]
-            if 'prompt' in self.add_scores: header_parts.append("PromptScore")
+            if 'prompt' in self.add_scores:
+                header_parts.append("PromptScore")
+                if self.secondary_gt_prompt_score_for_model: # Add header if secondary scoring is active
+                    header_parts.append("SecondaryGTScore")
             if 'image' in self.add_scores: header_parts.append("ImageScore")
             header_parts.append("Prompt")
             f.write("\t".join(header_parts) + "\n")
 
-            for i, (p_score, prompt, i_score) in enumerate(zip(best_scores, best_prompts, actual_best_image_scores)):
+            for i, (p_score, sec_p_score, prompt, i_score) in enumerate(zip(best_scores, actual_best_secondary_prompt_scores, best_prompts, actual_best_image_scores)):
                line_parts = [str(i+1)]
-               if 'prompt' in self.add_scores: line_parts.append(f"{p_score:.6f}")
+               if 'prompt' in self.add_scores:
+                   line_parts.append(f"{p_score:.6f}")
+                   if self.secondary_gt_prompt_score_for_model:
+                       line_parts.append(f"{sec_p_score:.6f}" if sec_p_score is not None else "N/A")
                if 'image' in self.add_scores: line_parts.append(f"{i_score:.6f}" if i_score is not None else "N/A")
                line_parts.append(prompt)
                f.write("\t".join(line_parts) + "\n")
@@ -455,9 +512,12 @@ class ImageGenerationSaver(BaseSaver):
             if self.save_worst and worst_prompts:
                 f.write("\nWORST PROMPTS:\n")
                 f.write("\t".join(header_parts) + "\n")
-                for i, (p_score, prompt, i_score) in enumerate(zip(worst_scores, worst_prompts, actual_worst_image_scores)):
+                for i, (p_score, sec_p_score, prompt, i_score) in enumerate(zip(worst_scores, actual_worst_secondary_prompt_scores, worst_prompts, actual_worst_image_scores)):
                     line_parts = [str(i+1)]
-                    if 'prompt' in self.add_scores: line_parts.append(f"{p_score:.6f}")
+                    if 'prompt' in self.add_scores:
+                        line_parts.append(f"{p_score:.6f}")
+                        if self.secondary_gt_prompt_score_for_model:
+                            line_parts.append(f"{sec_p_score:.6f}" if sec_p_score is not None else "N/A")
                     if 'image' in self.add_scores: line_parts.append(f"{i_score:.6f}" if i_score is not None else "N/A")
                     line_parts.append(prompt)
                     f.write("\t".join(line_parts) + "\n")

@@ -1522,8 +1522,14 @@ class LLMExperiment:
             test_idx = indices[n_train:]
             
             # Add to lists
-            training_words_lists.append([full_list[i] for i in train_idx])
-            testing_words_lists.append([full_list[i] for i in test_idx]) # Original line for test set
+            current_training_words = [full_list[i] for i in train_idx]
+            current_testing_words = [full_list[i] for i in test_idx] # Original line for test set
+            
+            if not current_testing_words:
+                print(f"Warning: LLMExperiment._load_data: Generated empty testing_words_list for vocab file '{path}'. This may cause issues in testers like ImageGenerationTester.")
+
+            training_words_lists.append(current_training_words)
+            testing_words_lists.append(current_testing_words)
             # testing_words_lists.append([full_list[i] for i in train_idx]) # TEMPORARY: Use training set for testing
         
         return training_words_lists, testing_words_lists, []

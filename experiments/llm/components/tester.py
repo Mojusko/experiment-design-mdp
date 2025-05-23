@@ -220,16 +220,30 @@ class ImageGenerationTester(BaseTester):
 
     def _beam_search(self, env, horizon, testing_words_list, scoring_model, beam_width, maximize):
         """Performs beam search to find sequences optimizing the score."""
+        print(f"ImageGenerationTester._beam_search: Received testing_words_list with {len(testing_words_list)} steps for horizon {horizon}.")
+        if testing_words_list and len(testing_words_list) == horizon:
+            for i_h, h_vocab in enumerate(testing_words_list):
+                print(f"  Vocabulary for step {i_h}: {len(h_vocab)} words. First few: {h_vocab[:3] if h_vocab else '[]'}")
+        elif len(testing_words_list) != horizon :
+            print(f"  Warning: testing_words_list length ({len(testing_words_list)}) does not match horizon ({horizon}).")
+        else: # testing_words_list is empty
+            print("  Received empty testing_words_list.")
+
         # Initialize beams: list of (score, sequence_tuple)
         # Start with an empty sequence tuple and score 0 (or score of base prompt if desired)
         beams = [(0.0, tuple())]
 
         for h in range(horizon):
+            if h >= len(testing_words_list) or not testing_words_list[h]:
+                print(f"Warning: ImageGenerationTester._beam_search: testing_words_list[{h}] is empty or not available. Beam search cannot proceed for this step.")
+                beams = [] # Clear beams as no new candidates can be formed
+                break # Terminate beam search
+
             candidates = []
             # For each current beam (sequence)
             for current_score, current_sequence in beams:
                 # Try appending each token from the vocabulary for this step
-                for token in testing_words_list[h]:
+                for token in testing_words_list[h]: # This is now safe due to the check above
                     new_sequence = current_sequence + (token,)
                     try:
                         # Score the new (potentially partial) sequence
@@ -312,6 +326,9 @@ class ImageGenerationTester(BaseTester):
             worst_scores = [score for score, seq in top_n_worst]
             worst_prompts = [create_prompt_from_tokens(seq, env.base_prompt) for seq in worst_sequences]
             print(f"Found {len(worst_sequences)} worst sequences. Worst score: {worst_scores[0] if worst_scores else 'N/A'}")
+
+            # Log the number of prompts found before returning
+            print(f"ImageGenerationTester: Beam search complete. Found {len(best_prompts)} best prompts and {len(worst_prompts)} worst prompts.")
 
         except Exception as e:
             print(f"Error during beam search test: {e}")
