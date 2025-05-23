@@ -491,7 +491,7 @@ def get_scorer_model(model_name: str, env: LLMGrid, embedder: BaseEmbedder) -> V
             try:
                 # Generate image from the sentence
                 # The generator's sample method does not need an embedder if embed_prompt=False (default)
-                generated_image_np, _ = image_generator.sample(prompt_text=sentence)
+                generated_image_np, _ = image_generator.sample(prompt=sentence)
                 generated_image_pil = PILImage.fromarray(generated_image_np)
 
                 # Embed the generated image using the main embedder
