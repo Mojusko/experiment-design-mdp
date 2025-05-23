@@ -675,8 +675,6 @@ def plot_results(directory, cli_model_name=None, save_plots=False): # Added save
                     results_by_type["feedback"][key_info]["preference_error"].append(val["preference_error"])
                 if "cosine_error" in val:
                     results_by_type["feedback"][key_info]["cosine_error"].append(val["cosine_error"])
-            else:
-                print(f"Warning: Feedback data in {f} is not a dictionary. Skipping.")
 
         elif exp_type in results_by_type: # Handle all other types
             if key_info not in results_by_type[exp_type]:

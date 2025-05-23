@@ -220,15 +220,6 @@ class ImageGenerationTester(BaseTester):
 
     def _beam_search(self, env, horizon, testing_words_list, scoring_model, beam_width, maximize):
         """Performs beam search to find sequences optimizing the score."""
-        print(f"ImageGenerationTester._beam_search: Received testing_words_list with {len(testing_words_list)} steps for horizon {horizon}.")
-        if testing_words_list and len(testing_words_list) == horizon:
-            for i_h, h_vocab in enumerate(testing_words_list):
-                print(f"  Vocabulary for step {i_h}: {len(h_vocab)} words. First few: {h_vocab[:3] if h_vocab else '[]'}")
-        elif len(testing_words_list) != horizon :
-            print(f"  Warning: testing_words_list length ({len(testing_words_list)}) does not match horizon ({horizon}).")
-        else: # testing_words_list is empty
-            print("  Received empty testing_words_list.")
-
         # Initialize beams: list of (score, sequence_tuple)
         # Start with an empty sequence tuple and score 0 (or score of base prompt if desired)
         beams = [(0.0, tuple())]
@@ -279,24 +270,25 @@ class ImageGenerationTester(BaseTester):
             if self.prompt_ranking_model == 'gt':
                 if first_gt_scorer_model is None:
                     # Try to get the name of the first model for a more informative error
-                    first_model_name_in_exp = OmegaConf.to_container(cfg.experiment.scorer_model_names, resolve=True)[0] if OmegaConf.is_list(cfg.experiment.scorer_model_names) and len(cfg.experiment.scorer_model_names)>0 else "N/A"
+                    # Use cfg.experiment.scorer_model which should be a list of names
+                    first_model_name_in_exp = OmegaConf.to_container(cfg.experiment.scorer_model, resolve=True)[0] if OmegaConf.is_list(cfg.experiment.scorer_model) and len(cfg.experiment.scorer_model)>0 else "N/A"
                     raise ValueError(f"Cannot use 'gt' for prompt ranking: Ground truth scorer model for '{first_model_name_in_exp}' is not available.")
                 scoring_model_for_ranking = first_gt_scorer_model
                 # Log which GT model is being used (name of the first model in the experiment config)
-                first_model_name_in_exp = OmegaConf.to_container(cfg.experiment.scorer_model_names, resolve=True)[0] if OmegaConf.is_list(cfg.experiment.scorer_model_names) and len(cfg.experiment.scorer_model_names)>0 else "N/A"
+                first_model_name_in_exp = OmegaConf.to_container(cfg.experiment.scorer_model, resolve=True)[0] if OmegaConf.is_list(cfg.experiment.scorer_model) and len(cfg.experiment.scorer_model)>0 else "N/A"
                 print(f"ImageGenerationTester: Using ground truth model ('{first_model_name_in_exp}') for prompt ranking. Horizon {horizon}, beam width {self.beam_width}")
             else: # It's a specific model name
                 model_name_to_use = self.prompt_ranking_model
                 
-                # Get experiment's model names list from cfg
-                experiment_model_names = OmegaConf.to_container(cfg.experiment.scorer_model_names, resolve=True)
-                if not experiment_model_names or not isinstance(experiment_model_names, list):
-                    raise ValueError(f"Cannot rank with '{model_name_to_use}': No scorer_model_names list configured in experiment.")
+                # Get experiment's model names list from cfg.experiment.scorer_model
+                experiment_model_names_list = OmegaConf.to_container(cfg.experiment.scorer_model, resolve=True)
+                if not experiment_model_names_list or not isinstance(experiment_model_names_list, list):
+                    raise ValueError(f"Cannot rank with '{model_name_to_use}': No scorer_model list configured in experiment (cfg.experiment.scorer_model).")
 
-                if model_name_to_use not in experiment_model_names:
-                    raise ValueError(f"Prompt ranking model '{model_name_to_use}' not found in experiment's scorer_model list: {experiment_model_names}")
+                if model_name_to_use not in experiment_model_names_list:
+                    raise ValueError(f"Prompt ranking model '{model_name_to_use}' not found in experiment's scorer_model list: {experiment_model_names_list}")
                 
-                model_idx = experiment_model_names.index(model_name_to_use)
+                model_idx = experiment_model_names_list.index(model_name_to_use)
                 
                 if all_estimators_list is None or model_idx >= len(all_estimators_list) or all_estimators_list[model_idx] is None:
                     raise ValueError(f"Estimator for prompt ranking model '{model_name_to_use}' (index {model_idx}) is not available from all_estimators_list.")
@@ -315,7 +307,7 @@ class ImageGenerationTester(BaseTester):
             best_sequences = [list(seq) for score, seq in top_n_best] # Convert tuples back to lists
             best_scores = [score for score, seq in top_n_best]
             best_prompts = [create_prompt_from_tokens(seq, env.base_prompt) for seq in best_sequences]
-            print(f"Found {len(best_sequences)} best sequences. Best score: {best_scores[0] if best_scores else 'N/A'}")
+            print(f"Beam search: Found {len(best_sequences)} best sequences (Top score: {best_scores[0]:.4f})" if best_scores else "Beam search: Found 0 best sequences.")
 
             # Find N worst sequences
             print("Starting beam search for worst sequences...")
@@ -325,10 +317,10 @@ class ImageGenerationTester(BaseTester):
             worst_sequences = [list(seq) for score, seq in top_n_worst] # Convert tuples back to lists
             worst_scores = [score for score, seq in top_n_worst]
             worst_prompts = [create_prompt_from_tokens(seq, env.base_prompt) for seq in worst_sequences]
-            print(f"Found {len(worst_sequences)} worst sequences. Worst score: {worst_scores[0] if worst_scores else 'N/A'}")
+            print(f"Beam search: Found {len(worst_sequences)} worst sequences (Top score: {worst_scores[0]:.4f})" if worst_scores else "Beam search: Found 0 worst sequences.")
 
             # Log the number of prompts found before returning
-            print(f"ImageGenerationTester: Beam search complete. Found {len(best_prompts)} best prompts and {len(worst_prompts)} worst prompts.")
+            print(f"ImageGenerationTester: Beam search complete ({len(best_prompts)} best, {len(worst_prompts)} worst).")
 
         except Exception as e:
             print(f"Error during beam search test: {e}")

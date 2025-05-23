@@ -1068,16 +1068,19 @@ class ReadableVisitsSaver(BaseSaver):
                      print(f"Skipping save for {policy_filename} as it already exists and skip_existing is True.")
                      continue
 
-                # Print last few lines to console for confirmation
+                # Print last few lines to console for confirmation - RESTORED
                 print(f"\nPolicy {p_idx+1} - Last few lines:")
                 print("\n".join(policy_output_lines[-5:]))
 
                 try:
                     with open(output_path, 'w') as f:
                         f.write("\n".join(policy_output_lines))
-                    print(f"Saved readable visits for policy {p_idx+1} to: {output_path}")
+                    print(f"Saved readable visits for policy {p_idx+1} to: {output_path}") # Restored individual save message
                 except Exception as e:
                     print(f"Error saving readable visits for policy {p_idx+1} to {output_path}: {e}")
+            
+            # After the loop, print a summary message
+            print(f"ReadableVisitsSaver: Finished processing {num_policies_in_data} policies. Files saved to '{self.results_dir}'.")
 
         except Exception as e:
             # Catch errors during the main processing loop (e.g., determining num_policies)

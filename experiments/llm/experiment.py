@@ -1375,10 +1375,15 @@ class LLMExperiment:
                         # Process and store results for this model
                         if tester_results:
                             for key, value in tester_results.items():
-                                if isinstance(value, float):
+                                if key == "image_generation" and isinstance(value, dict):
+                                    # Summarize image_generation results
+                                    best_count = len(value.get("best_prompts", []))
+                                    worst_count = len(value.get("worst_prompts", []))
+                                    print(f"    Model '{model_name}' - {key}: (Best: {best_count}, Worst: {worst_count})")
+                                elif isinstance(value, float):
                                     print(f"    Model '{model_name}' - {key}: {value:.4f}")
                                 else:
-                                    # For non-float values (like the 'image_generation' dict), print without float formatting
+                                    # For other non-float values, print as is (or consider summarizing if too verbose)
                                     print(f"    Model '{model_name}' - {key}: {value}")
 
                                 # If the current tester is ImageGenerationTester,
