@@ -220,8 +220,8 @@ def get_scorer_model(model_name: str, env: 'LLMGrid', embedder: 'BaseEmbedder') 
                 if env.verbose or (i + 1) % 10 == 0 or i == len(sentences) - 1:
                     print(f"    Processed sentence {i+1}/{len(sentences)} for {model_name} GT.")
             except Exception as e:
-                print(f"    Error processing sentence '{sentence}' for {model_name} GT: {e}. Skipping this sentence.")
-                continue
+                print(f"    Error processing sentence '{sentence}' for {model_name} GT: {e}. Crashing.")
+                raise # Re-raise the caught exception to stop execution
         
         if not image_embeddings_list:
             raise ValueError(f"No valid image embeddings generated for '{model_name}' model from '{sentences_file_path}'.")
