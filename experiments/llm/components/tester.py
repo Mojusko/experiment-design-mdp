@@ -2,7 +2,8 @@ import os # Added os import
 import torch
 import numpy as np
 from abc import ABC, abstractmethod
-from doexpy.env.llm import create_prompt_from_tokens, DotProductModel # Removed unused create_prompt
+from doexpy.env.llm import create_prompt_from_tokens # Removed DotProductModel from here
+from experiments.llm.models.scorer_models import DotProductModel # Import DotProductModel from new location
 
 def generate_test_sequence(rng, word_lists, horizon):
     """Generate a test sequence using the appropriate word list for each horizon step"""
