@@ -300,6 +300,8 @@ class LLMExperiment:
     
     def run(self):
         total_episodes = self.cfg.experiment.episodes
+        if not isinstance(total_episodes, int) or total_episodes <= 0:
+            raise ValueError(f"LLMExperiment.run() requires cfg.experiment.episodes to be a positive integer, but got: {total_episodes}")
         est_freq = self.cfg.feedback.adaptive_estimation_frequency
         est_start = self.cfg.feedback.adaptive_estimation_start
         num_policies = self.cfg.feedback.num_policies
@@ -514,6 +516,8 @@ class LLMExperiment:
     def run_explore_only(self):
         """Runs only the exploration phase and saves visits/images."""
         total_episodes = self.cfg.experiment.episodes
+        if not isinstance(total_episodes, int) or total_episodes <= 0:
+            raise ValueError(f"LLMExperiment.run_explore_only() requires cfg.experiment.episodes to be a positive integer, but got: {total_episodes}")
         print(f"Running exploration for {total_episodes} episodes...")
 
         # Run exploration without estimation callback
