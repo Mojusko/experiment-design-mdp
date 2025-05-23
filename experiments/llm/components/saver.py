@@ -509,9 +509,9 @@ class ImageGenerationSaver(BaseSaver):
            ax.imshow(img)
            title_parts = [f"Best {i+1}"]
            if 'prompt' in self.add_scores:
-               title_parts.append(f"PScr: {p_score:.2f}")
+               title_parts.append(f"RankScr: {p_score:.2f}")
                if sec_p_score is not None:
-                   title_parts.append(f"SecPScr: {sec_p_score:.2f}")
+                   title_parts.append(f"GTScr: {sec_p_score:.2f}")
            if 'image' in self.add_scores and i_score is not None:
                title_parts.append(f"IScr: {i_score:.2f}")
            ax.set_title(" ".join(title_parts))
@@ -532,9 +532,9 @@ class ImageGenerationSaver(BaseSaver):
                ax.imshow(img)
                title_parts = [f"Worst {i+1}"]
                if 'prompt' in self.add_scores:
-                   title_parts.append(f"PScr: {p_score:.2f}")
+                   title_parts.append(f"RankScr: {p_score:.2f}")
                    if sec_p_score is not None:
-                       title_parts.append(f"SecPScr: {sec_p_score:.2f}")
+                       title_parts.append(f"GTScr: {sec_p_score:.2f}")
                if 'image' in self.add_scores and i_score is not None:
                    title_parts.append(f"IScr: {i_score:.2f}")
                ax.set_title(" ".join(title_parts))
@@ -558,9 +558,9 @@ class ImageGenerationSaver(BaseSaver):
             f.write("BEST PROMPTS:\n")
             header_parts = ["Rank"]
             if 'prompt' in self.add_scores:
-                header_parts.append("PromptScore")
+                header_parts.append("RankScore")
                 if self.secondary_gt_prompt_score_for_model: # Add header if secondary scoring is active
-                    header_parts.append("SecondaryGTScore")
+                    header_parts.append("GTScore")
             if 'image' in self.add_scores: header_parts.append("ImageScore")
             header_parts.append("Prompt")
             f.write("\t".join(header_parts) + "\n")
