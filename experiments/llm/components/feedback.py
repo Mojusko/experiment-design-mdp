@@ -276,10 +276,10 @@ class FeedbackFactory:
             # env.max_episode_length corresponds to the number of original vocabulary files
             for k_vocab_idx in range(env.max_episode_length):
                 # Skip the first vocabulary file (bases.txt, k_vocab_idx == 0) for V calculation
-                if k_vocab_idx == 0:
-                    if env.verbose:
-                        print(f"V calc: Skipping vocabulary index {k_vocab_idx} (bases) for V matrix contribution.")
-                    continue
+                #if k_vocab_idx == 0:
+                #    if env.verbose:
+                #        print(f"V calc: Skipping vocabulary index {k_vocab_idx} (bases) for V matrix contribution.")
+                #    continue
 
                 action_indices_for_this_vocab_file = []
                 # Find all unique tokens (and their action_ids) that originated from this k_vocab_idx
