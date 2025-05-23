@@ -490,11 +490,14 @@ def get_scorer_model(model_name: str, env: LLMGrid, embedder: BaseEmbedder) -> V
         for i, sentence in enumerate(sentences):
             try:
                 # Generate image from the sentence
-                # The generator's sample method does not need an embedder if embed_prompt=False (default)
-                generated_image_np, _ = image_generator.sample(prompt=sentence)
+                # The generator's sample method now requires an embedder.
+                generated_image_np, img_embedding_tensor = image_generator.sample(prompt=sentence, embedder=embedder)
                 generated_image_pil = PILImage.fromarray(generated_image_np)
 
                 # Embed the generated image using the main embedder
+                # The image_embedding is already returned by the sample method, so we use that.
+                # img_embedding = embedder.embed_image(generated_image_pil) # Expected [1, dim]
+                img_embedding = img_embedding_tensor # Use the embedding returned by sample()
                 # The embedder (e.g., CLIPEmbedder) handles normalization if configured.
                 img_embedding = embedder.embed_image(generated_image_pil) # Expected [1, dim]
                 image_embeddings_list.append(img_embedding)
