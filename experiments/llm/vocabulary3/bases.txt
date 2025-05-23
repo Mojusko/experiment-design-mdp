@@ -1,271 +1,84 @@
 A man drinking tea
-a woman sipping coffee
-a child drinking juice
-an old man drinking water
-a robot drinking oil
 A robot painting a landscape
-a cyborg sketching a portrait
-an android sculpting a statue
-a drone spray-painting a mural
-a mech coloring a book
 A dragon reading a book
-a griffin studying a scroll
-a phoenix perusing a tablet
-a hydra deciphering a codex
-a wyvern examining a map
 A cat DJing at a party
-a dog playing drums at a concert
-a hamster singing karaoke
-a parrot MCing an event
-a ferret breakdancing
 A wizard summoning a storm
-a sorceress conjuring a blizzard
-a mage calling down lightning
-an enchanter creating a hurricane
-a shaman invoking a typhoon
 An alien exploring Earth
-a Martian investigating Mars
-a Venusian surveying Venus
-a Jovian charting Jupiter
-a Plutonian probing Pluto
 A knight playing guitar
-a paladin playing a lute
-a samurai playing a shamisen
-a viking playing a lyre
-a warrior playing a warhorn
 A scientist discovering a new planet
-an astronomer finding a new galaxy
-a biologist identifying a new species
-a physicist theorizing a new particle
-a chemist synthesizing a new compound
 A chef baking a cake
-a baker kneading dough
-a pastry chef decorating a tart
-a cook frying an egg
-a gourmand tasting a delicacy
 A detective solving a mystery
-an investigator cracking a case
-a sleuth uncovering a clue
-a P.I. following a lead
-a profiler analyzing a suspect
 A musician playing a violin
-a violinist bowing a Stradivarius
-a fiddler playing a jig
-a cellist performing a sonata
-a bassist plucking a double bass
 A group of friends laughing
-a circle of companions chuckling
-a band of buddies giggling
-a team of pals snickering
-a squad of mates roaring with laughter
 A lone wolf howling at the moon
-a solitary coyote yelping at the stars
-a single fox barking at the night sky
-an individual dingo wailing at the darkness
-a lone jackal crying at the celestial sphere
 A bustling city street at night
-a crowded urban avenue after dark
-a busy metropolitan road in the evening
-a teeming downtown thoroughfare at midnight
-a lively city lane under streetlights
- horse galloping in a field
-A computer screen with code
-a canvas with abstract art
-a stage with a spotlight
-a kitchen with sizzling pans
-a laboratory with bubbling beakers
-A clock ticking
-a phone ringing
-a door creaking
-a floorboard groaning
-a distant siren
-A smile
-a frown
-a tear
-a wink
-a sigh
-A handshake
-a hug
-a kiss
-a wave
-a bow
-A red car
-a blue boat
-a green bicycle
-a yellow taxi
-a black motorcycle
-A cup of tea on a saucer
-a book with a bookmark
-a plant in a pot
-a picture in a frame
-a candle in a holder
-A path through a snowy forest
-a bridge over a rushing river
-a tunnel through a mountain
-a staircase to a tower
-a ladder to a treehouse
-A robot serving coffee
-a drone delivering a package
-a self-driving car
-a virtual reality headset
-a smart home assistant
-A knight fighting a griffin
-a wizard battling a demon
-a rogue sneaking past guards
-a cleric healing the wounded
-a bard singing a tale
-A spaceship exploring a nebula
-an astronaut walking on Mars
-an alien city on a distant planet
-a black hole
-a supernova
-A dragon guarding a treasure
-a unicorn in a meadow
-a phoenix rising from flames
-a mermaid on a rock
-a gnome in a garden
-A detective examining a clue
-a spy on a secret mission
-a thief stealing a jewel
-a police officer chasing a suspect
-a judge in a courtroom
-A scientist in a lab coat
-an artist with a beret
-a musician with a guitar case
-a writer with a laptop
-a chef with a tall hat
-A haunted mansion on a hill
-a graveyard at midnight
-a dark forest with glowing eyes
-a vampire in a coffin
-a werewolf howling
-A secret door behind a bookshelf
-a hidden map in an old book
-a mysterious artifact in a museum
-a coded message
-a lost civilization
-A superhero with a cape
-a villain with a menacing laugh
-a city skyline at night
-a secret hideout
-a powerful gadget
-A magical sword
-an enchanted amulet
-a cursed ring
-a spellbook
-a potion
-A time traveler arriving in the past
-a dinosaur roaming the earth
-a futuristic city with flying cars
-a portal to another dimension
-a paradox in time
-A talking squirrel
-a walking tree
-a sentient cloud
-a living flame
-a conscious ocean
-A dream journal
-a crystal pendulum
-a Ouija board
-a set of ancient runes
-a prophecy foretold
-A warm cup of cocoa
-a knitted scarf
-a crackling fireplace
-a comfortable sofa
-a snowy landscape outside
-A bustling bazaar
-a quiet temple
-a noisy concert hall
-a serene garden
-a crowded subway car
-A single sunflower
-a field of poppies
-a giant sequoia
-a bonsai tree
-a carnivorous plant
-A thundering waterfall
-a babbling brook
-a stormy sea
-a placid lake
-a geyser erupting
-A snow-covered volcano
-a desert oasis
-a deep sea trench
-a rolling prairie
-a mangrove swamp
-A sunrise over a desert
-a sunset over a cityscape
-a meteor shower
-a crescent moon
-a lunar eclipse
-A child's finger painting
-a Renaissance masterpiece
-a charcoal sketch
-an architectural model
-a vibrant tapestry
-A love poem
-a secret code
-a historical document
-a science fiction epic
-a collection of fables
-A musical scale
-a rock band
-a solo piano
-a choir singing
-a tribal drum circle
-A ballet dancer's leap
-a martial artist's kick
-a potter's wheel
-a philosopher's paradox
-a lover's quarrel
-A ruined temple
-a high-tech laboratory
-a cozy cottage
-a nomadic yurt
-a solitary watchtower
-A keycard
-a revolving door
-a porthole
-a drawbridge
-a wormhole
-A single grain of sand
-a polished pebble
-a gnarled root
-a shed snakeskin
-a piece of coral
-A footprint in the snow
-a ripple in a teacup
-an echo in a canyon
-a shadow puppet
-a whisper on the breeze
-A flickering gas lamp on a foggy street
-a lone tent in a vast wilderness
-a single comet in a dark sky
-a lost puppy in a bustling market
-a hidden spring in a dry desert
-A shattered teacup
-an old map
-a tarnished locket
-a burnt page
-a silent grandfather clock
-A baker kneading bread
-a florist arranging flowers
-a pilot landing a helicopter
-a professor giving a lecture
-a student taking notes
-A kitten playing with yarn
-a puppy chewing a bone
-a bird feeding its chicks
-a goldfish in a castle
-a pony in a paddock
-A computer motherboard
-a blank canvas
-an empty stage
-a clean kitchen counter
-a sterile laboratory
-A grandfather clock chiming
-a cell phone vibrating
-a gate creaking
-a stair groaning
-a distant train whistle
+A quiet forest path
+A majestic eagle soaring
+A playful dolphin leaping
+A hidden treasure chest
+A philosopher pondering by a waterfall
+A spaceship landing on a vibrant alien planet
+A child building a sandcastle on a futuristic beach
+A mythical creature emerging from a misty lake
+A steampunk inventor showcasing a new contraption
+A group of animals having a tea party in the woods
+A lone astronaut gazing at Earth from the Moon
+A bustling medieval marketplace
+A serene zen garden with a koi pond
+A cyberpunk hacker in a neon-lit alley
+A giant treehouse village in an enchanted forest
+A pirate ship navigating a stormy sea
+A secret agent on a high-speed chase
+A fantasy warrior battling a colossal beast
+A vintage train chugging through snowy mountains
+A hidden library filled with ancient scrolls
+A musician composing a symphony under the stars
+A dancer performing on a floating stage
+A philosopher debating with a robot
+An artist sculpting with light
+A gardener tending to a bioluminescent forest
+A time traveler witnessing a historical event
+A chef cooking with exotic alien ingredients
+A detective investigating a crime in a virtual world
+A musician playing an instrument made of crystal
+A group of adventurers exploring a lost temple
+A lone lighthouse keeper on a stormy night
+A bustling intergalactic spaceport
+A tranquil underwater city
+A majestic griffin soaring over mountains
+A playful sprite hiding in a flower
+A hidden alchemist's laboratory
+A scholar deciphering an ancient prophecy
+A spaceship crew encountering a cosmic anomaly
+A child befriending a gentle giant
+A mythical phoenix rising from ashes
+A steampunk city powered by clockwork and steam
+A group of animals operating a complex machine
+A lone wanderer crossing a vast desert
+A futuristic city with flying vehicles
+A serene monastery nestled in high mountains
+A cyberpunk street food vendor
+A giant kraken attacking a sailing ship
+A secret garden hidden behind a waterfall
+A musician leading a parade of fantastical creatures
+A dancer made of stars and nebulae
+A king holding court in a crystal palace
+A robot butler serving tea to a cyborg
+An explorer discovering a new species of glowing fungi
+A sorcerer battling a shadow monster
+A pilot navigating an asteroid field
+A group of children playing in a zero-gravity playground
+A chef preparing a meal for gods
+A detective in a film noir setting
+A musician whose music can alter reality
+A knight defending a village from a mechanical dragon
+A scientist creating a miniature black hole
+A cat piloting a small submarine
+A wizard teaching magic to a group of squirrels
+An alien diplomat addressing a council of planets
+A chef whose restaurant is on a comet
+A detective solving a case on a generation ship
+A musician playing a concert for an audience of ghosts
+A group of friends on a road trip through a dreamscape
+A lone tree on a floating island
+A city built on the back of a colossal turtle

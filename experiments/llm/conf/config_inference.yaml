@@ -55,7 +55,7 @@ tester:
   - _target_: components.tester.ImageGenerationTester
     params:
        take_best_worst_N: 5 # Default N
-       use_estimator: true # Use the loaded estimator for generating best/worst prompts
+       prompt_ranking_model: ${experiment.scorer_model} # Use 'gt' or a specific scorer_model name (e.g., the one being inferred)
        save_worst: false # Default is false
   - _target_: components.tester.HumanFeedbackBenchmarkTester
     params: {} # No specific params needed in YAML, uses cfg and passed objects
@@ -73,8 +73,9 @@ savers:
   - _target_: components.saver.ImageGenerationSaver # Saves images and image_metrics.json
     params:
       take_best_worst_N: 5 # Match tester N
-      add_image_score: true # Score images
-      score_with_gt: false   # Use learned estimator for scoring images
+      prompt_ranking_model: ${experiment.scorer_model} # Match tester's ranking model
+      add_scores: ['image', 'prompt'] # Options: 'image', 'prompt'. Default: ['image', 'prompt']
+      score_images_with_model: ${experiment.scorer_model}   # Use 'gt' or a specific scorer_model name (e.g., the one being inferred)
       save_worst: false # Match tester setting
   #  - _target_: components.saver.LearnedEstimatorSaver # Save the estimator trained from visits
   #    params:

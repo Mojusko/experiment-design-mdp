@@ -1293,6 +1293,9 @@ class LLMExperiment:
         results.add_metadata('embedder_normalize', self.embedder.normalize)
         # Add scorer model names to metadata
         results.add_metadata('scorer_model_names', self.scorer_model_names)
+        # Add all GT scorer models to metadata for ImageGenerationSaver
+        results.add_metadata('all_gt_scorer_models', self._scorer_models)
+
 
         # Add the resolved config as a plain dictionary for the ConfSaver
         config_dict = OmegaConf.to_container(self.cfg, resolve=True)
@@ -1360,6 +1363,11 @@ class LLMExperiment:
                         # Add feedback object if the tester is CosineTester
                         if isinstance(tester, CosineTester):
                             test_args['feedback'] = self.feedbacks[i]
+                        
+                        # For ImageGenerationTester, pass all estimators and GT models
+                        if isinstance(tester, ImageGenerationTester):
+                            test_args['all_estimators'] = self.estimators # Pass the full list
+                            test_args['all_gt_scorer_models'] = self._scorer_models # Pass the full list
 
                         tester_results = tester.run_test(**test_args)
 
@@ -1382,10 +1390,12 @@ class LLMExperiment:
                                     if model_name not in per_model_metrics_collection:
                                         per_model_metrics_collection[model_name] = {}
                                     per_model_metrics_collection[model_name][key] = value
-                                    # Removed appending to all_preference_errors and all_cosine_errors
 
                     except Exception as e:
                         print(f"  Error running tester {tester_name} for model '{model_name}': {e}")
+                        # Optionally, re-raise or log traceback for critical errors
+                        # import traceback
+                        # print(traceback.format_exc())
 
             print("--------------------------------------\n")
         # Removed redundant else block here

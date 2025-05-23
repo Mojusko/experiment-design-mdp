@@ -174,33 +174,23 @@ class ImageGenerationTester(BaseTester):
         self.params = params or {}
         # embedder is passed to super() which stores it
         self.take_best_worst_N = self.params.get('take_best_worst_N', 8) # N sequences to return
-        self.use_estimator = self.params.get('use_estimator', False)
+        self.prompt_ranking_model = self.params.get('prompt_ranking_model', 'gt') # 'gt' or scorer_model name
         self.beam_width = self.params.get('beam_width', 15) # Beam width for search (K in beam search)
         # Pass env, embedder to the base class constructor
         super().__init__(env=env, embedder=embedder, params=params)
         print(f"Initialized {self.__class__.__name__} with take_best_worst_N={self.take_best_worst_N}, "
-              f"use_estimator={self.use_estimator}, beam_width={self.beam_width}")
+              f"prompt_ranking_model='{self.prompt_ranking_model}', beam_width={self.beam_width}")
 
     # Added scorer_model to signature
-    def run_test(self, cfg, env, estimator, theta_star, scorer_model, training_words_list, testing_words_list, visits=None):
+    # Added all_estimators and all_gt_scorer_models for specific model selection
+    def run_test(self, cfg, env, estimator, theta_star, scorer_model, training_words_list, testing_words_list, visits=None, all_estimators=None, all_gt_scorer_models=None):
         """Run the image generation test using beam search.
 
         This tester finds the top N best and worst prompts based on the scorer model or estimator,
         using beam search to explore sequences.
 
-        If use_estimator is True, it will use the estimator instead of the ground truth model for scoring.
+        The model for ranking is determined by `self.prompt_ranking_model`.
         """
-        # Determine which model to use for scoring and store it for helper methods
-        if self.use_estimator:
-            print(f"Using estimator model for {self.__class__.__name__}")
-            # Store the specific estimator passed for this run
-            self.current_estimator = estimator
-            # No need to store scorer_model locally, it's passed to _run_beam_search_test
-        # else: # scorer_model is passed directly, no need for self.current_scorer_model
-            # print(f"Using ground truth model for {self.__class__.__name__}")
-            # Store the specific scorer_model passed for this run
-            # self.current_scorer_model = scorer_model # REMOVED
-
         # test_rng = np.random.RandomState(42) # Removed unused RNG
         horizon = env.max_episode_length # Use horizon from env
         # Make sure testing_words_list is a list of lists with one list per horizon step
@@ -208,8 +198,10 @@ class ImageGenerationTester(BaseTester):
             testing_words_list = [testing_words_list] * horizon
 
         # Beam search approach: find top N best and worst sequences
-        # Pass the specific scorer_model for this iteration to the helper method
-        return self._run_beam_search_test(cfg, env, horizon, testing_words_list, scorer_model, estimator)
+        # Pass necessary models and lists to the helper method
+        return self._run_beam_search_test(cfg, env, horizon, testing_words_list,
+                                          scorer_model, estimator, # These are for the current (first) model iteration
+                                          all_estimators, all_gt_scorer_models)
 
     def _score_sequence(self, sequence, env, horizon, testing_words_list, scoring_model):
         """Scores a potentially partial sequence by padding and using the scoring model."""
@@ -260,31 +252,50 @@ class ImageGenerationTester(BaseTester):
         # Final beams are sorted by score according to 'maximize'
         return beams # Returns list of (score, sequence_tuple)
 
-    # Added scorer_model and estimator arguments
-    def _run_beam_search_test(self, cfg, env, horizon, testing_words_list, scorer_model, estimator):
+    # Added scorer_model (first GT model), estimator (first learned estimator),
+    # all_estimators_list, and all_gt_scorer_models_list
+    def _run_beam_search_test(self, cfg, env, horizon, testing_words_list,
+                              first_gt_scorer_model, first_estimator,
+                              all_estimators_list, all_gt_scorer_models_list):
         """Runs beam search to find top N best and worst sequences."""
+        from omegaconf import OmegaConf # For accessing list config
+
         try:
-            # Determine which scoring model to use based on self.use_estimator
-            if self.use_estimator:
-                # Use the estimator passed to this method
-                if estimator is None:
-                    raise ValueError("Cannot use estimator model when estimator passed is None.")
-                if self.embedder is None:
-                    raise ValueError("Cannot create estimator model without an embedder instance.")
-                # Use the passed estimator instance directly
-                scoring_model_to_use = create_dot_product_model_from_estimator(estimator, self.embedder)
-                print(f"Running beam search test with estimator model, horizon {horizon}, beam width {self.beam_width}")
-            else:
-                # Use the scorer_model passed to this method
-                if scorer_model is None:
-                    raise ValueError("Cannot use ground truth model when scorer_model passed is None.")
-                scoring_model_to_use = scorer_model
-                print(f"Running beam search test with ground truth model, horizon {horizon}, beam width {self.beam_width}")
+            scoring_model_for_ranking = None
+            if self.prompt_ranking_model == 'gt':
+                if first_gt_scorer_model is None:
+                    # Try to get the name of the first model for a more informative error
+                    first_model_name_in_exp = OmegaConf.to_container(cfg.experiment.scorer_model_names, resolve=True)[0] if OmegaConf.is_list(cfg.experiment.scorer_model_names) and len(cfg.experiment.scorer_model_names)>0 else "N/A"
+                    raise ValueError(f"Cannot use 'gt' for prompt ranking: Ground truth scorer model for '{first_model_name_in_exp}' is not available.")
+                scoring_model_for_ranking = first_gt_scorer_model
+                # Log which GT model is being used (name of the first model in the experiment config)
+                first_model_name_in_exp = OmegaConf.to_container(cfg.experiment.scorer_model_names, resolve=True)[0] if OmegaConf.is_list(cfg.experiment.scorer_model_names) and len(cfg.experiment.scorer_model_names)>0 else "N/A"
+                print(f"ImageGenerationTester: Using ground truth model ('{first_model_name_in_exp}') for prompt ranking. Horizon {horizon}, beam width {self.beam_width}")
+            else: # It's a specific model name
+                model_name_to_use = self.prompt_ranking_model
+                
+                # Get experiment's model names list from cfg
+                experiment_model_names = OmegaConf.to_container(cfg.experiment.scorer_model_names, resolve=True)
+                if not experiment_model_names or not isinstance(experiment_model_names, list):
+                    raise ValueError(f"Cannot rank with '{model_name_to_use}': No scorer_model_names list configured in experiment.")
+
+                if model_name_to_use not in experiment_model_names:
+                    raise ValueError(f"Prompt ranking model '{model_name_to_use}' not found in experiment's scorer_model list: {experiment_model_names}")
+                
+                model_idx = experiment_model_names.index(model_name_to_use)
+                
+                if all_estimators_list is None or model_idx >= len(all_estimators_list) or all_estimators_list[model_idx] is None:
+                    raise ValueError(f"Estimator for prompt ranking model '{model_name_to_use}' (index {model_idx}) is not available from all_estimators_list.")
+                
+                target_estimator = all_estimators_list[model_idx]
+                if self.embedder is None: # self.embedder is from BaseTester.__init__
+                    raise ValueError(f"Cannot create estimator model for prompt ranking ('{model_name_to_use}') without an embedder instance.")
+                scoring_model_for_ranking = create_dot_product_model_from_estimator(target_estimator, self.embedder)
+                print(f"ImageGenerationTester: Using estimator for '{model_name_to_use}' for prompt ranking. Horizon {horizon}, beam width {self.beam_width}")
 
             # Find N best sequences
             print("Starting beam search for best sequences...")
-            # Use the determined scoring_model_to_use
-            best_results = self._beam_search(env, horizon, testing_words_list, scoring_model_to_use, self.beam_width, maximize=True)
+            best_results = self._beam_search(env, horizon, testing_words_list, scoring_model_for_ranking, self.beam_width, maximize=True)
             # Extract top N best sequences and scores
             top_n_best = best_results[:self.take_best_worst_N]
             best_sequences = [list(seq) for score, seq in top_n_best] # Convert tuples back to lists
@@ -294,8 +305,7 @@ class ImageGenerationTester(BaseTester):
 
             # Find N worst sequences
             print("Starting beam search for worst sequences...")
-            # Use the determined scoring_model_to_use
-            worst_results = self._beam_search(env, horizon, testing_words_list, scoring_model_to_use, self.beam_width, maximize=False)
+            worst_results = self._beam_search(env, horizon, testing_words_list, scoring_model_for_ranking, self.beam_width, maximize=False)
             # Extract top N worst sequences and scores (top N from the ascending sort)
             top_n_worst = worst_results[:self.take_best_worst_N]
             worst_sequences = [list(seq) for score, seq in top_n_worst] # Convert tuples back to lists
