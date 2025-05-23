@@ -191,8 +191,33 @@ class ImageGenerationSaver(BaseSaver):
         self.add_scores = self.params.get('add_scores', ['image', 'prompt']) # List: 'image', 'prompt'
         self.metrics_filename = self.params.get('metrics_filename', 'image_metrics.json')
         self.save_worst = self.params.get('save_worst', False) # Add save_worst flag, default to False
-        self.score_images_with_model = self.params.get('score_images_with_model', 'gt') # 'gt' or scorer_model name
-        self.secondary_gt_prompt_score_for_model = self.params.get('secondary_gt_prompt_score_for_model', None) # 'gt' or scorer_model name for secondary prompt scoring
+
+        # Process score_images_with_model
+        raw_score_images_with_model = self.params.get('score_images_with_model', 'gt')
+        if isinstance(raw_score_images_with_model, list):
+            if len(raw_score_images_with_model) == 1:
+                self.score_images_with_model = raw_score_images_with_model[0]
+            else:
+                raise ValueError(f"ImageGenerationSaver: score_images_with_model must be a string or a single-element list, got {raw_score_images_with_model}")
+        elif isinstance(raw_score_images_with_model, str):
+            self.score_images_with_model = raw_score_images_with_model
+        else:
+            raise ValueError(f"ImageGenerationSaver: score_images_with_model must be a string or a list, got {type(raw_score_images_with_model)}")
+
+        # Process secondary_gt_prompt_score_for_model
+        raw_secondary_gt_model = self.params.get('secondary_gt_prompt_score_for_model', None)
+        if raw_secondary_gt_model is None:
+            self.secondary_gt_prompt_score_for_model = None
+        elif isinstance(raw_secondary_gt_model, list):
+            if len(raw_secondary_gt_model) == 1:
+                self.secondary_gt_prompt_score_for_model = raw_secondary_gt_model[0]
+            else:
+                raise ValueError(f"ImageGenerationSaver: secondary_gt_prompt_score_for_model must be None, a string, or a single-element list, got {raw_secondary_gt_model}")
+        elif isinstance(raw_secondary_gt_model, str):
+            self.secondary_gt_prompt_score_for_model = raw_secondary_gt_model
+        else:
+            raise ValueError(f"ImageGenerationSaver: secondary_gt_prompt_score_for_model must be None, a string, or a list, got {type(raw_secondary_gt_model)}")
+        
         # prompt_ranking_model is not directly used by saver, it relies on tester's output (best_scores/worst_scores)
         
     def save_result(self, results):

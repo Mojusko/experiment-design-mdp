@@ -175,7 +175,19 @@ class ImageGenerationTester(BaseTester):
         self.params = params or {}
         # embedder is passed to super() which stores it
         self.take_best_worst_N = self.params.get('take_best_worst_N', 8) # N sequences to return
-        self.prompt_ranking_model = self.params.get('prompt_ranking_model', 'gt') # 'gt' or scorer_model name
+        
+        # Process prompt_ranking_model
+        raw_prompt_ranking_model = self.params.get('prompt_ranking_model', 'gt')
+        if isinstance(raw_prompt_ranking_model, list):
+            if len(raw_prompt_ranking_model) == 1:
+                self.prompt_ranking_model = raw_prompt_ranking_model[0]
+            else:
+                raise ValueError(f"ImageGenerationTester: prompt_ranking_model must be a string or a single-element list, got {raw_prompt_ranking_model}")
+        elif isinstance(raw_prompt_ranking_model, str):
+            self.prompt_ranking_model = raw_prompt_ranking_model
+        else:
+            raise ValueError(f"ImageGenerationTester: prompt_ranking_model must be a string or a list, got {type(raw_prompt_ranking_model)}")
+
         self.beam_width = self.params.get('beam_width', 15) # Beam width for search (K in beam search)
         # Pass env, embedder to the base class constructor
         super().__init__(env=env, embedder=embedder, params=params)

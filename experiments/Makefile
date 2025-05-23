@@ -454,7 +454,7 @@ llm-find-rounds: $(JOBS_LLM_ROUNDS)
 # Lambda-finding
 # Define the range for the single lambda parameter
 #LAMBDA_VALUES := 1 15 25 50 
-LAMBDA_VALUES :=  50 100 200 500
+LAMBDA_VALUES :=  1 10 25 50 100 200
 
 # Generate job names for multinomial feedback
 JOBS_LLM_LAMBDA_MUL := \
