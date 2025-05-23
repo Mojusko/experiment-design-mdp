@@ -13,7 +13,7 @@ lambda_sparsity: 0 # Strength of the L2 sparsity regularizer on P(s,a)
 
 # Objective for the design: "A" for A-optimal, "C" for C-optimal.
 # If "C" is chosen, C_design_keywords must be provided.
-objective: "A"
+objective: "D"
 
 # C_design_keywords are no longer used.
 # For C-optimal adaptive design, the C vector is derived from the estimator.

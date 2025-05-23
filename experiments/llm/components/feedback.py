@@ -426,7 +426,7 @@ class FeedbackFactory:
             # --- Determine Design based on cfg.feedback.objective ---
             design_objective = cfg.feedback.get('objective', 'A').upper() # Default to 'A' if not specified
 
-            if design_objective not in ['A', 'C', 'D']: # Added 'D'
+            if design_objective not in ['A', 'C', 'D']: # Ensure 'D' is a recognized objective
                 warnings.warn(f"Invalid design_objective '{cfg.feedback.get('objective')}'. Defaulting to A-optimal design.")
                 design_objective = 'A'
 
@@ -456,7 +456,8 @@ class FeedbackFactory:
                         env=env,
                         lambd=lambda_val,
                         dim=1, # Ensure dim=1 for action embeddings
-                        V=V
+                        V=V,
+                        lambda_sparsity=cfg.feedback.get('lambda_sparsity', 0.0) # Pass lambda_sparsity
                     )
                     print("Using Static D-optimal design (MultiPolicyOrigDesignD).")
             elif design_objective == 'C':

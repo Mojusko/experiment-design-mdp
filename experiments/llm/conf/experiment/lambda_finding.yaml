@@ -1,6 +1,6 @@
 name: "lambda_finding"
 id_prefix: "lambda"  # Used for filename prefixes
-episodes: 150
+episodes: 90
 vocab_size: 2500
 vocabulary:
   - 'vocabulary3/bases.txt'
