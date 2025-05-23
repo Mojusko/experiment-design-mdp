@@ -47,12 +47,12 @@ experiment:
 
 # --- Testers (Enabled for Inference) ---
 tester:
-  #  - _target_: components.tester.PreferenceTester
-  #    params:
-  #      N_test_prompts: 1000
-  #      N_pairs_eval: 5000
-  #  - _target_: components.tester.CosineTester
-  #    params: null
+  - _target_: components.tester.PreferenceTester
+    params:
+      N_test_prompts: 1000
+      N_pairs_eval: 5000
+  - _target_: components.tester.CosineTester
+    params: null
   - _target_: components.tester.ImageGenerationTester
     params:
        take_best_worst_N: 5 # Default N
