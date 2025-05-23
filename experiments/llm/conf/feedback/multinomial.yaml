@@ -7,7 +7,7 @@ lambda: 100
 adaptive_estimation_frequency: 0
 adaptive_estimation_start: 0
 #adaptive_design_frequency: 100 
-adaptive_design_frequency: '/2' 
+adaptive_design_frequency: 0 
 pass_V: true
 lambda_sparsity: 0 # Strength of the L2 sparsity regularizer on P(s,a)
 

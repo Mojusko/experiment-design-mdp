@@ -165,69 +165,111 @@ non_sunny_sentences = [add_random_commas(s) for s in raw_non_sunny_sentences]
 all_sentences = sunny_sentences + non_sunny_sentences
 print(f"Defined {len(sunny_sentences)} sunny sentences (with random commas) and {len(non_sunny_sentences)} non-sunny sentences (with random commas).")
 
-# --- 3. Setup Environment and Scorer Model ---
-# For the 'sunny' model, the LLMGrid's vocabulary structure is not critical
-# as get_scorer_model directly uses the sentences from 'sunny.txt'.
-# We initialize it with a minimal vocabulary.
-minimal_vocab_for_env = [["placeholder"]]
-llm_env_for_gt = LLMGrid(
-    list_of_text_tokens=minimal_vocab_for_env,
-    embedder=clip_embedder,
-    base_prompt='',
-    include_base_prompt_in_first_tokens=False,
-    rng=np.random.RandomState(42), # Provide an RNG for LLMGrid
-    verbose=False
-)
-print(f"Minimal LLMGrid for GT 'sunny' model initialized. Horizon: {llm_env_for_gt.max_episode_length}")
+# --- 3. Load sentences from sunny.txt and embed all relevant sentences ---
+sunny_txt_path = os.path.join(os.path.dirname(__file__), 'models', 'sunny.txt') # Corrected path
+try:
+    with open(sunny_txt_path, 'r') as f:
+        raw_sentences_from_sunny_txt = [line.strip() for line in f if line.strip()]
+    print(f"Loaded {len(raw_sentences_from_sunny_txt)} sentences from {sunny_txt_path}")
+except FileNotFoundError:
+    print(f"Error: sunny.txt not found at {sunny_txt_path}")
+    raw_sentences_from_sunny_txt = []
 
-print("Loading GT 'sunny' model...")
-gt_sunny_model = get_scorer_model(
-    model_name='sunny',
-    env=llm_env_for_gt, # Env is used by get_scorer_model to find 'sunny.txt'
-    embedder=clip_embedder
-)
-gt_sunny_model.eval()
-print("GT 'sunny' model loaded.")
+print(f"\nEmbedding {len(raw_sentences_from_sunny_txt)} sentences from sunny.txt...")
+embeddings_from_sunny_txt = []
+for i, sentence in enumerate(raw_sentences_from_sunny_txt):
+    if (i + 1) % 5 == 0 or i == len(raw_sentences_from_sunny_txt) - 1:
+        print(f"  Embedding sentence {i+1}/{len(raw_sentences_from_sunny_txt)} from sunny.txt: \"{sentence[:50]}...\"")
+    embeddings_from_sunny_txt.append(clip_embedder.embed_text(sentence))
 
-# --- 4. Score all sentences ---
-print(f"\nScoring {len(all_sentences)} sentences with the 'sunny' model...")
-sentence_scores = {}
-for i, sentence in enumerate(all_sentences):
-    if (i + 1) % 10 == 0 or i == len(all_sentences) - 1:
-        print(f"  Scoring sentence {i+1}/{len(all_sentences)}: \"{sentence[:50]}...\"")
-    score_tensor, _ = gt_sunny_model.score_prompt(sentence)
-    sentence_scores[sentence] = score_tensor.item()
+# Embed script's sunny sentences (processed with commas)
+print(f"\nEmbedding {len(sunny_sentences)} processed sunny sentences (from script)...")
+script_sunny_embeddings = []
+for i, sentence in enumerate(sunny_sentences): # sunny_sentences is already processed with commas
+    if (i + 1) % 10 == 0 or i == len(sunny_sentences) - 1:
+        print(f"  Embedding script's sunny sentence {i+1}/{len(sunny_sentences)}: \"{sentence[:50]}...\"")
+    script_sunny_embeddings.append(clip_embedder.embed_text(sentence))
 
-# --- 5. Ranking Analysis ---
-print("\n--- Ranking Analysis ---")
-correct_rankings = 0
-total_pairs = 0
+print(f"\nEmbedding {len(non_sunny_sentences)} processed non-sunny sentences...")
+embeddings_non_sunny = []
+for i, sentence in enumerate(non_sunny_sentences): # non_sunny_sentences is already processed with commas
+    if (i + 1) % 10 == 0 or i == len(non_sunny_sentences) - 1:
+        print(f"  Embedding non-sunny sentence {i+1}/{len(non_sunny_sentences)}: \"{sentence[:50]}...\"")
+    embeddings_non_sunny.append(clip_embedder.embed_text(sentence))
 
-for sunny_sent in sunny_sentences:
-    for non_sunny_sent in non_sunny_sentences:
-        total_pairs += 1
-        score_sunny = sentence_scores[sunny_sent]
-        score_non_sunny = sentence_scores[non_sunny_sent]
+# --- 4. Overall Ranking Analysis ---
+print("\n--- Overall Ranking Analysis (Each sunny.txt sentence as a model) ---")
+correct_rankings_overall = 0
+total_pairs_overall = 0
 
-        if score_sunny > score_non_sunny:
-            correct_rankings += 1
+# Check if all necessary embeddings lists are populated
+if embeddings_from_sunny_txt and script_sunny_embeddings and embeddings_non_sunny:
+    # Iterate through each sentence from sunny.txt (as a model)
+    for i, model_theta_embedding in enumerate(embeddings_from_sunny_txt):
+        # Iterate through each sunny sentence from the script (as a positive example)
+        for j, script_sunny_emb in enumerate(script_sunny_embeddings):
+            score_positive_by_model = torch.dot(model_theta_embedding.squeeze(), script_sunny_emb.squeeze()).item()
+            
+            # Iterate through each non-sunny sentence from the script (as a negative example)
+            for k, script_non_sunny_emb in enumerate(embeddings_non_sunny):
+                score_negative_by_model = torch.dot(model_theta_embedding.squeeze(), script_non_sunny_emb.squeeze()).item()
+                
+                if score_positive_by_model > score_negative_by_model:
+                    correct_rankings_overall += 1
+                total_pairs_overall += 1
+        
+        # Print progress for each model processed from sunny.txt
+        if (i + 1) % 1 == 0 or i == len(embeddings_from_sunny_txt) - 1: # Adjusted print frequency
+            print(f"  Processed model {i+1}/{len(embeddings_from_sunny_txt)} from sunny.txt for overall accuracy. Current total pairs: {total_pairs_overall}")
 
-accuracy = (correct_rankings / total_pairs) if total_pairs > 0 else 0.0
-print(f"Number of correctly ranked pairs (sunny_score > non_sunny_score): {correct_rankings}")
-print(f"Total pairs compared: {total_pairs}")
-print(f"Ranking Accuracy: {accuracy:.4f}")
+accuracy_overall = (correct_rankings_overall / total_pairs_overall) if total_pairs_overall > 0 else 0.0
+print(f"Number of correctly ranked pairs (overall): {correct_rankings_overall}")
+print(f"Total pairs compared (overall): {total_pairs_overall}")
+print(f"Overall Ranking Accuracy: {accuracy_overall:.4f}")
 
-# Optional: Print top/bottom scored sentences from each category for qualitative check
-print("\n--- Top 5 Scored Sunny Sentences ---")
-sorted_sunny_scores = sorted([(s, sentence_scores[s]) for s in sunny_sentences], key=lambda x: x[1], reverse=True)
-for i, (sent, score) in enumerate(sorted_sunny_scores[:5]):
-    print(f"  {i+1}. Score: {score:.4f} | Sentence: \"{sent}\"")
 
-print("\n--- Top 5 Scored Non-Sunny Sentences (should be low scores) ---")
-sorted_non_sunny_scores = sorted([(s, sentence_scores[s]) for s in non_sunny_sentences], key=lambda x: x[1], reverse=True)
-for i, (sent, score) in enumerate(sorted_non_sunny_scores[:5]):
-    print(f"  {i+1}. Score: {score:.4f} | Sentence: \"{sent}\"")
+# --- 5. Individual Sentence Accuracy Analysis (using sentences from sunny.txt) ---
+print("\n--- Individual Sunny Sentence Accuracies (from sunny.txt) ---")
 
-print("\n--- Bottom 5 Scored Non-Sunny Sentences (should be very low scores) ---")
-for i, (sent, score) in enumerate(sorted_non_sunny_scores[-5:]):
-    print(f"  {len(sorted_non_sunny_scores)-5+i+1}. Score: {score:.4f} | Sentence: \"{sent}\"")
+def calculate_single_concept_accuracy(
+    emb_sunny_theta_model,  # Embedding of the target sunny sentence from sunny.txt (acts as theta for this model)
+    local_script_sunny_embeddings_list, # List of embeddings of processed sunny sentences from the script
+    local_script_non_sunny_embeddings_list # List of embeddings of processed non-sunny sentences from the script
+):
+    correct_single = 0
+    num_comparison_pairs = 0
+    # emb_sunny_theta_model is the vector defining the current model.
+    
+    for emb_script_sunny in local_script_sunny_embeddings_list:
+        score_positive_example_by_model = torch.dot(emb_sunny_theta_model.squeeze(), emb_script_sunny.squeeze()).item()
+        
+        for emb_script_non_sunny in local_script_non_sunny_embeddings_list:
+            score_negative_example_by_model = torch.dot(emb_sunny_theta_model.squeeze(), emb_script_non_sunny.squeeze()).item()
+            
+            if score_positive_example_by_model > score_negative_example_by_model:
+                correct_single += 1
+            num_comparison_pairs += 1
+            
+    return correct_single / num_comparison_pairs if num_comparison_pairs > 0 else 0.0
+
+
+if raw_sentences_from_sunny_txt and embeddings_from_sunny_txt and script_sunny_embeddings and embeddings_non_sunny:
+    # 1. Accuracy for the first sentence from sunny.txt
+    target_raw_sentence_first = raw_sentences_from_sunny_txt[0]
+    target_emb_first = embeddings_from_sunny_txt[0] # This is the theta for the first model
+    acc_first = calculate_single_concept_accuracy(target_emb_first, script_sunny_embeddings, embeddings_non_sunny)
+    print(f"'{target_raw_sentence_first}' - accuracy: {acc_first:.4f}")
+
+    # 2. Accuracies for the next 19 sentences from sunny.txt (indices 1 to 19)
+    for i in range(1, 20): # Iterate for sentences at index 1 through 19 in sunny.txt list
+        if i < len(raw_sentences_from_sunny_txt):
+            current_raw_sentence_from_txt = raw_sentences_from_sunny_txt[i]
+            current_emb_from_sunny_txt_as_model = embeddings_from_sunny_txt[i] # This is theta for the current model
+            acc_current = calculate_single_concept_accuracy(current_emb_from_sunny_txt_as_model, script_sunny_embeddings, embeddings_non_sunny)
+            print(f"'{current_raw_sentence_from_txt}' - accuracy: {acc_current:.4f}")
+        else:
+            # This means sunny.txt has fewer than (i+1) sentences.
+            print(f"Warning: Index {i} out of bounds for raw_sentences_from_sunny_txt (length {len(raw_sentences_from_sunny_txt)}).")
+            break # Stop if we run out of sentences
+else:
+    print("Skipping individual sentence accuracy calculation due to missing sentences or embeddings.")
