@@ -344,10 +344,11 @@ class ImageGenerationTester(BaseTester):
                 "worst_scores": worst_scores,
                 "worst_sequences": worst_sequences # Add sequences
             },
-            "best_image_score": best_scores[0] if best_scores else 0,
-            "worst_image_score": worst_scores[0] if worst_scores else 0,
+            # These are prompt scores from the tester's ranking model
+            "best_prompt_score": best_scores[0] if best_scores else 0,
+            "worst_prompt_score": worst_scores[0] if worst_scores else 0,
             # Avg score of the N best sequences found by beam search
-            "avg_top_image_score": sum(best_scores) / len(best_scores) if best_scores else 0
+            "avg_top_prompt_score": sum(best_scores) / len(best_scores) if best_scores else 0
         }
 
 class HumanFeedbackBenchmarkTester(BaseTester):

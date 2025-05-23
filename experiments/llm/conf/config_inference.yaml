@@ -9,7 +9,8 @@ defaults:
 seed: 1 # Default seed for testing (can be overridden)
 verbose: false
 # base_prompt: "A very long journey" # REMOVED - Use bases.txt now
-base_prompt: 'A man running in the field'
+#base_prompt: 'A man running in the field'
+base_prompt: ''
 include_base_prompt_in_first_tokens: false # Keep false as per request
 handle_duplicate_action: true # If true, duplicate non-zero actions in a sequence are replaced by 0 (keeping one random instance)
 algorithm: "design" # Default algorithm (can be overridden)
@@ -34,7 +35,7 @@ override_results_dir: false # Default
 # Use standard vocabulary including bases.txt
 experiment:
   vocabulary:
-    #    - 'vocabulary3/bases.txt'
+    - 'vocabulary3/bases.txt'
     - 'vocabulary3/ambient.txt'
     - 'vocabulary3/style.txt'
     - 'vocabulary3/composition.txt'
@@ -42,7 +43,7 @@ experiment:
     - 'vocabulary3/detail.txt'
   # Other experiment settings like name, id_prefix, vocab_size
   # are inherited from feedback_comparison.yaml unless overridden here.
-  scorer_model: 'sunny' # Override to a single model for this inference config
+  scorer_model: ['sunny-image'] # Ensure it's a list, even if single.
 
 # --- Testers (Enabled for Inference) ---
 tester:
@@ -57,8 +58,8 @@ tester:
        take_best_worst_N: 5 # Default N
        prompt_ranking_model: ${experiment.scorer_model} # Use 'gt' or a specific scorer_model name (e.g., the one being inferred)
        save_worst: false # Default is false
-  - _target_: components.tester.HumanFeedbackBenchmarkTester
-    params: {} # No specific params needed in YAML, uses cfg and passed objects
+  # - _target_: components.tester.HumanFeedbackBenchmarkTester
+  #   params: {} # No specific params needed in YAML, uses cfg and passed objects
 
 # --- Savers (Enabled for Inference Results) ---
 savers:
@@ -73,9 +74,10 @@ savers:
   - _target_: components.saver.ImageGenerationSaver # Saves images and image_metrics.json
     params:
       take_best_worst_N: 5 # Match tester N
-      prompt_ranking_model: ${experiment.scorer_model} # Match tester's ranking model
-      add_scores: ['image', 'prompt'] # Options: 'image', 'prompt'. Default: ['image', 'prompt']
-      score_images_with_model: ${experiment.scorer_model}   # Use 'gt' or a specific scorer_model name (e.g., the one being inferred)
+      prompt_ranking_model: ${experiment.scorer_model} # Relies on tester's output, but keep consistent.
+      add_scores: ['prompt', 'image'] # Include 'prompt' for estimator scores, 'image' for GT image scores.
+      score_images_with_model: ${experiment.scorer_model}   # Score generated images with the 'sunny-image' GT model.
+      # secondary_gt_prompt_score_for_model: null # Not used in this setup. GT image score is the secondary.
       save_worst: false # Match tester setting
   #  - _target_: components.saver.LearnedEstimatorSaver # Save the estimator trained from visits
   #    params:

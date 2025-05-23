@@ -421,6 +421,9 @@ def get_scorer_model(model_name: str, env: LLMGrid, embedder: BaseEmbedder) -> V
     Returns:
         An instance of VisionLanguageScorer (e.g., DotProductModel).
     """
+    # Import for sunny-image model type
+    from experiments.llm.image_generator import StableDiffusionGenerator, DEFAULT_CONFIG
+
     if model_name == 'sunny' or model_name == 'medieval' or model_name == 'technological':
         # Construct path relative to this file's location to ensure robustness
         current_script_dir = os.path.dirname(os.path.abspath(__file__)) # .../doexpy/env
@@ -453,6 +456,62 @@ def get_scorer_model(model_name: str, env: LLMGrid, embedder: BaseEmbedder) -> V
         # DotProductModel expects weights to be torch.double.
         weight_vector = stacked_embeddings.mean(dim=0).to(device=embedder.device, dtype=torch.double)
         
+        return DotProductModel(embedder, weight_vector).eval()
+    elif model_name == 'sunny-image':
+        print(f"Initializing ground truth scorer model: {model_name} (average of image embeddings from sunny.txt)")
+        # Construct path to sunny.txt
+        current_script_dir = os.path.dirname(os.path.abspath(__file__))
+        project_root_dir = os.path.abspath(os.path.join(current_script_dir, "..", ".."))
+        sentences_file_path = os.path.join(project_root_dir, 'experiments', 'llm', 'models', 'sunny.txt')
+
+        if not os.path.exists(sentences_file_path):
+            raise FileNotFoundError(f"Sentences file for sunny-image model not found at: {sentences_file_path}")
+
+        # Instantiate StableDiffusionGenerator with a fixed seed for reproducibility
+        # Using default image size and steps for GT model creation.
+        # These could be made configurable if needed for speed/quality trade-off.
+        try:
+            image_generator = StableDiffusionGenerator(
+                stable_diffusion_id=DEFAULT_CONFIG['stable_diffusion_id'],
+                MODELS_CACHE_DIR=DEFAULT_CONFIG['MODELS_CACHE_DIR'],
+                image_size=DEFAULT_CONFIG['image_size'], # Default size
+                num_inference_steps=DEFAULT_CONFIG['num_inference_steps'], # Default steps
+                seed=42 # Fixed seed for GT model reproducibility
+            )
+            print(f"  Instantiated StableDiffusionGenerator for {model_name} GT model creation.")
+        except Exception as e:
+            raise RuntimeError(f"Failed to instantiate StableDiffusionGenerator for {model_name}: {e}")
+
+        image_embeddings_list = []
+        with open(sentences_file_path, 'r', encoding='utf-8') as f:
+            sentences = [line.strip() for line in f if line.strip()]
+        
+        print(f"  Generating images and embeddings for {len(sentences)} sentences from sunny.txt...")
+        for i, sentence in enumerate(sentences):
+            try:
+                # Generate image from the sentence
+                # The generator's sample method does not need an embedder if embed_prompt=False (default)
+                generated_image_np, _ = image_generator.sample(prompt_text=sentence)
+                generated_image_pil = PILImage.fromarray(generated_image_np)
+
+                # Embed the generated image using the main embedder
+                # The embedder (e.g., CLIPEmbedder) handles normalization if configured.
+                img_embedding = embedder.embed_image(generated_image_pil) # Expected [1, dim]
+                image_embeddings_list.append(img_embedding)
+                if env.verbose or (i + 1) % 10 == 0 or i == len(sentences) - 1:
+                    print(f"    Processed sentence {i+1}/{len(sentences)} for {model_name} GT.")
+            except Exception as e:
+                print(f"    Error processing sentence '{sentence}' for {model_name} GT: {e}. Skipping this sentence.")
+                continue
+        
+        if not image_embeddings_list:
+            raise ValueError(f"No valid image embeddings generated for '{model_name}' model from '{sentences_file_path}'.")
+
+        # Stack embeddings and compute the mean
+        stacked_image_embeddings = torch.cat(image_embeddings_list, dim=0) # Shape [num_images, dim]
+        weight_vector = stacked_image_embeddings.mean(dim=0).to(device=embedder.device, dtype=torch.double) # Shape [dim]
+        
+        print(f"  Finished creating weight vector for {model_name} from {len(image_embeddings_list)} image embeddings.")
         return DotProductModel(embedder, weight_vector).eval()
 
     raise ValueError(f"Unknown scorer model name: {model_name}")

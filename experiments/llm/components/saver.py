@@ -221,25 +221,54 @@ class ImageGenerationSaver(BaseSaver):
             self._save_image_metrics(results)
     
     def _save_image_metrics(self, results):
-        """Save image-specific metrics to a separate JSON file"""
-        # Get the image metrics
+        """Save image-specific metrics to a separate JSON file, aligned with configuration."""
         image_metrics = {}
+        image_gen_data = results.metrics.get("image_generation", {})
+
+        # Counts are always relevant if image generation happened
+        image_metrics['best_prompts_count'] = len(image_gen_data.get('best_prompts', []))
+        image_metrics['worst_prompts_count'] = len(image_gen_data.get('worst_prompts', []))
+
+        # Primary prompt scores (from tester's ranking model)
+        if 'prompt' in self.add_scores:
+            # These keys are now best_prompt_score, worst_prompt_score, avg_top_prompt_score
+            if 'best_prompt_score' in results.metrics:
+                image_metrics['best_prompt_score'] = results.metrics['best_prompt_score']
+            if 'worst_prompt_score' in results.metrics: # Note: This is the "best" of the worst scores
+                image_metrics['worst_prompt_score'] = results.metrics['worst_prompt_score']
+            if 'avg_top_prompt_score' in results.metrics:
+                image_metrics['avg_top_prompt_score'] = results.metrics['avg_top_prompt_score']
         
-        # Include relevant image metrics
-        for key in ['best_image_score', 'worst_image_score', 'avg_top_image_score']:
-            if key in results.metrics:
-                image_metrics[key] = results.metrics[key]
+        # Secondary GT prompt scores (for prompts selected by tester)
+        if 'prompt' in self.add_scores and self.secondary_gt_prompt_score_for_model:
+            sec_ps_best = image_gen_data.get('secondary_gt_prompt_scores_best', [])
+            sec_ps_worst = image_gen_data.get('secondary_gt_prompt_scores_worst', [])
+            # Filter out None values before calculating stats
+            valid_sec_ps_best = [s for s in sec_ps_best if s is not None]
+            valid_sec_ps_worst = [s for s in sec_ps_worst if s is not None]
+
+            if valid_sec_ps_best:
+                image_metrics['best_secondary_gt_prompt_score'] = max(valid_sec_ps_best)
+                image_metrics['avg_top_secondary_gt_prompt_score'] = sum(valid_sec_ps_best) / len(valid_sec_ps_best)
+            if valid_sec_ps_worst: # "Worst" here means the highest score among the "worst" prompts
+                image_metrics['worst_secondary_gt_prompt_score'] = max(valid_sec_ps_worst)
+
+
+        # Actual generated image scores (if calculated)
+        if 'image' in self.add_scores:
+            img_scores_best = image_gen_data.get('generated_image_scores_best', [])
+            img_scores_worst = image_gen_data.get('generated_image_scores_worst', [])
+            # Filter out None values
+            valid_img_scores_best = [s for s in img_scores_best if s is not None]
+            valid_img_scores_worst = [s for s in img_scores_worst if s is not None]
+
+            if valid_img_scores_best:
+                image_metrics['best_generated_image_score'] = max(valid_img_scores_best)
+                image_metrics['avg_top_generated_image_score'] = sum(valid_img_scores_best) / len(valid_img_scores_best)
+            if valid_img_scores_worst: # "Worst" here means the highest score among the "worst" images
+                image_metrics['worst_generated_image_score'] = max(valid_img_scores_worst)
         
-        # Save the image generation summary stats
-        if 'image_generation' in results.metrics:
-            # Include counts and score ranges but not the full prompts list
-            image_gen = results.metrics['image_generation']
-            image_metrics['best_prompts_count'] = len(image_gen.get('best_prompts', []))
-            image_metrics['worst_prompts_count'] = len(image_gen.get('worst_prompts', []))
-            
-            # Removed saving of best_scores_range and worst_scores_range as they are prompt scores
-        
-        # Save to file
+        # Save to file only if there's something to save
         if image_metrics:
             file_path = self.get_output_path(self.metrics_filename)
             serializable_dict = _convert_to_serializable(image_metrics)
@@ -419,6 +448,18 @@ class ImageGenerationSaver(BaseSaver):
             img_path = os.path.join(images_dir, img_filename)
             PIL.Image.fromarray(image).save(img_path)
             worst_generated_images.append(image)
+
+        # Store detailed score lists in results.metrics['image_generation']
+        # This allows _save_image_metrics to access them.
+        if 'image_generation' not in results.metrics: # Should exist from tester
+            results.metrics['image_generation'] = {}
+        
+        # These are scores of the *generated images* themselves, if calculated
+        results.metrics['image_generation']['generated_image_scores_best'] = actual_best_image_scores
+        results.metrics['image_generation']['generated_image_scores_worst'] = actual_worst_image_scores
+        # These are the *secondary GT prompt scores* for the prompts selected by the tester
+        results.metrics['image_generation']['secondary_gt_prompt_scores_best'] = actual_best_secondary_prompt_scores
+        results.metrics['image_generation']['secondary_gt_prompt_scores_worst'] = actual_worst_secondary_prompt_scores
 
         # Create a summary image with generated images and their scores
         # Determine number of rows based on save_worst flag
