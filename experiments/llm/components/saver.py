@@ -187,7 +187,9 @@ class ImageGenerationSaver(BaseSaver):
         # Get image_size and num_inference_steps from params or DEFAULT_CONFIG
         self.image_size = self.params.get('image_size', DEFAULT_CONFIG['image_size'])
         self.num_inference_steps = self.params.get('num_inference_steps', DEFAULT_CONFIG['num_inference_steps'])
-        self.base_prompt = self.params.get('base_prompt', '')  # Extract base_prompt, default to empty string
+        # Saver's own base_prompt, defaults to empty string if not in params.
+        # This is used for _get_seed_from_prompt.
+        self.base_prompt = self.params.get('base_prompt', '')
         self.add_scores = self.params.get('add_scores', ['image', 'prompt']) # List: 'image', 'prompt'
         self.metrics_filename = self.params.get('metrics_filename', 'image_metrics.json')
         self.save_worst = self.params.get('save_worst', False) # Add save_worst flag, default to False

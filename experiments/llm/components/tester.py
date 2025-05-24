@@ -175,6 +175,7 @@ class ImageGenerationTester(BaseTester):
         self.params = params or {}
         # embedder is passed to super() which stores it
         self.take_best_worst_N = self.params.get('take_best_worst_N', 8) # N sequences to return
+        self.base_prompt = self.params.get('base_prompt', None) # Tester's specific base_prompt
         
         # Process prompt_ranking_model
         raw_prompt_ranking_model = self.params.get('prompt_ranking_model', 'gt')
@@ -216,45 +217,56 @@ class ImageGenerationTester(BaseTester):
                                           scorer_model, estimator, # These are for the current (first) model iteration
                                           all_estimators, all_gt_scorer_models)
 
-    def _score_sequence(self, sequence, env, horizon, testing_words_list, scoring_model):
+    def _score_sequence(self, sequence, env, horizon, testing_words_list, scoring_model, base_for_prompt_creation):
         """Scores a potentially partial sequence by padding and using the scoring model."""
         # Pad sequence if it's shorter than the horizon
         padded_sequence = list(sequence) # Make a mutable copy
         current_len = len(padded_sequence)
         if current_len < horizon:
             # Use first token from each remaining position's vocab as padding
-            padding = [testing_words_list[i][0] for i in range(current_len, horizon)]
+            # Ensure testing_words_list is not empty and h is within bounds for padding
+            padding = []
+            for i in range(current_len, horizon):
+                if i < len(testing_words_list) and testing_words_list[i]:
+                    padding.append(testing_words_list[i][0])
+                else:
+                    # Handle cases where padding cannot be determined (e.g., horizon mismatch)
+                    # This might indicate an issue with how horizon/testing_words_list are adjusted
+                    print(f"Warning: Cannot determine padding for step {i} in _score_sequence. Sequence: {sequence}, Horizon: {horizon}")
+                    break # Stop padding if a step is problematic
             padded_sequence.extend(padding)
 
         # Create prompt and score
-        prompt = create_prompt_from_tokens(padded_sequence, env.base_prompt)
+        prompt = create_prompt_from_tokens(padded_sequence, base_for_prompt_creation)
         score, _ = scoring_model.score_prompt(prompt)
         return score.item()
 
-    def _beam_search(self, env, horizon, testing_words_list, scoring_model, beam_width, maximize):
+    def _beam_search(self, env, horizon, testing_words_list, scoring_model, beam_width, maximize, base_for_sequences):
         """Performs beam search to find sequences optimizing the score."""
         # Initialize beams: list of (score, sequence_tuple)
-        # Start with an empty sequence tuple and score 0 (or score of base prompt if desired)
-        beams = [(0.0, tuple())]
+        # Start with an empty sequence tuple and score 0.
+        # If base_for_sequences is non-empty, the initial score could be the score of base_for_sequences itself,
+        # but for simplicity, we start sequences *after* the base.
+        beams = [(0.0, tuple())] # Score is for the sequence part *after* any fixed base.
 
-        for h in range(horizon):
+        for h in range(horizon): # horizon is now the number of choices *after* the fixed base
             if h >= len(testing_words_list) or not testing_words_list[h]:
-                print(f"Warning: ImageGenerationTester._beam_search: testing_words_list[{h}] is empty or not available. Beam search cannot proceed for this step.")
+                print(f"Warning: ImageGenerationTester._beam_search: testing_words_list[{h}] (for choice {h+1}) is empty or not available. Beam search cannot proceed for this step.")
                 beams = [] # Clear beams as no new candidates can be formed
                 break # Terminate beam search
 
             candidates = []
             # For each current beam (sequence)
-            for current_score, current_sequence in beams:
+            for current_score, current_sequence_tokens in beams: # current_sequence_tokens are tokens *after* fixed base
                 # Try appending each token from the vocabulary for this step
                 for token in testing_words_list[h]: # This is now safe due to the check above
-                    new_sequence = current_sequence + (token,)
+                    new_sequence_tokens = current_sequence_tokens + (token,)
                     try:
-                        # Score the new (potentially partial) sequence
-                        score = self._score_sequence(new_sequence, env, horizon, testing_words_list, scoring_model)
-                        candidates.append((score, new_sequence))
+                        # Score the new (potentially partial) sequence of tokens, prepending the fixed base for scoring
+                        score = self._score_sequence(new_sequence_tokens, env, horizon, testing_words_list, scoring_model, base_for_sequences)
+                        candidates.append((score, new_sequence_tokens))
                     except Exception as e:
-                        print(f"Error scoring sequence {new_sequence} with token '{token}': {e}")
+                        print(f"Error scoring sequence {new_sequence_tokens} (base: '{base_for_sequences}') with token '{token}': {e}")
                         continue # Skip this candidate if scoring fails
 
             # Sort candidates by score (descending for maximize, ascending for minimize)
@@ -278,59 +290,69 @@ class ImageGenerationTester(BaseTester):
         """Runs beam search to find top N best and worst sequences."""
         from omegaconf import OmegaConf # For accessing list config
 
+        # Determine the base prompt, horizon, and word lists for the beam search
+        is_fixed_base = bool(self.base_prompt and self.base_prompt.strip())
+        
+        if is_fixed_base:
+            search_base_prompt = self.base_prompt
+            # If base is fixed, we make one less choice.
+            # Horizon for beam search is the number of tokens to *choose*.
+            search_horizon = horizon - 1 
+            search_testing_words_list = testing_words_list[1:] # Skip first vocab list (bases.txt)
+            print(f"ImageGenerationTester: Using fixed base_prompt: '{search_base_prompt}'. Search horizon for tokens: {search_horizon}.")
+            if search_horizon < 0: # Should not happen if horizon > 0
+                print(f"Warning: Search horizon is {search_horizon} with fixed base. No tokens will be searched.")
+                search_horizon = 0 # Ensure it's not negative
+        else:
+            search_base_prompt = env.base_prompt # Use env's base_prompt (might be empty)
+            search_horizon = horizon # Full horizon of choices
+            search_testing_words_list = testing_words_list
+            print(f"ImageGenerationTester: Using env.base_prompt: '{search_base_prompt}'. Search horizon for tokens: {search_horizon}.")
+
         try:
             scoring_model_for_ranking = None
             if self.prompt_ranking_model == 'gt':
                 if first_gt_scorer_model is None:
-                    # Try to get the name of the first model for a more informative error
-                    # Use cfg.experiment.scorer_model which should be a list of names
                     first_model_name_in_exp = OmegaConf.to_container(cfg.experiment.scorer_model, resolve=True)[0] if OmegaConf.is_list(cfg.experiment.scorer_model) and len(cfg.experiment.scorer_model)>0 else "N/A"
                     raise ValueError(f"Cannot use 'gt' for prompt ranking: Ground truth scorer model for '{first_model_name_in_exp}' is not available.")
                 scoring_model_for_ranking = first_gt_scorer_model
-                # Log which GT model is being used (name of the first model in the experiment config)
                 first_model_name_in_exp = OmegaConf.to_container(cfg.experiment.scorer_model, resolve=True)[0] if OmegaConf.is_list(cfg.experiment.scorer_model) and len(cfg.experiment.scorer_model)>0 else "N/A"
-                print(f"ImageGenerationTester: Using ground truth model ('{first_model_name_in_exp}') for prompt ranking. Horizon {horizon}, beam width {self.beam_width}")
+                print(f"ImageGenerationTester: Using ground truth model ('{first_model_name_in_exp}') for prompt ranking. Beam width {self.beam_width}")
             else: # It's a specific model name
                 model_name_to_use = self.prompt_ranking_model
-                
-                # Get experiment's model names list from cfg.experiment.scorer_model
                 experiment_model_names_list = OmegaConf.to_container(cfg.experiment.scorer_model, resolve=True)
                 if not experiment_model_names_list or not isinstance(experiment_model_names_list, list):
                     raise ValueError(f"Cannot rank with '{model_name_to_use}': No scorer_model list configured in experiment (cfg.experiment.scorer_model).")
-
                 if model_name_to_use not in experiment_model_names_list:
                     raise ValueError(f"Prompt ranking model '{model_name_to_use}' not found in experiment's scorer_model list: {experiment_model_names_list}")
-                
                 model_idx = experiment_model_names_list.index(model_name_to_use)
-                
                 if all_estimators_list is None or model_idx >= len(all_estimators_list) or all_estimators_list[model_idx] is None:
                     raise ValueError(f"Estimator for prompt ranking model '{model_name_to_use}' (index {model_idx}) is not available from all_estimators_list.")
-                
                 target_estimator = all_estimators_list[model_idx]
-                if self.embedder is None: # self.embedder is from BaseTester.__init__
+                if self.embedder is None:
                     raise ValueError(f"Cannot create estimator model for prompt ranking ('{model_name_to_use}') without an embedder instance.")
                 scoring_model_for_ranking = create_dot_product_model_from_estimator(target_estimator, self.embedder)
-                print(f"ImageGenerationTester: Using estimator for '{model_name_to_use}' for prompt ranking. Horizon {horizon}, beam width {self.beam_width}")
+                print(f"ImageGenerationTester: Using estimator for '{model_name_to_use}' for prompt ranking. Beam width {self.beam_width}")
 
             # Find N best sequences
             print("Starting beam search for best sequences...")
-            best_results = self._beam_search(env, horizon, testing_words_list, scoring_model_for_ranking, self.beam_width, maximize=True)
-            # Extract top N best sequences and scores
+            # Pass search_base_prompt to _beam_search, it will be used by _score_sequence
+            best_results = self._beam_search(env, search_horizon, search_testing_words_list, scoring_model_for_ranking, self.beam_width, maximize=True, base_for_sequences=search_base_prompt)
             top_n_best = best_results[:self.take_best_worst_N]
-            best_sequences = [list(seq) for score, seq in top_n_best] # Convert tuples back to lists
-            best_scores = [score for score, seq in top_n_best]
-            best_prompts = [create_prompt_from_tokens(seq, env.base_prompt) for seq in best_sequences]
-            print(f"Beam search: Found {len(best_sequences)} best sequences (Top score: {best_scores[0]:.4f})" if best_scores else "Beam search: Found 0 best sequences.")
+            # best_sequences_tokens are tokens *after* the search_base_prompt
+            best_sequences_tokens = [list(seq_tokens) for score, seq_tokens in top_n_best]
+            best_scores = [score for score, seq_tokens in top_n_best] # Scores are for the full prompt
+            best_prompts = [create_prompt_from_tokens(seq_tokens, base_prompt=search_base_prompt) for seq_tokens in best_sequences_tokens]
+            print(f"Beam search: Found {len(best_prompts)} best prompts (Top score: {best_scores[0]:.4f})" if best_scores else "Beam search: Found 0 best prompts.")
 
             # Find N worst sequences
             print("Starting beam search for worst sequences...")
-            worst_results = self._beam_search(env, horizon, testing_words_list, scoring_model_for_ranking, self.beam_width, maximize=False)
-            # Extract top N worst sequences and scores (top N from the ascending sort)
+            worst_results = self._beam_search(env, search_horizon, search_testing_words_list, scoring_model_for_ranking, self.beam_width, maximize=False, base_for_sequences=search_base_prompt)
             top_n_worst = worst_results[:self.take_best_worst_N]
-            worst_sequences = [list(seq) for score, seq in top_n_worst] # Convert tuples back to lists
-            worst_scores = [score for score, seq in top_n_worst]
-            worst_prompts = [create_prompt_from_tokens(seq, env.base_prompt) for seq in worst_sequences]
-            print(f"Beam search: Found {len(worst_sequences)} worst sequences (Top score: {worst_scores[0]:.4f})" if worst_scores else "Beam search: Found 0 worst sequences.")
+            worst_sequences_tokens = [list(seq_tokens) for score, seq_tokens in top_n_worst]
+            worst_scores = [score for score, seq_tokens in top_n_worst]
+            worst_prompts = [create_prompt_from_tokens(seq_tokens, base_prompt=search_base_prompt) for seq_tokens in worst_sequences_tokens]
+            print(f"Beam search: Found {len(worst_prompts)} worst prompts (Top score: {worst_scores[0]:.4f})" if worst_scores else "Beam search: Found 0 worst prompts.")
 
             # Log the number of prompts found before returning
             print(f"ImageGenerationTester: Beam search complete ({len(best_prompts)} best, {len(worst_prompts)} worst).")
@@ -350,12 +372,12 @@ class ImageGenerationTester(BaseTester):
         # Return results in the expected format
         return {
             "image_generation": {
-                "best_prompts": best_prompts,
-                "best_scores": best_scores,
-                "best_sequences": best_sequences, # Add sequences
-                "worst_prompts": worst_prompts,
-                "worst_scores": worst_scores,
-                "worst_sequences": worst_sequences # Add sequences
+                "best_prompts": best_prompts, # Full prompts
+                "best_scores": best_scores, # Scores corresponding to best_prompts
+                "best_sequences": best_sequences_tokens, # Tokens *after* fixed base
+                "worst_prompts": worst_prompts, # Full prompts
+                "worst_scores": worst_scores, # Scores corresponding to worst_prompts
+                "worst_sequences": worst_sequences_tokens # Tokens *after* fixed base
             },
             # These are prompt scores from the tester's ranking model
             "best_prompt_score": best_scores[0] if best_scores else 0,

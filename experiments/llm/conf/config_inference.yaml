@@ -58,6 +58,7 @@ tester:
     params:
        take_best_worst_N: 5 # Default N
        prompt_ranking_model: 'sunny' # Use 'sunny' estimator for ranking prompts
+       base_prompt: "An open door or gateway" # Or "A specific fixed base prompt for this tester"
        # save_worst: false # Default is false, uncomment to save worst too
        save_worst: false # Default is false
   # - _target_: components.tester.HumanFeedbackBenchmarkTester
@@ -76,6 +77,7 @@ savers:
   - _target_: components.saver.ImageGenerationSaver # Saves images and image_metrics.json
     params:
       take_best_worst_N: 5 # Match tester N
+      base_prompt: "An open door or gateway" # Or specific base_prompt for saver's seed generation, defaults to "" if null
       # prompt_ranking_model: 'gt' # This parameter is unused by the saver; relying on tester's output.
       add_scores: ['prompt'] # Only process and display prompt scores.
       # score_images_with_model: 'gt' # Not used if add_scores does not include 'image'.
