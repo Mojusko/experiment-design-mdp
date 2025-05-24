@@ -9,5 +9,8 @@ vocabulary:
   - 'vocabulary3/composition.txt'
   - 'vocabulary3/lighting.txt'
   - 'vocabulary3/detail.txt'
-scorer_model: 'sunny'
+scorer_model: 
+  - 'sunny'
+  - 'medieval'
+  - 'technological'
 
