@@ -276,7 +276,13 @@ class ImageGenerationTester(BaseTester):
 
             candidates = []
             for current_score, current_sequence_tokens_after_base in beams:
-                for token in vocab_per_choice_step[h_choice_step]: # Iterate through tokens from the unified pool for this step
+                # Get the actual vocabulary for the current choice step
+                current_step_actual_vocab = vocab_per_choice_step[h_choice_step]
+                # Create a set of tokens to try, including the "zero action" (skip token)
+                tokens_to_try_this_step = set(current_step_actual_vocab)
+                tokens_to_try_this_step.add(env.EMPTY_ACTION_TOKEN) # env.EMPTY_ACTION_TOKEN is " "
+
+                for token in tokens_to_try_this_step: # Iterate through actual tokens + the skip token
                     new_sequence_tokens_after_base = current_sequence_tokens_after_base + (token,)
                     try:
                         # Score the new sequence. _score_sequence handles padding using vocab_for_padding_partial_sequences.
