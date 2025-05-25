@@ -395,54 +395,34 @@ class ImageGenerationTester(BaseTester):
                 worst_sequences_tokens = []
                 print(f"ImageGenerationTester: Base prompt score: {best_scores[0]:.4f}")
             else: # search_horizon > 0
-                vocab_for_beam_search_steps = []
+                # vocab_for_padding_search_steps is already correctly set to the per-step vocabulary list
+                # (either original_testing_words_list or original_testing_words_list[1:])
+                vocab_for_beam_search_steps = vocab_for_padding_search_steps
                 valid_vocab_setup = True
 
                 if is_fixed_base:
-                    # All search_horizon steps use a unified pool from original_testing_words_list[1:]
-                    # source_vocabs_for_unified_pool was already set to original_testing_words_list[1:]
-                    # vocab_for_padding_search_steps is also original_testing_words_list[1:]
-                    unified_pool = list(set(token for sublist in source_vocabs_for_unified_pool if sublist for token in sublist))
-                    if not unified_pool:
-                        print("Warning: Unified token pool for fixed base search is empty. No sequences can be generated.")
-                        valid_vocab_setup = False
-                    else:
-                        vocab_for_beam_search_steps = [unified_pool] * search_horizon
-                        print(f"Beam search (fixed base): Choosing {search_horizon} tokens using a unified pool of {len(unified_pool)} tokens.")
-                else: # Not fixed base, beam search chooses the base token as well
-                    # vocab_for_padding_search_steps is original_testing_words_list
-                    # Step 0 (choosing the "base" token)
-                    if search_horizon >= 1: # Should always be true if we are in this else block
-                        if original_testing_words_list and original_testing_words_list[0]:
-                            vocab_for_beam_search_steps.append(original_testing_words_list[0])
-                            print(f"Beam search (variable base): Step 1 (base choice) using {len(original_testing_words_list[0])} tokens from original_testing_words_list[0].")
-                        else:
-                            print("Warning: Vocab for first token choice (base) is empty. Cannot start beam search.")
+                    print(f"Beam search (fixed base): Choosing {search_horizon} tokens using per-step vocabulary.")
+                else:
+                    print(f"Beam search (variable base): Choosing {search_horizon} tokens using per-step vocabulary.")
+
+                # Validate the per-step vocabulary
+                if not vocab_for_beam_search_steps or len(vocab_for_beam_search_steps) < search_horizon:
+                    print(f"Warning: Per-step vocabulary list (length {len(vocab_for_beam_search_steps) if vocab_for_beam_search_steps else 0}) is shorter than search horizon ({search_horizon}) or empty. No sequences can be generated.")
+                    valid_vocab_setup = False
+                else:
+                    for h_idx in range(search_horizon):
+                        if not vocab_for_beam_search_steps[h_idx]:
+                            print(f"Warning: Vocabulary for choice step {h_idx + 1} (index {h_idx} in per-step list) is empty. No sequences can be generated.")
                             valid_vocab_setup = False
-                    
-                    # Subsequent steps (choosing tokens after the "base")
-                    if search_horizon > 1 and valid_vocab_setup:
-                        subsequent_vocabs_pool_source = original_testing_words_list[1:]
-                        unified_pool_subsequent = list(set(token for sublist in subsequent_vocabs_pool_source if sublist for token in sublist))
-                        
-                        if not unified_pool_subsequent:
-                            print(f"Warning: Unified token pool for subsequent {search_horizon - 1} choices is empty. Beam search may be ineffective.")
-                            # Allow proceeding, _beam_search handles empty vocab for a step by terminating.
-                            # If we want to be stricter and fail here: valid_vocab_setup = False
-                        
-                        vocab_for_beam_search_steps.extend([unified_pool_subsequent] * (search_horizon - 1))
-                        if unified_pool_subsequent : # Only print if pool is not empty
-                             print(f"Beam search (variable base): Next {search_horizon - 1} steps using a unified pool of {len(unified_pool_subsequent)} tokens from original_testing_words_list[1:].")
-
-
-                if not valid_vocab_setup or (search_horizon > 0 and (not vocab_for_beam_search_steps or len(vocab_for_beam_search_steps) != search_horizon or any(not vocab_step for vocab_step in vocab_for_beam_search_steps))):
-                    print("Warning: Beam search vocabulary setup failed or resulted in empty/incomplete steps. No sequences can be generated.")
+                            break
+            
+                if not valid_vocab_setup:
                     best_prompts, best_scores, best_sequences_tokens = [], [], []
                 else:
                     best_results = self._beam_search(
                         env, search_horizon, vocab_for_beam_search_steps, scoring_model_for_ranking,
                         self.beam_width, maximize=True, fixed_base_prompt_part=search_base_prompt,
-                        vocab_for_padding_partial_sequences=vocab_for_padding_search_steps
+                        vocab_for_padding_partial_sequences=vocab_for_padding_search_steps # This is the same as vocab_for_beam_search_steps
                     )
                     top_n_best = best_results[:self.take_best_worst_N]
                     best_sequences_tokens = [list(seq_tokens) for score, seq_tokens in top_n_best]
