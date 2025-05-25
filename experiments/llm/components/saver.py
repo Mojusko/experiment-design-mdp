@@ -531,24 +531,35 @@ class ImageGenerationSaver(BaseSaver):
             base_img_array, base_prompt_score, base_img_score = base_image_tuple
             ax = axes[0, current_col_idx]
             ax.imshow(base_img_array)
-            title_parts = ["Base Prompt"]
-            if 'prompt' in self.add_scores and base_prompt_score is not None:
-                 title_parts.append(f"GTScr: {base_prompt_score:.2f}")
-            if 'image' in self.add_scores and base_img_score is not None:
-                 title_parts.append(f"IScr: {base_img_score:.2f}")
-            ax.set_title(" ".join(title_parts))
+            ax.set_title("Base Prompt") # Title for base image without scores
             wrapped_prompt = textwrap.fill(self.base_prompt, width=40)
             ax.set_xlabel(wrapped_prompt, fontsize=8, labelpad=10)
             ax.set_xticks([])
             ax.set_yticks([])
+            
+            # Add a vertical separator line if there are best images to follow
+            if num_best_to_plot > 0:
+                ax.axvline(x=ax.get_xlim()[1], color='gray', linestyle='--', linewidth=1.5, ymin=0.05, ymax=0.95)
+            
             current_col_idx +=1
-            # Optional: Add a visual separator line if more images follow
-            # if num_best_to_plot > 0:
-            #     ax.axvline(x=base_img_array.shape[1] -1 , color='gray', linestyle='--', linewidth=1)
 
+        # Add a title for the "Top Generated Prompts" section if there are best images
+        if num_best_to_plot > 0:
+            # Determine the axes for the best images section
+            first_best_ax = axes[0, current_col_idx]
+            last_best_ax = axes[0, current_col_idx + num_best_to_plot - 1]
+            
+            # Get positions for centering the text
+            x_start_fig_coord = first_best_ax.get_position().x0
+            x_end_fig_coord = last_best_ax.get_position().x1
+            y_pos_fig_coord = first_best_ax.get_position().y1 + 0.02 # Adjust 0.02 for spacing
+            
+            fig.text((x_start_fig_coord + x_end_fig_coord) / 2, y_pos_fig_coord,
+                     "Top Generated Prompts",
+                     ha='center', va='bottom', fontsize=12, fontweight='bold')
 
         for i, (img, p_score, sec_p_score, full_prompt, i_score) in enumerate(zip(best_generated_images, best_scores, actual_best_secondary_prompt_scores, best_prompts, actual_best_image_scores)):
-           ax = axes[0, current_col_idx + i]
+           ax = axes[0, current_col_idx + i] # current_col_idx is 1 if base_image exists, 0 otherwise
            ax.imshow(img)
            title_parts = [f"Best {i+1}"]
            if 'prompt' in self.add_scores:

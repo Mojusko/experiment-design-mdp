@@ -24,7 +24,7 @@ from components.solver import SolverFactory
 from components.tester import BaseTester, ImageGenerationTester
 # Import specific saver types needed for validation and estimator creation
 # Removed LearnedEstimatorSaver from direct import here, will handle skipping later
-from components.saver import BaseSaver, VisitsSaver, VisitsImageSaver, ConfSaver, MetricsSaver # Added MetricsSaver
+from components.saver import BaseSaver, VisitsSaver, VisitsImageSaver, ConfSaver, MetricsSaver, ImageGenerationSaver # Added MetricsSaver and ImageGenerationSaver
 # Removed unused estimator/likelihood/regularizer imports here, they are used within factories/components
 # from stpy.regression.regularized_dictionary.regularized_multinomial_estimator import RegularizedMultinomialEstimator
 # from stpy.probability.multinomial_likelihood import MultinomialLikelihood
@@ -1372,10 +1372,6 @@ class LLMExperiment:
                          print(f"  Skipping {tester_name} (prompt_ranking_model='{tester.prompt_ranking_model}') for model '{model_name}': Estimator not available.")
                          continue
 
-                    # --- Skip ImageGenerationTester for subsequent models (i > 0) ---
-                    if isinstance(tester, ImageGenerationTester) and i > 0:
-                        print(f"  Skipping {tester_name} for model '{model_name}' (run only for the first model).")
-                        continue
                     # -------------------------------------------------------------
 
                     try:
@@ -1403,29 +1399,56 @@ class LLMExperiment:
 
                         # Process and store results for this model
                         if tester_results:
-                            for key, value in tester_results.items():
-                                if key == "image_generation" and isinstance(value, dict):
-                                    # Summarize image_generation results
-                                    best_count = len(value.get("best_prompts", []))
-                                    worst_count = len(value.get("worst_prompts", []))
-                                    print(f"    Model '{model_name}' - {key}: (Best: {best_count}, Worst: {worst_count})")
-                                elif isinstance(value, float):
-                                    print(f"    Model '{model_name}' - {key}: {value:.4f}")
-                                else:
-                                    # For other non-float values, print as is (or consider summarizing if too verbose)
-                                    print(f"    Model '{model_name}' - {key}: {value}")
+                            if isinstance(tester, ImageGenerationTester):
+                                # Handle ImageGenerationTester results specifically for the current model
+                                print(f"    ImageGenerationTester results for model '{model_name}':")
+                                # Summarize and print image generation details
+                                for key, value in tester_results.items():
+                                    if key == "image_generation" and isinstance(value, dict):
+                                        best_count = len(value.get("best_prompts", []))
+                                        worst_count = len(value.get("worst_prompts", [])) # Should be 0
+                                        print(f"      - {key}: (Best: {best_count}, Worst: {worst_count})")
+                                    elif isinstance(value, float):
+                                        print(f"      - {key}: {value:.4f}")
+                                    else:
+                                        print(f"      - {key}: {value}")
+                                
+                                # Find ImageGenerationSaver and run it with model-specific results
+                                ig_saver_instance = None
+                                for s_instance in self.savers:
+                                    if isinstance(s_instance, ImageGenerationSaver): # Ensure ImageGenerationSaver is imported
+                                        ig_saver_instance = s_instance
+                                        break
+                                
+                                if ig_saver_instance:
+                                    from components.results import ExperimentResults # Import locally
+                                    temp_ig_results = ExperimentResults()
+                                    # Add all metrics from ImageGenerationTester to this temp object
+                                    for key, value in tester_results.items():
+                                        temp_ig_results.add_metric(key, value)
+                                    
+                                    # Set metadata required by ImageGenerationSaver
+                                    temp_ig_results.metadata['current_model_name'] = model_name
+                                    temp_ig_results.metadata['all_gt_scorer_models'] = self._scorer_models
+                                    temp_ig_results.metadata['scorer_model_names'] = self.scorer_model_names
+                                    temp_ig_results.estimators = self.estimators # Pass the list of all estimators
 
-                                # If the current tester is ImageGenerationTester,
-                                # add its results directly to the main results object's metrics.
-                                # These are not averaged across models as IGT runs only for the first model.
-                                if isinstance(tester, ImageGenerationTester):
-                                    results.add_metric(key, value)
-                                # For other testers, collect for per-model saving
+                                    print(f"  Running ImageGenerationSaver for model '{model_name}'...")
+                                    ig_saver_instance.save_result(temp_ig_results)
                                 else:
+                                    print(f"  Warning: ImageGenerationSaver not found in savers list. Cannot save image generation results for model '{model_name}'.")
+
+                            else: # For other testers (PreferenceTester, CosineTester)
+                                # Collect metrics for per-model saving by MetricsSaver later
+                                for key, value in tester_results.items():
+                                    if isinstance(value, float):
+                                        print(f"    Model '{model_name}' - {key}: {value:.4f}")
+                                    else:
+                                        print(f"    Model '{model_name}' - {key}: {value}")
+                                    
                                     if model_name not in per_model_metrics_collection:
                                         per_model_metrics_collection[model_name] = {}
                                     per_model_metrics_collection[model_name][key] = value
-
                     except Exception as e:
                         print(f"  Error running tester {tester_name} for model '{model_name}': {e}")
                         # Optionally, re-raise or log traceback for critical errors

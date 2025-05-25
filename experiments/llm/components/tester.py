@@ -217,56 +217,74 @@ class ImageGenerationTester(BaseTester):
                                           scorer_model, estimator, # These are for the current (first) model iteration
                                           all_estimators, all_gt_scorer_models)
 
-    def _score_sequence(self, sequence, env, horizon, testing_words_list, scoring_model, base_for_prompt_creation):
-        """Scores a potentially partial sequence by padding and using the scoring model."""
-        # Pad sequence if it's shorter than the horizon
-        padded_sequence = list(sequence) # Make a mutable copy
-        current_len = len(padded_sequence)
-        if current_len < horizon:
-            # Use first token from each remaining position's vocab as padding
-            # Ensure testing_words_list is not empty and h is within bounds for padding
-            padding = []
-            for i in range(current_len, horizon):
-                if i < len(testing_words_list) and testing_words_list[i]:
-                    padding.append(testing_words_list[i][0])
-                else:
-                    # Handle cases where padding cannot be determined (e.g., horizon mismatch)
-                    # This might indicate an issue with how horizon/testing_words_list are adjusted
-                    print(f"Warning: Cannot determine padding for step {i} in _score_sequence. Sequence: {sequence}, Horizon: {horizon}")
-                    break # Stop padding if a step is problematic
-            padded_sequence.extend(padding)
+    def _score_sequence(self, sequence_tokens_after_base, env, num_total_chosen_tokens_target, vocab_for_padding_chosen_tokens, scoring_model, fixed_base_prompt_part):
+        """
+        Scores a sequence of chosen tokens. If partial, pads it to the target length.
+        
+        Args:
+            sequence_tokens_after_base: Tuple of tokens chosen by beam search so far.
+            env: Environment instance.
+            num_total_chosen_tokens_target: The target number of tokens to be chosen after the fixed base.
+            vocab_for_padding_chosen_tokens: List of token lists, structured per choice step, used for padding.
+                                            vocab_for_padding_chosen_tokens[i] is the vocab for the (i+1)-th chosen token.
+            scoring_model: The model to use for scoring the complete prompt.
+            fixed_base_prompt_part: The fixed base string of the prompt.
+        """
+        padded_chosen_tokens = list(sequence_tokens_after_base)
+        current_len_chosen = len(padded_chosen_tokens)
 
-        # Create prompt and score
-        prompt = create_prompt_from_tokens(padded_sequence, base_for_prompt_creation)
-        score, _ = scoring_model.score_prompt(prompt)
+        if current_len_chosen < num_total_chosen_tokens_target:
+            for i_choice_step in range(current_len_chosen, num_total_chosen_tokens_target):
+                # vocab_for_padding_chosen_tokens is indexed by choice step (0 to num_total_chosen_tokens_target-1)
+                if i_choice_step < len(vocab_for_padding_chosen_tokens) and vocab_for_padding_chosen_tokens[i_choice_step]:
+                    padding_token = vocab_for_padding_chosen_tokens[i_choice_step][0] # Use first token from the step-specific padding vocab
+                    padded_chosen_tokens.append(padding_token)
+                else:
+                    # Cannot pad further for this choice step, sequence will be scored as is (potentially shorter than target)
+                    print(f"Warning: Cannot determine padding for choice step {i_choice_step + 1} (index {i_choice_step}) in _score_sequence. "
+                          f"Padding vocab for this step might be missing or empty. Current sequence: {sequence_tokens_after_base}")
+                    break # Stop padding
+
+        # Create the full prompt by combining the fixed base and the (padded) chosen tokens
+        full_prompt = create_prompt_from_tokens(padded_chosen_tokens, base_prompt=fixed_base_prompt_part)
+        score, _ = scoring_model.score_prompt(full_prompt)
         return score.item()
 
-    def _beam_search(self, env, horizon, testing_words_list, scoring_model, beam_width, maximize, base_for_sequences):
-        """Performs beam search to find sequences optimizing the score."""
-        # Initialize beams: list of (score, sequence_tuple)
-        # Start with an empty sequence tuple and score 0.
-        # If base_for_sequences is non-empty, the initial score could be the score of base_for_sequences itself,
-        # but for simplicity, we start sequences *after* the base.
-        beams = [(0.0, tuple())] # Score is for the sequence part *after* any fixed base.
+    def _beam_search(self, env, num_tokens_to_choose, vocab_per_choice_step, scoring_model, beam_width, maximize, fixed_base_prompt_part, vocab_for_padding_partial_sequences):
+        """
+        Performs beam search to find sequences optimizing the score.
 
-        for h in range(horizon): # horizon is now the number of choices *after* the fixed base
-            if h >= len(testing_words_list) or not testing_words_list[h]:
-                print(f"Warning: ImageGenerationTester._beam_search: testing_words_list[{h}] (for choice {h+1}) is empty or not available. Beam search cannot proceed for this step.")
-                beams = [] # Clear beams as no new candidates can be formed
-                break # Terminate beam search
+        Args:
+            env: Environment instance.
+            num_tokens_to_choose: How many tokens to select after the fixed_base_prompt_part.
+            vocab_per_choice_step: List where each element is the vocabulary pool for that choice step.
+                                   (For current request, this will be the same unified pool for all steps).
+            scoring_model: Model to score prompts.
+            beam_width: The K in beam search.
+            maximize: Boolean, true to maximize score, false to minimize.
+            fixed_base_prompt_part: The fixed part of the prompt.
+            vocab_for_padding_partial_sequences: Original per-step vocabulary, used for padding partial sequences during scoring.
+        """
+        beams = [(0.0, tuple())]  # (score, sequence_tuple_after_base)
+
+        for h_choice_step in range(num_tokens_to_choose):
+            if h_choice_step >= len(vocab_per_choice_step) or not vocab_per_choice_step[h_choice_step]:
+                print(f"Warning: ImageGenerationTester._beam_search: Vocabulary for choice step {h_choice_step + 1} "
+                      f"(index {h_choice_step}) is empty or not available. Beam search cannot proceed for this step.")
+                beams = [] 
+                break 
 
             candidates = []
-            # For each current beam (sequence)
-            for current_score, current_sequence_tokens in beams: # current_sequence_tokens are tokens *after* fixed base
-                # Try appending each token from the vocabulary for this step
-                for token in testing_words_list[h]: # This is now safe due to the check above
-                    new_sequence_tokens = current_sequence_tokens + (token,)
+            for current_score, current_sequence_tokens_after_base in beams:
+                for token in vocab_per_choice_step[h_choice_step]: # Iterate through tokens from the unified pool for this step
+                    new_sequence_tokens_after_base = current_sequence_tokens_after_base + (token,)
                     try:
-                        # Score the new (potentially partial) sequence of tokens, prepending the fixed base for scoring
-                        score = self._score_sequence(new_sequence_tokens, env, horizon, testing_words_list, scoring_model, base_for_sequences)
-                        candidates.append((score, new_sequence_tokens))
+                        # Score the new sequence. _score_sequence handles padding using vocab_for_padding_partial_sequences.
+                        score = self._score_sequence(new_sequence_tokens_after_base, env, num_tokens_to_choose,
+                                                     vocab_for_padding_partial_sequences, scoring_model, fixed_base_prompt_part)
+                        candidates.append((score, new_sequence_tokens_after_base))
                     except Exception as e:
-                        print(f"Error scoring sequence {new_sequence_tokens} (base: '{base_for_sequences}') with token '{token}': {e}")
+                        print(f"Error scoring sequence {new_sequence_tokens_after_base} (base: '{fixed_base_prompt_part}') with token '{token}': {e}")
                         continue # Skip this candidate if scoring fails
 
             # Sort candidates by score (descending for maximize, ascending for minimize)
@@ -276,7 +294,7 @@ class ImageGenerationTester(BaseTester):
             beams = candidates[:beam_width]
 
             if not beams: # Stop if no valid candidates were found
-                print(f"Warning: Beam search terminated early at step {h+1} due to no valid candidates.")
+                print(f"Warning: Beam search terminated early at step {h_choice_step+1} due to no valid candidates.")
                 break
 
         # Final beams are sorted by score according to 'maximize'
@@ -284,33 +302,39 @@ class ImageGenerationTester(BaseTester):
 
     # Added scorer_model (first GT model), estimator (first learned estimator),
     # all_estimators_list, and all_gt_scorer_models_list
-    def _run_beam_search_test(self, cfg, env, horizon, testing_words_list,
+    def _run_beam_search_test(self, cfg, env, full_original_horizon, original_testing_words_list,
                               first_gt_scorer_model, first_estimator,
                               all_estimators_list, all_gt_scorer_models_list):
         """Runs beam search to find top N best and worst sequences."""
         from omegaconf import OmegaConf # For accessing list config
 
-        # Determine the base prompt, horizon, and word lists for the beam search
         is_fixed_base = bool(self.base_prompt and self.base_prompt.strip())
         
+        search_base_prompt: str
+        search_horizon: int # Number of tokens to choose by beam search
+        vocab_for_padding_search_steps: list # Original per-step vocab, sliced, for padding
+        source_vocabs_for_unified_pool: list # Vocabs to form the unified pool for choices
+
         if is_fixed_base:
             search_base_prompt = self.base_prompt
-            # If base is fixed, we make one less choice.
-            # Horizon for beam search is the number of tokens to *choose*.
-            search_horizon = horizon - 1 
-            search_testing_words_list = testing_words_list[1:] # Skip first vocab list (bases.txt)
-            print(f"ImageGenerationTester: Using fixed base_prompt: '{search_base_prompt}'. Search horizon for tokens: {search_horizon}.")
-            if search_horizon < 0: # Should not happen if horizon > 0
-                print(f"Warning: Search horizon is {search_horizon} with fixed base. No tokens will be searched.")
-                search_horizon = 0 # Ensure it's not negative
+            search_horizon = full_original_horizon - 1
+            vocab_for_padding_search_steps = original_testing_words_list[1:]
+            source_vocabs_for_unified_pool = original_testing_words_list[1:]
+            print(f"ImageGenerationTester: Using fixed base_prompt: '{search_base_prompt}'. Tokens to choose: {search_horizon}.")
         else:
-            search_base_prompt = env.base_prompt # Use env's base_prompt (might be empty)
-            search_horizon = horizon # Full horizon of choices
-            search_testing_words_list = testing_words_list
-            print(f"ImageGenerationTester: Using env.base_prompt: '{search_base_prompt}'. Search horizon for tokens: {search_horizon}.")
+            search_base_prompt = env.base_prompt 
+            search_horizon = full_original_horizon
+            vocab_for_padding_search_steps = original_testing_words_list
+            source_vocabs_for_unified_pool = original_testing_words_list
+            print(f"ImageGenerationTester: Using env.base_prompt: '{search_base_prompt}'. Tokens to choose: {search_horizon}.")
 
+        if search_horizon < 0:
+            print(f"Warning: Search horizon became {search_horizon}. Setting to 0. No tokens will be searched.")
+            search_horizon = 0
+
+        # Determine the scoring model for ranking prompts
+        scoring_model_for_ranking = None
         try:
-            scoring_model_for_ranking = None
             if self.prompt_ranking_model == "current_iteration_estimator":
                 if first_estimator is None:
                     raise ValueError("Cannot use 'current_iteration_estimator' for prompt ranking: Current iteration's estimator (first_estimator) is not available.")
@@ -342,26 +366,114 @@ class ImageGenerationTester(BaseTester):
                     raise ValueError(f"Cannot create estimator model for prompt ranking ('{model_name_to_use}') without an embedder instance.")
                 scoring_model_for_ranking = create_dot_product_model_from_estimator(target_estimator, self.embedder)
                 print(f"ImageGenerationTester: Using estimator for '{model_name_to_use}' for prompt ranking. Beam width {self.beam_width}")
+        except ValueError as e:
+            print(f"Error determining scoring model for ranking: {e}")
+            # Return error structure if model determination fails
+            return {
+                "image_generation": {"best_prompts": [], "best_scores": [], "best_sequences": [], "worst_prompts": [], "worst_scores": [], "worst_sequences": []},
+                "best_prompt_score": 0, "worst_prompt_score": 0, "avg_top_prompt_score": 0, "error": str(e)
+            }
+        
+        try: # Wrap main logic in a try block
+            if search_horizon == 0:
+                print("Search horizon is 0. Scoring the base prompt directly.")
+                if scoring_model_for_ranking is None: # Should have been caught above, but defensive check
+                    error_msg = "Scoring model for ranking not available for search_horizon=0 case."
+                    print(f"Error: {error_msg}")
+                    return {
+                        "image_generation": {"best_prompts": [], "best_scores": [], "best_sequences": [], "worst_prompts": [], "worst_scores": [], "worst_sequences": []},
+                        "best_prompt_score": 0, "worst_prompt_score": 0, "avg_top_prompt_score": 0, "error": error_msg
+                    }
+                
+                prompt_to_score = search_base_prompt
+                score_of_base, _ = scoring_model_for_ranking.score_prompt(prompt_to_score)
+                best_prompts = [prompt_to_score]
+                best_scores = [score_of_base.item()]
+                best_sequences_tokens = [[]] # No tokens chosen after base
+                worst_prompts = [] # No worst prompts processing
+                worst_scores = []
+                worst_sequences_tokens = []
+                print(f"ImageGenerationTester: Base prompt score: {best_scores[0]:.4f}")
+            else: # search_horizon > 0
+                vocab_for_beam_search_steps = []
+                valid_vocab_setup = True
 
-            # Find N best sequences
-            print("Starting beam search for best sequences...")
-            # Pass search_base_prompt to _beam_search, it will be used by _score_sequence
-            best_results = self._beam_search(env, search_horizon, search_testing_words_list, scoring_model_for_ranking, self.beam_width, maximize=True, base_for_sequences=search_base_prompt)
-            top_n_best = best_results[:self.take_best_worst_N]
-            # best_sequences_tokens are tokens *after* the search_base_prompt
-            best_sequences_tokens = [list(seq_tokens) for score, seq_tokens in top_n_best]
-            best_scores = [score for score, seq_tokens in top_n_best] # Scores are for the full prompt
-            best_prompts = [create_prompt_from_tokens(seq_tokens, base_prompt=search_base_prompt) for seq_tokens in best_sequences_tokens]
-            print(f"Beam search: Found {len(best_prompts)} best prompts (Top score: {best_scores[0]:.4f})" if best_scores else "Beam search: Found 0 best prompts.")
+                if is_fixed_base:
+                    # All search_horizon steps use a unified pool from original_testing_words_list[1:]
+                    # source_vocabs_for_unified_pool was already set to original_testing_words_list[1:]
+                    # vocab_for_padding_search_steps is also original_testing_words_list[1:]
+                    unified_pool = list(set(token for sublist in source_vocabs_for_unified_pool if sublist for token in sublist))
+                    if not unified_pool:
+                        print("Warning: Unified token pool for fixed base search is empty. No sequences can be generated.")
+                        valid_vocab_setup = False
+                    else:
+                        vocab_for_beam_search_steps = [unified_pool] * search_horizon
+                        print(f"Beam search (fixed base): Choosing {search_horizon} tokens using a unified pool of {len(unified_pool)} tokens.")
+                else: # Not fixed base, beam search chooses the base token as well
+                    # vocab_for_padding_search_steps is original_testing_words_list
+                    # Step 0 (choosing the "base" token)
+                    if search_horizon >= 1: # Should always be true if we are in this else block
+                        if original_testing_words_list and original_testing_words_list[0]:
+                            vocab_for_beam_search_steps.append(original_testing_words_list[0])
+                            print(f"Beam search (variable base): Step 1 (base choice) using {len(original_testing_words_list[0])} tokens from original_testing_words_list[0].")
+                        else:
+                            print("Warning: Vocab for first token choice (base) is empty. Cannot start beam search.")
+                            valid_vocab_setup = False
+                    
+                    # Subsequent steps (choosing tokens after the "base")
+                    if search_horizon > 1 and valid_vocab_setup:
+                        subsequent_vocabs_pool_source = original_testing_words_list[1:]
+                        unified_pool_subsequent = list(set(token for sublist in subsequent_vocabs_pool_source if sublist for token in sublist))
+                        
+                        if not unified_pool_subsequent:
+                            print(f"Warning: Unified token pool for subsequent {search_horizon - 1} choices is empty. Beam search may be ineffective.")
+                            # Allow proceeding, _beam_search handles empty vocab for a step by terminating.
+                            # If we want to be stricter and fail here: valid_vocab_setup = False
+                        
+                        vocab_for_beam_search_steps.extend([unified_pool_subsequent] * (search_horizon - 1))
+                        if unified_pool_subsequent : # Only print if pool is not empty
+                             print(f"Beam search (variable base): Next {search_horizon - 1} steps using a unified pool of {len(unified_pool_subsequent)} tokens from original_testing_words_list[1:].")
 
-            # Worst prompts are no longer searched for or processed.
-            worst_prompts = []
-            worst_scores = []
-            worst_sequences_tokens = []
-            
-            # Log the number of prompts found before returning
-            print(f"ImageGenerationTester: Beam search complete ({len(best_prompts)} best).")
 
+                if not valid_vocab_setup or (search_horizon > 0 and (not vocab_for_beam_search_steps or len(vocab_for_beam_search_steps) != search_horizon or any(not vocab_step for vocab_step in vocab_for_beam_search_steps))):
+                    print("Warning: Beam search vocabulary setup failed or resulted in empty/incomplete steps. No sequences can be generated.")
+                    best_prompts, best_scores, best_sequences_tokens = [], [], []
+                else:
+                    best_results = self._beam_search(
+                        env, search_horizon, vocab_for_beam_search_steps, scoring_model_for_ranking,
+                        self.beam_width, maximize=True, fixed_base_prompt_part=search_base_prompt,
+                        vocab_for_padding_partial_sequences=vocab_for_padding_search_steps
+                    )
+                    top_n_best = best_results[:self.take_best_worst_N]
+                    best_sequences_tokens = [list(seq_tokens) for score, seq_tokens in top_n_best]
+                    best_scores = [score for score, seq_tokens in top_n_best]
+                    best_prompts = [create_prompt_from_tokens(seq_tokens, base_prompt=search_base_prompt) for seq_tokens in best_sequences_tokens]
+                    print(f"Beam search: Found {len(best_prompts)} best prompts (Top score: {best_scores[0]:.4f})" if best_scores else "Beam search: Found 0 best prompts.")
+
+                # Worst prompts are no longer searched for or processed.
+                worst_prompts = []
+                worst_scores = []
+                worst_sequences_tokens = []
+                
+                # Log the number of prompts found before returning
+                print(f"ImageGenerationTester: Beam search complete ({len(best_prompts)} best).")
+
+            # Return results in the expected format (moved inside the try block)
+            return {
+                "image_generation": {
+                    "best_prompts": best_prompts, # Full prompts
+                    "best_scores": best_scores, # Scores corresponding to best_prompts
+                    "best_sequences": best_sequences_tokens, # Tokens *after* fixed base
+                    "worst_prompts": worst_prompts, # Empty list
+                    "worst_scores": worst_scores, # Empty list
+                    "worst_sequences": worst_sequences_tokens # Empty list
+                },
+                # These are prompt scores from the tester's ranking model
+                "best_prompt_score": best_scores[0] if best_scores else 0,
+                "worst_prompt_score": 0, # Worst prompts are not processed
+                # Avg score of the N best sequences found by beam search
+                "avg_top_prompt_score": sum(best_scores) / len(best_scores) if best_scores else 0
+            }
         except Exception as e:
             print(f"Error during beam search test: {e}")
             # Return an error structure
@@ -375,23 +487,6 @@ class ImageGenerationTester(BaseTester):
                 "avg_top_prompt_score": 0, # Changed from avg_top_image_score
                 "error": str(e)
             }
-
-        # Return results in the expected format
-        return {
-            "image_generation": {
-                "best_prompts": best_prompts, # Full prompts
-                "best_scores": best_scores, # Scores corresponding to best_prompts
-                "best_sequences": best_sequences_tokens, # Tokens *after* fixed base
-                "worst_prompts": worst_prompts, # Empty list
-                "worst_scores": worst_scores, # Empty list
-                "worst_sequences": worst_sequences_tokens # Empty list
-            },
-            # These are prompt scores from the tester's ranking model
-            "best_prompt_score": best_scores[0] if best_scores else 0,
-            "worst_prompt_score": 0, # Worst prompts are not processed
-            # Avg score of the N best sequences found by beam search
-            "avg_top_prompt_score": sum(best_scores) / len(best_scores) if best_scores else 0
-        }
 
 class HumanFeedbackBenchmarkTester(BaseTester):
     """
