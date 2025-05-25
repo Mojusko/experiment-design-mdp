@@ -760,3 +760,13 @@ nanopunk-aesthetic
 stonepunk-prehistoric-tech
 clockpunk-windup-tech
 nowpunk-contemporary-tech
+medieval-gothic-style
+romanesque-architectural-style
+norman-fortress-style
+illuminated-codex-style
+medieval-fresco-look
+bayeux-narrative-style
+heraldic-emblem-style
+pure-gothic-style
+crusader-era-aesthetic
+medieval-woodcut-impression

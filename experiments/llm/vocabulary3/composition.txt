@@ -662,3 +662,13 @@ view-through-sunglasses
 hammock-level-shot
 fruit-orchard-rows-perspective
 open-convertible-road-trip-view
+castle-siege-overview
+knightly-procession-view
+medieval-banquet-table-layout
+monastery-scriptorium-interior
+blacksmith-forge-close-up
+jousting-impact-moment
+drawbridge-low-angle
+cathedral-vaulted-ceiling-view
+feudal-manor-grounds-plan
+battle-formation-aerial

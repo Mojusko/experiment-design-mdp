@@ -697,3 +697,13 @@ early-morning-haze-sunlit
 sunset-over-horizon-fire
 beach-umbrella-dappled-shade
 open-field-unobstructed-sunlight
+great-hall-firepit-glow
+arrow-slit-sunbeam
+scriptorium-candlelight
+castle-corridor-torchlight
+siege-night-fire-illumination
+stained-glass-ambient-light
+dungeon-grate-light
+watchtower-beacon-flame
+banquet-candelabra-light
+moonlit-battlements

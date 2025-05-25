@@ -664,3 +664,17 @@ sun-dappled-leaf-veins
 golden-pollen-dusting
 beeswax-candle-drip-texture
 ripe-fruit-skin-sheen
+greaves-and-gauntlets
+portcullis-ironwork
+arrow-slit-detail
+trebuchet-woodwork
+catapult-mechanism
+longbow-yew-wood
+parchment-scroll-texture
+illuminated-lettering-detail
+feudal-standard-embroidery
+monastery-stonework
+castle-parapet-detail
+siege-ladder-construction
+knightly-surcoat-fabric
+wooden-shield-boss
