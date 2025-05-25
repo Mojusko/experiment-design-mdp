@@ -174,7 +174,7 @@ class ImageGenerationTester(BaseTester):
     def __init__(self, env=None, embedder=None, params=None):
         self.params = params or {}
         # embedder is passed to super() which stores it
-        self.take_best_worst_N = self.params.get('take_best_worst_N', 8) # N sequences to return
+        self.take_best_worst_N = self.params.get('take_best_worst_N', 4) # N sequences to return
         self.base_prompt = self.params.get('base_prompt', None) # Tester's specific base_prompt
         
         # Process prompt_ranking_model
@@ -345,17 +345,13 @@ class ImageGenerationTester(BaseTester):
             best_prompts = [create_prompt_from_tokens(seq_tokens, base_prompt=search_base_prompt) for seq_tokens in best_sequences_tokens]
             print(f"Beam search: Found {len(best_prompts)} best prompts (Top score: {best_scores[0]:.4f})" if best_scores else "Beam search: Found 0 best prompts.")
 
-            # Find N worst sequences
-            print("Starting beam search for worst sequences...")
-            worst_results = self._beam_search(env, search_horizon, search_testing_words_list, scoring_model_for_ranking, self.beam_width, maximize=False, base_for_sequences=search_base_prompt)
-            top_n_worst = worst_results[:self.take_best_worst_N]
-            worst_sequences_tokens = [list(seq_tokens) for score, seq_tokens in top_n_worst]
-            worst_scores = [score for score, seq_tokens in top_n_worst]
-            worst_prompts = [create_prompt_from_tokens(seq_tokens, base_prompt=search_base_prompt) for seq_tokens in worst_sequences_tokens]
-            print(f"Beam search: Found {len(worst_prompts)} worst prompts (Top score: {worst_scores[0]:.4f})" if worst_scores else "Beam search: Found 0 worst prompts.")
-
+            # Worst prompts are no longer searched for or processed.
+            worst_prompts = []
+            worst_scores = []
+            worst_sequences_tokens = []
+            
             # Log the number of prompts found before returning
-            print(f"ImageGenerationTester: Beam search complete ({len(best_prompts)} best, {len(worst_prompts)} worst).")
+            print(f"ImageGenerationTester: Beam search complete ({len(best_prompts)} best).")
 
         except Exception as e:
             print(f"Error during beam search test: {e}")
@@ -363,9 +359,11 @@ class ImageGenerationTester(BaseTester):
             return {
                 "image_generation": {
                     "best_prompts": [], "best_scores": [], "best_sequences": [],
-                    "worst_prompts": [], "worst_scores": [], "worst_sequences": []
+                    "worst_prompts": [], "worst_scores": [], "worst_sequences": [] # Keep structure for consistency
                 },
-                "best_image_score": 0, "worst_image_score": 0, "avg_top_image_score": 0,
+                "best_prompt_score": 0, # Changed from best_image_score
+                "worst_prompt_score": 0, # Changed from worst_image_score
+                "avg_top_prompt_score": 0, # Changed from avg_top_image_score
                 "error": str(e)
             }
 
@@ -375,13 +373,13 @@ class ImageGenerationTester(BaseTester):
                 "best_prompts": best_prompts, # Full prompts
                 "best_scores": best_scores, # Scores corresponding to best_prompts
                 "best_sequences": best_sequences_tokens, # Tokens *after* fixed base
-                "worst_prompts": worst_prompts, # Full prompts
-                "worst_scores": worst_scores, # Scores corresponding to worst_prompts
-                "worst_sequences": worst_sequences_tokens # Tokens *after* fixed base
+                "worst_prompts": worst_prompts, # Empty list
+                "worst_scores": worst_scores, # Empty list
+                "worst_sequences": worst_sequences_tokens # Empty list
             },
             # These are prompt scores from the tester's ranking model
             "best_prompt_score": best_scores[0] if best_scores else 0,
-            "worst_prompt_score": worst_scores[0] if worst_scores else 0,
+            "worst_prompt_score": 0, # Worst prompts are not processed
             # Avg score of the N best sequences found by beam search
             "avg_top_prompt_score": sum(best_scores) / len(best_scores) if best_scores else 0
         }
