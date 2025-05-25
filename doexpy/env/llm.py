@@ -17,6 +17,8 @@ from collections import Counter
 
 
 class LLMGrid(DiscreteEnv):
+    EMPTY_ACTION_TOKEN = " " # Define the empty action token
+
     def __init__(
         self,
         list_of_text_tokens: List[str],
