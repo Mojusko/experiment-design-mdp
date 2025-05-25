@@ -917,24 +917,43 @@ class LLMExperiment:
             # can handle feedback_data=None or raises an appropriate error.
             # If NumericalFeedback is used, this might just return the scorer_model.
             try:
-                # Step 1: Collect labels using visits and ground truth scorer
-                print("Collecting labels from visits using ground truth scorer...")
-                # Ensure _theta_star is available
-                # Use the first model's theta_star, consistent with limited multi-model support
-                if not self._theta_stars or self._theta_stars[0] is None:
-                     raise ValueError("Ground truth scorer (_theta_stars[0]) is not available. Cannot collect labels.")
-                # Use the first feedback mechanism and first theta_star
-                self.feedbacks[0].collect_labels(self.cfg, self.visits, self._theta_stars[0])
+                # Loop through each configured scorer model to collect labels and fit an estimator
+                for i in range(self.num_scorer_models):
+                    model_name = self.scorer_model_names[i]
+                    print(f"Processing model '{model_name}' for estimator training from visits...")
 
-                # Step 2: Fit the estimator using the collected labels
-                print("Fitting estimator with collected labels...")
-                self.feedbacks[0].fit_estimator() # Uses internally stored data
+                    # Ensure components for this model are available
+                    if i >= len(self.feedbacks) or self.feedbacks[i] is None:
+                        print(f"  Skipping model '{model_name}': Feedback component not available.")
+                        continue
+                    if i >= len(self._theta_stars) or self._theta_stars[i] is None:
+                        print(f"  Skipping model '{model_name}': Ground truth scorer (_theta_stars[{i}]) not available.")
+                        continue
+                    
+                    # Step 1: Collect labels using visits and the current model's ground truth scorer
+                    print(f"  Collecting labels for model '{model_name}' from visits...")
+                    # self.visits should be List[List[Tuple(s,a)]]
+                    # collect_labels expects List[List[Tuple(s,a)]]
+                    self.feedbacks[i].collect_labels(self.cfg, self.visits, self._theta_stars[i])
 
-                # Step 3: Retrieve the fitted estimator (for the first model)
-                self.estimators[0] = self.feedbacks[0].estimator # Get the estimator instance
+                    # Step 2: Fit the estimator using the collected labels
+                    print(f"  Fitting estimator for model '{model_name}' with collected labels...")
+                    self.feedbacks[i].fit_estimator() # Uses internally stored data for this feedback object
 
+                    # Step 3: Retrieve the fitted estimator
+                    if i < len(self.estimators):
+                        self.estimators[i] = self.feedbacks[i].estimator
+                        if self.estimators[i] and getattr(self.estimators[i], 'fitted', False):
+                            print(f"  Estimator for model '{model_name}' trained successfully.")
+                        else:
+                            print(f"  Warning: Estimator for model '{model_name}' not fitted after training attempt.")
+                    else:
+                        print(f"  Warning: Estimators list too short for model '{model_name}' (index {i}).")
+                
             except NotImplementedError as e:
-                 print(f"Error: The configured feedback mechanism ({self.feedbacks[0].__class__.__name__}) does not support training from visits alone.")
+                 # This error would apply to the feedback mechanism type, not per model.
+                 # If it occurs, it likely means the feedback type itself is unsuitable.
+                 print(f"Error: The configured feedback mechanism ({self.feedbacks[0].__class__.__name__ if self.feedbacks else 'N/A'}) does not support training from visits alone.")
                  print(e)
                  return False
             except AttributeError as e: # Catch the specific error if collect_labels/fit_estimator are missing
@@ -945,14 +964,18 @@ class LLMExperiment:
                  # Optionally re-raise for more detail: raise e
                  return False
 
-            # Check if the first estimator was successfully fitted/retrieved
-            if self.estimators and self.estimators[0] and getattr(self.estimators[0], 'fitted', False):
-                print("Estimator for the first model trained/obtained successfully.")
-                # Proceed to testing (will handle multiple models internally)
+            # After attempting to fit all estimators, check if at least one was successful
+            # to proceed to test_and_save. Individual testers will skip if their specific estimator is None.
+            any_estimator_fitted = any(
+                est and getattr(est, 'fitted', False) for est in self.estimators if est is not None
+            )
+
+            if any_estimator_fitted:
+                print("At least one estimator trained successfully from visits.")
                 self.test_and_save(current_mode=mode)
                 return True
             else:
-                print("Error: Feedback processing did not return a valid estimator from visits.")
+                print("Error: No estimators were successfully trained from visits.")
                 return False
 
         # --- Mode 3: Inspect Visits ---
