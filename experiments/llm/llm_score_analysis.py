@@ -324,9 +324,9 @@ if raw_sentences_from_model_txt and embeddings_from_model_txt and script_positiv
     acc_first = calculate_single_concept_accuracy(target_emb_first, script_positive_medieval_embeddings, script_negative_non_medieval_embeddings)
     print(f"'{target_raw_sentence_first}' - accuracy: {acc_first:.4f}")
 
-    # 2. Accuracies for the next 19 sentences from {model_name_to_analyze}.txt (indices 1 to 19)
-    for i in range(1, 20): # Iterate for sentences at index 1 through 19 in {model_name_to_analyze}.txt list
-        if i < len(raw_sentences_from_model_txt):
+    # 2. Accuracies for the remaining sentences from {model_name_to_analyze}.txt (indices 1 up to length of list)
+    for i in range(1, len(raw_sentences_from_model_txt)): # Iterate for sentences from index 1 up to the number of loaded sentences
+        if i < len(raw_sentences_from_model_txt): # This check is now implicitly handled by the loop range, but kept for safety
             current_raw_sentence_from_txt = raw_sentences_from_model_txt[i]
             current_emb_from_model_txt_as_model = embeddings_from_model_txt[i] # This is theta for the current model
             acc_current = calculate_single_concept_accuracy(current_emb_from_model_txt_as_model, script_positive_medieval_embeddings, script_negative_non_medieval_embeddings)
