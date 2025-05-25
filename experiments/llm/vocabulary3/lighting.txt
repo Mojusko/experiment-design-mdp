@@ -707,3 +707,16 @@ dungeon-grate-light
 watchtower-beacon-flame
 banquet-candelabra-light
 moonlit-battlements
+rushlight-flicker
+tallow-candle-glow
+castle-window-slit-light
+dawn-over-battlefield
+dusk-in-ancient-forest
+smithy-fire-intense-glow
+altar-candle-sacred-light
+hidden-crypt-torchlight
+royal-chamber-brazier-warmth
+executioner's-block-stark-light
+wizard's-crystal-ball-luminescence
+haunted-armory-spectral-light
+monastery-library-dusty-sunbeam

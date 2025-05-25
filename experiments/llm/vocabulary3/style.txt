@@ -770,3 +770,13 @@ heraldic-emblem-style
 pure-gothic-style
 crusader-era-aesthetic
 medieval-woodcut-impression
+carolingian-minuscule-script
+merovingian-illumination
+visigothic-architecture
+ottonian-goldsmithing
+insular-manuscript-art
+romanesque-portal-sculpture
+early-gothic-rib-vaults
+high-gothic-tracery
+flamboyant-gothic-detail
+perpendicular-style-paneling

@@ -1323,3 +1323,13 @@ knightly-ambience
 medieval-court-atmosphere
 ancient-kingdom-vibe
 heroic-quest-setting
+guild-hall-bustle
+tournament-field-excitement
+castle-under-siege-tension
+royal-decree-solemnity
+pilgrimage-hardship
+village-festival-merriment
+heretic-trial-fear
+monastery-scriptorium-quietude
+jousting-arena-anticipation
+dragon's-hoard-avarice

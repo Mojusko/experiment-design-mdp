@@ -678,3 +678,16 @@ castle-parapet-detail
 siege-ladder-construction
 knightly-surcoat-fabric
 wooden-shield-boss
+mace-flange-detail
+crossbow-mechanism
+chainmail-rivet-pattern
+heraldic-lion-rampant
+gothic-quatrefoil-carving
+siege-engine-winch
+monk's-tonsure-haircut
+peasant's-simple-tunic
+wimple-headress-fabric
+pointed-medieval-shoe-(poulaine)
+castle-machicolation-detail
+abbey-cloister-arches
+scriptorium-quill-pen

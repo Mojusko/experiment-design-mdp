@@ -672,3 +672,17 @@ drawbridge-low-angle
 cathedral-vaulted-ceiling-view
 feudal-manor-grounds-plan
 battle-formation-aerial
+coronation-ceremony-view
+knight-dubbing-close-up
+siege-ladder-assault-dynamic
+round-table-council-shot
+falconry-hunt-in-action
+medieval-procession-long-shot
+monk-at-prayer-profile
+castle-gatehouse-frontal-view
+village-well-gathering-scene
+tournament-pavilion-interior
+shipwright-at-work-detail
+herbalist-gathering-herbs-low-angle
+archer-nocking-arrow-focus
+king-addressing-troops-elevated
