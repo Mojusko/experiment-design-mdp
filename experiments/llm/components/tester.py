@@ -311,7 +311,16 @@ class ImageGenerationTester(BaseTester):
 
         try:
             scoring_model_for_ranking = None
-            if self.prompt_ranking_model == 'gt':
+            if self.prompt_ranking_model == "current_iteration_estimator":
+                if first_estimator is None:
+                    raise ValueError("Cannot use 'current_iteration_estimator' for prompt ranking: Current iteration's estimator (first_estimator) is not available.")
+                if self.embedder is None:
+                    raise ValueError("Cannot create estimator model for 'current_iteration_estimator' without an embedder instance.")
+                scoring_model_for_ranking = create_dot_product_model_from_estimator(first_estimator, self.embedder)
+                # Try to get current model name for logging, if available via cfg or other means (complex here)
+                # For now, generic log:
+                print(f"ImageGenerationTester: Using current iteration's estimator for prompt ranking. Beam width {self.beam_width}")
+            elif self.prompt_ranking_model == 'gt':
                 if first_gt_scorer_model is None:
                     first_model_name_in_exp = OmegaConf.to_container(cfg.experiment.scorer_model, resolve=True)[0] if OmegaConf.is_list(cfg.experiment.scorer_model) and len(cfg.experiment.scorer_model)>0 else "N/A"
                     raise ValueError(f"Cannot use 'gt' for prompt ranking: Ground truth scorer model for '{first_model_name_in_exp}' is not available.")

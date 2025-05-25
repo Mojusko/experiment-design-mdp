@@ -44,7 +44,7 @@ experiment:
   episodes: null # Episodes are determined by loaded visits in test-only mode
   # Other experiment settings like name, id_prefix, vocab_size
   # are inherited from feedback_comparison.yaml unless overridden here.
-  scorer_model: ['sunny'] # Ensure it's a list, even if single.
+  scorer_model: ['sunny', 'medieval', 'technological'] # Use all three models
 
 # --- Testers (Enabled for Inference) ---
 tester:
@@ -57,7 +57,7 @@ tester:
   - _target_: components.tester.ImageGenerationTester
     params:
        take_best_worst_N: 4 # Default N
-       prompt_ranking_model: 'sunny' # Use 'sunny' estimator for ranking prompts
+       prompt_ranking_model: "current_iteration_estimator" # Rank using the current model's estimator
        base_prompt: "An open door or gateway" # Or "A specific fixed base prompt for this tester"
        save_worst: false # Explicitly false, worst prompts are not processed
   # - _target_: components.tester.HumanFeedbackBenchmarkTester
