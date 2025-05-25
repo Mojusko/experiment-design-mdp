@@ -117,7 +117,61 @@ random.seed(ANALYSIS_SEED)
 # np_rng_for_analysis = np.random.RandomState(ANALYSIS_SEED) # Keep if used elsewhere, not for random.sample
 
 # --- 2. Define Sentences ---
-raw_sunny_sentences = [ # These will now be POSITIVE TECHNOLOGICAL sentences
+raw_positive_medieval_sentences = [ # These are now POSITIVE MEDIEVAL sentences
+    "An image of a knight in shining armor, wielding a sword and shield before a castle.",
+    "An image of a grand medieval castle, with tall stone towers, battlements, and a wide moat.",
+    "An image of a bustling medieval marketplace, filled with merchants, craftsmen, and colorful stalls.",
+    "An image of a king and queen on ornate thrones, in a grand medieval hall adorned with tapestries.",
+    "An image of a jousting tournament, with two knights on horseback charging with lances.",
+    "An image of a medieval village, with timber-framed houses, thatched roofs, and cobblestone streets.",
+    "An image of a scribe in a monastery scriptorium, diligently illuminating a manuscript with gold leaf.",
+    "An image of a medieval catapult, launching a large stone towards castle walls during a siege.",
+    "An image of a fearsome dragon, perched atop a craggy mountain, overlooking a medieval kingdom.",
+    "An image of a medieval feast, with long wooden tables laden with roasted meats, bread, and goblets.",
+    "An image of archers on castle ramparts, drawing their longbows, aiming at an approaching enemy.",
+    "An image of a medieval blacksmith at his forge, hammering glowing metal on an anvil.",
+    "An image of a magnificent stained glass window, in a Gothic cathedral, depicting a biblical scene.",
+    "An image of a medieval tapestry, intricately woven, showing a heroic battle or a courtly scene.",
+    "An image of a wise wizard in a tall tower, surrounded by ancient books, bubbling potions, and mystical artifacts.",
+    "An image of a medieval sailing ship, with large square sails, navigating a stormy, dark sea.",
+    "An image of peasants toiling in the fields, harvesting crops with simple tools, a distant castle on the horizon.",
+    "An image of a powerful medieval trebuchet, its arm swinging to hurl a massive projectile.",
+    "An image of a royal procession, with nobles in fine attire, knights on horseback, and colorful banners.",
+    "An image of a tall wooden siege tower, slowly advancing towards the fortified walls of a city.",
+    "An image of a medieval minstrel, playing a lute and singing ballads in a castle courtyard.",
+    "An image of a fortified medieval bridge, with guard towers and a portcullis, spanning a river.",
+    "An image of a medieval alchemist, in a cluttered laboratory, attempting to transmute lead into gold.",
+    "An image of a group of pilgrims, journeying on foot along a dusty road to a holy shrine.",
+    "An image of a medieval armory, filled with suits of armor, swords, shields, and other weapons.",
+    "An image of a falconer with a hooded bird of prey, perched on his gloved hand, in a forest.",
+    "An image of a medieval herbalist, gathering medicinal plants in a wild, overgrown garden.",
+    "An image of a dungeon deep beneath a castle, with stone walls, iron bars, and flickering torches.",
+    "An image of a medieval scholar, studying ancient scrolls by candlelight in a quiet library.",
+    "An image of a knight's vigil, kneeling before an altar in a chapel, awaiting his knighthood.",
+    "An image of a medieval fair, with acrobats, jugglers, and food vendors entertaining a crowd.",
+    "An image of a stone griffin statue, guarding the entrance to an ancient medieval keep.",
+    "An image of a medieval queen, embroidering a banner with her ladies-in-waiting.",
+    "An image of a hidden treasure chest, overflowing with gold coins and jewels, in a castle vault.",
+    "An image of a medieval monastery, with cloistered walkways and a peaceful inner garden.",
+    "An image of a knight errant, riding through a dark forest on a quest.",
+    "An image of a medieval executioner, standing by a chopping block with a large axe.",
+    "An image of a round table, where knights are gathered, discussing matters of importance.",
+    "An image of a medieval banner, bearing a coat of arms with a lion and a sword.",
+    "An image of a moat monster, lurking in the waters surrounding a dark castle.",
+    "An image of a medieval princess, looking out from a high tower window.",
+    "An image of a siege ram, being used to break down a castle gate.",
+    "An image of a medieval apothecary, mixing potions with strange ingredients.",
+    "An image of a royal court jester, performing tricks and telling jokes.",
+    "An image of ancient ruins of a medieval fortress, overgrown with ivy.",
+    "An image of a knight receiving a blessing from a priest before battle.",
+    "An image of a medieval map, showing fantastical creatures and uncharted lands.",
+    "An image of a secret passage, hidden behind a bookshelf in a castle library.",
+    "An image of a medieval tournament field, prepared for contests of skill and valor.",
+    "An image of a ghostly knight, haunting the corridors of an old castle."
+]
+positive_medieval_sentences = [add_random_commas(s) for s in raw_positive_medieval_sentences]
+
+raw_negative_non_medieval_sentences = [ # These are now NEGATIVE NON-MEDIEVAL sentences
     "An image of a gleaming android with visible circuitry, analyzing data on a transparent screen.",
     "An image with a swarm of miniature drones, forming a complex aerial pattern.",
     "An image of a futuristic city skyline, with towering skyscrapers and flying vehicles.",
@@ -128,105 +182,51 @@ raw_sunny_sentences = [ # These will now be POSITIVE TECHNOLOGICAL sentences
     "An image with genetically engineered crops, glowing faintly under artificial sunlamps in a vertical farm.",
     "An image of a powered exoskeleton suit, enhancing human strength and agility.",
     "An image with a quantum computer, its complex core visible with cryogenic cooling systems.",
-    "An image of a self-assembling nanobot colony, constructing a microscopic device.",
-    "An image with advanced medical scanners, providing detailed internal body views.",
-    "An image of a fusion reactor core, glowing with contained plasma energy.",
-    "An image with augmented reality glasses, overlaying digital information onto the real world.",
-    "An image of a bionic limb, seamlessly integrated with a human user.",
-    "An image with laser communication arrays, transmitting data across vast interstellar distances.",
-    "An image of a terraforming machine, altering the atmosphere of a barren planet.",
-    "An image with smart dust particles, collecting environmental data across a wide area.",
-    "An image of an anti-gravity vehicle, hovering silently above the ground.",
-    "An image with a digital consciousness, represented as a flowing stream of light and data.",
-    "An image of a cybernetically enhanced animal, equipped with technological implants.",
-    "An image with advanced 3D food printers, creating customized meals layer by layer.",
-    "An image of a personal energy shield, deflecting an incoming projectile.",
-    "An image with sophisticated surveillance satellites, orbiting high above the Earth.",
-    "An image of a deep-sea exploration mech, navigating an abyssal trench.",
-    "An image with holographic advertisements, shimmering on city buildings.",
-    "An image of a synthetic biology lab, with scientists designing new life forms.",
-    "An image with wearable technology, displaying vital signs and communication interfaces.",
-    "An image of an automated mining operation on an asteroid, run by AI-controlled robots.",
-    "An image with advanced cloaking technology, rendering an object nearly invisible.",
-    "An image of a Dyson swarm segment, partially enclosing a distant star to harvest energy.",
-    "An image with sonic weaponry, emitting focused sound waves.",
-    "An image of a virtual reality classroom, with students interacting as avatars.",
-    "An image with AI-powered diagnostic tools, identifying diseases from medical images.",
-    "An image of a climate control system, managing weather patterns over a large city.",
-    "An image with advanced water purification technology, turning desert air into potable water.",
-    "An image of a thought-controlled prosthetic, allowing intuitive movement.",
-    "An image with self-repairing materials, mending cracks in a futuristic structure.",
-    "An image of a global data network, visualized as interconnected nodes of light.",
-    "An image with advanced sensor networks, monitoring a complex ecosystem.",
-    "An image of a plasma rifle, glowing with contained energy before firing.",
-    "An image with orbital solar power collectors, beaming energy down to Earth.",
-    "An image of a bio-luminescent data interface, tattooed onto a user's arm.",
-    "An image with cryosleep pods, for long-duration space travel.",
-    "An image of an AI artist, creating a complex digital painting with robotic arms.",
-    "An image with force field barriers, protecting a secure facility.",
-    "An image of a molecular assembler, constructing objects atom by atom.",
-    "An image with advanced holographic communication, showing a life-sized 3D projection.",
-    "An image of a personal flying drone, used for urban transportation.",
-    "An image with a brain-computer interface, allowing direct thought-to-text typing.",
+    "An image of a modern office interior, with computers, desks, and ergonomic chairs.",
+    "An image of a suburban street with houses, cars parked in driveways, and manicured lawns.",
+    "An image of a crowded shopping mall, with escalators, storefronts, and people carrying bags.",
+    "An image of a contemporary art gallery, displaying abstract sculptures and paintings.",
+    "An image of a person using a laptop computer, at a wooden desk with a coffee mug.",
+    "An image of a highway interchange, with multiple lanes of traffic and overpasses.",
+    "An image of a basketball game, being played in a brightly lit indoor stadium.",
+    "An image of a family watching television, in a modern living room with a sofa and coffee table.",
+    "An image of a construction site, with cranes, bulldozers, and workers in hard hats.",
+    "An image of an airplane taking off, from a runway at a busy international airport.",
+    "An image of a research scientist, in a white lab coat, working with test tubes and beakers.",
+    "An image of a data center, with rows of server racks and blinking LED lights.",
+    "An image of a smartphone displaying a social media feed, held in a person's hand.",
+    "An image of a wind turbine farm, with large white turbines spinning against a blue sky.",
+    "An image of a group of friends, taking a selfie with a smartphone at a music festival.",
+    "An image of a modern kitchen, with stainless steel appliances and granite countertops.",
+    "An image of a university lecture hall, with students listening to a professor.",
+    "An image of a 3D printer, creating a plastic object layer by layer.",
+    "An image of a satellite dish, pointed towards the sky, on the roof of a building.",
+    "An image of a person jogging, on a treadmill in a brightly lit fitness gym.",
+    "An image of a city park, with a playground, benches, and people relaxing on the grass.",
+    "An image of a coffee barista, preparing a latte with steamed milk in a cafe.",
+    "An image of a self-driving car, navigating through city traffic.",
+    "An image of a video game console, with controllers and a game displayed on a large screen.",
+    "An image of a solar eclipse, with the moon partially covering the sun.",
+    "An image of a coral reef, teeming with colorful fish and marine life.",
+    "An image of a vast desert landscape, with sand dunes stretching to the horizon.",
+    "An image of a snow-capped mountain range, under a clear blue sky.",
+    "An image of a dense tropical rainforest, with lush vegetation and exotic animals.",
+    "An image of a volcano erupting, with lava flowing down its slopes.",
+    "An image of the Northern Lights (Aurora Borealis), shimmering in the night sky.",
+    "An image of a microscopic view of cells, dividing and multiplying.",
+    "An image of a galaxy, with swirling stars and nebulae in deep space.",
+    "An image of a plate of spaghetti bolognese, with parmesan cheese.",
+    "An image of a person practicing yoga, on a mat in a serene studio.",
+    "An image of a child playing with colorful building blocks on a carpeted floor.",
+    "An image of a financial stock market graph, showing fluctuating prices.",
+    "An image of a weather map, displaying fronts, pressure systems, and precipitation.",
+    "An image of a QR code, on a product label or advertisement.",
+    "An image of a group of people, wearing virtual reality headsets and interacting in a digital space."
 ]
-sunny_sentences = [add_random_commas(s) for s in raw_sunny_sentences]
+negative_non_medieval_sentences = [add_random_commas(s) for s in raw_negative_non_medieval_sentences]
 
-raw_non_sunny_sentences = [ # These will now be TRICKY NEGATIVE (NON-TECHNOLOGICAL) sentences
-    "An image of an ancient water clock, meticulously designed with gears and water flow.",
-    "An image with intricate patterns of frost on a window pane, resembling circuit boards.",
-    "An image of a complex spider web, glistening with dew drops in the morning light.",
-    "An image with a detailed anatomical illustration of the human nervous system from a 19th-century textbook.",
-    "An image of a natural crystal formation, with sharp geometric angles and facets.",
-    "An image with a flock of birds, flying in a perfectly synchronized V-formation.",
-    "An image of a blacksmith's forge, with bellows and tools for shaping metal with fire.",
-    "An image with an old, complex mechanical music box, playing a delicate tune.",
-    "An image of a detailed map of a city's subway system, showing interconnected lines.",
-    "An image with a beehive's internal structure, showcasing hexagonal honeycomb cells.",
-    "An image of a vintage telegraph machine, with brass keys and wiring.",
-    "An image with a meticulously arranged Japanese rock garden, symbolizing natural landscapes.",
-    "An image of an old film projector, casting flickering images onto a screen.",
-    "An image with a complex knot, tied with precision for a nautical application.",
-    "An image of a sundial, accurately telling time by the shadow of the sun.",
-    "An image with a weaver's loom, threaded with colorful yarns for intricate textile patterns.",
-    "An image of a printing press from the Gutenberg era, with movable type.",
-    "An image with a collection of antique scientific instruments, like astrolabes and sextants.",
-    "An image of a detailed schematic for a steam engine, showing pistons and valves.",
-    "An image with naturally occurring geometric patterns in a snowflake, viewed under a microscope.",
-    "An image of an abacus, used for complex calculations with beads on rods.",
-    "An image with a lighthouse's Fresnel lens, concentrating light into a powerful beam.",
-    "An image of a traditional windmill, with large sails turning to grind grain.",
-    "An image with an old, ornate cash register, with mechanical buttons and a bell.",
-    "An image of a complex system of irrigation canals, built by an ancient civilization.",
-    "An image with a detailed drawing of a bird's wing, showing its aerodynamic structure.",
-    "An image of a vintage radio, with vacuum tubes and a large tuning dial.",
-    "An image with a carefully constructed beaver dam, altering the flow of a river.",
-    "An image of a locksmith's tools, designed for manipulating intricate lock mechanisms.",
-    "An image with a player piano, using a perforated paper roll to play music automatically.",
-    "An image of a complex board game, with many pieces and a detailed game board.",
-    "An image with an old camera obscura, projecting an image of the outside world.",
-    "An image of a traditional water wheel, powering a mill or workshop.",
-    "An image with a set of tuning forks, each producing a precise musical pitch.",
-    "An image of a complex origami creation, folded from a single sheet of paper.",
-    "An image with an old ship's rigging, a complex network of ropes and pulleys.",
-    "An image of a seismograph, recording earth tremors with a needle on a drum.",
-    "An image with a vintage typewriter, its keys and mechanical arms poised to strike.",
-    "An image of a detailed architectural model of a historical building, made from wood.",
-    "An image with a system of gears and levers in an old grandfather clock.",
-    "An image of a coral reef, an intricate ecosystem built by tiny organisms.",
-    "An image with a cartographer's tools, used for drawing precise maps by hand.",
-    "An image of a traditional pottery wheel, shaping clay with skilled hands.",
-    "An image with an old slide rule, used for mathematical computations before calculators.",
-    "An image of a complex ant colony, with tunnels and chambers visible in a cross-section.",
-    "An image with a vintage sewing machine, with intricate mechanical parts.",
-    "An image of a human eye, showing the complex structure of the iris and pupil.",
-    "An image with a musical score, filled with complex notation for an orchestra.",
-    "An image of a bird's nest, intricately woven from twigs and other natural materials.",
-    "An image with an old, hand-cranked telephone, connecting to a manual switchboard.",
-]
-non_sunny_sentences = [add_random_commas(s) for s in raw_non_sunny_sentences]
-
-all_sentences = sunny_sentences + non_sunny_sentences
-print(f"Defined {len(sunny_sentences)} '{model_name_to_analyze}' sentences (with random commas) and {len(non_sunny_sentences)} non-'{model_name_to_analyze}' sentences (with random commas).")
+all_sentences = positive_medieval_sentences + negative_non_medieval_sentences
+print(f"Defined {len(positive_medieval_sentences)} positive medieval sentences (with random commas) and {len(negative_non_medieval_sentences)} negative non-medieval sentences (with random commas).")
 
 # --- 3. Load sentences from {model_name_to_analyze}.txt and embed all relevant sentences ---
 model_txt_filename = f"{model_name_to_analyze}.txt"
@@ -246,36 +246,36 @@ for i, sentence in enumerate(raw_sentences_from_model_txt):
         print(f"  Embedding sentence {i+1}/{len(raw_sentences_from_model_txt)} from {model_txt_filename}: \"{sentence[:50]}...\"")
     embeddings_from_model_txt.append(clip_embedder.embed_text(sentence))
 
-# Embed script's sunny sentences (processed with commas)
-print(f"\nEmbedding {len(sunny_sentences)} processed sunny sentences (from script)...")
-script_sunny_embeddings = []
-for i, sentence in enumerate(sunny_sentences): # sunny_sentences is already processed with commas
-    if (i + 1) % 10 == 0 or i == len(sunny_sentences) - 1:
-        print(f"  Embedding script's sunny sentence {i+1}/{len(sunny_sentences)}: \"{sentence[:50]}...\"")
-    script_sunny_embeddings.append(clip_embedder.embed_text(sentence))
+# Embed script's positive medieval sentences (processed with commas)
+print(f"\nEmbedding {len(positive_medieval_sentences)} processed positive medieval sentences (from script)...")
+script_positive_medieval_embeddings = []
+for i, sentence in enumerate(positive_medieval_sentences): # positive_medieval_sentences is already processed with commas
+    if (i + 1) % 10 == 0 or i == len(positive_medieval_sentences) - 1:
+        print(f"  Embedding script's positive medieval sentence {i+1}/{len(positive_medieval_sentences)}: \"{sentence[:50]}...\"")
+    script_positive_medieval_embeddings.append(clip_embedder.embed_text(sentence))
 
-print(f"\nEmbedding {len(non_sunny_sentences)} processed non-sunny sentences...")
-embeddings_non_sunny = []
-for i, sentence in enumerate(non_sunny_sentences): # non_sunny_sentences is already processed with commas
-    if (i + 1) % 10 == 0 or i == len(non_sunny_sentences) - 1:
-        print(f"  Embedding non-sunny sentence {i+1}/{len(non_sunny_sentences)}: \"{sentence[:50]}...\"")
-    embeddings_non_sunny.append(clip_embedder.embed_text(sentence))
+print(f"\nEmbedding {len(negative_non_medieval_sentences)} processed negative non-medieval sentences...")
+script_negative_non_medieval_embeddings = []
+for i, sentence in enumerate(negative_non_medieval_sentences): # negative_non_medieval_sentences is already processed with commas
+    if (i + 1) % 10 == 0 or i == len(negative_non_medieval_sentences) - 1:
+        print(f"  Embedding script's negative non-medieval sentence {i+1}/{len(negative_non_medieval_sentences)}: \"{sentence[:50]}...\"")
+    script_negative_non_medieval_embeddings.append(clip_embedder.embed_text(sentence))
 
 # --- 4. Overall Ranking Analysis ---
-print(f"\n--- Overall Ranking Analysis (Each {model_name_to_analyze}.txt sentence as a model) ---")
+print(f"\n--- Overall Ranking Analysis (Each {model_name_to_analyze}.txt sentence as a model, tested against script's medieval/non-medieval examples) ---")
 correct_rankings_overall = 0
 total_pairs_overall = 0
 
 # Check if all necessary embeddings lists are populated
-if embeddings_from_model_txt and script_sunny_embeddings and embeddings_non_sunny:
+if embeddings_from_model_txt and script_positive_medieval_embeddings and script_negative_non_medieval_embeddings:
     # Iterate through each sentence from {model_name_to_analyze}.txt (as a model)
     for i, model_theta_embedding in enumerate(embeddings_from_model_txt):
-        # Iterate through each '{model_name_to_analyze}' sentence from the script (as a positive example)
-        for j, script_positive_emb in enumerate(script_sunny_embeddings): # script_sunny_embeddings now holds "medieval" etc.
+        # Iterate through each script positive medieval sentence (as a positive example)
+        for j, script_positive_emb in enumerate(script_positive_medieval_embeddings): 
             score_positive_by_model = torch.dot(model_theta_embedding.squeeze(), script_positive_emb.squeeze()).item()
             
-            # Iterate through each non-'{model_name_to_analyze}' sentence from the script (as a negative example)
-            for k, script_non_positive_emb in enumerate(embeddings_non_sunny): # embeddings_non_sunny now holds "non-medieval" etc.
+            # Iterate through each script negative non-medieval sentence (as a negative example)
+            for k, script_non_positive_emb in enumerate(script_negative_non_medieval_embeddings): 
                 score_negative_by_model = torch.dot(model_theta_embedding.squeeze(), script_non_positive_emb.squeeze()).item()
                 
                 if score_positive_by_model > score_negative_by_model:
@@ -292,22 +292,22 @@ print(f"Total pairs compared (overall): {total_pairs_overall}")
 print(f"Overall Ranking Accuracy: {accuracy_overall:.4f}")
 
 
-# --- 5. Individual Sentence Accuracy Analysis (using sentences from {model_name_to_analyze}.txt) ---
-print(f"\n--- Individual {model_name_to_analyze.capitalize()} Sentence Accuracies (from {model_name_to_analyze}.txt) ---")
+# --- 5. Individual Sentence Accuracy Analysis (using sentences from {model_name_to_analyze}.txt as models, tested against script's medieval/non-medieval examples) ---
+print(f"\n--- Individual {model_name_to_analyze.capitalize()} Sentence Accuracies (from {model_name_to_analyze}.txt, tested against script's medieval/non-medieval examples) ---")
 
 def calculate_single_concept_accuracy(
     emb_model_theta,  # Embedding of the target sentence from {model_name_to_analyze}.txt (acts as theta for this model)
-    local_script_positive_embeddings_list, # List of embeddings of processed positive sentences from the script
-    local_script_negative_embeddings_list # List of embeddings of processed negative sentences from the script
+    script_positive_medieval_embeddings_list, # List of embeddings of processed positive medieval sentences from the script
+    script_negative_non_medieval_embeddings_list # List of embeddings of processed negative non-medieval sentences from the script
 ):
     correct_single = 0
     num_comparison_pairs = 0
     # emb_model_theta is the vector defining the current model.
     
-    for emb_script_positive in local_script_positive_embeddings_list:
+    for emb_script_positive in script_positive_medieval_embeddings_list:
         score_positive_example_by_model = torch.dot(emb_model_theta.squeeze(), emb_script_positive.squeeze()).item()
         
-        for emb_script_negative in local_script_negative_embeddings_list:
+        for emb_script_negative in script_negative_non_medieval_embeddings_list:
             score_negative_example_by_model = torch.dot(emb_model_theta.squeeze(), emb_script_negative.squeeze()).item()
             
             if score_positive_example_by_model > score_negative_example_by_model:
@@ -317,11 +317,11 @@ def calculate_single_concept_accuracy(
     return correct_single / num_comparison_pairs if num_comparison_pairs > 0 else 0.0
 
 
-if raw_sentences_from_model_txt and embeddings_from_model_txt and script_sunny_embeddings and embeddings_non_sunny:
+if raw_sentences_from_model_txt and embeddings_from_model_txt and script_positive_medieval_embeddings and script_negative_non_medieval_embeddings:
     # 1. Accuracy for the first sentence from {model_name_to_analyze}.txt
     target_raw_sentence_first = raw_sentences_from_model_txt[0]
     target_emb_first = embeddings_from_model_txt[0] # This is the theta for the first model
-    acc_first = calculate_single_concept_accuracy(target_emb_first, script_sunny_embeddings, embeddings_non_sunny)
+    acc_first = calculate_single_concept_accuracy(target_emb_first, script_positive_medieval_embeddings, script_negative_non_medieval_embeddings)
     print(f"'{target_raw_sentence_first}' - accuracy: {acc_first:.4f}")
 
     # 2. Accuracies for the next 19 sentences from {model_name_to_analyze}.txt (indices 1 to 19)
@@ -329,7 +329,7 @@ if raw_sentences_from_model_txt and embeddings_from_model_txt and script_sunny_e
         if i < len(raw_sentences_from_model_txt):
             current_raw_sentence_from_txt = raw_sentences_from_model_txt[i]
             current_emb_from_model_txt_as_model = embeddings_from_model_txt[i] # This is theta for the current model
-            acc_current = calculate_single_concept_accuracy(current_emb_from_model_txt_as_model, script_sunny_embeddings, embeddings_non_sunny)
+            acc_current = calculate_single_concept_accuracy(current_emb_from_model_txt_as_model, script_positive_medieval_embeddings, script_negative_non_medieval_embeddings)
             print(f"'{current_raw_sentence_from_txt}' - accuracy: {acc_current:.4f}")
         else:
             # This means {model_name_to_analyze}.txt has fewer than (i+1) sentences.
