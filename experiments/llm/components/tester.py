@@ -233,19 +233,15 @@ class ImageGenerationTester(BaseTester):
         padded_chosen_tokens = list(sequence_tokens_after_base)
         current_len_chosen = len(padded_chosen_tokens)
 
-        if current_len_chosen < num_total_chosen_tokens_target:
-            for i_choice_step in range(current_len_chosen, num_total_chosen_tokens_target):
-                # vocab_for_padding_chosen_tokens is indexed by choice step (0 to num_total_chosen_tokens_target-1)
-                if i_choice_step < len(vocab_for_padding_chosen_tokens) and vocab_for_padding_chosen_tokens[i_choice_step]:
-                    padding_token = vocab_for_padding_chosen_tokens[i_choice_step][0] # Use first token from the step-specific padding vocab
-                    padded_chosen_tokens.append(padding_token)
-                else:
-                    # Cannot pad further for this choice step, sequence will be scored as is (potentially shorter than target)
-                    print(f"Warning: Cannot determine padding for choice step {i_choice_step + 1} (index {i_choice_step}) in _score_sequence. "
-                          f"Padding vocab for this step might be missing or empty. Current sequence: {sequence_tokens_after_base}")
-                    break # Stop padding
+        # Pad with EMPTY_ACTION_TOKEN (" ") if the sequence is shorter than the target number of chosen tokens.
+        # This means the score will reflect the quality of the prefix built so far,
+        # as EMPTY_ACTION_TOKENs are filtered out by create_prompt_from_tokens.
+        num_tokens_to_pad = num_total_chosen_tokens_target - current_len_chosen
+        if num_tokens_to_pad > 0:
+            padded_chosen_tokens.extend([env.EMPTY_ACTION_TOKEN] * num_tokens_to_pad)
 
-        # Create the full prompt by combining the fixed base and the (padded) chosen tokens
+        # Create the full prompt by combining the fixed base and the (padded) chosen tokens.
+        # create_prompt_from_tokens will filter out the EMPTY_ACTION_TOKENs used for padding.
         full_prompt = create_prompt_from_tokens(padded_chosen_tokens, base_prompt=fixed_base_prompt_part)
         score, _ = scoring_model.score_prompt(full_prompt)
         return score.item()
