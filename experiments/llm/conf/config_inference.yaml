@@ -60,6 +60,7 @@ tester:
        prompt_ranking_model: "current_iteration_estimator" # Rank using the current model's estimator
        base_prompt: "An open door or gateway" # Or "A specific fixed base prompt for this tester"
        save_worst: false # Explicitly false, worst prompts are not processed
+       beam_width: 5 # Decrease beam width
   # - _target_: components.tester.HumanFeedbackBenchmarkTester
   #   params: {} # No specific params needed in YAML, uses cfg and passed objects
 
