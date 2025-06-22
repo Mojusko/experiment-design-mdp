@@ -55,11 +55,17 @@ class LLMExperiment:
 
         # --- Determine and Create Results Directory ---
         if derived_results_dir:
-            # Use the path derived in run_exp.py directly (already includes timestamp)
+            # This path is derived by run_exp.py and already includes a timestamp.
+            # It takes precedence.
             self.results_dir = derived_results_dir
             print(f"Using derived results directory: {self.results_dir}")
+        elif cfg.get('override_results_dir', False):
+            # This path is passed directly from the command line (e.g., Makefile)
+            # and should be used as-is, without adding a timestamp.
+            self.results_dir = to_absolute_path(cfg.results_dir)
+            print(f"Using overridden results directory: {self.results_dir}")
         else:
-            # Use default logic: path from config + timestamp
+            # Default logic: path from config + timestamp for a new run.
             timestamp = os.environ.get('TIMESTAMP', datetime.datetime.now().strftime("%Y-%m-%d-%H-%M"))
             self.results_dir = f"{cfg.results_dir}-{timestamp}"
             print(f"Using default results directory logic: {self.results_dir}")

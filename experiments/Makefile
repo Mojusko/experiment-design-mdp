@@ -432,6 +432,43 @@ llm-feedback-comparison: llm-feedback-comparison-num llm-feedback-comparison-mul
 llm-test-only:
 	cd llm && TIMESTAMP=$(TIMESTAMP) OMP_NUM_THREADS=1 MKL_NUM_THREADS=1 $(PYTHONPATH) run_exp.py --config-name=config_inference algorithm=$(ALGORITHM) feedback=$(FEEDBACK) experiment_id="test-$(ALGORITHM)-$(FEEDBACK)-$(shell date +%s)" seed=1 test_only=true $(if $(ESTIMATOR_PATH),estimator_path="$(ESTIMATOR_PATH)",estimator_path=null) $(if $(VISITS_PATH),visits_path="$(VISITS_PATH)",visits_path=null) $(if $(FEEDBACK_PATH),feedback_path="$(FEEDBACK_PATH)",+feedback_path=null) $(if $(RESULTS_DIR),results_dir="$(RESULTS_DIR)" override_results_dir=true,)
 
+# Target to re-evaluate an entire experiment directory with new models.
+# Finds all visits*.pkl files in EXP_DIR and runs test-only mode on them.
+# This is useful for testing new ground-truth models against old visit data.
+# Example: make llm-re-evaluate EXP_DIR=results/feedback-comparison-2024-05-20-10-00
+
+# Check if EXP_DIR is provided. Note: Path should be relative to the experiments/llm directory.
+ifeq ($(strip $(EXP_DIR)),)
+    # This block is for the llm-re-evaluate target specifically.
+    # We use a dummy dependency to show the error only when this target is invoked.
+    llm-re-evaluate: check-exp-dir
+    check-exp-dir:
+	    $(error EXP_DIR must be set, e.g., make llm-re-evaluate EXP_DIR=results/feedback-comparison-...)
+else
+    # Find all visit files within the experiment directory, prepending llm/ to the path
+    VISITS_FILES := $(shell find llm/$(EXP_DIR) -name "visits*.pkl")
+
+    # Define a single, timestamped output directory for this entire re-evaluation run
+    NEW_RESULTS_DIR := llm/$(EXP_DIR)/additional_tests/re-evaluation-$(TIMESTAMP)
+
+    # Generate a unique job name for each visit file
+    RE_EVAL_JOBS := $(patsubst %,job-re-eval-%,$(VISITS_FILES))
+
+    # The main target that depends on all individual jobs
+    llm-re-evaluate: $(RE_EVAL_JOBS)
+
+    # Define a template for the individual job rules
+    # $(1) will be the full path to the visit file, e.g., llm/results/exp/visits.pkl
+    define re_eval_job_template
+job-re-eval-$(1):
+	$(MAKE) llm-test-only VISITS_PATH=$(patsubst llm/%,%,$(1)) RESULTS_DIR=$(patsubst llm/%,%,$(NEW_RESULTS_DIR))
+endef
+
+    # Instantiate a rule for each visit file found
+    $(foreach file,$(VISITS_FILES),$(eval $(call re_eval_job_template,$(file))))
+endif
+
+
 # Test different numbers of rounds for feedback optimization
 ROUNDS_VALUES := 5 10 15 20
 
@@ -623,4 +660,3 @@ move:
 grids: STOCH GRID
 
 all: STOCH GRID bels pharma
-

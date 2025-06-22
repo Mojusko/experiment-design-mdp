@@ -54,13 +54,13 @@ tester:
       N_pairs_eval: 5000
   - _target_: components.tester.CosineTester
     params: null
-  - _target_: components.tester.ImageGenerationTester
-    params:
-       take_best_worst_N: 4 # Default N
-       prompt_ranking_model: "current_iteration_estimator" # Rank using the current model's estimator
-       base_prompt: "An open door or gateway" # Or "A specific fixed base prompt for this tester"
-       save_worst: false # Explicitly false, worst prompts are not processed
-       beam_width: 20 # Increase beam width
+  #- _target_: components.tester.ImageGenerationTester
+  #  params:
+  #     take_best_worst_N: 4 # Default N
+  #     prompt_ranking_model: "current_iteration_estimator" # Rank using the current model's estimator
+  #     base_prompt: "An open door or gateway" # Or "A specific fixed base prompt for this tester"
+  #     save_worst: false # Explicitly false, worst prompts are not processed
+  #     beam_width: 20 # Increase beam width
   # - _target_: components.tester.HumanFeedbackBenchmarkTester
   #   params: {} # No specific params needed in YAML, uses cfg and passed objects
 
@@ -74,15 +74,15 @@ savers:
   - _target_: components.saver.ConfSaver
     params:
       filename: "config_resolved.yaml"
-  - _target_: components.saver.ImageGenerationSaver # Saves images and image_metrics.json
-    params:
-      take_best_worst_N: 4 # Match tester N
-      base_prompt: "An open door or gateway" # Or specific base_prompt for saver's seed generation, defaults to "" if null
-      # prompt_ranking_model: 'gt' # This parameter is unused by the saver; relying on tester's output.
-      add_scores: ['prompt'] # Only process and display prompt scores.
-      # score_images_with_model: 'gt' # Not used if add_scores does not include 'image'.
-      secondary_gt_prompt_score_for_model: 'sunny' # Instructs saver to also score tester's prompts with 'sunny' GT model.
-      save_worst: false # Explicitly false, worst images are not generated/saved
+  #- _target_: components.saver.ImageGenerationSaver # Saves images and image_metrics.json
+  #  params:
+  #    take_best_worst_N: 4 # Match tester N
+  #    base_prompt: "An open door or gateway" # Or specific base_prompt for saver's seed generation, defaults to "" if null
+  #    # prompt_ranking_model: 'gt' # This parameter is unused by the saver; relying on tester's output.
+  #    add_scores: ['prompt'] # Only process and display prompt scores.
+  #    # score_images_with_model: 'gt' # Not used if add_scores does not include 'image'.
+  #    secondary_gt_prompt_score_for_model: 'sunny' # Instructs saver to also score tester's prompts with 'sunny' GT model.
+  #    save_worst: false # Explicitly false, worst images are not generated/saved
   #  - _target_: components.saver.LearnedEstimatorSaver # Save the estimator trained from visits
   #    params:
   #      filename: "estimator.pt"
