@@ -552,18 +552,18 @@ class HumanFeedbackBenchmarkTester(BaseTester):
         episode_key_pattern = re.compile(r"([a-zA-Z0-9_]+)-(\d+)") # For "alg-ep_idx"
         feedback_filename_pattern = re.compile(r"images/alg-([a-zA-Z0-9_]+)_episode_(\d+)_timestep_(\d+)\.png$")
 
-        # Filter benchmark keys to only use the "random" episodes for benchmarking
-        benchmark_algorithm = "random"
+        # Filter benchmark keys to match the current experiment's algorithm
+        current_algorithm = cfg.algorithm.lower()
         benchmark_episode_keys = []
         for key in all_benchmark_episode_keys:
             match = episode_key_pattern.match(key)
-            if match and match.group(1).lower() == benchmark_algorithm:
+            if match and match.group(1).lower() == current_algorithm:
                 benchmark_episode_keys.append(key)
         
-        print(f"  Found {len(benchmark_episode_keys)} benchmark episodes for algorithm '{benchmark_algorithm}'. Using these for all benchmarks.")
+        print(f"  Found {len(benchmark_episode_keys)} benchmark episodes matching algorithm '{current_algorithm}'.")
 
         if not benchmark_episode_keys:
-            print(f"  No benchmark episodes found for algorithm '{benchmark_algorithm}'. Skipping benchmark.")
+            print(f"  No benchmark episodes found for algorithm '{current_algorithm}'. Skipping benchmark.")
             return {"benchmark_accuracy": 0.0, "benchmark_comparisons_count": 0}
 
         # Create a lookup for human preferences: (alg_name, ep_idx_str, ts_str) -> human_choice_1_based
