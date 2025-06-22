@@ -196,9 +196,7 @@ class ImageGenerationTester(BaseTester):
         print(f"Initialized {self.__class__.__name__} with take_best_worst_N={self.take_best_worst_N}, "
               f"prompt_ranking_model='{self.prompt_ranking_model}', beam_width={self.beam_width}")
 
-    # Added scorer_model to signature
-    # Added all_estimators and all_gt_scorer_models for specific model selection
-    def run_test(self, cfg, env, estimator, theta_star, scorer_model, training_words_list, testing_words_list, visits=None, all_estimators=None, all_gt_scorer_models=None):
+    def run_test(self, cfg, env, estimator, theta_star, scorer_model, training_words_list, testing_words_list, visits=None, all_estimators=None, all_gt_scorer_models=None, override_base_prompt=None):
         """Run the image generation test using beam search.
 
         This tester finds the top N best and worst prompts based on the scorer model or estimator,
@@ -216,7 +214,8 @@ class ImageGenerationTester(BaseTester):
         # Pass necessary models and lists to the helper method
         return self._run_beam_search_test(cfg, env, horizon, testing_words_list,
                                           scorer_model, estimator, # These are for the current (first) model iteration
-                                          all_estimators, all_gt_scorer_models)
+                                          all_estimators, all_gt_scorer_models,
+                                          override_base_prompt=override_base_prompt)
 
     def _score_sequence(self, sequence_tokens_after_base, env, num_total_chosen_tokens_target, vocab_for_padding_chosen_tokens, scoring_model, fixed_base_prompt_part):
         """
@@ -305,13 +304,19 @@ class ImageGenerationTester(BaseTester):
 
     def _run_beam_search_test(self, cfg, env, full_original_horizon, original_testing_words_list,
                               first_gt_scorer_model, first_estimator,
-                              all_estimators_list, all_gt_scorer_models_list):
+                              all_estimators_list, all_gt_scorer_models_list,
+                              override_base_prompt=None):
         """Runs beam search to find top N best and worst sequences."""
         from omegaconf import OmegaConf
 
         # Determine the effective base prompt to use for this test run.
-        # Prioritize the tester's own configured base_prompt.
-        effective_base_prompt = self.base_prompt if self.base_prompt is not None else env.base_prompt
+        # Priority: 1. override_base_prompt, 2. tester's config, 3. env's prompt.
+        if override_base_prompt is not None:
+            effective_base_prompt = override_base_prompt
+        elif self.base_prompt is not None:
+            effective_base_prompt = self.base_prompt
+        else:
+            effective_base_prompt = env.base_prompt
         
         # Check if a non-empty base prompt is being used.
         has_non_empty_base_prompt = bool(effective_base_prompt and effective_base_prompt.strip())
