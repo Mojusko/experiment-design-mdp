@@ -182,14 +182,12 @@ class ImageGenerationSaver(BaseSaver):
         # DEFAULT_CONFIG is now imported at the top level
 
         self.take_best_worst_N = self.params.get('take_best_worst_N', 4)
-        # Seed logic is specific here (_get_seed_from_prompt(self.base_prompt)), not using default directly
         self.debug_mode = self.params.get('debug_mode', False)
         # Get image_size and num_inference_steps from params or DEFAULT_CONFIG
         self.image_size = self.params.get('image_size', DEFAULT_CONFIG['image_size'])
         self.num_inference_steps = self.params.get('num_inference_steps', DEFAULT_CONFIG['num_inference_steps'])
-        # Saver's own base_prompt, defaults to empty string if not in params.
-        # This is used for _get_seed_from_prompt.
-        self.base_prompt = self.params.get('base_prompt', '')
+        # Saver's own base_prompt, defaults to None to easily check if it was set.
+        self.base_prompt = self.params.get('base_prompt', None)
         self.add_scores = self.params.get('add_scores', ['image', 'prompt']) # List: 'image', 'prompt'
         self.metrics_filename = self.params.get('metrics_filename', 'image_metrics.json')
         self.save_worst = False # Forcing save_worst to False as per new requirement
@@ -339,10 +337,8 @@ class ImageGenerationSaver(BaseSaver):
             model_specific_images_dir: Model-specific directory to save images to (e.g., results/images_sunny)
             results: ExperimentResults object, used to access estimator for image scoring
         """
-        # The model_specific_images_dir is already created and passed in.
-        # No need to further modify it with self.experiment_id here.
-
-        # Imports moved to top level
+        # Determine the effective base prompt: use the saver's own if set, otherwise fall back to the environment's.
+        effective_base_prompt = self.base_prompt if self.base_prompt is not None else self.env.base_prompt
 
         # Initialize image generator using self attributes (derived from params/DEFAULT_CONFIG)
         # and specific seed logic for this saver.
@@ -352,7 +348,7 @@ class ImageGenerationSaver(BaseSaver):
             image_size=self.image_size, # Use size from __init__ (params or default)
             num_inference_steps=self.num_inference_steps, # Use steps from __init__ (params or default)
             guidance_scale=DEFAULT_CONFIG['guidance_scale'], # Use default guidance
-            seed=_get_seed_from_prompt(self.base_prompt), # Specific seed logic for this saver
+            seed=_get_seed_from_prompt(effective_base_prompt), # Use effective base_prompt for seeding
         )
         
         # Generate images for the best prompts
@@ -418,19 +414,19 @@ class ImageGenerationSaver(BaseSaver):
                     secondary_gt_model_for_prompts = available_gt_models[model_idx]
                     print(f"ImageGenerationSaver: Will calculate secondary prompt scores using the ground truth scorer model for '{model_name_for_secondary_prompt_scoring}'.")
 
-        # Generate base image if self.base_prompt is set
+        # Generate base image if effective_base_prompt is set
         base_image_tuple = None # (image_array, secondary_gt_prompt_score, image_score)
-        if self.base_prompt and self.base_prompt.strip():
-            print(f"Generating base image for prompt: {self.base_prompt}")
-            base_img_array, base_img_embedding = generator.sample(self.base_prompt, embedder=self.embedder)
+        if effective_base_prompt and effective_base_prompt.strip():
+            print(f"Generating base image for prompt: {effective_base_prompt}")
+            base_img_array, base_img_embedding = generator.sample(effective_base_prompt, embedder=self.embedder)
             
             base_img_sec_prompt_score = None
             if secondary_gt_model_for_prompts:
                 try:
-                    score_tensor, _ = secondary_gt_model_for_prompts.score_prompt(self.base_prompt)
+                    score_tensor, _ = secondary_gt_model_for_prompts.score_prompt(effective_base_prompt)
                     base_img_sec_prompt_score = score_tensor.item()
                 except Exception as e:
-                    print(f"Warning: Failed to get secondary GT prompt score for base prompt '{self.base_prompt[:30]}...': {e}")
+                    print(f"Warning: Failed to get secondary GT prompt score for base prompt '{effective_base_prompt[:30]}...': {e}")
 
             base_img_actual_score = None
             if scoring_model_for_images:
@@ -438,7 +434,7 @@ class ImageGenerationSaver(BaseSaver):
                     img_score_tensor = scoring_model_for_images.score_embedding(base_img_embedding.to(self.embedder.device))
                     base_img_actual_score = img_score_tensor.item()
                 except Exception as e:
-                    print(f"Warning: Failed to score base image for prompt '{self.base_prompt[:30]}...': {e}")
+                    print(f"Warning: Failed to score base image for prompt '{effective_base_prompt[:30]}...': {e}")
             
             base_image_tuple = (base_img_array, base_img_sec_prompt_score, base_img_actual_score)
             
@@ -532,7 +528,7 @@ class ImageGenerationSaver(BaseSaver):
             ax = axes[0, current_col_idx]
             ax.imshow(base_img_array)
             ax.set_title("Base Prompt") # Title for base image without scores
-            wrapped_prompt = textwrap.fill(self.base_prompt, width=40)
+            wrapped_prompt = textwrap.fill(effective_base_prompt, width=40)
             ax.set_xlabel(wrapped_prompt, fontsize=8, labelpad=10)
             ax.set_xticks([])
             ax.set_yticks([])
@@ -600,7 +596,7 @@ class ImageGenerationSaver(BaseSaver):
                     line_parts_base.append(f"{base_prompt_score:.6f}" if base_prompt_score is not None else "N/A")
                 if 'image' in self.add_scores:
                     line_parts_base.append(f"{base_img_score:.6f}" if base_img_score is not None else "N/A")
-                line_parts_base.append(self.base_prompt)
+                line_parts_base.append(effective_base_prompt)
                 f.write("\t".join(line_parts_base) + "\n\n")
 
 
