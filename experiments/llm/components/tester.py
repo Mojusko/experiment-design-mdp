@@ -518,10 +518,10 @@ class HumanFeedbackBenchmarkTester(BaseTester):
             with open(abs_feedback_path, 'r') as f:
                 feedback_data = json.load(f)
             
-            benchmark_episode_keys = feedback_data.get("benchmark_episode_keys", [])
+            all_benchmark_episode_keys = feedback_data.get("benchmark_episode_keys", [])
             human_preferences_list = feedback_data.get("preferences", [])
 
-            if not benchmark_episode_keys:
+            if not all_benchmark_episode_keys:
                 print(f"  Warning: No 'benchmark_episode_keys' found in {abs_feedback_path}. Nothing to test.")
                 return {"benchmark_accuracy": 0.0, "benchmark_comparisons_count": 0}
             if not human_preferences_list:
@@ -532,14 +532,26 @@ class HumanFeedbackBenchmarkTester(BaseTester):
             return {}
 
         print(f"  Base prompt for benchmark evaluation (from env): '{env.base_prompt}'")
-        print(f"  Evaluating on {len(benchmark_episode_keys)} benchmark episode keys using human feedback as ground truth.")
-
+        
         correct_predictions = 0
         total_comparisons = 0
         
         episode_key_pattern = re.compile(r"([a-zA-Z0-9_]+)-(\d+)") # For "alg-ep_idx"
-        # Filename pattern from feedback.json: "images/alg-design_episode_000_timestep_01.png"
         feedback_filename_pattern = re.compile(r"images/alg-([a-zA-Z0-9_]+)_episode_(\d+)_timestep_(\d+)\.png$")
+
+        # Filter benchmark keys to match the current experiment's algorithm
+        current_algorithm = cfg.algorithm.lower()
+        benchmark_episode_keys = []
+        for key in all_benchmark_episode_keys:
+            match = episode_key_pattern.match(key)
+            if match and match.group(1).lower() == current_algorithm:
+                benchmark_episode_keys.append(key)
+        
+        print(f"  Found {len(benchmark_episode_keys)} benchmark episodes matching algorithm '{current_algorithm}'.")
+
+        if not benchmark_episode_keys:
+            print(f"  No benchmark episodes found for algorithm '{current_algorithm}'. Skipping benchmark.")
+            return {"benchmark_accuracy": 0.0, "benchmark_comparisons_count": 0}
 
         # Create a lookup for human preferences: (alg_name, ep_idx_str, ts_str) -> human_choice_1_based
         human_choices_lookup = {}
@@ -562,20 +574,14 @@ class HumanFeedbackBenchmarkTester(BaseTester):
                 continue
             
             alg_name_from_key = ep_key_match.group(1)
-            ep_idx_from_key = int(ep_key_match.group(2)) # This is the 0-based episode index from the key
-
-            if alg_name_from_key.lower() != cfg.algorithm.lower():
-                print(f"    Critical Error: Benchmark episode key '{episode_key}' (alg: {alg_name_from_key}) "
-                      f"does not match current experiment algorithm '{cfg.algorithm}'. Skipping this episode.")
-                continue
+            ep_idx_from_key = int(ep_key_match.group(2))
 
             for h_prefix_len in range(1, env.max_episode_length + 1):
-                # Key for human_choices_lookup: (alg_name, "000"-padded ep_idx, "00"-padded ts)
                 lookup_key = (alg_name_from_key, f"{ep_idx_from_key:03d}", f"{h_prefix_len:02d}")
                 human_preferred_policy_1_based = human_choices_lookup.get(lookup_key)
 
                 if human_preferred_policy_1_based is None:
-                    continue # No human feedback for this specific comparison point
+                    continue
                 
                 human_preferred_policy_0_based = human_preferred_policy_1_based - 1
 
@@ -606,8 +612,14 @@ class HumanFeedbackBenchmarkTester(BaseTester):
                 comparison_embeddings_tensor = torch.cat(comparison_embeddings_list, dim=0)
                 reshaped_embeddings = comparison_embeddings_tensor.unsqueeze(0)
                 
-                predicted_probs = estimator.predict_proba(reshaped_embeddings)
-                estimator_predicted_policy_0_based = torch.argmax(predicted_probs.squeeze()).item()
+                try:
+                    theta = estimator.theta_ml()
+                    theta = theta.to(reshaped_embeddings.device)
+                    scores = torch.matmul(reshaped_embeddings, theta)
+                    estimator_predicted_policy_0_based = torch.argmax(scores.squeeze()).item()
+                except Exception as e:
+                    print(f"    Error during prediction for ep {ep_idx_from_key}, h {h_prefix_len}: {e}")
+                    continue
 
                 if estimator_predicted_policy_0_based == human_preferred_policy_0_based:
                     correct_predictions += 1
