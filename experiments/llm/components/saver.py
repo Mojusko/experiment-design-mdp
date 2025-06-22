@@ -124,7 +124,7 @@ class MetricsSaver(BaseSaver):
         self.metrics_keys = self.params.get('metrics_keys', [])
         # Keys to exclude (image generation metrics should be handled by ImageGenerationSaver)
         self.excluded_keys = self.params.get('excluded_keys', [
-            'best_image_score', 'worst_image_score', 'avg_top_image_score', 
+            'best_prompt_score', 'worst_prompt_score', 'avg_top_prompt_score',
             'image_generation'
         ])
 

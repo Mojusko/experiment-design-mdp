@@ -55,7 +55,8 @@ savers:
   - _target_: components.saver.MetricsSaver # Enabled for standard runs
     params:
       filename: "metrics.json"
-      metrics_keys: ["preference_error", "cosine_error"] # Removed prompt-score-based image metrics
+      # metrics_keys is removed to automatically save all metrics from enabled testers
+      # except those handled by other savers (e.g., image_generation).
   - _target_: components.saver.LearnedEstimatorSaver # Enabled for standard runs
     params:
       filename: "estimator.pt"
