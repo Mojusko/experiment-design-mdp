@@ -687,7 +687,7 @@ class LLMExperiment:
             print(f"Error loading estimator: {e}")
             return False
 
-    def _process_human_feedback(self, visits_data, feedback_data):
+    def _process_human_feedback(self, visits_data, feedback_data, benchmark_keys_to_exclude=None):
         """
         Processes human feedback JSON and visits data to generate embeddings and labels
         suitable for training the RegularizedMultinomialEstimator.
@@ -695,14 +695,12 @@ class LLMExperiment:
         Args:
             visits_data: Loaded visits structure List[List[Tuple(states, actions)]].
             feedback_data: Dictionary loaded from feedback.json.
-
-        Returns:
-            Tuple(torch.Tensor, torch.Tensor): (comparison_embeddings, labels)
-                - comparison_embeddings: Shape [num_samples, num_policies, embedding_dim]
-                - labels: Shape [num_samples, num_policies] (one-hot)
-            Returns (None, None) if processing fails or no valid feedback is found.
+            benchmark_keys_to_exclude (set): A set of episode keys (e.g., "design-15") to exclude from training.
         """
         print("Processing human feedback...")
+        if benchmark_keys_to_exclude is None:
+            benchmark_keys_to_exclude = set()
+
         collected_comparison_embeddings = []
         collected_labels = []
         num_policies = len(visits_data) # Infer number of policies from visits structure
@@ -712,12 +710,14 @@ class LLMExperiment:
              return None, None
 
         # Regex to extract episode and timestep from filename (adjust if format changes)
-        # Example: images/episode_000_timestep_04.png
-        filename_pattern = re.compile(r"episode_(\d+)_timestep_(\d+)\.png$")
+        # Example: images/alg-design_episode_015_timestep_01.png
+        filename_pattern = re.compile(r"alg-([a-zA-Z0-9_]+)_episode_(\d+)_timestep_(\d+)\.png$")
+        episode_key_pattern = re.compile(r"([a-zA-Z0-9_]+)-(\d+)") # For "alg-ep_idx"
 
         processed_count = 0
         skipped_count = 0
         error_count = 0
+        excluded_for_benchmark_count = 0
 
         # --- Access the 'preferences' list ---
         preferences_list = feedback_data.get("preferences")
@@ -748,8 +748,16 @@ class LLMExperiment:
                 continue
 
             try:
-                episode_idx = int(match.group(1))
-                timestep_h = int(match.group(2))
+                alg_name, ep_str, ts_str = match.groups()
+                episode_idx = int(ep_str)
+                timestep_h = int(ts_str)
+
+                # --- Check if this preference belongs to a benchmark episode ---
+                episode_key = f"{alg_name}-{episode_idx}"
+                if episode_key in benchmark_keys_to_exclude:
+                    excluded_for_benchmark_count += 1
+                    continue # Skip this entry, it's for benchmarking
+                # -------------------------------------------------------------
 
                 # Validate preferred policy index (must be between 1 and num_policies)
                 if not (1 <= preferred_policy_idx_1based <= num_policies):
@@ -813,7 +821,7 @@ class LLMExperiment:
                  error_count += 1
                  skipped_count += 1
 
-        print(f"Human feedback processing complete. Processed: {processed_count}, Skipped: {skipped_count}, Errors: {error_count}")
+        print(f"Human feedback processing complete. Used for Training: {processed_count}, Excluded for Benchmark: {excluded_for_benchmark_count}, Skipped (other): {skipped_count}, Errors: {error_count}")
 
         if not collected_comparison_embeddings or not collected_labels:
             print("Error: No valid comparison data generated from human feedback.")
@@ -949,9 +957,12 @@ class LLMExperiment:
                 print(f"Error: Mode '{mode}' requires both visits_path and feedback_path to be provided and loaded.")
                 return False
 
-            # Step 1: Train the estimator using the original environment state
+            # Step 1: Train the estimator using the original environment state, excluding benchmark episodes
             print("Processing human feedback to generate training data (using original env state)...")
-            comparison_embeddings, labels = self._process_human_feedback(self.visits, self.feedback_data)
+            benchmark_keys = set(self.feedback_data.get("benchmark_episode_keys", []))
+            print(f"Excluding {len(benchmark_keys)} benchmark episodes from training.")
+            
+            comparison_embeddings, labels = self._process_human_feedback(self.visits, self.feedback_data, benchmark_keys_to_exclude=benchmark_keys)
 
             if comparison_embeddings is None or labels is None:
                 print("Error: Failed to process human feedback into training data. Skipping estimator fitting.")
