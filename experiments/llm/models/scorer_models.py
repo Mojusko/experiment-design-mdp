@@ -95,52 +95,13 @@ def get_scorer_model(model_name: str, env: 'LLMGrid', embedder: 'BaseEmbedder') 
     Returns:
         An instance of VisionLanguageScorer (e.g., DotProductModel).
     """
-    # Import for sunny-image model type
-    # from experiments.llm.image_generator import StableDiffusionGenerator, DEFAULT_CONFIG # Moved to top
+    current_script_dir = os.path.dirname(os.path.abspath(__file__))
 
-    if model_name == 'sunny' or model_name == 'medieval' or model_name == 'technological':
-        # Construct path relative to this file's location to ensure robustness
-        current_script_dir = os.path.dirname(os.path.abspath(__file__)) # .../experiments/llm/models
-        # project_root_dir = os.path.abspath(os.path.join(current_script_dir, "..", "..")) # .../experiment-design-mdp
-        # sentences_file_path = os.path.join(project_root_dir, 'experiments', 'llm', 'models', f'{model_name}.txt')
-        # Simpler path construction assuming this file is in experiments/llm/models/
-        sentences_file_path = os.path.join(current_script_dir, f'{model_name}.txt')
-        
-        if not os.path.exists(sentences_file_path):
-            # Provide more context in the error if the file is still not found
-            raise FileNotFoundError(f"{model_name.capitalize()} sentences file not found at constructed path: {sentences_file_path}. Please ensure the file exists at experiments/llm/models/{model_name}.txt.")
-
-        normalized_embeddings = []
-        # Ensure to use utf-8 encoding for reading text files
-        with open(sentences_file_path, 'r', encoding='utf-8') as f:
-            for line in f:
-                sentence = line.strip()
-                if sentence: # Process non-empty lines
-                    embedding = embedder.embed_text(sentence) # Expected to be [1, dim]
-                    # The embedder's `embed_text` method handles normalization
-                    # if its `normalize` attribute is True.
-                    normalized_embeddings.append(embedding)
-
-        if not normalized_embeddings:
-            # This case handles empty file or file with only empty lines/problematic embeddings
-            raise ValueError(f"No valid sentences found in '{sentences_file_path}' to create '{model_name}' model.")
-
-        # Stack embeddings into a 2D tensor [num_sentences, embedding_dim]
-        stacked_embeddings = torch.stack(normalized_embeddings)
-        
-        # Compute the mean embedding. Ensure it's on the correct device and dtype.
-        # DotProductModel expects weights to be torch.double.
-        weight_vector = stacked_embeddings.mean(dim=0).to(device=embedder.device, dtype=torch.double)
-        
-        return DotProductModel(embedder, weight_vector).eval()
-    elif model_name == 'sunny-image':
+    # Handle special 'sunny-image' model first
+    if model_name == 'sunny-image':
         print(f"Initializing ground truth scorer model: {model_name} (average of image embeddings from sunny.txt)")
         # Construct path to sunny.txt
-        current_script_dir = os.path.dirname(os.path.abspath(__file__)) # .../experiments/llm/models
-        # project_root_dir = os.path.abspath(os.path.join(current_script_dir, "..", ".."))
-        # sentences_file_path = os.path.join(project_root_dir, 'experiments', 'llm', 'models', 'sunny.txt')
         sentences_file_path = os.path.join(current_script_dir, 'sunny.txt')
-
 
         if not os.path.exists(sentences_file_path):
             raise FileNotFoundError(f"Sentences file for sunny-image model not found at: {sentences_file_path}")
@@ -240,7 +201,36 @@ def get_scorer_model(model_name: str, env: 'LLMGrid', embedder: 'BaseEmbedder') 
 
         return DotProductModel(embedder, weight_vector).eval()
 
-    raise ValueError(f"Unknown scorer model name: {model_name}")
+    # Generic handler for any model defined by a .txt file
+    sentences_file_path = os.path.join(current_script_dir, f'{model_name}.txt')
+    
+    if os.path.exists(sentences_file_path):
+        normalized_embeddings = []
+        # Ensure to use utf-8 encoding for reading text files
+        with open(sentences_file_path, 'r', encoding='utf-8') as f:
+            for line in f:
+                sentence = line.strip()
+                if sentence: # Process non-empty lines
+                    embedding = embedder.embed_text(sentence) # Expected to be [1, dim]
+                    # The embedder's `embed_text` method handles normalization
+                    # if its `normalize` attribute is True.
+                    normalized_embeddings.append(embedding)
+
+        if not normalized_embeddings:
+            # This case handles empty file or file with only empty lines/problematic embeddings
+            raise ValueError(f"No valid sentences found in '{sentences_file_path}' to create '{model_name}' model.")
+
+        # Stack embeddings into a 2D tensor [num_sentences, embedding_dim]
+        stacked_embeddings = torch.stack(normalized_embeddings)
+        
+        # Compute the mean embedding. Ensure it's on the correct device and dtype.
+        # DotProductModel expects weights to be torch.double.
+        weight_vector = stacked_embeddings.mean(dim=0).to(device=embedder.device, dtype=torch.double)
+        
+        return DotProductModel(embedder, weight_vector).eval()
+
+    # If neither of the above conditions were met, the model is unknown.
+    raise ValueError(f"Unknown scorer model name: '{model_name}'. No special handler exists and the corresponding file '{os.path.basename(sentences_file_path)}' was not found in the models directory.")
 
 
 def make_theta_star(env: 'LLMGrid', scorer_model: VisionLanguageScorer, verbose: bool = False):
