@@ -22,13 +22,6 @@ def main(cfg: DictConfig):
     print("===================\n", flush=True)
     # -----------------------------
 
-    experiment = LLMExperiment(cfg)
-
-    # --- Handle Special Modes ---
-    if cfg.get('test_only', False) and cfg.get('explore_only', False):
-        print("Error: Cannot set both test_only and explore_only to true.")
-        return 1
-
     # Check if we're in test-only mode
     if cfg.get('test_only', False):
         print("--- Running in Test-Only Mode ---")
@@ -39,6 +32,7 @@ def main(cfg: DictConfig):
         # Determine the mode based on provided paths AND inspection_mode flag
         mode = None
         derived_results_dir = None # Initialize derived path as None
+        input_path_for_dir = None # Initialize to avoid UnboundLocalError
 
         if cfg.get('inspection_mode', False):
             mode = "inspect_visits"
@@ -130,24 +124,6 @@ def main(cfg: DictConfig):
                 print(f"Warning: Error deriving results directory: {e}. Using default results_dir.")
         # ----------------------------------------------------
 
-        # --- Deprecated Modes (Handled by other Makefile targets) ---
-        # elif not estimator_path and visits_path and feedback_path:
-        #     mode = "train_human" # Now handled by llm-train-human-feedback target
-        #     print("Mode: Train Human Feedback (Use llm-train-human-feedback target)")
-        # elif not estimator_path and visits_path and not feedback_path:
-        #     mode = "inspect_visits" # Now handled by llm-inspect-visits target
-        #     print("Mode: Inspect Visits (Use llm-inspect-visits target)")
-        # ----------------------------------------------------------
-        else:
-            print("\nError: Invalid combination of paths for test_only mode.")
-            print("Valid combinations for llm-test-only:")
-            print("  1. --config-name=config_inference estimator_path=/path/to/estimator.pt")
-            print("  2. --config-name=config_inference visits_path=/path/to/visits.pkl")
-            print("  3. --config-name=config_inference estimator_path=/path/to/estimator.pt feedback_path=/path/to/feedback.json")
-            # print("Use 'llm-train-human-feedback' target for: visits_path + feedback_path")
-            # print("Use 'llm-inspect-visits' target for: visits_path only (with config_inspect)")
-            return 1 # Exit due to invalid combination
-
         # Initialize Experiment - Pass derived_results_dir if available
         experiment = LLMExperiment(cfg, derived_results_dir=derived_results_dir)
 
@@ -165,11 +141,13 @@ def main(cfg: DictConfig):
     # Check if we're in explore-only mode
     elif cfg.get('explore_only', False):
         print("--- Running in Explore-Only Mode ---")
+        experiment = LLMExperiment(cfg)
         experiment.run_explore_only()
 
     # Otherwise, run the full experiment (explore, estimate, test, save)
     else:
         print("--- Running Full Experiment ---")
+        experiment = LLMExperiment(cfg)
         experiment.run()
         experiment.test_and_save()
 
