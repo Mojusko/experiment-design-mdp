@@ -44,7 +44,7 @@ experiment:
   episodes: null # Episodes are determined by loaded visits in test-only mode
   # Other experiment settings like name, id_prefix, vocab_size
   # are inherited from feedback_comparison.yaml unless overridden here.
-  scorer_model: ['sunny', 'medieval', 'technological'] # Use all three models
+  scorer_model: ['futuristic', 'natural', 'abstract'] # Use all three models
 
 # --- Testers (Enabled for Inference) ---
 tester:
