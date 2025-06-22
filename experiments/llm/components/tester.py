@@ -303,33 +303,48 @@ class ImageGenerationTester(BaseTester):
         # Final beams are sorted by score according to 'maximize'
         return beams # Returns list of (score, sequence_tuple)
 
-    # Added scorer_model (first GT model), estimator (first learned estimator),
-    # all_estimators_list, and all_gt_scorer_models_list
     def _run_beam_search_test(self, cfg, env, full_original_horizon, original_testing_words_list,
                               first_gt_scorer_model, first_estimator,
                               all_estimators_list, all_gt_scorer_models_list):
         """Runs beam search to find top N best and worst sequences."""
-        from omegaconf import OmegaConf # For accessing list config
+        from omegaconf import OmegaConf
 
-        is_fixed_base = bool(self.base_prompt and self.base_prompt.strip())
+        # Determine the effective base prompt to use for this test run.
+        # Prioritize the tester's own configured base_prompt.
+        effective_base_prompt = self.base_prompt if self.base_prompt is not None else env.base_prompt
         
-        search_base_prompt: str
-        search_horizon: int # Number of tokens to choose by beam search
-        vocab_for_padding_search_steps: list # Original per-step vocab, sliced, for padding
-        source_vocabs_for_unified_pool: list # Vocabs to form the unified pool for choices
+        # Check if a non-empty base prompt is being used.
+        has_non_empty_base_prompt = bool(effective_base_prompt and effective_base_prompt.strip())
 
-        if is_fixed_base:
-            search_base_prompt = self.base_prompt
+        # Check if the vocabulary was configured to have a separate 'bases.txt' file.
+        # This is a robust way to decide whether to slice the vocabulary list.
+        vocab_files = OmegaConf.to_container(cfg.experiment.vocabulary, resolve=True)
+        has_base_vocab_file = any('bases.txt' in f for f in vocab_files)
+
+        search_base_prompt: str
+        search_horizon: int
+        vocab_for_search: list
+
+        # If we have a non-empty base prompt AND the config included a bases.txt,
+        # then we should use the provided prompt and slice the vocabulary.
+        if has_non_empty_base_prompt and has_base_vocab_file:
+            search_base_prompt = effective_base_prompt
+            # The horizon for search is one less than the total, as the base is fixed.
             search_horizon = full_original_horizon - 1
-            vocab_for_padding_search_steps = original_testing_words_list[1:]
-            source_vocabs_for_unified_pool = original_testing_words_list[1:]
-            print(f"ImageGenerationTester: Using fixed base_prompt: '{search_base_prompt}'. Tokens to choose: {search_horizon}.")
+            # The vocabulary for search steps excludes the first list (from bases.txt).
+            vocab_for_search = original_testing_words_list[1:]
+            print(f"ImageGenerationTester: Using fixed base prompt '{search_base_prompt}'. "
+                  f"Ignoring 'bases.txt' and searching for {search_horizon} tokens.")
         else:
+            # Otherwise, use the environment's base prompt (which might be empty)
+            # and the full vocabulary list. This covers cases where:
+            # 1. No base prompt is used at all.
+            # 2. A base prompt is used, but the vocabulary was not built with a separate bases.txt.
             search_base_prompt = env.base_prompt 
             search_horizon = full_original_horizon
-            vocab_for_padding_search_steps = original_testing_words_list
-            source_vocabs_for_unified_pool = original_testing_words_list
-            print(f"ImageGenerationTester: Using env.base_prompt: '{search_base_prompt}'. Tokens to choose: {search_horizon}.")
+            vocab_for_search = original_testing_words_list
+            print(f"ImageGenerationTester: Using env.base_prompt: '{search_base_prompt}'. "
+                  f"Searching for {search_horizon} tokens using full vocabulary.")
 
         if search_horizon < 0:
             print(f"Warning: Search horizon became {search_horizon}. Setting to 0. No tokens will be searched.")
@@ -398,15 +413,8 @@ class ImageGenerationTester(BaseTester):
                 worst_sequences_tokens = []
                 print(f"ImageGenerationTester: Base prompt score: {best_scores[0]:.4f}")
             else: # search_horizon > 0
-                # vocab_for_padding_search_steps is already correctly set to the per-step vocabulary list
-                # (either original_testing_words_list or original_testing_words_list[1:])
-                vocab_for_beam_search_steps = vocab_for_padding_search_steps
+                vocab_for_beam_search_steps = vocab_for_search
                 valid_vocab_setup = True
-
-                if is_fixed_base:
-                    print(f"Beam search (fixed base): Choosing {search_horizon} tokens using per-step vocabulary.")
-                else:
-                    print(f"Beam search (variable base): Choosing {search_horizon} tokens using per-step vocabulary.")
 
                 # Validate the per-step vocabulary
                 if not vocab_for_beam_search_steps or len(vocab_for_beam_search_steps) < search_horizon:
@@ -425,7 +433,7 @@ class ImageGenerationTester(BaseTester):
                     best_results = self._beam_search(
                         env, search_horizon, vocab_for_beam_search_steps, scoring_model_for_ranking,
                         self.beam_width, maximize=True, fixed_base_prompt_part=search_base_prompt,
-                        vocab_for_padding_partial_sequences=vocab_for_padding_search_steps # This is the same as vocab_for_beam_search_steps
+                        vocab_for_padding_partial_sequences=vocab_for_beam_search_steps
                     )
                     top_n_best = best_results[:self.take_best_worst_N]
                     best_sequences_tokens = [list(seq_tokens) for score, seq_tokens in top_n_best]
