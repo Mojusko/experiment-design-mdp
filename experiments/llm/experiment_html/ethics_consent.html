@@ -44,7 +44,20 @@
         <p>By proceeding, you acknowledge that you understand the nature of the study and consent to your feedback being used for academic research.</p>
     </div>
 
-    <button id="agree-button" onclick="sessionStorage.setItem('userConsented', 'true'); window.location.href='introduction.html'">I Agree</button>
+    <button id="agree-button" onclick="startNewSession()">I Agree</button>
+
+    <script>
+        function startNewSession() {
+            // Clear any data from previous sessions to prevent contamination
+            console.log("Clearing previous session data from localStorage...");
+            localStorage.removeItem('imageFeedback');
+            localStorage.removeItem('benchmarkEpisodeKeys');
+            
+            // Set consent flag and proceed to instructions
+            sessionStorage.setItem('userConsented', 'true');
+            window.location.href='introduction.html';
+        }
+    </script>
 
 </body>
 </html>

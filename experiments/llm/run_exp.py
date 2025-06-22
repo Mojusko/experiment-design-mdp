@@ -57,16 +57,17 @@ def main(cfg: DictConfig):
                 print("Mode: Load Estimator and Feedback")
                 input_path_for_dir = estimator_path # Use estimator path as base
             elif not estimator_path and visits_path and feedback_path:
-                 mode = "train_human_feedback"
-                 print("Mode: Train Human Feedback")
+                 mode = "run_human_feedback"
+                 print("Mode: Run Human Feedback Pipeline")
                  input_path_for_dir = visits_path # Use visits path as base for dir derivation
             else:
                  # Invalid combination if not inspection mode
                  print("\nError: Invalid combination of paths for test_only mode.")
-                 print("Valid combinations for llm-test-only:")
-                 print("  1. --config-name=config_inference estimator_path=/path/to/estimator.pt")
-                 print("  2. --config-name=config_inference visits_path=/path/to/visits.pkl")
-                 print("  3. --config-name=config_inference estimator_path=/path/to/estimator.pt feedback_path=/path/to/feedback.json")
+                 print("Valid combinations include:")
+                 print("  - estimator_path only (to load and test an estimator)")
+                 print("  - visits_path only (to train and test an estimator from visits)")
+                 print("  - visits_path and feedback_path (to run the human feedback pipeline)")
+                 print("  - estimator_path and feedback_path (to load estimator and use feedback data)")
                  return 1 # Exit due to invalid combination
 
         # --- Derive Results Directory if not overridden ---

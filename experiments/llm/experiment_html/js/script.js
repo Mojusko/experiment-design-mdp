@@ -48,74 +48,74 @@ function initializeQuestionnaire() {
         throw new Error("No valid images parsed.");
     }
 
-    // 2. Group by (algorithm, episode)
-    const groupedByEpisode = structuredImages.reduce((acc, imgData) => {
-        const key = `${imgData.algorithm}-${imgData.episode}`;
-        if (!acc[key]) {
-            acc[key] = [];
+    // 2. Group images by algorithm, then by episode
+    const groupedByAlgorithm = structuredImages.reduce((acc, img) => {
+        if (!acc[img.algorithm]) {
+            acc[img.algorithm] = {};
         }
-        acc[key].push(imgData);
+        const episodeKey = `ep_${img.episode}`;
+        if (!acc[img.algorithm][episodeKey]) {
+            acc[img.algorithm][episodeKey] = [];
+        }
+        acc[img.algorithm][episodeKey].push(img);
         return acc;
     }, {});
 
-    // 3. Sort images within each group by timestep
-    for (const key in groupedByEpisode) {
-        groupedByEpisode[key].sort((a, b) => a.timestep - b.timestep);
+    // 3. Sort images within each episode by timestep
+    for (const alg in groupedByAlgorithm) {
+        for (const epKey in groupedByAlgorithm[alg]) {
+            groupedByAlgorithm[alg][epKey].sort((a, b) => a.timestep - b.timestep);
+        }
     }
 
-    // 4. Create a list of unique (algorithm, episode) keys and shuffle it
-    const episodeKeys = Object.keys(groupedByEpisode);
-    // Fisher-Yates (Knuth) Shuffle
-    for (let i = episodeKeys.length - 1; i > 0; i--) {
-        const j = Math.floor(Math.random() * (i + 1));
-        [episodeKeys[i], episodeKeys[j]] = [episodeKeys[j], episodeKeys[i]];
-    }
-    console.log("Shuffled episode order:", episodeKeys);
-
-    const NUM_BENCHMARK_EPISODES = 5; // Number of episodes to reserve for benchmark
+    // 4. Select a balanced set of benchmark episodes
+    const NUM_BENCHMARK_PER_ALG = 5;
     let benchmarkEpisodeKeys = [];
-    let userEpisodeKeys = [...episodeKeys]; // Start with all episodes
+    let allEpisodeKeys = [];
 
-    if (episodeKeys.length > NUM_BENCHMARK_EPISODES) {
-        // Take the last NUM_BENCHMARK_EPISODES from the shuffled list as benchmarks
-        benchmarkEpisodeKeys = episodeKeys.slice(-NUM_BENCHMARK_EPISODES);
-        // The rest are for the user
-        userEpisodeKeys = episodeKeys.slice(0, episodeKeys.length - NUM_BENCHMARK_EPISODES);
+    for (const alg in groupedByAlgorithm) {
+        let episodeNumbers = Object.keys(groupedByAlgorithm[alg]).map(epKey => parseInt(epKey.replace('ep_', ''), 10));
         
-        console.log("Benchmark episodes (keys, not shown to user):", benchmarkEpisodeKeys);
-        console.log("User-answerable episodes (keys):", userEpisodeKeys);
-    } else {
-        console.warn(`Not enough episodes (${episodeKeys.length}) to reserve ${NUM_BENCHMARK_EPISODES} for benchmark. All episodes will be user-answerable.`);
-        // All episodes remain in userEpisodeKeys, benchmarkEpisodeKeys is empty
+        // Fisher-Yates Shuffle for this algorithm's episodes
+        for (let i = episodeNumbers.length - 1; i > 0; i--) {
+            const j = Math.floor(Math.random() * (i + 1));
+            [episodeNumbers[i], episodeNumbers[j]] = [episodeNumbers[j], episodeNumbers[i]];
+        }
+
+        if (episodeNumbers.length > NUM_BENCHMARK_PER_ALG) {
+            const benchmarkEpisodesForAlg = episodeNumbers.slice(-NUM_BENCHMARK_PER_ALG);
+            benchmarkEpisodesForAlg.forEach(epNum => benchmarkEpisodeKeys.push(`${alg}-${epNum}`));
+        } else {
+            console.warn(`Algorithm '${alg}' has only ${episodeNumbers.length} episodes. Cannot reserve ${NUM_BENCHMARK_PER_ALG} for benchmark. Using all as non-benchmark.`);
+        }
+        
+        // Add all episode keys for this algorithm to the master list for display shuffling
+        episodeNumbers.forEach(epNum => allEpisodeKeys.push(`${alg}-${epNum}`));
     }
 
-    // 5. Create the final displayOrder based on ALL shuffled episode keys
-    // All episodes will be shown to the user for feedback.
-    // benchmarkEpisodeKeys are still identified and saved to localStorage
-    // so that prompt.js can mark them in feedback.json for later benchmark evaluation.
+    console.log("Selected Benchmark Episodes (internal use, not shown to user):", benchmarkEpisodeKeys);
+    localStorage.setItem('benchmarkEpisodeKeys', JSON.stringify(benchmarkEpisodeKeys));
+
+    // 5. Shuffle the combined list of all episode keys to randomize the user's viewing order
+    for (let i = allEpisodeKeys.length - 1; i > 0; i--) {
+        const j = Math.floor(Math.random() * (i + 1));
+        [allEpisodeKeys[i], allEpisodeKeys[j]] = [allEpisodeKeys[j], allEpisodeKeys[i]];
+    }
+    console.log("Final shuffled order of all episodes for user:", allEpisodeKeys);
+
+    // 6. Create the final displayOrder based on the fully shuffled episode keys
     displayOrder = [];
-    episodeKeys.forEach(key => { // Use the full episodeKeys list here
-        displayOrder.push(...groupedByEpisode[key]); // Add all timesteps for this shuffled episode
+    allEpisodeKeys.forEach(key => {
+        const [alg, epNum] = key.split('-');
+        const epKey = `ep_${epNum}`;
+        if (groupedByAlgorithm[alg] && groupedByAlgorithm[alg][epKey]) {
+            displayOrder.push(...groupedByAlgorithm[alg][epKey]);
+        }
     });
 
-    if (benchmarkEpisodeKeys.length > 0) {
-        // Log that these episodes are marked for benchmark, but will still be shown.
-        console.log(`Identified ${benchmarkEpisodeKeys.length} episodes for benchmark evaluation (will still be shown to user).`);
-        // Save benchmarkEpisodeKeys to localStorage for prompt.js
-        try {
-            localStorage.setItem('benchmarkEpisodeKeys', JSON.stringify(benchmarkEpisodeKeys));
-            console.log("Saved benchmarkEpisodeKeys to localStorage.");
-        } catch (e) {
-            console.error("Error saving benchmarkEpisodeKeys to localStorage:", e);
-        }
-    } else {
-        // Ensure localStorage is cleared or set to empty if no benchmark keys
-        localStorage.setItem('benchmarkEpisodeKeys', JSON.stringify([]));
-    }
-    // This now reflects the total number of questions the user will answer.
-    console.log(`Initialization complete. Total questions to be displayed to user (all episodes): ${displayOrder.length}`);
+    console.log(`Initialization complete. Total questions to be displayed: ${displayOrder.length}`);
 
-    // 6. Start the display
+    // 7. Start the display
     updateImage();
 }
 

@@ -614,13 +614,13 @@ $(foreach episodes,$(EPISODES_DESIGN_FREQ), \
 # Target to run all design frequency finding jobs
 llm-find-design-frequency: $(JOBS_LLM_DESIGN_FREQUENCY)
 
-# Target for training estimator from human feedback
+# Target for processing human feedback: trains estimator, benchmarks, and generates images.
 # Requires VISITS_PATH and FEEDBACK_PATH
-# Example: make llm-train-human-feedback VISITS_PATH=results/.../visits.pkl FEEDBACK_PATH=results/.../feedback.json
-llm-train-human-feedback:
+# Example: make llm-human-feedback VISITS_PATH=results/.../visits.pkl FEEDBACK_PATH=results/.../feedback.json
+llm-human-feedback:
 	@$(if $(VISITS_PATH),,$(error VISITS_PATH is required))
 	@$(if $(FEEDBACK_PATH),,$(error FEEDBACK_PATH is required))
-	cd llm && TIMESTAMP=$(TIMESTAMP) OMP_NUM_THREADS=1 MKL_NUM_THREADS=1 $(PYTHONPATH) run_exp.py --config-name=config_human_train visits_path="$(VISITS_PATH)" feedback_path="$(FEEDBACK_PATH)" $(if $(RESULTS_DIR),results_dir="$(RESULTS_DIR)" override_results_dir=true,) experiment_id="train-human-feedback-$(shell basename $(VISITS_PATH) .pkl)" seed=1
+	cd llm && TIMESTAMP=$(TIMESTAMP) OMP_NUM_THREADS=1 MKL_NUM_THREADS=1 $(PYTHONPATH) run_exp.py --config-name=config_human_feedback visits_path="$(VISITS_PATH)" feedback_path="$(FEEDBACK_PATH)" $(if $(RESULTS_DIR),results_dir="$(RESULTS_DIR)" override_results_dir=true,) experiment_id="run-$(shell basename $(VISITS_PATH) .pkl)" seed=1
 
 # Define jobs for inspecting visits using VisitsImageSaver
 JOBS_LLM_INSPECT_VISITS := $(addprefix job-llm-inspect-visit-,$(NUMBERS_LLM))

@@ -1,0 +1,72 @@
+# Configuration for training an estimator from human feedback,
+# benchmarking it, and generating new images.
+defaults:
+  - experiment: feedback_comparison # Inherit experiment settings
+  - embedder: clip # Inherit default embedder settings
+  - feedback: multinomial # Inherit multinomial feedback defaults
+  - _self_
+
+# --- Core Settings (Inherited or Default) ---
+seed: 1 # Default seed for this mode (can be overridden)
+verbose: false
+cache_dir: "${oc.env:HOME}/.cache/huggingface/hub"
+accuracy: 1e-14 # Needed for estimator initialization? Check if required.
+experiment_id: "" # Define top-level key to allow overriding from Makefile
+base_prompt: "" # Will be overridden by user_prompt from feedback.json
+include_base_prompt_in_first_tokens: false # Add for LLMGrid initialization
+num_benchmark_episodes: 5 # Number of episodes to reserve for benchmarking (consistent with config.yaml)
+
+# --- Experiment Settings Override ---
+# Inherit from feedback_comparison via defaults, but override prefix and scorer_model
+experiment:
+  id_prefix: "human-feedback" # New prefix for this job
+  scorer_model: null # No ground truth models are used
+
+# --- Mode Settings ---
+test_only: true # This mode runs within the test_only logic
+explore_only: false
+algorithm: "design" # Placeholder, will be parsed from visits filename
+# horizon: 4 # REMOVED - Determined by len(experiment.vocabulary)
+
+# --- Feedback Settings ---
+# Feedback settings are now inherited from conf/feedback/multinomial.yaml via defaults list.
+# Specific overrides can be added here if needed:
+feedback:
+  # Ensure we use the default lambda_est from multinomial.yaml, not model-specific ones
+  use_model_specific_lambda: false
+
+# --- Input Paths (Passed via command line) ---
+visits_path: null # Must be provided via command line
+feedback_path: null # Must be provided via command line
+estimator_path: null # Explicitly null, we are training one
+
+# --- Output Settings ---
+results_dir: "results/dummy" # Base directory, will likely be overridden
+override_results_dir: false # Default, can be overridden via command line if RESULTS_DIR is set
+
+# --- Component Settings ---
+tester:
+  - _target_: components.tester.HumanFeedbackBenchmarkTester
+    params: {} # Compares learned model to held-out human choices
+  - _target_: components.tester.ImageGenerationTester
+    params:
+      take_best_worst_N: 4
+      prompt_ranking_model: "current_iteration_estimator" # Use the newly learned model
+      # base_prompt will be set dynamically from the feedback.json user_prompt
+      beam_width: 20
+
+savers:
+  - _target_: components.saver.LearnedEstimatorSaver
+    params:
+      filename: "estimator.pt"
+  - _target_: components.saver.MetricsSaver
+    params:
+      filename: "metrics.json"
+      # No keys specified, will save all metrics from testers (e.g., benchmark_accuracy)
+  - _target_: components.saver.ImageGenerationSaver
+    params:
+      take_best_worst_N: 4
+      add_scores: ['prompt'] # Only show prompt scores on summary image
+  - _target_: components.saver.ConfSaver
+    params:
+      filename: "config_resolved.yaml"

@@ -860,9 +860,9 @@ class LLMExperiment:
                 print("-> Will estimate for the first model only.")
             elif mode == "load_estimator_and_feedback":
                  print("-> Will load estimator for the first model only. Feedback processing might affect environment for all.")
-            # 'train_human_feedback' mode needs significant changes to support multiple models, likely unsupported for now.
-            if mode == "train_human_feedback":
-                 print("Error: Mode 'train_human_feedback' is not supported with multiple scorer models.")
+            # 'run_human_feedback' mode needs significant changes to support multiple models, likely unsupported for now.
+            if mode == "run_human_feedback":
+                 print("Error: Mode 'run_human_feedback' is not supported with multiple scorer models.")
                  return False
 
         # --- Mode 1: Load Estimator ---
@@ -870,7 +870,7 @@ class LLMExperiment:
             #     mode = "test"
             #     ...
             # elif visits_path and feedback_path:
-            #     mode = "train_human_feedback"
+            #     mode = "run_human_feedback"
             #     ...
             # elif visits_path:
             #     mode = "inspect"
@@ -1136,8 +1136,8 @@ class LLMExperiment:
         # --- End pre-tester setup ---
 
 
-        # --- Mode 5: Train Human Feedback ---
-        elif mode == "train_human_feedback":
+        # --- Mode 5: Run Human Feedback Pipeline ---
+        elif mode == "run_human_feedback":
             if not visits_path or not os.path.exists(visits_path): # Path existence checked by to_absolute_path earlier if HFBenchmarkTester active
                 abs_visits_path = to_absolute_path(visits_path) if visits_path else "None"
                 if not os.path.exists(abs_visits_path): # Re-check if not loaded above
@@ -1218,7 +1218,7 @@ class LLMExperiment:
 
         Args:
             current_mode (str): The mode the experiment is running in
-                                ('full_run', 'test', 'inspect', 'train_human_feedback').
+                                ('full_run', 'test', 'inspect', 'run_human_feedback').
                                 Used for mode-specific validation and behavior.
         """
         # Create a container for all results
@@ -1240,11 +1240,11 @@ class LLMExperiment:
         visits_available = bool(self.visits and isinstance(self.visits, list) and self.visits[0])
 
         # Import tester/saver classes for isinstance checks
-        from components.tester import PreferenceTester, CosineTester, ImageGenerationTester
+        from components.tester import PreferenceTester, CosineTester, ImageGenerationTester, HumanFeedbackBenchmarkTester
         from components.saver import LearnedEstimatorSaver, VisitsSaver, VisitsImageSaver, ReadableVisitsSaver, ConfSaver
 
         # --- Mode-Specific Validation ---
-        if current_mode == "train_human_feedback":
+        if current_mode == "run_human_feedback":
             # Ensure LearnedEstimatorSaver is present
             # Check if LearnedEstimatorSaver is present (it will be skipped if num_models > 1)
             has_les = any(isinstance(s, LearnedEstimatorSaver) for s in self.savers)
@@ -1253,31 +1253,35 @@ class LLMExperiment:
             # Ensure at least one estimator was actually fitted
             if not estimators_available:
                  raise ValueError(f"Mode '{current_mode}' completed but no estimator is available. Training likely failed.")
-            # Testers are generally skipped in this mode, so no tester validation needed here.
+            # Testers are now run in this mode, so we validate them.
             print(f"Validation for mode '{current_mode}': Estimator(s) available.")
         # -----------------------------
 
-        # Validate Testers (Skip if in train_human_feedback mode)
-        if current_mode != "train_human_feedback":
+        # Validate Testers (only skip for inspect_visits mode)
+        if current_mode != "inspect_visits":
             for tester in self.testers:
                 tester_name = type(tester).__name__
-                # Check if *any* estimator is available if the tester needs one
-                if isinstance(tester, (PreferenceTester, CosineTester)):
+                # Check for estimator requirement
+                if isinstance(tester, (PreferenceTester, CosineTester, HumanFeedbackBenchmarkTester)):
                     if not estimators_available:
                         raise ValueError(f"Tester '{tester_name}' requires an estimator, but none were loaded or available.")
+                
+                # Check for visits requirement
+                if isinstance(tester, HumanFeedbackBenchmarkTester):
+                    if not visits_available:
+                        raise ValueError(f"Tester '{tester_name}' requires visits data, but it is not available.")
+
+                # Check for ImageGenerationTester requirements
                 elif isinstance(tester, ImageGenerationTester):
-                     # ImageGenerationTester needs an estimator if prompt_ranking_model is not 'gt'
                      if tester.prompt_ranking_model != 'gt' and not estimators_available:
                          raise ValueError(f"Tester '{tester_name}' is configured with prompt_ranking_model='{tester.prompt_ranking_model}', but no estimator is available.")
-                     # Check if *any* scorer model is available if prompt_ranking_model is 'gt'
                      scorer_models_available = self._scorer_models and any(sm is not None for sm in self._scorer_models)
                      if tester.prompt_ranking_model == 'gt' and not scorer_models_available:
                           raise ValueError(f"Tester '{tester_name}' is configured with prompt_ranking_model='gt', but no ground truth scorer models are available.")
-                     if self.embedder is None: # Also needs embedder
+                     if self.embedder is None:
                           raise ValueError(f"Tester '{tester_name}' requires an embedder, but it's not available.")
-                # Add checks for other testers if they have specific requirements
         else:
-             print("Skipping tester validation in 'train_human_feedback' mode.")
+            print("Skipping tester validation in 'inspect_visits' mode.")
 
 
         # Validate Savers (Common checks for all modes)
@@ -1338,46 +1342,53 @@ class LLMExperiment:
         # --- Run Testers and Collect Metrics (Looping through models) ---
         # Dictionary to store metrics per model for individual saving
         per_model_metrics_collection = {}
-        # Averaging lists (all_preference_errors, all_cosine_errors) are removed.
-        # Add lists for other potential metrics here if they need different handling
-        # ...
 
-        # Skip testers if in inspection or human feedback training mode
+        # Skip testers if in inspection mode
         if current_mode == "inspect_visits":
             print("Skipping testers in 'inspect_visits' mode.")
-        elif current_mode == "train_human_feedback":
-            print("Skipping testers in 'train_human_feedback' mode.")
         else:
-            # Run testers only for other modes (full_run, load_estimator, estimate_from_visits, load_estimator_and_feedback)
-            print("\n--- Running Testers for Each Model ---")
-            for i in range(self.num_scorer_models):
-                model_name = self.scorer_model_names[i]
-                estimator = self.estimators[i] if self.estimators and i < len(self.estimators) else None
-                theta_star = self._theta_stars[i] if self._theta_stars and i < len(self._theta_stars) else None
-                scorer_model = self._scorer_models[i] if self._scorer_models and i < len(self._scorer_models) else None
+            # Run testers for all other modes
+            print("\n--- Running Testers ---")
+            
+            num_iterations = self.num_scorer_models if self.num_scorer_models > 0 else 1
+            
+            for i in range(num_iterations):
+                model_name, estimator, theta_star, scorer_model = None, None, None, None
+                
+                if self.num_scorer_models > 0:
+                    model_name = self.scorer_model_names[i]
+                    estimator = self.estimators[i] if self.estimators and i < len(self.estimators) else None
+                    theta_star = self._theta_stars[i] if self._theta_stars and i < len(self._theta_stars) else None
+                    scorer_model = self._scorer_models[i] if self._scorer_models and i < len(self._scorer_models) else None
+                    print(f"\nTesting Model: {model_name}")
+                else: # No scorer models (e.g., human feedback mode)
+                    model_name = "human_feedback"
+                    estimator = self.estimators[0] if self.estimators else None
+                    theta_star = None
+                    scorer_model = None
+                    print(f"\nTesting Model: {model_name}")
 
-                print(f"\nTesting Model: {model_name}")
-
-                # Check if essential components for this model are available
-                if theta_star is None or scorer_model is None:
+                # Check if essential components for this model are available (for GT-based testing)
+                if self.num_scorer_models > 0 and (theta_star is None or scorer_model is None):
                     print(f"Skipping testing for model '{model_name}': Ground truth components missing.")
                     continue
-                # Note: Estimator might be None if fitting failed, testers should handle this
+                
+                # For human feedback mode, we must have an estimator
+                if self.num_scorer_models == 0 and estimator is None:
+                    print(f"Skipping testing for model '{model_name}': Estimator not available.")
+                    continue
 
                 for tester in self.testers:
                     tester_name = type(tester).__name__
                     print(f"  Running tester: {tester_name}")
 
-                    # Check if this tester requires an estimator and if it's available for *this* model
-                    if isinstance(tester, (PreferenceTester, CosineTester)) and estimator is None:
-                        print(f"  Skipping {tester_name} for model '{model_name}': Estimator not available.")
+                    # Per-iteration validation
+                    if isinstance(tester, (PreferenceTester, CosineTester, HumanFeedbackBenchmarkTester)) and estimator is None:
+                        print(f"  Skipping {tester_name} for model '{model_name}': Estimator not available for this iteration.")
                         continue
-                    # For ImageGenerationTester, check if it needs an estimator (prompt_ranking_model != 'gt') and if that estimator is available
                     if isinstance(tester, ImageGenerationTester) and tester.prompt_ranking_model != 'gt' and estimator is None:
-                         print(f"  Skipping {tester_name} (prompt_ranking_model='{tester.prompt_ranking_model}') for model '{model_name}': Estimator not available.")
+                         print(f"  Skipping {tester_name} (prompt_ranking_model='{tester.prompt_ranking_model}') for model '{model_name}': Estimator not available for this iteration.")
                          continue
-
-                    # -------------------------------------------------------------
 
                     try:
                         # Prepare arguments for tester.run_test()
@@ -1393,7 +1404,7 @@ class LLMExperiment:
                         }
                         # Add feedback object if the tester is CosineTester
                         if isinstance(tester, CosineTester):
-                            test_args['feedback'] = self.feedbacks[i]
+                            test_args['feedback'] = self.feedbacks[i] if self.feedbacks and i < len(self.feedbacks) else None
                         
                         # For ImageGenerationTester, pass all estimators and GT models
                         if isinstance(tester, ImageGenerationTester):
@@ -1443,7 +1454,7 @@ class LLMExperiment:
                                 else:
                                     print(f"  Warning: ImageGenerationSaver not found in savers list. Cannot save image generation results for model '{model_name}'.")
 
-                            else: # For other testers (PreferenceTester, CosineTester)
+                            else: # For other testers (PreferenceTester, CosineTester, HumanFeedbackBenchmarkTester)
                                 # Collect metrics for per-model saving by MetricsSaver later
                                 for key, value in tester_results.items():
                                     if isinstance(value, float):
@@ -1461,25 +1472,17 @@ class LLMExperiment:
                         # print(traceback.format_exc())
 
             print("--------------------------------------\n")
-        # Removed redundant else block here
 
-        # --- Averaged Metrics Calculation Removed ---
-        # The main results.metrics will now only contain non-model-specific metrics
-        # (e.g., from ImageGenerationTester if it runs for the first model).
-
-        # --- Benchmark Episode Evaluation (for human feedback training mode) ---
-        # This is now handled by HumanFeedbackBenchmarkTester if it's active in the config.
-        # The results from that tester will be added to results.metrics directly by the tester loop.
-        # No specific code needed here for train_human_feedback mode regarding benchmark evaluation.
-        # --------------------------------------------------------------------
-
-        # If there's only one model, merge its metrics from per_model_metrics_collection
-        # into the main results.metrics so MetricsSaver can pick them up.
-        if self.num_scorer_models == 1 and per_model_metrics_collection:
-            single_model_name = self.scorer_model_names[0]
-            if single_model_name in per_model_metrics_collection:
-                print(f"Merging metrics from single model '{single_model_name}' into main results for saving.")
-                for key, value in per_model_metrics_collection[single_model_name].items():
+        # If there's only one model (or one set of metrics, like in human feedback mode), 
+        # merge its metrics into the main results.metrics so MetricsSaver can pick them up.
+        if len(per_model_metrics_collection) == 1:
+            # Get the single model name/key and its metrics
+            single_model_name = list(per_model_metrics_collection.keys())[0]
+            single_model_metrics = per_model_metrics_collection[single_model_name]
+            
+            if single_model_metrics:
+                print(f"Merging metrics from single model/run '{single_model_name}' into main results for saving.")
+                for key, value in single_model_metrics.items():
                     results.add_metric(key, value)
 
         # --- Run Savers ---
