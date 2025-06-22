@@ -826,108 +826,71 @@ class LLMExperiment:
         print(f"Generated training data shapes: Embeddings {final_comparison_embeddings.shape}, Labels {final_labels.shape}")
         return final_comparison_embeddings, final_labels
 
-    # Removed unused _process_human_feedback method
-
     def run_test_only(self, mode: str, estimator_path: str = None, visits_path: str = None, feedback_path: str = None) -> bool:
         """
-        Run in test-only mode. Behavior depends on provided paths:
-        - estimator_path provided: Load estimator, test, save results. Optionally use feedback_path to override base_prompt.
-        - visits_path provided, estimator_path=None: Load visits, inspect, save results.
-        - visits_path and feedback_path provided, estimator_path=None: Load visits & feedback, train estimator, save estimator & results.
-        Args:
-            estimator_path: Path to the saved estimator file
-            
-        Returns:
-            True if the test/save process was executed, False otherwise (e.g., input path missing).
-        Args:
-            estimator_path: Path to the saved estimator file (can be None).
-
-        Returns:
-            True if the process was executed successfully, False otherwise.
+        Run in test-only mode. Behavior depends on provided paths and mode.
         """
-        # Mode is now passed directly as an argument
         print(f"--- Running Test-Only Mode: {mode} ---")
 
-        # --- Setup Results Directory (Handled by run_exp.py now) ---
-        # The results_dir is set in __init__ and potentially overridden by run_exp.py
+        # --- Centralized Data Loading ---
+        # Load visits if visits_path is provided.
+        if visits_path:
+            abs_visits_path = to_absolute_path(visits_path)
+            if not os.path.exists(abs_visits_path):
+                print(f"Error: Visits file not found: {abs_visits_path}")
+                return False
+            print(f"Loading visits from: {abs_visits_path}")
+            try:
+                self.visits = torch.load(abs_visits_path)
+            except Exception as e:
+                print(f"Error loading visits from {abs_visits_path}: {e}")
+                return False
+        
+        # Load feedback data if feedback_path is provided.
+        if feedback_path:
+            abs_feedback_path = to_absolute_path(feedback_path)
+            if not os.path.exists(abs_feedback_path):
+                print(f"Error: Feedback file not found: {abs_feedback_path}")
+                return False
+            print(f"Loading feedback data from: {abs_feedback_path}")
+            try:
+                import json
+                with open(abs_feedback_path, 'r') as f:
+                    self.feedback_data = json.load(f)
+                
+                user_prompt = self.feedback_data.get("user_prompt")
+                if user_prompt and isinstance(user_prompt, str):
+                    print(f"  Updating env.base_prompt to '{user_prompt}' from feedback file.")
+                    self.env.base_prompt = user_prompt
+            except Exception as e:
+                print(f"Error loading or parsing feedback data from {abs_feedback_path}: {e}")
+                return False
+        # --- End Centralized Data Loading ---
 
-        # --- Basic Multi-Model Handling ---
-        if self.num_scorer_models > 1:
-            print(f"Warning: Test-only mode currently has limited support for multiple scorer models.")
-            if mode == "load_estimator":
-                print("-> Will load estimator for the first model only.")
-            elif mode == "estimate_from_visits":
-                print("-> Will estimate for the first model only.")
-            elif mode == "load_estimator_and_feedback":
-                 print("-> Will load estimator for the first model only. Feedback processing might affect environment for all.")
-            # 'run_human_feedback' mode needs significant changes to support multiple models, likely unsupported for now.
-            if mode == "run_human_feedback":
-                 print("Error: Mode 'run_human_feedback' is not supported with multiple scorer models.")
-                 return False
-
-        # --- Mode 1: Load Estimator ---
+        # --- Mode Logic ---
         if mode == "load_estimator":
-            #     mode = "test"
-            #     ...
-            # elif visits_path and feedback_path:
-            #     mode = "run_human_feedback"
-            #     ...
-            # elif visits_path:
-            #     mode = "inspect"
-            #     ...
-            # else:
-            #     ...
-            #     return False
-
-            # Indentation added for the block below
-            print(f"--- Running Test-Only Mode: {mode} ---") # This line was moved inside the if block
-
-            # --- Setup Results Directory (Handled by run_exp.py now) ---
-            # The results_dir is set in __init__ and potentially overridden by run_exp.py
-        # We just need to ensure savers use the final self.results_dir before saving.
-
-        # --- Mode 1: Load Estimator ---
-        if mode == "load_estimator": # This if statement needs the block below indented
-            # Indentation added for the block below
-            if not estimator_path or not os.path.exists(estimator_path):
-                print(f"Error: Estimator file not found or not provided: {estimator_path}")
+            if not estimator_path:
+                print(f"Error: Estimator file not provided for mode '{mode}'.")
                 return False
             print(f"Loading estimator from: {estimator_path}")
             if not self.load_estimator(estimator_path):
                  print("Error: Failed to load estimator.")
                  return False
-            # Proceed to testing
             self.test_and_save(current_mode=mode)
             return True
 
-        # --- Mode 2: Estimate from Visits ---
         elif mode == "estimate_from_visits":
-            if not visits_path or not os.path.exists(visits_path):
-                print(f"Error: Visits file not found or not provided: {visits_path}")
+            if self.visits is None:
+                print(f"Error: Visits data not loaded, but required for mode '{mode}'.")
                 return False
-            print(f"Loading visits from: {visits_path}")
-            # Load visits directly into self.visits
-            try:
-                self.visits = torch.load(visits_path)
-                if not isinstance(self.visits, list) or not self.visits or not self.visits[0]:
-                     print(f"Warning: Loaded visits from {visits_path} appear empty or invalid.")
-                     # Proceed, test_and_save validation will handle it if savers need visits
-            except Exception as e:
-                 print(f"Error loading visits from {visits_path}: {e}")
-                 return False # Stop execution on loading errors
-
+            
             print("Estimating/Training estimator using visits...")
-            # Train the estimator using the loaded visits.
-            # Assumes the configured feedback mechanism (e.g., PairwiseFeedback)
-            # can handle feedback_data=None or raises an appropriate error.
-            # If NumericalFeedback is used, this might just return the scorer_model.
             try:
                 # Loop through each configured scorer model to collect labels and fit an estimator
                 for i in range(self.num_scorer_models):
                     model_name = self.scorer_model_names[i]
                     print(f"Processing model '{model_name}' for estimator training from visits...")
 
-                    # Ensure components for this model are available
                     if i >= len(self.feedbacks) or self.feedbacks[i] is None:
                         print(f"  Skipping model '{model_name}': Feedback component not available.")
                         continue
@@ -935,17 +898,12 @@ class LLMExperiment:
                         print(f"  Skipping model '{model_name}': Ground truth scorer (_theta_stars[{i}]) not available.")
                         continue
                     
-                    # Step 1: Collect labels using visits and the current model's ground truth scorer
                     print(f"  Collecting labels for model '{model_name}' from visits...")
-                    # self.visits should be List[List[Tuple(s,a)]]
-                    # collect_labels expects List[List[Tuple(s,a)]]
                     self.feedbacks[i].collect_labels(self.cfg, self.visits, self._theta_stars[i])
 
-                    # Step 2: Fit the estimator using the collected labels
                     print(f"  Fitting estimator for model '{model_name}' with collected labels...")
-                    self.feedbacks[i].fit_estimator() # Uses internally stored data for this feedback object
+                    self.feedbacks[i].fit_estimator()
 
-                    # Step 3: Retrieve the fitted estimator
                     if i < len(self.estimators):
                         self.estimators[i] = self.feedbacks[i].estimator
                         if self.estimators[i] and getattr(self.estimators[i], 'fitted', False):
@@ -954,27 +912,11 @@ class LLMExperiment:
                             print(f"  Warning: Estimator for model '{model_name}' not fitted after training attempt.")
                     else:
                         print(f"  Warning: Estimators list too short for model '{model_name}' (index {i}).")
-                
-            except NotImplementedError as e:
-                 # This error would apply to the feedback mechanism type, not per model.
-                 # If it occurs, it likely means the feedback type itself is unsuitable.
-                 print(f"Error: The configured feedback mechanism ({self.feedbacks[0].__class__.__name__ if self.feedbacks else 'N/A'}) does not support training from visits alone.")
-                 print(e)
-                 return False
-            except AttributeError as e: # Catch the specific error if collect_labels/fit_estimator are missing
-                 print(f"Error: Method missing in feedback class ({self.feedbacks[0].__class__.__name__}): {e}")
-                 return False
             except Exception as e:
-                 print(f"Error during estimator training from visits (model 0): {e}")
-                 # Optionally re-raise for more detail: raise e
-                 return False
-
-            # After attempting to fit all estimators, check if at least one was successful
-            # to proceed to test_and_save. Individual testers will skip if their specific estimator is None.
-            any_estimator_fitted = any(
-                est and getattr(est, 'fitted', False) for est in self.estimators if est is not None
-            )
-
+                print(f"Error during estimator training from visits: {e}")
+                return False
+            
+            any_estimator_fitted = any(est and getattr(est, 'fitted', False) for est in self.estimators if est is not None)
             if any_estimator_fitted:
                 print("At least one estimator trained successfully from visits.")
                 self.test_and_save(current_mode=mode)
@@ -983,206 +925,35 @@ class LLMExperiment:
                 print("Error: No estimators were successfully trained from visits.")
                 return False
 
-        # --- Mode 3: Inspect Visits ---
         elif mode == "inspect_visits":
-            if not visits_path or not os.path.exists(visits_path):
-                print(f"Error: Visits file not found or not provided for inspection: {visits_path}")
+            if self.visits is None:
+                print(f"Error: Visits data not loaded, but required for mode '{mode}'.")
                 return False
-            print(f"Loading visits for inspection from: {visits_path}")
-            # Load visits directly into self.visits
-            try:
-                self.visits = torch.load(visits_path)
-                if not isinstance(self.visits, list) or not self.visits or not self.visits[0]:
-                     print(f"Warning: Loaded visits from {visits_path} appear empty or invalid.")
-                     # Proceed, test_and_save validation will handle it if savers need visits
-            except Exception as e:
-                 print(f"Error loading visits from {visits_path}: {e}")
-                 return False # Stop execution on loading errors
-
-            # Ensure estimator is None for inspection mode
             self.estimators = [None] * self.num_scorer_models
             print("Skipping estimator training/loading in inspection mode.")
-            # Proceed directly to saving (which includes VisitsImageSaver)
             self.test_and_save(current_mode=mode)
             return True
 
-        # --- Mode 4: Load Estimator and Feedback ---
         elif mode == "load_estimator_and_feedback":
-            if not estimator_path or not os.path.exists(estimator_path):
-                print(f"Error: Estimator file not found or not provided: {estimator_path}")
+            if not estimator_path or self.feedback_data is None:
+                print(f"Error: Mode '{mode}' requires both estimator_path and feedback_path.")
                 return False
-            if not feedback_path or not os.path.exists(feedback_path):
-                print(f"Error: Feedback file not found or not provided: {feedback_path}")
-                return False
-
+            
             print(f"Loading estimator from: {estimator_path}")
             if not self.load_estimator(estimator_path):
                  print("Error: Failed to load estimator.")
                  return False
-
-            print(f"Loading feedback data from: {feedback_path}")
-            # Load feedback data using the feedback component's method
-            # Store it for potential use by testers/savers (e.g., base prompt override)
-            try:
-                # Use the first feedback mechanism
-                self.feedback_data = self.feedbacks[0].load_feedback(feedback_path)
-                if self.feedback_data is None:
-                    print("Error: Failed to load feedback data (returned None).")
-                    return False
-                print("Feedback data loaded.")
-                # --- Optional: Re-initialize environment if user_prompt is found ---
-                user_prompt = self.feedback_data.get("user_prompt")
-                if user_prompt is not None and isinstance(user_prompt, str):
-                    print(f"Found user_prompt: '{user_prompt}'. Re-initializing environment without bases.txt.")
-                    # Prepare new vocab list excluding bases.txt
-                    new_vocab_files = [vf for vf in self.cfg.experiment.vocabulary if 'bases.txt' not in vf]
-                    if len(new_vocab_files) == len(self.cfg.experiment.vocabulary):
-                        print("Warning: 'bases.txt' not found in original vocabulary list. Environment not changed.")
-                        # If bases.txt wasn't there, still use the user_prompt as base_prompt
-                        # but keep the original vocabulary and set include_base_prompt_in_first_tokens=False
-                        # Re-initialize env with modified base_prompt, keeping original vocab
-                        # Need to modify _init_env or create a helper to handle this
-                        print("Warning: Environment re-initialization with modified base_prompt not fully implemented yet.")
-                        # For now, just update the env's base_prompt attribute directly
-                        self.env.base_prompt = user_prompt
-                        self.env.include_base_prompt_in_first_tokens = False
-                        # Note: Emissions might need regeneration if base_prompt changes significantly
-                        print(f"Updated env.base_prompt to '{user_prompt}'. Emissions not regenerated.")
-                    else:
-                        # Re-initialize env with the user_prompt as base_prompt and the reduced vocabulary.
-                        # Horizon is implicitly set by len(new_vocab_files).
-                       # Set include_base_prompt_in_first_tokens=False as the base is now explicit.
-                       # Need to modify _init_env or create a helper to handle this
-                       print("Warning: Environment re-initialization with modified vocabulary not fully implemented yet.")
-                       # For now, just update the env's base_prompt attribute directly
-                       self.env.base_prompt = user_prompt
-                       self.env.include_base_prompt_in_first_tokens = False
-                       # Note: Emissions and token lists need regeneration
-                       print(f"Updated env.base_prompt to '{user_prompt}'. Vocabulary/Emissions not regenerated.")
-
-                   # Update components dependent on env.emissions (Skip design update)
-                   # if hasattr(self, 'designs') and self.designs and hasattr(self.designs[0], 'update_estimator'):
-                   #      # Ensure estimator is available before updating design
-                    #      if self.estimators and self.estimators[0]:
-                    #          # self.designs[0].update_estimator(self.estimators[0], self.env.emissions)
-                    #          # print("Design objective updated with new environment emissions.")
-                    #          pass # Skipping design update
-                    #      else:
-                    #          print("Warning: Estimator not available when trying to update design objective.")
-                    # else:
-                    #      print("Warning: Could not update design objective after environment re-initialization.")
-                    print("Environment re-initialized.")
-                else:
-                    print("Optional 'user_prompt' not found in feedback data or not a string. Using environment initialized from config.")
-                # -----------------------------------------------------------------
-            except Exception as e:
-                 print(f"Error loading feedback data or re-initializing environment: {e}")
-                 return False
-
-            # Proceed to testing with potentially modified environment
+            
             self.test_and_save(current_mode=mode)
             return True
-        
-        # --- Pre-tester setup for modes that might need feedback_path or visits_path ---
-        # This block runs for 'load_estimator_and_feedback' and if HumanFeedbackBenchmarkTester is active.
-        from components.tester import HumanFeedbackBenchmarkTester # Import locally for isinstance check
-        is_hf_benchmark_tester_active = any(isinstance(t, HumanFeedbackBenchmarkTester) for t in self.testers)
 
-        if mode == "load_estimator_and_feedback" or is_hf_benchmark_tester_active:
-            if not feedback_path or not os.path.exists(to_absolute_path(feedback_path)):
-                print(f"Error: Feedback file not found or not provided ({feedback_path}), but required for mode '{mode}' or HumanFeedbackBenchmarkTester.")
-                return False
-            
-            abs_feedback_path = to_absolute_path(feedback_path)
-            print(f"Loading feedback data from: {abs_feedback_path} for mode '{mode}' or HumanFeedbackBenchmarkTester.")
-            try:
-                import json
-                with open(abs_feedback_path, 'r') as f:
-                    loaded_feedback_json = json.load(f)
-                
-                user_prompt_from_feedback = loaded_feedback_json.get("user_prompt")
-                if user_prompt_from_feedback is not None and isinstance(user_prompt_from_feedback, str):
-                    print(f"  Updating env.base_prompt to '{user_prompt_from_feedback}' from feedback file.")
-                    self.env.base_prompt = user_prompt_from_feedback
-                    # Note: If include_base_prompt_in_first_tokens was true during LLMGrid init,
-                    # this change alone might not be enough if vocab/emissions depend on it.
-                    # However, config_inference.yaml has include_base_prompt_in_first_tokens: false.
-                else:
-                    print(f"  'user_prompt' not found in {abs_feedback_path} or not a string. Using existing env.base_prompt: '{self.env.base_prompt}'")
-                
-                # Store the full feedback_data if other components might need it (HFBenchmarkTester loads it itself)
-                # self.feedback_data = loaded_feedback_json 
-
-            except Exception as e:
-                print(f"Error loading feedback data from {abs_feedback_path} or updating env: {e}")
-                return False
-
-        if is_hf_benchmark_tester_active: # Also load visits if HFBenchmarkTester is active
-            if not visits_path or not os.path.exists(to_absolute_path(visits_path)):
-                print(f"Error: Visits file not found or not provided ({visits_path}), but required for HumanFeedbackBenchmarkTester.")
-                return False
-            abs_visits_path = to_absolute_path(visits_path)
-            print(f"Loading visits from: {abs_visits_path} for HumanFeedbackBenchmarkTester.")
-            try:
-                self.visits = torch.load(abs_visits_path) # Load into self.visits
-                if not isinstance(self.visits, list) or not self.visits or \
-                   not (isinstance(self.visits[0], list) and self.visits[0]) or \
-                   not (isinstance(self.visits[0][0], tuple)): # Check structure List[List[Tuple(s,a)]]
-                    print(f"Warning: Loaded visits from {abs_visits_path} appear empty or invalid for HumanFeedbackBenchmarkTester. Expected List[List[Tuple(s,a)]].")
-                    # Allow proceeding, tester will handle it or error more specifically.
-            except Exception as e:
-                print(f"Error loading visits from {abs_visits_path} for HumanFeedbackBenchmarkTester: {e}")
-                return False
-        # --- End pre-tester setup ---
-
-
-        # --- Mode 5: Run Human Feedback Pipeline ---
         elif mode == "run_human_feedback":
-            if not visits_path or not os.path.exists(visits_path): # Path existence checked by to_absolute_path earlier if HFBenchmarkTester active
-                abs_visits_path = to_absolute_path(visits_path) if visits_path else "None"
-                if not os.path.exists(abs_visits_path): # Re-check if not loaded above
-                    print(f"Error: Visits file not found or not provided: {abs_visits_path}")
-                    return False
-            if not feedback_path or not os.path.exists(to_absolute_path(feedback_path)):
-                abs_feedback_path = to_absolute_path(feedback_path) if feedback_path else "None"
-                if not os.path.exists(abs_feedback_path): # Re-check
-                    print(f"Error: Feedback file not found or not provided: {abs_feedback_path}")
-                    return False
-            
-            # Paths are now absolute
-            abs_visits_path = to_absolute_path(visits_path)
-            abs_feedback_path = to_absolute_path(feedback_path)
-
-
-            print(f"Loading visits from: {abs_visits_path}")
-            if not feedback_path or not os.path.exists(feedback_path):
-                print(f"Error: Feedback file not found or not provided: {feedback_path}")
-                return False
-
-            print(f"Loading visits from: {visits_path}")
-            try:
-                visits_data = torch.load(visits_path)
-                if not isinstance(visits_data, list) or not visits_data: # Basic check
-                     print(f"Warning: Loaded visits from {visits_path} appear empty or invalid.")
-                     # Allow proceeding, _process_human_feedback will handle empty/invalid visits
-            except Exception as e:
-                 print(f"Error loading visits from {visits_path}: {e}")
-                 return False
-
-            print(f"Loading human feedback data from: {feedback_path}")
-            try:
-                import json # Ensure json is imported
-                with open(feedback_path, 'r') as f:
-                    self.feedback_data = json.load(f) # Store loaded feedback data
-                if not self.feedback_data:
-                    print("Error: Loaded feedback data is empty.")
-                    return False
-            except Exception as e:
-                print(f"Error loading feedback data from {feedback_path}: {e}")
+            if self.visits is None or self.feedback_data is None:
+                print(f"Error: Mode '{mode}' requires both visits_path and feedback_path to be provided and loaded.")
                 return False
 
             print("Processing human feedback to generate training data...")
-            comparison_embeddings, labels = self._process_human_feedback(visits_data, self.feedback_data)
+            comparison_embeddings, labels = self._process_human_feedback(self.visits, self.feedback_data)
 
             if comparison_embeddings is None or labels is None:
                 print("Error: Failed to process human feedback into training data. Skipping estimator fitting.")
@@ -1194,21 +965,18 @@ class LLMExperiment:
 
             print("Fitting estimator using processed human feedback...")
             try:
-                # Populate _collected_data for the first feedback component
                 self.feedbacks[0]._collected_data = [(comparison_embeddings, labels)]
                 self.feedbacks[0].fit_estimator()
-                # Update the main estimator list
                 self.estimators[0] = self.feedbacks[0].estimator
                 print("Estimator fitted successfully with human feedback.")
             except Exception as e:
                 print(f"Error fitting estimator with human feedback: {e}")
                 return False
             
-            # Proceed to testing and saving (which includes benchmark evaluation)
             self.test_and_save(current_mode=mode)
             return True
+        
         else:
-             # Should not happen if logic in run_exp.py is correct
              print(f"Error: Unknown test_only mode '{mode}' received by experiment runner.")
              return False
 
