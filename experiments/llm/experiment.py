@@ -1098,7 +1098,7 @@ class LLMExperiment:
         # Add experiment metadata
         results.add_metadata('horizon', self.env.max_episode_length) # Log horizon from env
         results.add_metadata('algorithm', self.cfg.algorithm)
-        results.add_metadata('base_prompt', self.cfg.base_prompt)
+        results.add_metadata('base_prompt', self.env.base_prompt) # Use the original env base prompt
         # Add embedder info to metadata
         results.add_metadata('embedder_class', self.embedder.__class__.__name__)
         results.add_metadata('embedder_model_id', self.embedder.model_id)
@@ -1297,9 +1297,13 @@ class LLMExperiment:
             metrics_saver_instance.experiment_id = original_metrics_saver_exp_id # Restore original experiment_id
             print("Finished saving per-model metrics.")
 
-        # Now run all savers (MetricsSaver will run again for averaged metrics if it's in the list)
+        # Now run all savers. ImageGenerationSaver is skipped as it's handled within the tester loop.
         for saver in self.savers:
             saver_name = type(saver).__name__
+
+            if isinstance(saver, ImageGenerationSaver):
+                print(f"Skipping saver: {saver_name} (handled within tester loop to ensure correct context)")
+                continue
 
             # Pass the results object containing potentially loaded estimators/visits
             print(f"Running saver: {saver_name}")
