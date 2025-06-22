@@ -2,6 +2,7 @@ import os # Added os import
 import torch
 import numpy as np
 from abc import ABC, abstractmethod
+from hydra.utils import to_absolute_path
 from doexpy.env.llm import create_prompt_from_tokens # Removed DotProductModel from here
 from experiments.llm.models.scorer_models import DotProductModel # Import DotProductModel from new location
 
@@ -503,7 +504,6 @@ class HumanFeedbackBenchmarkTester(BaseTester):
             return {}
         
         # Resolve feedback_path using Hydra's utility
-        from hydra.utils import to_absolute_path
         abs_feedback_path = to_absolute_path(feedback_path_str)
         if not os.path.exists(abs_feedback_path):
             print(f"  Skipping {self.__class__.__name__}: feedback_path file not found: {abs_feedback_path}")
@@ -616,4 +616,3 @@ class HumanFeedbackBenchmarkTester(BaseTester):
         benchmark_accuracy = (correct_predictions / total_comparisons) if total_comparisons > 0 else 0.0
         print(f"  Human Feedback Benchmark Accuracy: {benchmark_accuracy:.4f} ({correct_predictions}/{total_comparisons} comparisons)")
         return {"benchmark_accuracy": benchmark_accuracy, "benchmark_comparisons_count": total_comparisons}
-

@@ -4,6 +4,7 @@ from experiment import LLMExperiment
 import sys
 import os
 from omegaconf import OmegaConf, DictConfig
+from hydra.utils import to_absolute_path
 
 @hydra.main(config_path="conf", config_name="config", version_base=None)
 def main(cfg: DictConfig):
@@ -77,7 +78,6 @@ def main(cfg: DictConfig):
         # --- Derive Results Directory if not overridden ---
         if input_path_for_dir and not cfg.get('override_results_dir', False):
             try:
-                from hydra.utils import to_absolute_path
                 import datetime
                 absolute_input_path = to_absolute_path(input_path_for_dir)
                 if not os.path.exists(absolute_input_path):

@@ -177,7 +177,6 @@ class LLMExperiment:
             input_path = self.cfg.get('visits_path') or self.cfg.get('estimator_path')
             if input_path:
                 try:
-                    from hydra.utils import to_absolute_path
                     abs_input_path = to_absolute_path(input_path)
                     filename = os.path.basename(abs_input_path)
                     print(f"Attempting to parse original info from input filename: {filename}")
