@@ -857,11 +857,7 @@ class LLMExperiment:
                 import json
                 with open(abs_feedback_path, 'r') as f:
                     self.feedback_data = json.load(f)
-                
-                user_prompt = self.feedback_data.get("user_prompt")
-                if user_prompt and isinstance(user_prompt, str):
-                    print(f"  Updating env.base_prompt to '{user_prompt}' from feedback file.")
-                    self.env.base_prompt = user_prompt
+                # DO NOT modify self.env here. The user_prompt will be passed down.
             except Exception as e:
                 print(f"Error loading or parsing feedback data from {abs_feedback_path}: {e}")
                 return False
@@ -944,7 +940,8 @@ class LLMExperiment:
                  print("Error: Failed to load estimator.")
                  return False
             
-            self.test_and_save(current_mode=mode)
+            # Pass feedback_data down to testing. The environment is NOT modified.
+            self.test_and_save(current_mode=mode, feedback_data=self.feedback_data)
             return True
 
         elif mode == "run_human_feedback":
@@ -952,7 +949,8 @@ class LLMExperiment:
                 print(f"Error: Mode '{mode}' requires both visits_path and feedback_path to be provided and loaded.")
                 return False
 
-            print("Processing human feedback to generate training data...")
+            # Step 1: Train the estimator using the original environment state
+            print("Processing human feedback to generate training data (using original env state)...")
             comparison_embeddings, labels = self._process_human_feedback(self.visits, self.feedback_data)
 
             if comparison_embeddings is None or labels is None:
@@ -973,21 +971,22 @@ class LLMExperiment:
                 print(f"Error fitting estimator with human feedback: {e}")
                 return False
             
-            self.test_and_save(current_mode=mode)
+            # Step 2: Proceed to testing, passing feedback_data down so components can use the user_prompt.
+            # The environment's base_prompt is NOT modified.
+            self.test_and_save(current_mode=mode, feedback_data=self.feedback_data)
             return True
         
         else:
              print(f"Error: Unknown test_only mode '{mode}' received by experiment runner.")
              return False
 
-    def test_and_save(self, current_mode="full_run"): # Add current_mode argument with a default
+    def test_and_save(self, current_mode="full_run", feedback_data=None): # Add feedback_data
         """
         Final estimation, testing and saving of results.
 
         Args:
-            current_mode (str): The mode the experiment is running in
-                                ('full_run', 'test', 'inspect', 'run_human_feedback').
-                                Used for mode-specific validation and behavior.
+            current_mode (str): The mode the experiment is running in.
+            feedback_data (dict, optional): Loaded data from feedback.json.
         """
         # Create a container for all results
         from components.results import ExperimentResults
@@ -999,6 +998,13 @@ class LLMExperiment:
         # Ensure visits are valid before setting
         valid_visits = self.visits and isinstance(self.visits, list) and self.visits[0]
         results.set_visits(self.visits if valid_visits else None) # Set to None if invalid/empty
+
+        # Extract user_prompt from feedback_data if available
+        user_prompt = None
+        if feedback_data:
+            user_prompt = feedback_data.get("user_prompt")
+            if user_prompt:
+                results.add_metadata('user_prompt', user_prompt)
 
         # --- Pre-run Validation ---
         print("Validating requirements for configured testers and savers...")
@@ -1178,6 +1184,8 @@ class LLMExperiment:
                         if isinstance(tester, ImageGenerationTester):
                             test_args['all_estimators'] = self.estimators # Pass the full list
                             test_args['all_gt_scorer_models'] = self._scorer_models # Pass the full list
+                            if user_prompt:
+                                test_args['override_base_prompt'] = user_prompt
 
                         tester_results = tester.run_test(**test_args)
 
@@ -1215,6 +1223,8 @@ class LLMExperiment:
                                     temp_ig_results.metadata['current_model_name'] = model_name
                                     temp_ig_results.metadata['all_gt_scorer_models'] = self._scorer_models
                                     temp_ig_results.metadata['scorer_model_names'] = self.scorer_model_names
+                                    if user_prompt:
+                                        temp_ig_results.add_metadata('user_prompt', user_prompt)
                                     temp_ig_results.estimators = self.estimators # Pass the list of all estimators
 
                                     print(f"  Running ImageGenerationSaver for model '{model_name}'...")
