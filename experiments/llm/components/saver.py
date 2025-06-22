@@ -337,8 +337,17 @@ class ImageGenerationSaver(BaseSaver):
             model_specific_images_dir: Model-specific directory to save images to (e.g., results/images_sunny)
             results: ExperimentResults object, used to access estimator for image scoring
         """
-        # Determine the effective base prompt: use the saver's own if set, otherwise fall back to the environment's.
-        effective_base_prompt = self.base_prompt if self.base_prompt is not None else self.env.base_prompt
+        # Determine the effective base prompt with a clear priority:
+        # 1. user_prompt from results metadata (for human feedback runs)
+        # 2. base_prompt from the saver's own config
+        # 3. base_prompt from the global environment
+        user_prompt_override = results.metadata.get('user_prompt')
+        if user_prompt_override is not None:
+            effective_base_prompt = user_prompt_override
+        elif self.base_prompt is not None:
+            effective_base_prompt = self.base_prompt
+        else:
+            effective_base_prompt = self.env.base_prompt
 
         # Initialize image generator using self attributes (derived from params/DEFAULT_CONFIG)
         # and specific seed logic for this saver.
