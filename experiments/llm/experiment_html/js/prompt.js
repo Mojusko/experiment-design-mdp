@@ -1,25 +1,31 @@
 // Script for prompt.html
 
-const userPromptInput = document.getElementById('user-prompt-input');
+const userPromptInput1 = document.getElementById('user-prompt-input-1');
+const userPromptInput2 = document.getElementById('user-prompt-input-2');
+const userPromptInput3 = document.getElementById('user-prompt-input-3');
 const saveFinalButton = document.getElementById('save-final-button');
 
 saveFinalButton.addEventListener('click', () => {
     // Retrieve feedback data saved from index.html
     const feedbackData = JSON.parse(localStorage.getItem('imageFeedback')) || {};
 
-    // Get the user prompt from this page
-    const userPrompt = userPromptInput.value.trim();
+    // Get the user prompts from this page
+    const userPrompts = [
+        userPromptInput1.value.trim(),
+        userPromptInput2.value.trim(),
+        userPromptInput3.value.trim()
+    ];
 
     // --- Validation ---
-    // Check if prompt is entered
-    if (!userPrompt) {
-        alert("Please enter a content prompt before saving.");
-        return; // Stop if prompt is missing
+    // Check if all prompts are entered
+    if (userPrompts.some(p => p === '')) {
+        alert("Please enter all three content prompts before saving.");
+        return; // Stop if any prompt is missing
     }
 
     // Optional: Check if feedbackData is empty (user somehow skipped the feedback page)
     if (Object.keys(feedbackData).length === 0) {
-        if (!confirm("Warning: No image preferences were found. This usually means the feedback steps were skipped.\n\nDo you want to save just the prompt anyway?")) {
+        if (!confirm("Warning: No image preferences were found. This usually means the feedback steps were skipped.\n\nDo you want to save the prompts anyway?")) {
             return; // Stop if user cancels
         }
     }
@@ -62,7 +68,7 @@ saveFinalButton.addEventListener('click', () => {
     }
 
     const outputData = {
-        user_prompt: userPrompt,
+        user_prompts: userPrompts, // Store the list of prompts
         preferences: formattedPreferences, // Store the detailed, formatted preferences
         benchmark_episode_keys: benchmarkEpisodeKeys // Add benchmark keys
     };
@@ -72,8 +78,8 @@ saveFinalButton.addEventListener('click', () => {
     const url = URL.createObjectURL(blob);
     const a = document.createElement('a');
     a.href = url;
-    // Suggest a filename including the prompt (sanitized)
-    const sanitizedPrompt = userPrompt.replace(/[^a-z0-9]/gi, '_').toLowerCase().substring(0, 30);
+    // Suggest a filename including the first prompt (sanitized)
+    const sanitizedPrompt = userPrompts[0].replace(/[^a-z0-9]/gi, '_').toLowerCase().substring(0, 30);
     a.download = `feedback_${sanitizedPrompt || 'data'}.json`;
     document.body.appendChild(a);
     a.click();

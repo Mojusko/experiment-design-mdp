@@ -1,6 +1,7 @@
 # Standard library imports
 import json
 import os
+import re
 import textwrap
 # import types # Removed unused import
 # import hashlib # Removed unused import
@@ -227,12 +228,23 @@ class ImageGenerationSaver(BaseSaver):
             results: ExperimentResults object with results to save
         """
         # Determine current model name for directory/file naming
-        # LLMExperiment should set results.metadata['current_model_name']
         current_model_name = results.metadata.get('current_model_name', self.experiment_id or 'unknown_model')
 
-        # Create model-specific images subdirectory, e.g., results/images_sunny/
-        model_specific_images_dir = os.path.join(self.results_dir, f"images_{current_model_name}")
-        os.makedirs(model_specific_images_dir, exist_ok=True)
+        # Create a base directory for this model's images, e.g., results/images_sunny/
+        base_images_dir = os.path.join(self.results_dir, f"images_{current_model_name}")
+
+        # Check for a specific user prompt to create a nested subdirectory
+        user_prompt_for_dir = results.metadata.get('user_prompt')
+        if user_prompt_for_dir:
+            # Sanitize the prompt to create a valid directory name
+            sanitized_prompt = re.sub(r'[^\w\s-]', '', user_prompt_for_dir).strip().replace(' ', '_')
+            sanitized_prompt = sanitized_prompt[:50] # Limit length for filesystem compatibility
+            # The final directory will be nested, e.g., .../images_human_feedback/a_cat_sleeping/
+            output_images_dir = os.path.join(base_images_dir, sanitized_prompt)
+        else:
+            output_images_dir = base_images_dir
+
+        os.makedirs(output_images_dir, exist_ok=True)
         
         # Check if there's image generation data in the results
         if "image_generation" in results.metrics:
@@ -244,13 +256,13 @@ class ImageGenerationSaver(BaseSaver):
             worst_prompts = [] 
             worst_scores = []
             
-            # Generate images and potentially calculate new image scores, saving into model_specific_images_dir
-            self._generate_images(best_prompts, best_scores, worst_prompts, worst_scores, model_specific_images_dir, results) # Pass results
+            # Generate images and potentially calculate new image scores, saving into output_images_dir
+            self._generate_images(best_prompts, best_scores, worst_prompts, worst_scores, output_images_dir, results) # Pass results
             
-            # Save image metrics separately, using model_specific name
-            self._save_image_metrics(results, current_model_name)
+            # Save image metrics separately, using model_specific name and potentially prompt-specific path
+            self._save_image_metrics(results, current_model_name, output_images_dir)
     
-    def _save_image_metrics(self, results, current_model_name_for_file):
+    def _save_image_metrics(self, results, current_model_name_for_file, output_dir):
         """Save image-specific metrics to a separate JSON file, aligned with configuration."""
         image_metrics = {}
         image_gen_data = results.metrics.get("image_generation", {})
@@ -312,10 +324,8 @@ class ImageGenerationSaver(BaseSaver):
             name, ext = os.path.splitext(base_metrics_filename)
             model_specific_metrics_filename = f"{name}_{current_model_name_for_file}{ext}"
             
-            # Manually construct the full path to avoid double experiment_id if get_output_path is used
-            # and self.experiment_id is also model-specific.
-            file_path = os.path.join(self.results_dir, model_specific_metrics_filename)
-            os.makedirs(self.results_dir, exist_ok=True) # Ensure base results_dir exists
+            # Save the metrics file inside the specific output directory for this run
+            file_path = os.path.join(output_dir, model_specific_metrics_filename)
 
             serializable_dict = _convert_to_serializable(image_metrics)
             
@@ -326,7 +336,7 @@ class ImageGenerationSaver(BaseSaver):
             except TypeError as e:
                 print(f"Error saving image metrics: {e}")
     
-    def _generate_images(self, best_prompts, best_scores, worst_prompts, worst_scores, model_specific_images_dir, results):
+    def _generate_images(self, best_prompts, best_scores, worst_prompts, worst_scores, output_images_dir, results):
         """Generate images from lists of best and worst prompts (internal method)
         
         Args:
@@ -334,7 +344,7 @@ class ImageGenerationSaver(BaseSaver):
             best_scores: List of scores for each best prompt (prompt scores from tester)
             worst_prompts: List of worst prompts to generate images for
             worst_scores: List of scores for each worst prompt (prompt scores from tester)
-            model_specific_images_dir: Model-specific directory to save images to (e.g., results/images_sunny)
+            output_images_dir: Directory to save images to (e.g., results/images_sunny/a_cat_sleeping)
             results: ExperimentResults object, used to access estimator for image scoring
         """
         # Determine the effective base prompt with a clear priority:
@@ -454,7 +464,7 @@ class ImageGenerationSaver(BaseSaver):
             if 'image' in self.add_scores and base_img_actual_score is not None:
                 base_filename_parts.append(f"iscore_{base_img_actual_score:.4f}")
             base_img_filename = "_".join(base_filename_parts) + ".png"
-            base_img_path = os.path.join(model_specific_images_dir, base_img_filename) # Use model_specific_images_dir
+            base_img_path = os.path.join(output_images_dir, base_img_filename) # Use output_images_dir
             PIL.Image.fromarray(base_img_array).save(base_img_path)
             print(f"Saved base image to {base_img_path}")
             
@@ -499,7 +509,7 @@ class ImageGenerationSaver(BaseSaver):
             if 'image' in self.add_scores and current_image_score is not None:
                 filename_parts.append(f"iscore_{current_image_score:.4f}")
             img_filename = "_".join(filename_parts) + ".png"
-            img_path = os.path.join(model_specific_images_dir, img_filename) # Use model_specific_images_dir
+            img_path = os.path.join(output_images_dir, img_filename) # Use output_images_dir
             PIL.Image.fromarray(image).save(img_path)
             best_generated_images.append(image)
         
@@ -585,11 +595,11 @@ class ImageGenerationSaver(BaseSaver):
 
 
         plt.subplots_adjust(bottom=0.2, wspace=0.4, hspace=0.5)
-        summary_path = os.path.join(model_specific_images_dir, "summary.png") # Use model_specific_images_dir
+        summary_path = os.path.join(output_images_dir, "summary.png") # Use output_images_dir
         plt.savefig(summary_path)
         plt.close()
 
-        with open(os.path.join(model_specific_images_dir, "results.txt"), "w") as f: # Use model_specific_images_dir
+        with open(os.path.join(output_images_dir, "results.txt"), "w") as f: # Use output_images_dir
             if base_image_tuple:
                 _, base_prompt_score, base_img_score = base_image_tuple
                 f.write("BASE PROMPT:\n")

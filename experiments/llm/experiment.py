@@ -990,12 +990,17 @@ class LLMExperiment:
         valid_visits = self.visits and isinstance(self.visits, list) and self.visits[0]
         results.set_visits(self.visits if valid_visits else None) # Set to None if invalid/empty
 
-        # Extract user_prompt from feedback_data if available
-        user_prompt = None
+        # Extract user_prompts list from feedback_data if available
+        user_prompts = []
         if feedback_data:
-            user_prompt = feedback_data.get("user_prompt")
-            if user_prompt:
-                results.add_metadata('user_prompt', user_prompt)
+            # New key is 'user_prompts' (plural list)
+            user_prompts = feedback_data.get("user_prompts", [])
+            if not user_prompts and feedback_data.get("user_prompt"):
+                # Fallback for old format (single prompt)
+                user_prompts = [feedback_data.get("user_prompt")]
+            if user_prompts:
+                results.add_metadata('user_prompts', user_prompts)
+
 
         # --- Pre-run Validation ---
         print("Validating requirements for configured testers and savers...")
@@ -1112,134 +1117,102 @@ class LLMExperiment:
         if current_mode == "inspect_visits":
             print("Skipping testers in 'inspect_visits' mode.")
         else:
-            # Run testers for all other modes
-            print("\n--- Running Testers ---")
-            
+            # Separate ImageGenerationTesters from others
+            image_gen_testers = [t for t in self.testers if isinstance(t, ImageGenerationTester)]
+            other_testers = [t for t in self.testers if not isinstance(t, ImageGenerationTester)]
+
+            # Run non-image-gen testers first
+            print("\n--- Running Standard Testers ---")
             num_iterations = self.num_scorer_models if self.num_scorer_models > 0 else 1
-            
             for i in range(num_iterations):
                 model_name, estimator, theta_star, scorer_model = None, None, None, None
-                
                 if self.num_scorer_models > 0:
                     model_name = self.scorer_model_names[i]
                     estimator = self.estimators[i] if self.estimators and i < len(self.estimators) else None
                     theta_star = self._theta_stars[i] if self._theta_stars and i < len(self._theta_stars) else None
                     scorer_model = self._scorer_models[i] if self._scorer_models and i < len(self._scorer_models) else None
                     print(f"\nTesting Model: {model_name}")
-                else: # No scorer models (e.g., human feedback mode)
+                else:
                     model_name = "human_feedback"
                     estimator = self.estimators[0] if self.estimators else None
-                    theta_star = None
-                    scorer_model = None
+                    theta_star, scorer_model = None, None
                     print(f"\nTesting Model: {model_name}")
 
-                # Check if essential components for this model are available (for GT-based testing)
                 if self.num_scorer_models > 0 and (theta_star is None or scorer_model is None):
                     print(f"Skipping testing for model '{model_name}': Ground truth components missing.")
                     continue
-                
-                # For human feedback mode, we must have an estimator
                 if self.num_scorer_models == 0 and estimator is None:
                     print(f"Skipping testing for model '{model_name}': Estimator not available.")
                     continue
 
-                for tester in self.testers:
+                for tester in other_testers:
                     tester_name = type(tester).__name__
                     print(f"  Running tester: {tester_name}")
-
-                    # Per-iteration validation
                     if isinstance(tester, (PreferenceTester, CosineTester, HumanFeedbackBenchmarkTester)) and estimator is None:
                         print(f"  Skipping {tester_name} for model '{model_name}': Estimator not available for this iteration.")
                         continue
-                    if isinstance(tester, ImageGenerationTester) and tester.prompt_ranking_model != 'gt' and estimator is None:
-                         print(f"  Skipping {tester_name} (prompt_ranking_model='{tester.prompt_ranking_model}') for model '{model_name}': Estimator not available for this iteration.")
-                         continue
-
+                    
                     try:
-                        # Prepare arguments for tester.run_test()
                         test_args = {
-                            'cfg': self.cfg,
-                            'env': self.env,
-                            'estimator': estimator, # Pass the specific estimator for this model
-                            'theta_star': theta_star, # Pass the specific theta_star for this model
-                            'scorer_model': scorer_model, # Pass the specific scorer_model
-                            'training_words_list': self.training_words,
-                            'testing_words_list': self.testing_words,
-                            'visits': self.visits if hasattr(self, 'visits') else None # Pass loaded visits
+                            'cfg': self.cfg, 'env': self.env, 'estimator': estimator,
+                            'theta_star': theta_star, 'scorer_model': scorer_model,
+                            'training_words_list': self.training_words, 'testing_words_list': self.testing_words,
+                            'visits': self.visits if hasattr(self, 'visits') else None
                         }
-                        # Add feedback object if the tester is CosineTester
                         if isinstance(tester, CosineTester):
                             test_args['feedback'] = self.feedbacks[i] if self.feedbacks and i < len(self.feedbacks) else None
                         
-                        # For ImageGenerationTester, pass all estimators and GT models
-                        if isinstance(tester, ImageGenerationTester):
-                            test_args['all_estimators'] = self.estimators # Pass the full list
-                            test_args['all_gt_scorer_models'] = self._scorer_models # Pass the full list
-                            if user_prompt:
-                                test_args['override_base_prompt'] = user_prompt
-
                         tester_results = tester.run_test(**test_args)
-
-                        # Process and store results for this model
                         if tester_results:
-                            if isinstance(tester, ImageGenerationTester):
-                                # Handle ImageGenerationTester results specifically for the current model
-                                print(f"    ImageGenerationTester results for model '{model_name}':")
-                                # Summarize and print image generation details
-                                for key, value in tester_results.items():
-                                    if key == "image_generation" and isinstance(value, dict):
-                                        best_count = len(value.get("best_prompts", []))
-                                        worst_count = len(value.get("worst_prompts", [])) # Should be 0
-                                        print(f"      - {key}: (Best: {best_count}, Worst: {worst_count})")
-                                    elif isinstance(value, float):
-                                        print(f"      - {key}: {value:.4f}")
-                                    else:
-                                        print(f"      - {key}: {value}")
-                                
-                                # Find ImageGenerationSaver and run it with model-specific results
-                                ig_saver_instance = None
-                                for s_instance in self.savers:
-                                    if isinstance(s_instance, ImageGenerationSaver): # Ensure ImageGenerationSaver is imported
-                                        ig_saver_instance = s_instance
-                                        break
-                                
+                            for key, value in tester_results.items():
+                                if isinstance(value, float): print(f"    Model '{model_name}' - {key}: {value:.4f}")
+                                else: print(f"    Model '{model_name}' - {key}: {value}")
+                                if model_name not in per_model_metrics_collection: per_model_metrics_collection[model_name] = {}
+                                per_model_metrics_collection[model_name][key] = value
+                    except Exception as e:
+                        print(f"  Error running tester {tester_name} for model '{model_name}': {e}")
+
+            # Now handle image generation testers with multiple prompts
+            if image_gen_testers and user_prompts:
+                print(f"\n--- Running Image Generation for {len(user_prompts)} prompts ---")
+                for user_prompt in user_prompts:
+                    print(f"  Processing prompt: '{user_prompt}'")
+                    # We assume image generation is only for the first model/estimator
+                    model_name = self.scorer_model_names[0] if self.num_scorer_models > 0 else "human_feedback"
+                    estimator = self.estimators[0] if self.estimators else None
+                    theta_star = self._theta_stars[0] if self._theta_stars else None
+                    scorer_model = self._scorer_models[0] if self._scorer_models else None
+
+                    for tester in image_gen_testers:
+                        tester_name = type(tester).__name__
+                        print(f"    Running tester: {tester_name}")
+                        try:
+                            test_args = {
+                                'cfg': self.cfg, 'env': self.env, 'estimator': estimator,
+                                'theta_star': theta_star, 'scorer_model': scorer_model,
+                                'training_words_list': self.training_words, 'testing_words_list': self.testing_words,
+                                'visits': self.visits if hasattr(self, 'visits') else None,
+                                'all_estimators': self.estimators, 'all_gt_scorer_models': self._scorer_models,
+                                'override_base_prompt': user_prompt
+                            }
+                            tester_results = tester.run_test(**test_args)
+                            if tester_results:
+                                ig_saver_instance = next((s for s in self.savers if isinstance(s, ImageGenerationSaver)), None)
                                 if ig_saver_instance:
-                                    from components.results import ExperimentResults # Import locally
+                                    from components.results import ExperimentResults
                                     temp_ig_results = ExperimentResults()
-                                    # Add all metrics from ImageGenerationTester to this temp object
-                                    for key, value in tester_results.items():
-                                        temp_ig_results.add_metric(key, value)
-                                    
-                                    # Set metadata required by ImageGenerationSaver
+                                    for key, value in tester_results.items(): temp_ig_results.add_metric(key, value)
                                     temp_ig_results.metadata['current_model_name'] = model_name
                                     temp_ig_results.metadata['all_gt_scorer_models'] = self._scorer_models
                                     temp_ig_results.metadata['scorer_model_names'] = self.scorer_model_names
-                                    if user_prompt:
-                                        temp_ig_results.add_metadata('user_prompt', user_prompt)
-                                    temp_ig_results.estimators = self.estimators # Pass the list of all estimators
-
-                                    print(f"  Running ImageGenerationSaver for model '{model_name}'...")
+                                    temp_ig_results.add_metadata('user_prompt', user_prompt) # Pass the specific prompt
+                                    temp_ig_results.estimators = self.estimators
+                                    print(f"    Running ImageGenerationSaver for prompt '{user_prompt}'...")
                                     ig_saver_instance.save_result(temp_ig_results)
                                 else:
-                                    print(f"  Warning: ImageGenerationSaver not found in savers list. Cannot save image generation results for model '{model_name}'.")
-
-                            else: # For other testers (PreferenceTester, CosineTester, HumanFeedbackBenchmarkTester)
-                                # Collect metrics for per-model saving by MetricsSaver later
-                                for key, value in tester_results.items():
-                                    if isinstance(value, float):
-                                        print(f"    Model '{model_name}' - {key}: {value:.4f}")
-                                    else:
-                                        print(f"    Model '{model_name}' - {key}: {value}")
-                                    
-                                    if model_name not in per_model_metrics_collection:
-                                        per_model_metrics_collection[model_name] = {}
-                                    per_model_metrics_collection[model_name][key] = value
-                    except Exception as e:
-                        print(f"  Error running tester {tester_name} for model '{model_name}': {e}")
-                        # Optionally, re-raise or log traceback for critical errors
-                        # import traceback
-                        # print(traceback.format_exc())
-
+                                    print(f"    Warning: ImageGenerationSaver not found. Cannot save image generation results for prompt '{user_prompt}'.")
+                        except Exception as e:
+                            print(f"    Error running tester {tester_name} for prompt '{user_prompt}': {e}")
             print("--------------------------------------\n")
 
         # If there's only one model (or one set of metrics, like in human feedback mode), 

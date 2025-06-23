@@ -3,7 +3,7 @@
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
-    <title>Image Feedback - Enter Prompt</title>
+    <title>Image Feedback - Enter Prompts</title>
     <link rel="stylesheet" href="css/style.css">
     <style>
         /* Add specific styles for the prompt page */
@@ -22,7 +22,8 @@
         }
         #prompt-entry-container label {
             display: block;
-            margin-bottom: 10px;
+            margin-bottom: 5px;
+            margin-top: 15px; /* Add space above each label */
             font-weight: bold;
             font-size: 1.1em;
         }
@@ -30,23 +31,31 @@
             width: 100%;
             padding: 10px;
             font-size: 1em;
-            margin-bottom: 20px;
+            margin-bottom: 10px;
             box-sizing: border-box;
         }
         #save-final-button { /* Use a unique ID */
             padding: 12px 25px;
             font-size: 1.1em;
             cursor: pointer;
+            margin-top: 25px; /* Add space above the save button */
         }
     </style>
 </head>
 <body>
     <div id="prompt-entry-container">
-        <h1>Final Step: Enter Content Prompt</h1>
-        <p>Please enter a simple, short prompt describing the desired <strong>content</strong> for a <i>new</i> image to be generated in your style.</p>
-        <!-- Warning moved to introduction.html -->
-        <label for="user-prompt-input">Content Prompt for New Image:</label>
-        <input type="text" id="user-prompt-input" name="user_prompt" placeholder="e.g., A dog chasing a ball, A futuristic city, Two people talking">
+        <h1>Final Step: Enter Content Prompts</h1>
+        <p>Please enter three simple, short prompts describing the desired <strong>content</strong> for new images to be generated in your style.</p>
+        
+        <label for="user-prompt-input-1">Content Prompt 1:</label>
+        <input type="text" id="user-prompt-input-1" name="user_prompt_1" placeholder="e.g., A dog chasing a ball">
+        
+        <label for="user-prompt-input-2">Content Prompt 2:</label>
+        <input type="text" id="user-prompt-input-2" name="user_prompt_2" placeholder="e.g., A futuristic city">
+        
+        <label for="user-prompt-input-3">Content Prompt 3:</label>
+        <input type="text" id="user-prompt-input-3" name="user_prompt_3" placeholder="e.g., Two people talking">
+
         <button id="save-final-button">Save Feedback</button>
     </div>
 
