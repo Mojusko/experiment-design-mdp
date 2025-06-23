@@ -3,7 +3,7 @@ name: "multinomial"
 num_policies: 4
 num_components: 2
 num_rounds: 20 #static
-lambda: 100 
+lambda: 1 
 adaptive_estimation_frequency: 0
 adaptive_estimation_start: 0
 #adaptive_design_frequency: 100 
