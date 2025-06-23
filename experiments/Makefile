@@ -626,8 +626,35 @@ llm-human-feedback:
 JOBS_LLM_INSPECT_VISITS := $(addprefix job-llm-inspect-visit-,$(NUMBERS_LLM))
 
 # Variables for visit inspection and test-only with defaults
-ALGORITHM ?= design
-FEEDBACK ?= multinomial
+# For llm-inspect-visits, ALGORITHM and FEEDBACK are derived from VISITS_PATH.
+# For other targets, they use a default.
+ifeq ($(findstring llm-inspect-visits,$(MAKECMDGOALS)),llm-inspect-visits)
+    # This block is for llm-inspect-visits.
+    # We use := for immediate assignment based on the command-line VISITS_PATH.
+    # Fallback to 'design'/'multinomial' if pattern not in path.
+    ifeq ($(findstring -rand-,$(VISITS_PATH)),-rand-)
+        ALGORITHM := random
+    else ifeq ($(findstring -dsn-,$(VISITS_PATH)),-dsn-)
+        ALGORITHM := design
+    else ifeq ($(findstring -opt-,$(VISITS_PATH)),-opt-)
+        ALGORITHM := optim
+    else
+        ALGORITHM := design
+    endif
+
+    ifeq ($(findstring -mult-,$(VISITS_PATH)),-mult-)
+        FEEDBACK := multinomial
+    else ifeq ($(findstring -num-,$(VISITS_PATH)),-num-)
+        FEEDBACK := numerical
+    else
+        FEEDBACK := multinomial
+    endif
+else
+    # For all other targets, use the original default behavior.
+    ALGORITHM ?= design
+    FEEDBACK ?= multinomial
+endif
+
 
 # Define the algorithm code for experiment ID
 algorithm_code = $(if $(findstring design,$(ALGORITHM)),dsn,$(if $(findstring random,$(ALGORITHM)),rand,$(if $(findstring optim,$(ALGORITHM)),opt,unk)))

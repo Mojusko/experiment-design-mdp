@@ -174,28 +174,10 @@ class LLMExperiment:
 
         # --- Override experiment_id if in test/inspect mode ---
         if self.cfg.get('test_only', False):
-            # Special handling for inspection mode to ensure experiment_id is correct
-            if self.cfg.get('inspection_mode', False):
-                # The algorithm in self.cfg.algorithm has already been corrected in run_exp.py
-                # We just need to rebuild the experiment_id string.
-                # The original ID from Makefile is like "inspect-dsn-mult-1"
-                # We need to replace "dsn" with the correct code.
-                original_id = str(self.experiment_id)
-                # Extract seed number from the end
-                seed_match = re.search(r'-(\d+)$', original_id)
-                if seed_match:
-                    seed_str = seed_match.group(1)
-                    # Get correct codes for algorithm and feedback
-                    alg_code = self._get_algorithm_code() # Uses self.cfg.algorithm
-                    feed_code = self._get_feedback_code() # Uses self.cfg.feedback.name
-                    # Reconstruct the ID
-                    new_id = f"inspect-{alg_code}-{feed_code}-{seed_str}"
-                    if new_id != original_id:
-                        print(f"Correcting inspection experiment_id from '{original_id}' to '{new_id}'")
-                        self.experiment_id = new_id
-                else:
-                    print(f"Warning: Could not parse seed from inspection experiment_id: '{original_id}'")
-            else: # Original logic for other test_only modes
+            # The logic to correct experiment_id for inspection mode has been removed.
+            # The Makefile now generates the correct ID from the start.
+            # The logic below is for non-inspection test modes.
+            if not self.cfg.get('inspection_mode', False):
                 input_path = self.cfg.get('visits_path') or self.cfg.get('estimator_path')
                 if input_path:
                     try:
