@@ -69,7 +69,7 @@ function initializeQuestionnaire() {
     }
 
     // 4. Select a balanced set of benchmark episodes
-    const NUM_BENCHMARK_PER_ALG = 5;
+    const NUM_BENCHMARK_PER_ALG = 10;
     let benchmarkEpisodeKeys = [];
     let allEpisodeKeys = [];
 
