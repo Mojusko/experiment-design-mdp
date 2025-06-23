@@ -174,38 +174,59 @@ class LLMExperiment:
 
         # --- Override experiment_id if in test/inspect mode ---
         if self.cfg.get('test_only', False):
-            input_path = self.cfg.get('visits_path') or self.cfg.get('estimator_path')
-            if input_path:
-                try:
-                    abs_input_path = to_absolute_path(input_path)
-                    filename = os.path.basename(abs_input_path)
-                    print(f"Attempting to parse original info from input filename: {filename}")
+            # Special handling for inspection mode to ensure experiment_id is correct
+            if self.cfg.get('inspection_mode', False):
+                # The algorithm in self.cfg.algorithm has already been corrected in run_exp.py
+                # We just need to rebuild the experiment_id string.
+                # The original ID from Makefile is like "inspect-dsn-mult-1"
+                # We need to replace "dsn" with the correct code.
+                original_id = str(self.experiment_id)
+                # Extract seed number from the end
+                seed_match = re.search(r'-(\d+)$', original_id)
+                if seed_match:
+                    seed_str = seed_match.group(1)
+                    # Get correct codes for algorithm and feedback
+                    alg_code = self._get_algorithm_code() # Uses self.cfg.algorithm
+                    feed_code = self._get_feedback_code() # Uses self.cfg.feedback.name
+                    # Reconstruct the ID
+                    new_id = f"inspect-{alg_code}-{feed_code}-{seed_str}"
+                    if new_id != original_id:
+                        print(f"Correcting inspection experiment_id from '{original_id}' to '{new_id}'")
+                        self.experiment_id = new_id
+                else:
+                    print(f"Warning: Could not parse seed from inspection experiment_id: '{original_id}'")
+            else: # Original logic for other test_only modes
+                input_path = self.cfg.get('visits_path') or self.cfg.get('estimator_path')
+                if input_path:
+                    try:
+                        abs_input_path = to_absolute_path(input_path)
+                        filename = os.path.basename(abs_input_path)
+                        print(f"Attempting to parse original info from input filename: {filename}")
 
-                    # Regex to capture prefix, alg, feed, optional episode, and seed from visits/estimator files
-                    pattern = re.compile(r"^(?:visits|estimator)-(.+?)-(\w+)-(\w+)(?:-ep(\d+))?-(\d+)\.(?:pkl|pt)$")
-                    match = pattern.match(filename)
+                        # Regex to capture prefix, alg, feed, optional episode, and seed from visits/estimator files
+                        pattern = re.compile(r"^(?:visits|estimator)-(.+?)-(\w+)-(\w+)(?:-ep(\d+))?-(\d+)\.(?:pkl|pt)$")
+                        match = pattern.match(filename)
 
-                    if match:
-                        original_prefix_part = match.group(1) # e.g., "feedback"
-                        original_alg_code = match.group(2)    # e.g., "rand"
-                        original_feed_code = match.group(3)   # e.g., "mult"
-                        original_episodes = match.group(4)    # e.g., "30" or None
-                        original_seed = match.group(5)        # e.g., "1"
+                        if match:
+                            original_prefix_part = match.group(1) # e.g., "feedback"
+                            original_alg_code = match.group(2)    # e.g., "rand"
+                            original_feed_code = match.group(3)   # e.g., "mult"
+                            original_episodes = match.group(4)    # e.g., "30" or None
+                            original_seed = match.group(5)        # e.g., "1"
 
-                        # Reconstruct the original experiment ID
-                        parsed_original_id = f"{original_prefix_part}-{original_alg_code}-{original_feed_code}"
-                        if original_episodes:
-                            parsed_original_id += f"-ep{original_episodes}"
-                        parsed_original_id += f"-{original_seed}"
-                        
-                        print(f"  Parsed Original ID from filename: {parsed_original_id}")
-                        print(f"  Overriding self.experiment_id from '{self.experiment_id}' to '{parsed_original_id}'")
-                        self.experiment_id = parsed_original_id # Always update if filename parsed
-                    else:
-                        print(f"  Warning: Could not parse original ID from filename '{filename}' using pattern.")
-                except Exception as e:
-                    print(f"  Warning: Error during parsing of input path '{input_path}': {e}")
-        # -----------------------------------------------------------------
+                            # Reconstruct the original experiment ID
+                            parsed_original_id = f"{original_prefix_part}-{original_alg_code}-{original_feed_code}"
+                            if original_episodes:
+                                parsed_original_id += f"-ep{original_episodes}"
+                            parsed_original_id += f"-{original_seed}"
+                            
+                            print(f"  Parsed Original ID from filename: {parsed_original_id}")
+                            print(f"  Overriding self.experiment_id from '{self.experiment_id}' to '{parsed_original_id}'")
+                            self.experiment_id = parsed_original_id # Always update if filename parsed
+                        else:
+                            print(f"  Warning: Could not parse original ID from filename '{filename}' using pattern.")
+                    except Exception as e:
+                        print(f"  Warning: Error during parsing of input path '{input_path}': {e}")
 
         # Initialize testers and savers with potentially overridden results_dir and experiment_id
         testers_config = self.cfg.get('tester') # Get the config value (could be list or None)
