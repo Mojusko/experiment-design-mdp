@@ -620,39 +620,33 @@ llm-find-design-frequency: $(JOBS_LLM_DESIGN_FREQUENCY)
 llm-human-feedback:
 	@$(if $(VISITS_PATH),,$(error VISITS_PATH is required))
 	@$(if $(FEEDBACK_PATH),,$(error FEEDBACK_PATH is required))
-	cd llm && TIMESTAMP=$(TIMESTAMP) OMP_NUM_THREADS=1 MKL_NUM_THREADS=1 $(PYTHONPATH) run_exp.py --config-name=config_human_feedback visits_path="$(VISITS_PATH)" feedback_path="$(FEEDBACK_PATH)" $(if $(RESULTS_DIR),results_dir="$(RESULTS_DIR)" override_results_dir=true,) experiment_id="run-$(shell basename $(VISITS_PATH) .pkl)" seed=1
+	cd llm && TIMESTAMP=$(TIMESTAMP) OMP_NUM_THREADS=1 MKL_NUM_THREADS=1 $(PYTHONPATH) run_exp.py --config-name=config_human_feedback algorithm=$(ALGORITHM) visits_path="$(VISITS_PATH)" feedback_path="$(FEEDBACK_PATH)" $(if $(RESULTS_DIR),results_dir="$(RESULTS_DIR)" override_results_dir=true,) experiment_id="run-$(shell basename $(VISITS_PATH) .pkl)" seed=1
 
 # Define jobs for inspecting visits using VisitsImageSaver
 JOBS_LLM_INSPECT_VISITS := $(addprefix job-llm-inspect-visit-,$(NUMBERS_LLM))
 
-# Variables for visit inspection and test-only with defaults
-# For llm-inspect-visits, ALGORITHM and FEEDBACK are derived from VISITS_PATH.
-# For other targets, they use a default.
-ifeq ($(findstring llm-inspect-visits,$(MAKECMDGOALS)),llm-inspect-visits)
-    # This block is for llm-inspect-visits.
+# Default values for ALGORITHM and FEEDBACK. `?=` means they can be overridden from the command line.
+ALGORITHM ?= design
+FEEDBACK ?= multinomial
+
+# If VISITS_PATH is provided, try to derive ALGORITHM and FEEDBACK from it.
+# This will override the defaults for any target that uses VISITS_PATH.
+ifneq ($(strip $(VISITS_PATH)),)
     # We use := for immediate assignment based on the command-line VISITS_PATH.
-    # Fallback to 'design'/'multinomial' if pattern not in path.
+    # The existing value (from default or user override) is used as a fallback if no pattern matches.
     ifeq ($(findstring -rand-,$(VISITS_PATH)),-rand-)
         ALGORITHM := random
     else ifeq ($(findstring -dsn-,$(VISITS_PATH)),-dsn-)
         ALGORITHM := design
     else ifeq ($(findstring -opt-,$(VISITS_PATH)),-opt-)
         ALGORITHM := optim
-    else
-        ALGORITHM := design
     endif
 
     ifeq ($(findstring -mult-,$(VISITS_PATH)),-mult-)
         FEEDBACK := multinomial
     else ifeq ($(findstring -num-,$(VISITS_PATH)),-num-)
         FEEDBACK := numerical
-    else
-        FEEDBACK := multinomial
     endif
-else
-    # For all other targets, use the original default behavior.
-    ALGORITHM ?= design
-    FEEDBACK ?= multinomial
 endif
 
 

@@ -898,17 +898,20 @@ class VisitsImageSaver(BaseSaver):
                 end_ep_idx = (current_seed_index + 1) * num_episodes // self.total_repeats
                 # Ensure end_ep_idx doesn't exceed num_episodes (shouldn't happen with this logic, but safe)
                 end_ep_idx = min(end_ep_idx, num_episodes)
-                # Use inclusive start and exclusive end for clarity
-                print(f"VisitsImageSaver (Seed {self.seed}/{self.total_repeats}): Processing episodes {start_ep_idx} (inclusive) to {end_ep_idx} (exclusive) (Total: {num_episodes})")
+        
+        # --- Log the episode range that will be processed ---
+        # Use 1-based indexing for user-facing logs. The range is inclusive.
+        # The loop `range(start_ep_idx, end_ep_idx)` will process episodes from start_ep_idx up to end_ep_idx - 1.
+        # So the 1-based episode numbers are start_ep_idx + 1 to end_ep_idx.
+        if end_ep_idx > start_ep_idx:
+            if self.seed is not None and self.total_repeats is not None and self.total_repeats > 1:
+                print(f"VisitsImageSaver (Seed {self.seed}/{self.total_repeats}): Processing episodes {start_ep_idx + 1} to {end_ep_idx} (inclusive) of {num_episodes} total episodes.", flush=True)
+            else:
+                print(f"VisitsImageSaver: Processing all episodes: {start_ep_idx + 1} to {end_ep_idx} (inclusive) of {num_episodes} total episodes.", flush=True)
         else:
-            # Use inclusive start and exclusive end for clarity
-            print(f"VisitsImageSaver: Processing all episodes {start_ep_idx} (inclusive) to {end_ep_idx} (exclusive) (Seed/Repeats info not used for splitting).")
+            print(f"VisitsImageSaver: No episodes to process for this seed/range ({start_ep_idx+1} to {end_ep_idx}).", flush=True)
 
         # --- Generate and Save Images Per Episode and Timestep ---
-        # Modify the loop to use the calculated range
-        # --- Add explicit logging for the calculated range ---
-        print(f"VisitsImageSaver: Calculated episode range for seed {self.seed}: {start_ep_idx} (inclusive) to {end_ep_idx} (exclusive)", flush=True)
-        # ----------------------------------------------------
         for ep_idx in range(start_ep_idx, end_ep_idx):
             # Add flush=True to ensure progress is visible
             # Log the absolute episode index (ep_idx + 1) relative to the total number of episodes
