@@ -22,7 +22,7 @@ handle_duplicate_action: true # If true, duplicate non-zero actions in a sequenc
 results_dir: "results/dummy"
 # Experiment identifier (can be overridden from Makefile)
 experiment_id: ""
-num_benchmark_episodes: 5 # Number of episodes to reserve for benchmarking (not shown to user)
+num_benchmark_episodes: 10 # Number of episodes to hold out from training for benchmarking against human feedback.
 
 
 # --- Special Modes ---
