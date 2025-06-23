@@ -5,9 +5,35 @@ import sys
 import os
 from omegaconf import OmegaConf, DictConfig
 from hydra.utils import to_absolute_path
+import re
 
 @hydra.main(config_path="conf", config_name="config", version_base=None)
 def main(cfg: DictConfig):
+    # --- Pre-initialization override for algorithm based on input path ---
+    # This ensures the correct algorithm is set before anything else runs.
+    if cfg.get('test_only', False):
+        input_path = cfg.get('visits_path') or cfg.get('estimator_path')
+        if input_path:
+            try:
+                filename = os.path.basename(to_absolute_path(input_path))
+                # Regex to capture alg code (dsn, rand, opt) from filenames like:
+                # visits-feedback-rand-mult-ep30-1.pkl
+                pattern = re.compile(r"-(dsn|rand|opt)-")
+                match = pattern.search(filename)
+                if match:
+                    alg_code = match.group(1)
+                    alg_map = {"dsn": "design", "rand": "random", "opt": "optim"}
+                    parsed_algorithm = alg_map.get(alg_code)
+                    if parsed_algorithm and parsed_algorithm != cfg.algorithm:
+                        print(f"--- Overriding Algorithm ---")
+                        print(f"Parsed '{parsed_algorithm}' from input path: {filename}")
+                        print(f"Changing cfg.algorithm from '{cfg.algorithm}' to '{parsed_algorithm}'")
+                        print(f"--------------------------\n")
+                        cfg.algorithm = parsed_algorithm
+            except Exception as e:
+                print(f"Warning: Could not parse algorithm from input path '{input_path}': {e}")
+    # --- End Override ---
+
     print("\n=== Configuration ===", flush=True)
     print(OmegaConf.to_yaml(cfg, resolve=True), flush=True)
     print("===================\n", flush=True)

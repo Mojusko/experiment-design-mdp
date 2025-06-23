@@ -172,7 +172,7 @@ class LLMExperiment:
         self.experiment_id = experiment_id # Initial experiment_id (e.g., from Makefile)
         self.previous_theta_fits = [None] * self.num_scorer_models # For logging previous estimator performance
 
-        # --- Override experiment_id and algorithm if in test/inspect mode ---
+        # --- Override experiment_id if in test/inspect mode ---
         if self.cfg.get('test_only', False):
             input_path = self.cfg.get('visits_path') or self.cfg.get('estimator_path')
             if input_path:
@@ -182,9 +182,6 @@ class LLMExperiment:
                     print(f"Attempting to parse original info from input filename: {filename}")
 
                     # Regex to capture prefix, alg, feed, optional episode, and seed from visits/estimator files
-                    # Example: visits-feedback-rand-mult-ep30-1.pkl
-                    # Example: visits-feedback-dsn-num-5.pkl (no episode part)
-                    # Example: estimator-feedback-dsn-num-ep50-5.pt
                     pattern = re.compile(r"^(?:visits|estimator)-(.+?)-(\w+)-(\w+)(?:-ep(\d+))?-(\d+)\.(?:pkl|pt)$")
                     match = pattern.match(filename)
 
@@ -200,32 +197,12 @@ class LLMExperiment:
                         if original_episodes:
                             parsed_original_id += f"-ep{original_episodes}"
                         parsed_original_id += f"-{original_seed}"
-
-                        # Map alg_code back to algorithm name
-                        alg_map = {"dsn": "design", "rand": "random", "opt": "optim"}
-                        parsed_original_id = f"{original_prefix_part}-{original_alg_code}-{original_feed_code}"
-                        if original_episodes:
-                            parsed_original_id += f"-ep{original_episodes}"
-                        parsed_original_id += f"-{original_seed}"
                         
                         print(f"  Parsed Original ID from filename: {parsed_original_id}")
                         print(f"  Overriding self.experiment_id from '{self.experiment_id}' to '{parsed_original_id}'")
                         self.experiment_id = parsed_original_id # Always update if filename parsed
-
-                        # Map alg_code back to algorithm name
-                        alg_map = {"dsn": "design", "rand": "random", "opt": "optim"}
-                        parsed_original_algorithm = alg_map.get(original_alg_code)
-
-                        if parsed_original_algorithm:
-                            print(f"  Parsed Original Algorithm: {parsed_original_algorithm} (from code '{original_alg_code}')")
-                            print(f"  Overriding self.cfg.algorithm from '{self.cfg.algorithm}' to '{parsed_original_algorithm}'")
-                            self.cfg.algorithm = parsed_original_algorithm
-                        else:
-                            print(f"  Warning: Could not map parsed algorithm code '{original_alg_code}' to a known algorithm name.")
-                            print(f"  Setting self.cfg.algorithm to 'unknown'. Original value was '{self.cfg.algorithm}'.")
-                            self.cfg.algorithm = "unknown" # Set to "unknown" if not mapped
                     else:
-                        print(f"  Warning: Could not parse original ID and algorithm from filename '{filename}' using pattern.")
+                        print(f"  Warning: Could not parse original ID from filename '{filename}' using pattern.")
                 except Exception as e:
                     print(f"  Warning: Error during parsing of input path '{input_path}': {e}")
         # -----------------------------------------------------------------
@@ -790,7 +767,7 @@ class LLMExperiment:
                         embeddings_for_this_comparison.append(embedding_k.detach().cpu())
 
                     except IndexError:
-                        print(f"Warning: Skipping feedback for {image_filename}. Missing visit data for policy {k}, episode {episode_idx}.")
+                        print(f"Warning: Missing visit data for policy {k}, episode {episode_idx}.")
                         valid_comparison = False
                         break # Skip this entire comparison
                     except Exception as e:
