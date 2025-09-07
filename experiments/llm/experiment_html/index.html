@@ -8,9 +8,9 @@
 </head>
 <body>
     <script>
-        // Redirect to consent page if consent hasn't been given in this session
-        if (!sessionStorage.getItem('userConsented')) {
-            window.location.href = 'ethics_consent.html';
+        // Check password verification and consent - redirect silently if not authenticated
+        if (!sessionStorage.getItem('passwordVerified') || !sessionStorage.getItem('userConsented')) {
+            window.location.replace('ethics_consent.html');
         }
     </script>
     <!-- Introduction container removed -->

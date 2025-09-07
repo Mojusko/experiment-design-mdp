@@ -1,26 +1,20 @@
 // Script for prompt.html
 
-const userPromptInput1 = document.getElementById('user-prompt-input-1');
-const userPromptInput2 = document.getElementById('user-prompt-input-2');
-const userPromptInput3 = document.getElementById('user-prompt-input-3');
+const styleDescriptionInput = document.getElementById('style-description-input');
 const saveFinalButton = document.getElementById('save-final-button');
 
 saveFinalButton.addEventListener('click', () => {
     // Retrieve feedback data saved from index.html
     const feedbackData = JSON.parse(localStorage.getItem('imageFeedback')) || {};
 
-    // Get the user prompts from this page
-    const userPrompts = [
-        userPromptInput1.value.trim(),
-        userPromptInput2.value.trim(),
-        userPromptInput3.value.trim()
-    ];
+    // Get the style description from this page
+    const styleDescription = styleDescriptionInput.value.trim();
 
     // --- Validation ---
-    // Check if all prompts are entered
-    if (userPrompts.some(p => p === '')) {
-        alert("Please enter all three content prompts before saving.");
-        return; // Stop if any prompt is missing
+    // Check if style description is entered
+    if (styleDescription === '') {
+        alert("Please describe the style you had in mind before saving.");
+        return; // Stop if description is missing
     }
 
     // Optional: Check if feedbackData is empty (user somehow skipped the feedback page)
@@ -68,7 +62,7 @@ saveFinalButton.addEventListener('click', () => {
     }
 
     const outputData = {
-        user_prompts: userPrompts, // Store the list of prompts
+        style_description: styleDescription, // Store the style description
         preferences: formattedPreferences, // Store the detailed, formatted preferences
         benchmark_episode_keys: benchmarkEpisodeKeys // Add benchmark keys
     };
@@ -78,9 +72,9 @@ saveFinalButton.addEventListener('click', () => {
     const url = URL.createObjectURL(blob);
     const a = document.createElement('a');
     a.href = url;
-    // Suggest a filename including the first prompt (sanitized)
-    const sanitizedPrompt = userPrompts[0].replace(/[^a-z0-9]/gi, '_').toLowerCase().substring(0, 30);
-    a.download = `feedback_${sanitizedPrompt || 'data'}.json`;
+    // Suggest a filename including the style description (sanitized)
+    const sanitizedDescription = styleDescription.replace(/[^a-z0-9]/gi, '_').toLowerCase().substring(0, 30);
+    a.download = `feedback_${sanitizedDescription || 'data'}.json`;
     document.body.appendChild(a);
     a.click();
     document.body.removeChild(a);

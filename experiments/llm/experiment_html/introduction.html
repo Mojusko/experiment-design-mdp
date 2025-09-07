@@ -52,6 +52,13 @@
     </style>
 </head>
 <body>
+    <script>
+        // Check password verification
+        if (!sessionStorage.getItem('passwordVerified')) {
+            alert("Access denied. Please start from the consent page.");
+            window.location.href = 'ethics_consent.html';
+        }
+    </script>
     <!-- Title removed, using h2 inside container -->
 
     <div id="introduction-container">
@@ -67,7 +74,7 @@
                 <br>
                 (e.g., <i>cartoonish, photorealistic, dark, vibrant, greek, roman</i>)
                 <br><br>
-                Keep this style in mind – you won't enter it anywhere.
+                Keep this style in mind throughout the experiment.
                 <br><br>
             </li>
             <li>
@@ -81,13 +88,13 @@
                 <br><br>
             </li>
             <li>
-                <strong>Describe Content & Save:</strong>
+                <strong>Describe Your Style & Save:</strong>
                 <br><br>
-                After reviewing all images, enter a short prompt describing the <strong>content</strong> for a <i>new</i> image you'd like generated in your style.
+                After reviewing all images, you will be asked to briefly describe the <strong>style</strong> you had in mind.
                 <br>
-                (e.g., "a cat sleeping", "a futuristic city", "two people talking")
+                (e.g., "vintage photo", "cartoonish", "like a roman fresco")
                 <br><br>
-                <strong style="color: red;">Important:</strong> Do <u>not</u> mention your style in the prompt.
+                This description will help us understand your choices.
                 <br><br>
                 Then, save your feedback.
                 <br><br>

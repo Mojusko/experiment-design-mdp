@@ -15,6 +15,7 @@ body {
     margin-bottom: 20px;
     text-align: center;
     width: 100%; /* Make container fill available width */
+    position: relative; /* Add for positioning context */
 }
 
 #current-image {
@@ -87,3 +88,5 @@ button {
 /* .disabled-feedback input[type="radio"]:disabled { */
     /* Add specific styles here, e.g., opacity */
 /* } */
+
+/* Removed unused overlay rectangle */
