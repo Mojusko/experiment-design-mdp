@@ -60,7 +60,13 @@
         <label for="style-description-input">Your Style Description:</label>
         <textarea id="style-description-input" name="style_description" rows="4" placeholder="e.g., vintage photo, cartoonish, like a roman fresco..."></textarea>
 
-        <button id="save-final-button">Save Feedback</button>
+        <div style="margin-top: 12px; display: flex; gap: 10px; flex-wrap: wrap; justify-content:center;">
+            <button id="save-final-button">Save Feedback</button>
+            <button id="backup-button" type="button">Save Local Backup</button>
+            <button id="share-button" type="button">Share / Email Results</button>
+            <button id="copy-button" type="button">Copy JSON</button>
+        </div>
+        <p id="save-status" style="margin-top:10px;color:#2a6;display:none;">Saved locally.</p>
     </div>
 
     <!-- Load the script for this page -->
