@@ -1,10 +1,8 @@
 from doexpy.env.discrete_env import DiscreteEnv
 # Removed direct CLIP imports, will use embedder object
-from typing import List, Tuple, Union, TYPE_CHECKING
+from typing import List
 import torch
 from torch import nn
-# Import the base embedder class and specific implementations for type hinting/checking
-from experiments.llm.components.embedder import BaseEmbedder # Removed CLIPEmbedder, BaseEmbedder is enough
 # Import PIL Image type hint
 from PIL.Image import Image as PILImage
 import os
@@ -22,7 +20,7 @@ class LLMGrid(DiscreteEnv):
     def __init__(
         self,
         list_of_text_tokens: List[str],
-        embedder: BaseEmbedder, # Accept an embedder instance
+        embedder,
         base_prompt: str = '',
         verbose: bool = False,
         include_base_prompt_in_first_tokens: bool = True,
@@ -190,7 +188,7 @@ class LLMGrid(DiscreteEnv):
 # Scorer model classes and factories moved to experiments/llm/models/scorer_models.py
 # Import them if they were used internally in this file (they are not directly, only LLMGrid uses them via experiment.py)
 
-def generate_emissions(unique_elements: List[str], embedder: BaseEmbedder, verbose: bool = True) -> torch.Tensor:
+def generate_emissions(unique_elements: List[str], embedder, verbose: bool = True) -> torch.Tensor:
     """Generate emissions (embeddings) for a list of unique elements using the provided embedder.
 
     Args:
