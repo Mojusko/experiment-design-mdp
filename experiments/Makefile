@@ -291,7 +291,8 @@ llm-generate-image:
 	cd llm && TIMESTAMP=$(TIMESTAMP) OMP_NUM_THREADS=1 MKL_NUM_THREADS=1 $(PYTHONPATH) image_generator.py --prompt '$(PROMPT)' $(if $(OUTPUT_DIR),--output_dir '$(OUTPUT_DIR)',) $(if $(SEED),--seed $(SEED),) $(if $(IMAGE_SIZE),--image_size $(IMAGE_SIZE),) $(if $(NUM_STEPS),--num_inference_steps $(NUM_STEPS),) $(if $(GUIDANCE_PROMPT),--guidance_prompt $(GUIDANCE_PROMPT),) $(if $(GUIDANCE_ESTIMATOR),--guidance_estimator $(GUIDANCE_ESTIMATOR),) $(if $(ESTIMATOR),--estimator '$(ESTIMATOR)',)
 
 ########################### LLMS
-REPEATS_LLM=20
+#REPEATS_LLM=20
+REPEATS_LLM=1
 NUMBERS_LLM := $(shell seq 1 ${REPEATS_LLM})
 
 # Jobs for V comparison (non-adaptive design)
@@ -326,7 +327,7 @@ llm-additivity: $(JOBS_LLM_ALG_ADD) $(JOBS_LLM_RAN_ADD) $(JOBS_LLM_DSN_ADD)
 #EPISODES_LLM_FEEDBACK_COMPARISON := 10 25 50 100 # Define episode counts to iterate over
 #EPISODES_LLM_FEEDBACK_COMPARISON := 10 25 50 100 200
 #EPISODES_LLM_FEEDBACK_COMPARISON := 10 30 50 70 90 110
-EPISODES_LLM_FEEDBACK_COMPARISON := 30 50 
+EPISODES_LLM_FEEDBACK_COMPARISON := 50 80 
 
 # Numerical Feedback Jobs
 JOBS_LLM_DSN_NUM := \
@@ -348,7 +349,7 @@ job-llm-feedback-dsn-num-ep$(1)-$(2):
 	  experiment.episodes=$(1) \
 	  seed=$(2) \
 	  results_dir="results/feedback-comparison" \
-	  experiment_id="ep$(1)-$(2)"
+	  experiment_id="ep$(1)-$(2)" $(EXTRA)
 endef
 
 define feedback_ran_num_job_template
@@ -360,7 +361,7 @@ job-llm-feedback-ran-num-ep$(1)-$(2):
 	  experiment.episodes=$(1) \
 	  seed=$(2) \
 	  results_dir="results/feedback-comparison" \
-	  experiment_id="ep$(1)-$(2)"
+	  experiment_id="ep$(1)-$(2)" $(EXTRA)
 endef
 
 $(foreach episodes,$(EPISODES_LLM_FEEDBACK_COMPARISON), \
@@ -391,7 +392,7 @@ job-llm-feedback-dsn-mult-ep$(1)-$(2):
 	  experiment.episodes=$(1) \
 	  seed=$(2) \
 	  results_dir="results/feedback-comparison" \
-	  experiment_id="ep$(1)-$(2)"
+	  experiment_id="ep$(1)-$(2)" $(EXTRA)
 endef
 
 define feedback_ran_mult_job_template
@@ -403,7 +404,7 @@ job-llm-feedback-ran-mult-ep$(1)-$(2):
 	  experiment.episodes=$(1) \
 	  seed=$(2) \
 	  results_dir="results/feedback-comparison" \
-	  experiment_id="ep$(1)-$(2)"
+	  experiment_id="ep$(1)-$(2)" $(EXTRA)
 endef
 
 $(foreach episodes,$(EPISODES_LLM_FEEDBACK_COMPARISON), \

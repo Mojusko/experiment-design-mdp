@@ -2,7 +2,7 @@ name: "multinomial"
 #num_policies: 4
 num_policies: 4
 num_components: 2
-num_rounds: 25 #static
+num_rounds: 35 #static
 lambda: 0.1 
 adaptive_estimation_frequency: 0
 adaptive_estimation_start: 0
