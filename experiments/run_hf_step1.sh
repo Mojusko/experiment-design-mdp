@@ -12,10 +12,12 @@ set -euo pipefail
 # - Uses Make targets that emit one-liners; we still normalize with awk joiner.
 # - REPEATS_LLM=1 is used to keep workload light.
 
+
 USER_ARG=""
 REMOTE_DIR=""
 DRY_RUN=false
 SLEEP_SECONDS=2
+LOCAL=false
 
 while [[ $# -gt 0 ]]; do
   case "$1" in
@@ -27,21 +29,34 @@ while [[ $# -gt 0 ]]; do
       DRY_RUN=true; shift ;;
     --sleep-seconds)
       SLEEP_SECONDS="$2"; shift 2 ;;
+    --local)
+      LOCAL=true; shift ;;
     -h|--help)
-      echo "Usage: $0 --user <eth_user> --remote-experiments-dir <remote_dir> [--dry-run] [--sleep-seconds N]"; exit 0 ;;
+      echo "Usage: $0 --user <eth_user> --remote-experiments-dir <remote_dir> [--local] [--dry-run] [--sleep-seconds N]"; exit 0 ;;
     *)
       echo "Unknown arg: $1"; exit 1 ;;
   esac
 done
 
-if [[ -z "$USER_ARG" || -z "$REMOTE_DIR" ]]; then
-  echo "Error: --user and --remote-experiments-dir are required."
+
+if [[ -z "$REMOTE_DIR" ]]; then
+  echo "Error: --remote-experiments-dir is required."
+  echo "Usage: $0 --remote-experiments-dir <remote_dir> [--user <eth_user>] [--local] [--dry-run] [--sleep-seconds N]"
+  exit 1
+fi
+
+if ! $LOCAL && [[ -z "$USER_ARG" ]]; then
+  echo "Error: --user is required for remote execution."
   echo "Usage: $0 --user <eth_user> --remote-experiments-dir <remote_dir> [--dry-run] [--sleep-seconds N]"
   exit 1
 fi
 
-SERVER="${USER_ARG}@euler.ethz.ch"
-PRECMD="cd ${REMOTE_DIR} && conda activate doexpy"
+if $LOCAL; then
+  PRECMD="cd ${REMOTE_DIR} && eval \"\$(conda shell.bash hook)\" && conda activate doexpy"
+else
+  SERVER="${USER_ARG}@euler.ethz.ch"
+  PRECMD="cd ${REMOTE_DIR} && eval \"\$(conda shell.bash hook)\" && conda activate doexpy"
+fi
 
 # Helper to join multiline Make output into single lines
 join_lines() {
@@ -80,7 +95,11 @@ run_block() {
     if [[ -z "$cmds" ]]; then
       echo "[Warn] No commands produced; skipping submission." >&2
     else
-      echo "$cmds" | ./submit_euler --server "$SERVER" --precommand "$PRECMD"
+      if $LOCAL; then
+        echo "$cmds" | ./submit_euler --local --precommand "$PRECMD" --activate doexpy
+      else
+        echo "$cmds" | ./submit_euler --server "$SERVER" --precommand "$PRECMD" --activate doexpy
+      fi
     fi
   fi
 }

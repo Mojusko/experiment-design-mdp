@@ -1,67 +1,148 @@
-#!/bin/bash
+#!/usr/bin/env bash
+# submit_euler
+# Mojmir, Nov 2024, ETH Zurich — extended to support:
+#   - --local (no SSH)
+#   - --activate <conda-env> (activate conda INSIDE the sbatch job)
+#   - --precommand "<cmds>" (run inside the job, before your command)
+#
+# Usage examples:
+#   make job --dry-run | ./submit_euler --server username@euler.ethz.ch --activate myenv
+#   make job --dry-run | ./submit_euler --local --precommand 'cd dir' --activate myenv
+#   ./submit_euler --server username@euler.ethz.ch path/to/jobs.txt --activate myenv
+#
+# Notes:
+# - --precommand and --activate are injected into the sbatch --wrap, so they execute on the compute node.
 
-### Mojmir, Nov 2024, ETH Zurich
-### Usage
-################
-### make job --dry-run | ./submit_euler --server=username@euler.ethz.ch --precommand='cd dir && conda activate env'
-###
-### Notes: its best to have no login password to submit these jobs elegantly.
+set -o errexit -o pipefail -o nounset
 
-# Function to display usage
 usage() {
-   echo "Usage: $0 --server <server_address> [--precommand <commands>] [file_path]"
-   echo "       Or use: cat <file> | $0 --server <server_address> [--precommand <commands>]"
-   exit 1
+  cat <<'EOF'
+Usage:
+  submit_euler --server <server_address> [--precommand "<commands>"] [--activate <conda_env>] [file_path]
+  submit_euler --local [--precommand "<commands>"] [--activate <conda_env>] [file_path]
+  Or pipe:
+    cat <file> | submit_euler --server <server_address> [--precommand "<commands>"] [--activate <conda_env>]
+    cat <file> | submit_euler --local [--precommand "<commands>"] [--activate <conda_env>]
+
+Options:
+  --server       SSH destination (e.g., username@euler.ethz.ch)
+  --local        Submit on the current machine (no SSH)
+  --precommand   Commands to run inside the job before your line (e.g., 'cd dir && module load cuda')
+  --activate     Conda environment to activate inside the job (uses: eval "$(conda shell.bash hook)" && conda activate <env>)
+  --help         Show this help
+
+Behavior:
+  - Input lines are wrapped as: sbatch --wrap="<preamble &&> your-line" <SUFFIX>
+  - <preamble> is built from --precommand and --activate (in that order) and runs INSIDE the job.
+  - Submission itself occurs in a login shell (bash -l -c) for consistent initialization.
+EOF
+  exit 1
 }
 
-# Parse arguments
 SERVER=""
 PRE_CMD=""
-while [[ "$#" -gt 0 ]]; do
-   case "$1" in
-       --server)
-           SERVER="$2"
-           shift 2
-           ;;
-       --precommand)
-           PRE_CMD="$2"
-           shift 2
-           ;;
-       *)
-           FILE_PATH="$1"
-           shift
-           ;;
-   esac
+LOCAL=false
+CONDA_ENV=""
+FILE_PATH="${FILE_PATH:-}"
+
+# Parse args
+while [[ $# -gt 0 ]]; do
+  case "$1" in
+    --server) SERVER="${2:-}"; shift 2 ;;
+    --precommand) PRE_CMD="${2:-}"; shift 2 ;;
+    --local) LOCAL=true; shift ;;
+    --activate) CONDA_ENV="${2:-}"; shift 2 ;;
+    --help|-h) usage ;;
+    *)
+      FILE_PATH="${1:-}"
+      shift
+      ;;
+  esac
 done
 
-# Validate the server argument
-if [ -z "$SERVER" ]; then
-   usage
+# Validate mode
+if ! $LOCAL && [[ -z "$SERVER" ]]; then
+  echo "Error: choose either --server <host> or --local."
+  usage
+fi
+if $LOCAL && [[ -n "$SERVER" ]]; then
+  echo "Error: --local and --server are mutually exclusive."
+  usage
 fi
 
-# Prefix for sbatch
+# sbatch options (adjust as needed)
 PREFIX="--wrap="
-# Suffix for job specs
-#SUFFIX="--time=2:00:00 --mem-per-cpu=4G --ntasks=8 --gpus=1 --gres=gpumem:8g"
-SUFFIX="--time=18:00:00 --mem-per-cpu=4G --ntasks=8 --gpus=1 --gres=gpumem:16g"
+# SUFFIX as in your original script
+SUFFIX="--time=01:00:00 --mem-per-cpu=4G --ntasks=8 --gpus=1 --gres=gpumem:8g"
 
-# Check if input is from pipe or file
+# Determine input source
 if [ -p /dev/stdin ]; then
-   INPUT_SOURCE="/dev/stdin"
-elif [ -n "$FILE_PATH" ]; then
-   INPUT_SOURCE="$FILE_PATH"
+  INPUT_SOURCE="/dev/stdin"
+elif [ -n "${FILE_PATH}" ]; then
+  if [[ ! -f "$FILE_PATH" ]]; then
+    echo "Error: file not found: $FILE_PATH"
+    exit 1
+  fi
+  INPUT_SOURCE="$FILE_PATH"
 else
-   echo "Error: No input provided. Use a file or pipe content via stdin."
-   usage
+  echo "Error: No input provided. Use a file or pipe content via stdin."
+  usage
 fi
 
-# Process each line
-while IFS= read -r line || [ -n "$line" ]; do
-   MODIFIED_LINE="${SUFFIX} ${PREFIX}\"${line}\""
-   #MODIFIED_LINE="${PREFIX}\"${line}\" ${SUFFIX}"
+# Build the job preamble that will run INSIDE the job
+# Order: PRE_CMD then conda activation (if any)
+build_job_preamble() {
+  local preamble=""
+  if [[ -n "$PRE_CMD" ]]; then
+    preamble="$PRE_CMD"
+  fi
+  if [[ -n "$CONDA_ENV" ]]; then
+    local activate_cmd='conda activate '"$CONDA_ENV"
+    if [[ -n "$preamble" ]]; then
+      preamble="$preamble && $activate_cmd"
+    else
+      preamble="$activate_cmd"
+    fi
+  fi
+  printf '%s' "$preamble"
+}
 
-   COMMAND="$PRE_CMD && sbatch $MODIFIED_LINE"
-   echo "Executing on $SERVER: $COMMAND"
-   ssh -o BatchMode=yes -f "$SERVER" "$COMMAND"
-   #sleep 1 # Add a 1-second pause
+# Escape content for inclusion inside a double-quoted --wrap="...":
+# - Escape backslashes, double quotes, and dollar signs so they don't expand on the submission node.
+escape_for_double_quotes() {
+  local s="$1"
+  s="${s//\\/\\\\}"   # backslash -> \\
+  s="${s//\"/\\\"}"   # " -> \"
+  s="${s//\$/\\\$}"   # $ -> \$
+  printf '%s' "$s"
+}
+
+JOB_PREAMBLE="$(build_job_preamble)"
+
+# Submission loop
+while IFS= read -r line || [[ -n "$line" ]]; do
+  # Build the full line that should run on the compute node
+  if [[ -n "$JOB_PREAMBLE" ]]; then
+    job_body="$JOB_PREAMBLE && $line"
+  else
+    job_body="$line"
+  fi
+
+  # Escape for safe inclusion in --wrap="...":
+  escaped_job_body="$(escape_for_double_quotes "$job_body")"
+
+  # Build the sbatch command
+  MODIFIED_LINE="${PREFIX}\"${escaped_job_body}\" ${SUFFIX}"
+  COMMAND="sbatch $MODIFIED_LINE"
+
+  if $LOCAL; then
+    echo "Executing locally (login shell): $COMMAND"
+    # Use login shell so cluster environment is initialized
+    bash -l -c "$COMMAND"
+  else
+    echo "Executing on $SERVER (login shell): $COMMAND"
+    # Send through a login shell remotely as well
+    ssh -f "$SERVER" "bash -l -c $(printf %q "$COMMAND")"
+  fi
 done < "$INPUT_SOURCE"
+
