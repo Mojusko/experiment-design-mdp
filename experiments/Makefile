@@ -292,7 +292,8 @@ llm-generate-image:
 
 ########################### LLMS
 #REPEATS_LLM=20
-REPEATS_LLM=1
+# Increase repeats to parallelize llm-inspect-visits across many GPUs
+REPEATS_LLM=36
 NUMBERS_LLM := $(shell seq 1 ${REPEATS_LLM})
 
 # Jobs for V comparison (non-adaptive design)
