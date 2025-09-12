@@ -1001,16 +1001,18 @@ class VisitsImageSaver(BaseSaver):
                 try:
                     n_cols = num_policies
                     n_rows = 1
-                    # Restore original figure size (e.g., width factor 5, height 8)
-                    fig, axes = plt.subplots(n_rows, n_cols, figsize=(5 * n_cols, 8 * n_rows), squeeze=False)
+                    # Create a compact figure with minimal margins and larger image area
+                    fig, axes = plt.subplots(
+                        n_rows, n_cols,
+                        figsize=(5.5 * n_cols, 5.5 * n_rows),
+                        squeeze=False
+                    )
 
-                    for i, (img, prompt) in enumerate(zip(timestep_images, timestep_prompts)):
+                    for i, img in enumerate(timestep_images):
                         ax = axes[0, i]
                         ax.imshow(img)
-                        # Wrap prompt text using textwrap for better readability
-                        wrapped_prompt = textwrap.fill(prompt, width=40) # Wrap at 40 characters
-                        ax.set_title(f"Policy {i+1}", fontsize=10)
-                        ax.set_xlabel(wrapped_prompt, fontsize=8, labelpad=10) # Add padding
+                        # Make policy title larger and do not show prompt text under images
+                        ax.set_title(f"Policy {i+1}", fontsize=14)
                         ax.set_xticks([])
                         ax.set_yticks([])
 
@@ -1025,12 +1027,12 @@ class VisitsImageSaver(BaseSaver):
                     
                     # Wrap the determined title text
                     wrapped_title = textwrap.fill(title_text, width=80) # Adjust width as needed
-                    # Increase font size, make bold, lower position (adjust y value)
-                    plt.suptitle(wrapped_title, fontsize=14, fontweight='bold', y=0.96)
+                    # Increase font size slightly, place near top
+                    plt.suptitle(wrapped_title, fontsize=16, fontweight='bold', y=0.97)
                     # -----------------------------------------
 
-                    # Adjust subplot parameters: increase bottom margin slightly to accommodate xlabels, adjust spacing
-                    plt.subplots_adjust(bottom=0.25, hspace=0.4, wspace=0.2) # Increased bottom margin
+                    # Tighten layout to reduce white background and enlarge images
+                    plt.subplots_adjust(left=0.03, right=0.97, top=0.90, bottom=0.08, wspace=0.05, hspace=0.10)
 
                     # Construct filename including algorithm, episode, and timestep h
                     # Use the absolute episode index ep_idx in the filename
