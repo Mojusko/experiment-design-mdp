@@ -88,9 +88,11 @@ MAKE_L001=( "${MAKE_BASE[@]}" "EXTRA=${EXTRA_L001}" )
 run_block() {
   local ts="$1"; shift
   local -a MAKE_CMD=("$@")
-  echo "[Info] Generating jobs: TIMESTAMP=${ts} ${MAKE_CMD[*]} --dry-run"
+  # Insert TIMESTAMP assignment as a make command-line variable (overrides makefile var)
+  local -a CMD_WITH_TS=("${MAKE_CMD[0]}" "TIMESTAMP=${ts}" "${MAKE_CMD[@]:1}")
+  echo "[Info] Generating jobs: ${CMD_WITH_TS[*]} --dry-run"
   local cmds
-  if ! cmds=$(TIMESTAMP="$ts" "${MAKE_CMD[@]}" --dry-run | join_lines); then
+  if ! cmds=("${CMD_WITH_TS[@]}" --dry-run | join_lines); then
     echo "[Error] make --dry-run failed." >&2
     exit 1
   fi
