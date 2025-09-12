@@ -528,7 +528,8 @@ class LLMExperiment:
 
         results = ExperimentResults()
         results.set_visits(self.visits)
-        results.set_estimator(None) # Explicitly set estimator to None
+        # No estimator in explore-only mode; ensure structure is consistent
+        results.set_estimators([])
 
         # Ensure savers have the correct results_dir (might change in test_only)
         for saver in self.savers:
