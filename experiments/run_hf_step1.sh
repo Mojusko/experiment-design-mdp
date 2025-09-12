@@ -68,6 +68,11 @@ join_lines() {
 # Build the two make invocations
 MAKE_BASE=( make llm-feedback-comparison-mul REPEATS_LLM=1 EPISODES_LLM_FEEDBACK_COMPARISON="50 80" )
 
+# Generate unique TIMESTAMPs per batch to avoid collisions when running
+# within the same minute. Include a lambda tag for clarity.
+TS_L01="$(date +%Y-%m-%d-%H-%M-%S)-l01"
+TS_L001="$(date +%Y-%m-%d-%H-%M-%S)-l001"
+
 # Visits-only overrides: do not initialize GT scorer models; disable testers; run explore_only;
 # restrict savers to VisitsSaver and ConfSaver. Use ++ to force-override existing key and quote
 # list-valued overrides so Hydra gets them as single tokens.
@@ -81,10 +86,11 @@ EXTRA_L001="${EXTRA_VISITS_ONLY} feedback.lambda=0.01"
 MAKE_L001=( "${MAKE_BASE[@]}" "EXTRA=${EXTRA_L001}" )
 
 run_block() {
+  local ts="$1"; shift
   local -a MAKE_CMD=("$@")
-  echo "[Info] Generating jobs: ${MAKE_CMD[*]} --dry-run"
+  echo "[Info] Generating jobs: TIMESTAMP=${ts} ${MAKE_CMD[*]} --dry-run"
   local cmds
-  if ! cmds=$("${MAKE_CMD[@]}" --dry-run | join_lines); then
+  if ! cmds=$(TIMESTAMP="$ts" "${MAKE_CMD[@]}" --dry-run | join_lines); then
     echo "[Error] make --dry-run failed." >&2
     exit 1
   fi
@@ -141,16 +147,16 @@ if $DEBUG; then
   popd >/dev/null
   echo "[Debug] Done."
 else
-  # Lambda 0.1 (default) for episodes 50 and 80
-  run_block "${MAKE_L01[@]}"
+# Lambda 0.1 (default) for episodes 50 and 80
+run_block "$TS_L01" "${MAKE_L01[@]}"
 
   if ! $DRY_RUN; then
     echo "[Info] Sleeping ${SLEEP_SECONDS}s before next batch..."
     sleep "$SLEEP_SECONDS"
   fi
 
-  # Lambda 0.01 for episodes 50 and 80
-  run_block "${MAKE_L001[@]}"
+# Lambda 0.01 for episodes 50 and 80
+run_block "$TS_L001" "${MAKE_L001[@]}"
 
   echo "[Info] Done."
 fi
