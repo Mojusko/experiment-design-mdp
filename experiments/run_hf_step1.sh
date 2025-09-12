@@ -92,7 +92,7 @@ run_block() {
   local -a CMD_WITH_TS=("${MAKE_CMD[0]}" "TIMESTAMP=${ts}" "${MAKE_CMD[@]:1}")
   echo "[Info] Generating jobs: ${CMD_WITH_TS[*]} --dry-run"
   local cmds
-  if ! cmds=("${CMD_WITH_TS[@]}" --dry-run | join_lines); then
+  if ! cmds=$("${CMD_WITH_TS[@]}" --dry-run | join_lines); then
     echo "[Error] make --dry-run failed." >&2
     exit 1
   fi
@@ -125,7 +125,7 @@ if $DEBUG; then
     algorithm=design \
     feedback=multinomial \
     explore_only=true \
-    +experiment.scorer_model=null \
+    ++experiment.scorer_model=null \
     'tester=[]' \
     'savers=[{_target_: components.saver.VisitsSaver, params: {filename: "visits.pkl"}}, {_target_: components.saver.ConfSaver, params: {filename: "config_resolved.yaml"}}]' \
     experiment.episodes=10 \
@@ -138,7 +138,7 @@ if $DEBUG; then
     algorithm=random \
     feedback=multinomial \
     explore_only=true \
-    +experiment.scorer_model=null \
+    ++experiment.scorer_model=null \
     'tester=[]' \
     'savers=[{_target_: components.saver.VisitsSaver, params: {filename: "visits.pkl"}}, {_target_: components.saver.ConfSaver, params: {filename: "config_resolved.yaml"}}]' \
     experiment.episodes=10 \
