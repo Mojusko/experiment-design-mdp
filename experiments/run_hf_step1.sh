@@ -12,12 +12,16 @@ set -euo pipefail
 # - Uses Make targets that emit one-liners; we still normalize with awk joiner.
 # - REPEATS_LLM=1 is used to keep workload light.
 
-
 USER_ARG=""
 REMOTE_DIR=""
 DRY_RUN=false
 SLEEP_SECONDS=2
+DEBUG=false
 LOCAL=false
+
+# Resolve script directories for robust relative paths
+HERE=$(cd "$(dirname "$0")" && pwd)          # .../experiments
+LLM_DIR="$HERE/llm"                              # .../experiments/llm
 
 while [[ $# -gt 0 ]]; do
   case "$1" in
@@ -27,36 +31,34 @@ while [[ $# -gt 0 ]]; do
       REMOTE_DIR="$2"; shift 2 ;;
     --dry-run)
       DRY_RUN=true; shift ;;
-    --sleep-seconds)
-      SLEEP_SECONDS="$2"; shift 2 ;;
+    --debug)
+      DEBUG=true; shift ;;
     --local)
       LOCAL=true; shift ;;
+    --sleep-seconds)
+      SLEEP_SECONDS="$2"; shift 2 ;;
     -h|--help)
-      echo "Usage: $0 --user <eth_user> --remote-experiments-dir <remote_dir> [--local] [--dry-run] [--sleep-seconds N]"; exit 0 ;;
+      echo "Usage: $0 [--user <eth_user>] --remote-experiments-dir <remote_dir> [--local] [--dry-run] [--debug] [--sleep-seconds N]"; exit 0 ;;
     *)
       echo "Unknown arg: $1"; exit 1 ;;
   esac
 done
 
-
-if [[ -z "$REMOTE_DIR" ]]; then
-  echo "Error: --remote-experiments-dir is required."
-  echo "Usage: $0 --remote-experiments-dir <remote_dir> [--user <eth_user>] [--local] [--dry-run] [--sleep-seconds N]"
-  exit 1
+if ! $DEBUG; then
+  if ! $LOCAL && [[ -z "$USER_ARG" ]]; then
+    echo "Error: --user is required for remote execution."
+    echo "Usage: $0 [--user <eth_user>] --remote-experiments-dir <remote_dir> [--local] [--dry-run] [--debug] [--sleep-seconds N]"
+    exit 1
+  fi
+  if [[ -z "$REMOTE_DIR" ]]; then
+    echo "Error: --remote-experiments-dir is required."
+    echo "Usage: $0 [--user <eth_user>] --remote-experiments-dir <remote_dir> [--local] [--dry-run] [--debug] [--sleep-seconds N]"
+    exit 1
+  fi
 fi
 
-if ! $LOCAL && [[ -z "$USER_ARG" ]]; then
-  echo "Error: --user is required for remote execution."
-  echo "Usage: $0 --user <eth_user> --remote-experiments-dir <remote_dir> [--dry-run] [--sleep-seconds N]"
-  exit 1
-fi
-
-if $LOCAL; then
-  PRECMD="cd ${REMOTE_DIR} && eval \"\$(conda shell.bash hook)\" && conda activate doexpy"
-else
-  SERVER="${USER_ARG}@euler.ethz.ch"
-  PRECMD="cd ${REMOTE_DIR} && eval \"\$(conda shell.bash hook)\" && conda activate doexpy"
-fi
+SERVER="${USER_ARG}@euler.ethz.ch"
+PRECMD="cd ${REMOTE_DIR} && eval \"\$(conda shell.bash hook)\" && conda activate doexpy"
 
 # Helper to join multiline Make output into single lines
 join_lines() {
@@ -96,23 +98,59 @@ run_block() {
       echo "[Warn] No commands produced; skipping submission." >&2
     else
       if $LOCAL; then
-        echo "$cmds" | ./submit_euler --local --precommand "$PRECMD" --activate doexpy
+        echo "$cmds" | ./submit_euler --local --precommand "$PRECMD"
       else
-        echo "$cmds" | ./submit_euler --server "$SERVER" --precommand "$PRECMD" --activate doexpy
+        echo "$cmds" | ./submit_euler --server "$SERVER" --precommand "$PRECMD"
       fi
     fi
   fi
 }
 
-# Lambda 0.1 (default) for episodes 50 and 80
-run_block "${MAKE_L01[@]}"
+if $DEBUG; then
+  echo "[Debug] Running local quick sanity checks using config 'debug'."
+  echo "[Debug] Ignoring remote submission and --dry-run."
+  # Build two local runs (design and random) with minimal episodes; visits-only savers
+  pushd "$LLM_DIR" >/dev/null
+  set -x
+  python run_exp.py --config-name=debug \
+    experiment=feedback_comparison \
+    algorithm=design \
+    feedback=multinomial \
+    explore_only=true \
+    +experiment.scorer_model=null \
+    'tester=[]' \
+    'savers=[{_target_: components.saver.VisitsSaver, params: {filename: "visits.pkl"}}, {_target_: components.saver.ConfSaver, params: {filename: "config_resolved.yaml"}}]' \
+    experiment.episodes=10 \
+    seed=1 \
+    results_dir="results/feedback-comparison" \
+    experiment_id="ep10-1"
 
-if ! $DRY_RUN; then
-  echo "[Info] Sleeping ${SLEEP_SECONDS}s before next batch..."
-  sleep "$SLEEP_SECONDS"
+  python run_exp.py --config-name=debug \
+    experiment=feedback_comparison \
+    algorithm=random \
+    feedback=multinomial \
+    explore_only=true \
+    +experiment.scorer_model=null \
+    'tester=[]' \
+    'savers=[{_target_: components.saver.VisitsSaver, params: {filename: "visits.pkl"}}, {_target_: components.saver.ConfSaver, params: {filename: "config_resolved.yaml"}}]' \
+    experiment.episodes=10 \
+    seed=1 \
+    results_dir="results/feedback-comparison" \
+    experiment_id="ep10-1"
+  set +x
+  popd >/dev/null
+  echo "[Debug] Done."
+else
+  # Lambda 0.1 (default) for episodes 50 and 80
+  run_block "${MAKE_L01[@]}"
+
+  if ! $DRY_RUN; then
+    echo "[Info] Sleeping ${SLEEP_SECONDS}s before next batch..."
+    sleep "$SLEEP_SECONDS"
+  fi
+
+  # Lambda 0.01 for episodes 50 and 80
+  run_block "${MAKE_L001[@]}"
+
+  echo "[Info] Done."
 fi
-
-# Lambda 0.01 for episodes 50 and 80
-run_block "${MAKE_L001[@]}"
-
-echo "[Info] Done."

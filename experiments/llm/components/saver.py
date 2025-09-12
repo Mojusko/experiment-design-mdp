@@ -819,6 +819,9 @@ class VisitsImageSaver(BaseSaver):
         # Get other params needed for image generation
         self.seed_per_prompt = self.params.get('seed_per_prompt', True)
         self.output_subdir = self.params.get('output_subdir', 'visit_images')
+        # Allow overriding image generation settings for debugging/speed
+        self.image_size = self.params.get('image_size', DEFAULT_CONFIG['image_size'])
+        self.num_inference_steps = self.params.get('num_inference_steps', DEFAULT_CONFIG['num_inference_steps'])
 
         # --- Validate configuration ---
         if self.horizon is None or self.horizon <= 0:
@@ -885,7 +888,10 @@ class VisitsImageSaver(BaseSaver):
         # The generator will use defaults from image_generator.DEFAULT_CONFIG
         # for model_id, cache_dir, image_size, steps, guidance, seed etc.
         try:
-            generator = StableDiffusionGenerator()
+            generator = StableDiffusionGenerator(
+                num_inference_steps=self.num_inference_steps,
+                image_size=self.image_size
+            )
         except Exception as e:
             print(f"VisitsImageSaver: Failed to initialize StableDiffusionGenerator with defaults: {e}. Skipping.")
             return
