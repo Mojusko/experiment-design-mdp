@@ -8,9 +8,29 @@
 </head>
 <body>
     <script>
+        (function enforceLambdaParam() {
+            const defaultLam = '0.1';
+            const url = new URL(window.location.href);
+            if (!url.searchParams.has('lam')) {
+                const lamValue = url.searchParams.get('lambda') || defaultLam;
+                url.searchParams.set('lam', lamValue);
+                if (url.searchParams.has('lambda')) {
+                    url.searchParams.delete('lambda');
+                }
+                window.location.replace(url.toString());
+                return;
+            }
+            if (url.searchParams.has('lambda')) {
+                url.searchParams.delete('lambda');
+                window.history.replaceState(null, '', url.toString());
+            }
+        })();
+
         // Check password verification and consent - redirect silently if not authenticated
         if (!sessionStorage.getItem('passwordVerified') || !sessionStorage.getItem('userConsented')) {
-            window.location.replace('ethics_consent.html');
+            const queryString = window.location.search;
+            const target = queryString ? `ethics_consent.html${queryString}` : 'ethics_consent.html';
+            window.location.replace(target);
         }
     </script>
     <!-- Introduction container removed -->

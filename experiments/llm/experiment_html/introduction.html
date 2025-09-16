@@ -53,10 +53,29 @@
 </head>
 <body>
     <script>
+        (function enforceLambdaParam() {
+            const defaultLam = '0.1';
+            const url = new URL(window.location.href);
+            if (!url.searchParams.has('lam')) {
+                const lamValue = url.searchParams.get('lambda') || defaultLam;
+                url.searchParams.set('lam', lamValue);
+                if (url.searchParams.has('lambda')) {
+                    url.searchParams.delete('lambda');
+                }
+                window.location.replace(url.toString());
+                return;
+            }
+            if (url.searchParams.has('lambda')) {
+                url.searchParams.delete('lambda');
+                window.history.replaceState(null, '', url.toString());
+            }
+        })();
+
         // Check password verification
         if (!sessionStorage.getItem('passwordVerified')) {
             alert("Access denied. Please start from the consent page.");
-            window.location.href = 'ethics_consent.html';
+            const queryString = window.location.search;
+            window.location.href = queryString ? `ethics_consent.html${queryString}` : 'ethics_consent.html';
         }
     </script>
     <!-- Title removed, using h2 inside container -->
@@ -96,14 +115,21 @@
                 <br><br>
                 This description will help us understand your choices.
                 <br><br>
-                Then, save your feedback.
+                Then, submit your feedback.
                 <br><br>
             </li>
         </ol>
         <!-- Goal section removed -->
     </div>
 
-    <button id="start-button" onclick="window.location.href='index.html'">Start</button>
+    <button id="start-button">Start</button>
+
+    <script>
+        document.getElementById('start-button')?.addEventListener('click', () => {
+            const queryString = window.location.search;
+            window.location.href = queryString ? `index.html${queryString}` : 'index.html';
+        });
+    </script>
 
 </body>
 </html>

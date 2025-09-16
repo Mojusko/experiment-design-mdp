@@ -52,6 +52,23 @@
     </style>
 </head>
 <body>
+    <script>
+        (function enforceLambdaParam() {
+            const defaultLam = '0.1';
+            const url = new URL(window.location.href);
+            if (!url.searchParams.has('lam')) {
+                const lamValue = url.searchParams.get('lambda') || defaultLam;
+                url.searchParams.set('lam', lamValue);
+                if (url.searchParams.has('lambda')) {
+                    url.searchParams.delete('lambda');
+                }
+                window.location.replace(url.toString());
+            } else if (url.searchParams.has('lambda')) {
+                url.searchParams.delete('lambda');
+                window.history.replaceState(null, '', url.toString());
+            }
+        })();
+    </script>
     <div id="consent-container">
         <h2>Participant Information and Consent</h2>
 
@@ -250,12 +267,22 @@
             
             // Clear any data from previous sessions to prevent contamination
             console.log("Clearing previous session data from localStorage...");
-            localStorage.removeItem('imageFeedback');
-            localStorage.removeItem('benchmarkEpisodeKeys');
+            const keysToClear = [];
+            for (let i = 0; i < localStorage.length; i++) {
+                const key = localStorage.key(i);
+                if (!key) continue;
+                if (key === 'imageFeedback' || key === 'benchmarkEpisodeKeys' || key === 'currentLambda') {
+                    keysToClear.push(key);
+                } else if (key === 'imageFeedback_backup' || key.startsWith('imageFeedback_') || key.startsWith('benchmarkEpisodeKeys_')) {
+                    keysToClear.push(key);
+                }
+            }
+            keysToClear.forEach(key => localStorage.removeItem(key));
             
             // Set consent flag and proceed to instructions
             sessionStorage.setItem('userConsented', 'true');
-            window.location.href='introduction.html';
+            const queryString = window.location.search;
+            window.location.href = queryString ? `introduction.html${queryString}` : 'introduction.html';
         }
     </script>
 

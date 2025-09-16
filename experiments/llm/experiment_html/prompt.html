@@ -37,7 +37,7 @@
             font-family: sans-serif; /* Ensure textarea font matches */
             resize: vertical; /* Allow vertical resize */
         }
-        #save-final-button { /* Use a unique ID */
+        #submit-button {
             padding: 12px 25px;
             font-size: 1.1em;
             cursor: pointer;
@@ -47,26 +47,45 @@
 </head>
 <body>
     <script>
+        (function enforceLambdaParam() {
+            const defaultLam = '0.1';
+            const url = new URL(window.location.href);
+            if (!url.searchParams.has('lam')) {
+                const lamValue = url.searchParams.get('lambda') || defaultLam;
+                url.searchParams.set('lam', lamValue);
+                if (url.searchParams.has('lambda')) {
+                    url.searchParams.delete('lambda');
+                }
+                window.location.replace(url.toString());
+                return;
+            }
+            if (url.searchParams.has('lambda')) {
+                url.searchParams.delete('lambda');
+                window.history.replaceState(null, '', url.toString());
+            }
+        })();
+
         // Check password verification
         if (!sessionStorage.getItem('passwordVerified')) {
             alert("Access denied. Please start from the consent page.");
-            window.location.href = 'ethics_consent.html';
+            const queryString = window.location.search;
+            window.location.href = queryString ? `ethics_consent.html${queryString}` : 'ethics_consent.html';
         }
     </script>
     <div id="prompt-entry-container">
-        <h1>Final Step: Describe Your Style</h1>
-        <p>Please briefly describe the visual style you had in mind during the experiment. This will help us understand your choices.</p>
-        
-        <label for="style-description-input">Your Style Description:</label>
-        <textarea id="style-description-input" name="style_description" rows="4" placeholder="e.g., vintage photo, cartoonish, like a roman fresco..."></textarea>
+        <form id="prompt-form" action="https://formspree.io/f/xpwjklwz" method="POST">
+            <h1>Final Step: Describe Your Style</h1>
+            <p>Please briefly describe the visual style you had in mind during the experiment. This will help us understand your choices.</p>
 
-        <div style="margin-top: 12px; display: flex; gap: 10px; flex-wrap: wrap; justify-content:center;">
-            <button id="save-final-button">Save Feedback</button>
-            <button id="backup-button" type="button">Save Local Backup</button>
-            <button id="share-button" type="button">Share / Email Results</button>
-            <button id="copy-button" type="button">Copy JSON</button>
-        </div>
-        <p id="save-status" style="margin-top:10px;color:#2a6;display:none;">Saved locally.</p>
+            <label for="style-description-input">Your Style Description:</label>
+            <textarea id="style-description-input" name="style_description" rows="4" placeholder="e.g., vintage photo, cartoonish, like a roman fresco..." required></textarea>
+
+            <input type="hidden" name="lambda" id="lambda-input" value="">
+            <input type="hidden" name="feedback_json" id="feedback-json-input" value="">
+
+            <button id="submit-button" type="submit">Submit Feedback</button>
+            <p id="form-status" style="margin-top:10px; display:none;"></p>
+        </form>
     </div>
 
     <!-- Load the script for this page -->

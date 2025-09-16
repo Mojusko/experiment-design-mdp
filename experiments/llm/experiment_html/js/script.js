@@ -6,10 +6,48 @@ if (typeof imageFiles === 'undefined' || !Array.isArray(imageFiles) || imageFile
     throw new Error("imageFiles not loaded."); // Stop script execution
 }
 
+const selectedLambda = window.selectedLambda || window.defaultLambdaKey || '0.1';
+const feedbackStorageKey = `imageFeedback_${selectedLambda}`;
+const benchmarkStorageKey = `benchmarkEpisodeKeys_${selectedLambda}`;
+console.log(`Loading questionnaire for lambda=${selectedLambda}.`);
+
 // --- Global Variables ---
 let currentQuestionIndex = 0; // Index for the shuffled question order
 let displayOrder = []; // Holds the structured and shuffled image data
-let feedbackData = JSON.parse(localStorage.getItem('imageFeedback')) || {}; // Load feedback
+let feedbackData = {};
+
+try {
+    const stored = localStorage.getItem(feedbackStorageKey);
+    if (stored) {
+        feedbackData = JSON.parse(stored) || {};
+    }
+} catch (err) {
+    console.warn('Unable to parse stored feedback for key', feedbackStorageKey, err);
+    feedbackData = {};
+}
+
+if (!Object.keys(feedbackData).length) {
+    // Backwards compatibility with legacy key when switching lambdas
+    try {
+        const legacyStored = localStorage.getItem('imageFeedback');
+        if (legacyStored) {
+            const legacyData = JSON.parse(legacyStored) || {};
+            if (Object.keys(legacyData).length) {
+                feedbackData = legacyData;
+                localStorage.setItem(feedbackStorageKey, JSON.stringify(feedbackData));
+                console.log(`Migrated legacy feedback to ${feedbackStorageKey}.`);
+            }
+        }
+    } catch (err) {
+        console.warn('Unable to migrate legacy feedback data:', err);
+    }
+}
+
+try {
+    localStorage.setItem('currentLambda', selectedLambda);
+} catch (err) {
+    console.warn('Unable to store current lambda selection:', err);
+}
 
 // --- DOM Elements ---
 const imageElement = document.getElementById('current-image');
@@ -30,7 +68,8 @@ console.log(`Detected ${numPolicies} policies.`);
 function initializeQuestionnaire() {
     // 1. Parse imageFiles into structured data
     const structuredImages = imageFiles.map(filename => {
-        const match = filename.match(/alg-([a-zA-Z0-9]+)_episode_(\d+)_timestep_(\d+)\.png$/i);
+        const baseName = filename.split('/').pop();
+        const match = baseName.match(/alg-([a-zA-Z0-9]+)_episode_(\d+)_timestep_(\d+)\.png$/i);
         if (match) {
             return {
                 filename: filename,
@@ -94,7 +133,7 @@ function initializeQuestionnaire() {
     }
 
     console.log("Selected Benchmark Episodes (internal use, not shown to user):", benchmarkEpisodeKeys);
-    localStorage.setItem('benchmarkEpisodeKeys', JSON.stringify(benchmarkEpisodeKeys));
+    localStorage.setItem(benchmarkStorageKey, JSON.stringify(benchmarkEpisodeKeys));
 
     // 5. Shuffle the combined list of all episode keys to randomize the user's viewing order
     for (let i = allEpisodeKeys.length - 1; i > 0; i--) {
@@ -163,15 +202,15 @@ function saveFeedback() {
 
     if (selectedValue) {
         feedbackData[filenameKey] = parseInt(selectedValue, 10);
-        localStorage.setItem('imageFeedback', JSON.stringify(feedbackData));
+        localStorage.setItem(feedbackStorageKey, JSON.stringify(feedbackData));
         console.log(`Saved feedback for ${filenameKey}: ${feedbackData[filenameKey]}`);
     } else {
         // Optional: Clear feedback if nothing is selected
         // delete feedbackData[filenameKey];
-        // localStorage.setItem('imageFeedback', JSON.stringify(feedbackData));
+        // localStorage.setItem(feedbackStorageKey, JSON.stringify(feedbackData));
         // If you want to explicitly save 'null' or 'undefined' when nothing is chosen:
         // delete feedbackData[currentImageFile];
-        // localStorage.setItem('imageFeedback', JSON.stringify(feedbackData));
+        // localStorage.setItem(feedbackStorageKey, JSON.stringify(feedbackData));
     }
 }
 
@@ -219,7 +258,8 @@ nextButton.addEventListener('click', () => {
 finishButton.addEventListener('click', () => {
     saveFeedback(); // Save feedback for the last image
     console.log("Finish button clicked. Redirecting to prompt page.");
-    window.location.href = 'prompt.html'; // Redirect to prompt page
+    const queryString = window.location.search;
+    window.location.href = queryString ? `prompt.html${queryString}` : 'prompt.html';
 });
 
 // Save feedback immediately when a radio button is clicked
