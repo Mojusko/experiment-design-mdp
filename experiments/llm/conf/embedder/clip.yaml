@@ -1,5 +1,5 @@
 # Default configuration for CLIP Embedder
-_target_: experiments.llm.components.embedder.CLIPEmbedder
+_target_: components.embedder.CLIPEmbedder
 model_id: "openai/clip-vit-large-patch14"
 normalize: true
 # Inherit cache_dir from the main config's cache_dir variable
