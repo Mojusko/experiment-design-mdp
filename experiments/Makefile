@@ -584,8 +584,9 @@ llm-find-lambda-sparsity: llm-find-lambda-sparsity-mul
 # Lambda comparison for feedback_comparison experiment
 # Iterates lambdas, uses episodes from feedback_comparison.yaml
 # Only saves trajectories (explore_only=true)
-# LAMBDA_VALUES_COMPARISON := 0.1 1 10 100  # Original - 0.1 and 1 completed
-LAMBDA_VALUES_COMPARISON := 10 100  # Remaining jobs after 0.1 and 1 completed
+# LAMBDA_VALUES_COMPARISON := 0.1 1 10 100  # Original
+# LAMBDA_VALUES_COMPARISON := 10 100  # Ran this - completed
+LAMBDA_VALUES_COMPARISON := 0.1 1  # Missing random jobs only
 
 # Generate job names for both design and random
 JOBS_LLM_DSN_MULT_LAMBDAS := \
@@ -633,6 +634,9 @@ $(foreach lambda_val,$(LAMBDA_VALUES_COMPARISON), \
     $(eval $(call feedback_comp_ran_mult_lambda_template,$(lambda_val),$(n)))))
 
 llm-feedback-comparison-mul-lambdas: $(JOBS_LLM_DSN_MULT_LAMBDAS) $(JOBS_LLM_RAN_MULT_LAMBDAS)
+
+# Run only random jobs (for completing missing random runs)
+llm-feedback-comparison-mul-lambdas-random-only: $(JOBS_LLM_RAN_MULT_LAMBDAS)
 
 
 # Design Frequency Finding (using lambda_finding base config)
