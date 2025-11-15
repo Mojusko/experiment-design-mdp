@@ -19,7 +19,7 @@ from doexpy.env.llm import (
     LLMGrid, generate_emissions, create_prompt # Removed get_scorer_model, make_theta_star
 )
 # Import scorer model functions from their new location
-from experiments.llm.models.scorer_models import get_scorer_model, make_theta_star
+from models.scorer_models import get_scorer_model, make_theta_star
 # Import embedder components
 from components.embedder import BaseEmbedder, create_embedder
 from components.feedback import FeedbackFactory
