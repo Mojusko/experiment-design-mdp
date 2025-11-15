@@ -584,7 +584,8 @@ llm-find-lambda-sparsity: llm-find-lambda-sparsity-mul
 # Lambda comparison for feedback_comparison experiment
 # Iterates lambdas, uses episodes from feedback_comparison.yaml
 # Only saves trajectories (explore_only=true)
-LAMBDA_VALUES_COMPARISON := 0.1 1 10 100
+# LAMBDA_VALUES_COMPARISON := 0.1 1 10 100  # Original - 0.1 and 1 completed
+LAMBDA_VALUES_COMPARISON := 10 100  # Remaining jobs after 0.1 and 1 completed
 
 # Generate job names for both design and random
 JOBS_LLM_DSN_MULT_LAMBDAS := \
