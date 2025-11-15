@@ -19,8 +19,8 @@ from omegaconf import DictConfig # Keep DictConfig for type hints
 # Local imports
 from doexpy.env.llm import create_prompt
 # Moved imports to top level:
-from experiments.llm.image_generator import StableDiffusionGenerator, _get_seed_from_prompt, DEFAULT_CONFIG
-from experiments.llm.components.tester import create_dot_product_model_from_estimator # Add this import
+from image_generator import StableDiffusionGenerator, _get_seed_from_prompt, DEFAULT_CONFIG
+from components.tester import create_dot_product_model_from_estimator # Add this import
 
 
 def _convert_to_serializable(obj):

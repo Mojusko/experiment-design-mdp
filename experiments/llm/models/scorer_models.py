@@ -8,10 +8,10 @@ from typing import Tuple, TYPE_CHECKING
 # Import for type hinting without circular dependency
 if TYPE_CHECKING:
     from doexpy.env.llm import LLMGrid
-    from experiments.llm.components.embedder import BaseEmbedder
+    from components.embedder import BaseEmbedder
 
 # Import for sunny-image model type in get_scorer_model
-from experiments.llm.image_generator import StableDiffusionGenerator, DEFAULT_CONFIG
+from image_generator import StableDiffusionGenerator, DEFAULT_CONFIG
 from PIL import Image # Changed import for fromarray
 
 # Import create_prompt for make_theta_star
