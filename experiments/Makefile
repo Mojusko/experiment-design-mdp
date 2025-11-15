@@ -293,7 +293,7 @@ llm-generate-image:
 ########################### LLMS
 #REPEATS_LLM=20
 # Parallelization factor for llm-inspect-visits (seeds/jobs)
-REPEATS_LLM=15
+REPEATS_LLM=1
 NUMBERS_LLM := $(shell seq 1 ${REPEATS_LLM})
 
 # Jobs for V comparison (non-adaptive design)
@@ -579,6 +579,59 @@ $(foreach lambda_s_val,$(LAMBDA_SPARSITY_VALUES), \
 # Aggregate targets for lambda_sparsity tuning
 llm-find-lambda-sparsity-mul: $(JOBS_LLM_LAMBDA_SPARSITY_MUL)
 llm-find-lambda-sparsity: llm-find-lambda-sparsity-mul
+
+
+# Lambda comparison for feedback_comparison experiment
+# Iterates lambdas, uses episodes from feedback_comparison.yaml
+# Only saves trajectories (explore_only=true)
+LAMBDA_VALUES_COMPARISON := 0.1 1 10 100
+
+# Generate job names for both design and random
+JOBS_LLM_DSN_MULT_LAMBDAS := \
+  $(foreach lambda_val,$(LAMBDA_VALUES_COMPARISON), \
+    $(foreach n,$(NUMBERS_LLM), \
+      job-llm-feedback-comp-dsn-mult-lambda$(lambda_val)-$(n)))
+
+JOBS_LLM_RAN_MULT_LAMBDAS := \
+  $(foreach lambda_val,$(LAMBDA_VALUES_COMPARISON), \
+    $(foreach n,$(NUMBERS_LLM), \
+      job-llm-feedback-comp-ran-mult-lambda$(lambda_val)-$(n)))
+
+define feedback_comp_dsn_mult_lambda_template
+job-llm-feedback-comp-dsn-mult-lambda$(1)-$(2):
+	cd llm && TIMESTAMP=$(TIMESTAMP) OMP_NUM_THREADS=1 MKL_NUM_THREADS=1 $(PYTHONPATH) run_exp.py \
+	  experiment=feedback_comparison \
+	  algorithm=design \
+	  feedback=multinomial \
+	  feedback.lambda=$(1) \
+	  explore_only=true \
+	  seed=$(2) \
+	  results_dir="results/feedback-comparison-lambdas" \
+	  experiment_id="lambda$(1)-$(2)" $(EXTRA)
+endef
+
+define feedback_comp_ran_mult_lambda_template
+job-llm-feedback-comp-ran-mult-lambda$(1)-$(2):
+	cd llm && TIMESTAMP=$(TIMESTAMP) OMP_NUM_THREADS=1 MKL_NUM_THREADS=1 $(PYTHONPATH) run_exp.py \
+	  experiment=feedback_comparison \
+	  algorithm=random \
+	  feedback=multinomial \
+	  feedback.lambda=$(1) \
+	  explore_only=true \
+	  seed=$(2) \
+	  results_dir="results/feedback-comparison-lambdas" \
+	  experiment_id="lambda$(1)-$(2)" $(EXTRA)
+endef
+
+$(foreach lambda_val,$(LAMBDA_VALUES_COMPARISON), \
+  $(foreach n,$(NUMBERS_LLM), \
+    $(eval $(call feedback_comp_dsn_mult_lambda_template,$(lambda_val),$(n)))))
+
+$(foreach lambda_val,$(LAMBDA_VALUES_COMPARISON), \
+  $(foreach n,$(NUMBERS_LLM), \
+    $(eval $(call feedback_comp_ran_mult_lambda_template,$(lambda_val),$(n)))))
+
+llm-feedback-comparison-mul-lambdas: $(JOBS_LLM_DSN_MULT_LAMBDAS) $(JOBS_LLM_RAN_MULT_LAMBDAS)
 
 
 # Design Frequency Finding (using lambda_finding base config)

@@ -267,17 +267,21 @@ class LLMExperiment:
                 raise  # Re-raise to stop execution as this is a critical component
         self.visits = [] if self.cfg.feedback.num_policies == 1 else [[] for _ in range(self.cfg.feedback.num_policies)]
 
-        # --- Validate configuration for explore_only mode ---
+        # --- Auto-configure for explore_only mode ---
         if self.cfg.get('explore_only', False):
+            # Clear all testers in explore_only mode
             if self.testers:
-                raise ValueError("Testers are not allowed in explore_only mode.")
-            # Import saver classes locally for isinstance check
+                print(f"explore_only=true: Removing {len(self.testers)} tester(s)")
+                self.testers = []
+
+            # Filter savers to only allowed types
             from components.saver import VisitsSaver, VisitsImageSaver, ConfSaver
-            allowed_savers = (VisitsSaver, VisitsImageSaver, ConfSaver) # Allow ConfSaver too
-            for saver in self.savers:
-                if not isinstance(saver, allowed_savers):
-                    raise ValueError(f"Saver type '{type(saver).__name__}' is not allowed in explore_only mode. "
-                                     f"Only {', '.join(s.__name__ for s in allowed_savers)} are permitted.")
+            allowed_savers = (VisitsSaver, VisitsImageSaver, ConfSaver)
+            original_saver_count = len(self.savers)
+            self.savers = [s for s in self.savers if isinstance(s, allowed_savers)]
+            removed_count = original_saver_count - len(self.savers)
+            if removed_count > 0:
+                print(f"explore_only=true: Removed {removed_count} incompatible saver(s), kept {len(self.savers)}")
 
     def calculate_cosine_error(self, est_weight, gt_weight):
         """Calculate cosine error between two weight vectors."""
