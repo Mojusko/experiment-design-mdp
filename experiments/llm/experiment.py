@@ -275,8 +275,8 @@ class LLMExperiment:
                 self.testers = []
 
             # Filter savers to only allowed types
-            from components.saver import VisitsSaver, VisitsImageSaver, ConfSaver
-            allowed_savers = (VisitsSaver, VisitsImageSaver, ConfSaver)
+            from components.saver import VisitsSaver, VisitsImageSaver, ConfSaver, ReadableVisitsSaver
+            allowed_savers = (VisitsSaver, VisitsImageSaver, ConfSaver, ReadableVisitsSaver)
             original_saver_count = len(self.savers)
             self.savers = [s for s in self.savers if isinstance(s, allowed_savers)]
             removed_count = original_saver_count - len(self.savers)
@@ -533,7 +533,7 @@ class LLMExperiment:
     def save_results_explore_only(self):
         """Saves results specifically for explore_only mode (visits, images, config)."""
         from components.results import ExperimentResults
-        from components.saver import VisitsSaver, VisitsImageSaver, ConfSaver # Import allowed savers
+        from components.saver import VisitsSaver, VisitsImageSaver, ConfSaver, ReadableVisitsSaver # Import allowed savers
 
         results = ExperimentResults()
         results.set_visits(self.visits)
@@ -558,7 +558,7 @@ class LLMExperiment:
         results.add_metadata('config_dict', config_dict)
 
         # Run only the allowed savers
-        allowed_savers = (VisitsSaver, VisitsImageSaver, ConfSaver)
+        allowed_savers = (VisitsSaver, VisitsImageSaver, ConfSaver, ReadableVisitsSaver)
         for saver in self.savers:
             if isinstance(saver, allowed_savers):
                 print(f"Running saver: {type(saver).__name__}")

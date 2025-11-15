@@ -335,8 +335,8 @@ class FrankWolfe(ConvexSolverBase):
                             
                             # Update weights for the current policy
                             self.weights[policy_idx] = [(1 - step_size) * w for w in self.weights[policy_idx]] + [step_size]
-                            
-                            if self.verbosity > 0 and policy_counters[policy_idx] % 5 == 0:
+
+                            if self.verbosity > 0 and policy_counters[policy_idx] % 15 == 0:
                                 # Ensure tensors are on the correct device for the final objective calculation print
                                 if self.objective.get_type() == "adaptive":
                                     objective = self.objective.eval(emissions.to(target_device), densities, visitations, episodes)
