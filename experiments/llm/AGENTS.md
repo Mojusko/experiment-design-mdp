@@ -91,12 +91,13 @@ Step 4 — Collect feedback JSON
 - Export via `prompt.html` (copy or download JSON). Minimal schema:
 ```
 {
-  "user_prompts": ["...", "..."],
+  "style_description": "...",
   "preferences": [
     {"filename":"images/alg-design_episode_000_timestep_01.png","algorithm":"design","episode":0,"timestep":1,"preference":2},
     ...
   ],
-  "benchmark_episode_keys": ["design-12","random-7", ...]
+  "benchmark_episode_keys": ["design-12","random-7", ...],
+  "metadata": {"lambda": 0.01, "responses_recorded": 600}
 }
 ```
 

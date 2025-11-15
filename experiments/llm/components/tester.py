@@ -488,8 +488,8 @@ class HumanFeedbackBenchmarkTester(BaseTester):
     """
     Tests a human-trained estimator on benchmark episodes defined in a feedback.json file.
     Compares estimator predictions against a ground truth scorer model.
-    The environment's base_prompt is expected to be set to the 'user_prompt'
-    from the feedback.json file before this tester is run by LLMExperiment.
+    The environment's base_prompt should already be configured by the experiment;
+    feedback metadata such as style descriptions is not used here.
     Visits data is also expected to be loaded by LLMExperiment and passed to run_test.
     """
     def __init__(self, env=None, embedder=None, params=None):
@@ -522,7 +522,7 @@ class HumanFeedbackBenchmarkTester(BaseTester):
             print(f"  Skipping {self.__class__.__name__}: feedback_path file not found: {abs_feedback_path}")
             return {}
 
-        # Load feedback.json to get benchmark_episode_keys and human preferences
+        # Load feedback.json to get benchmark keys and human preferences
         try:
             import json 
             import re 
@@ -532,14 +532,26 @@ class HumanFeedbackBenchmarkTester(BaseTester):
                 feedback_data = json.load(f)
             
             all_benchmark_episode_keys = feedback_data.get("benchmark_episode_keys", [])
+            all_benchmark_question_keys = feedback_data.get("benchmark_question_keys", [])
             human_preferences_list = feedback_data.get("preferences", [])
 
-            if not all_benchmark_episode_keys:
-                print(f"  Warning: No 'benchmark_episode_keys' found in {abs_feedback_path}. Nothing to test.")
-                return {"benchmark_accuracy": 0.0, "benchmark_comparisons_count": 0}
+            if not all_benchmark_episode_keys and not all_benchmark_question_keys:
+                print(f"  Warning: No benchmark keys found in {abs_feedback_path}. Nothing to test.")
+                return {
+                    "benchmark_accuracy": 0.0,
+                    "benchmark_holdout_questions": 0,
+                    "benchmark_correct_count": 0,
+                    # Backwards compat legacy key
+                    "benchmark_comparisons_count": 0,
+                }
             if not human_preferences_list:
                 print(f"  Warning: No 'preferences' list found in {abs_feedback_path}. Cannot determine human choices for benchmark.")
-                return {"benchmark_accuracy": 0.0, "benchmark_comparisons_count": 0}
+                return {
+                    "benchmark_accuracy": 0.0,
+                    "benchmark_holdout_questions": 0,
+                    "benchmark_correct_count": 0,
+                    "benchmark_comparisons_count": 0,
+                }
         except Exception as e:
             print(f"  Error loading or parsing feedback_path {abs_feedback_path}: {e}")
             return {}
@@ -550,21 +562,62 @@ class HumanFeedbackBenchmarkTester(BaseTester):
         total_comparisons = 0
         
         episode_key_pattern = re.compile(r"([a-zA-Z0-9_]+)-(\d+)") # For "alg-ep_idx"
-        feedback_filename_pattern = re.compile(r"images/alg-([a-zA-Z0-9_]+)_episode_(\d+)_timestep_(\d+)\.png$")
+        # Allow filenames with optional directory prefixes (e.g., images/lambda-0.1/alg-design_...)
+        feedback_filename_pattern = re.compile(r"alg-([a-zA-Z0-9_]+)_episode_(\d+)_timestep_(\d+)\.png$")
 
-        # Filter benchmark keys to match the current experiment's algorithm
+        question_entries = []
+        if all_benchmark_question_keys:
+            for entry in all_benchmark_question_keys:
+                if isinstance(entry, dict):
+                    alg = entry.get('algorithm')
+                    episode = entry.get('episode')
+                    timestep = entry.get('timestep')
+                elif isinstance(entry, (list, tuple)) and len(entry) >= 3:
+                    alg, episode, timestep = entry[:3]
+                elif isinstance(entry, str):
+                    parts = entry.split('-')
+                    if len(parts) >= 3:
+                        alg, episode, timestep = parts[0], parts[1], parts[2]
+                    else:
+                        continue
+                else:
+                    continue
+                try:
+                    episode_idx = int(episode)
+                    timestep_idx = int(timestep)
+                except (TypeError, ValueError):
+                    continue
+                question_entries.append((str(alg).lower(), episode_idx, timestep_idx))
+
         current_algorithm = cfg.algorithm.lower()
-        benchmark_episode_keys = []
-        for key in all_benchmark_episode_keys:
-            match = episode_key_pattern.match(key)
-            if match and match.group(1).lower() == current_algorithm:
-                benchmark_episode_keys.append(key)
-        
-        print(f"  Found {len(benchmark_episode_keys)} benchmark episodes matching algorithm '{current_algorithm}'.")
-
-        if not benchmark_episode_keys:
-            print(f"  No benchmark episodes found for algorithm '{current_algorithm}'. Skipping benchmark.")
-            return {"benchmark_accuracy": 0.0, "benchmark_comparisons_count": 0}
+        if question_entries:
+            benchmark_questions_for_algorithm = [entry for entry in question_entries if entry[0] == current_algorithm]
+            print(f"  Found {len(benchmark_questions_for_algorithm)} benchmark questions matching algorithm '{current_algorithm}'.")
+            if not benchmark_questions_for_algorithm:
+                print(f"  No benchmark questions found for algorithm '{current_algorithm}'. Skipping benchmark.")
+                return {
+                    "benchmark_accuracy": 0.0,
+                    "benchmark_holdout_questions": 0,
+                    "benchmark_correct_count": 0,
+                    "benchmark_comparisons_count": 0,
+                }
+            benchmark_episode_keys = sorted({f"{current_algorithm}-{ep}" for _, ep, _ in benchmark_questions_for_algorithm})
+        else:
+            benchmark_episode_keys = []
+            for key in all_benchmark_episode_keys:
+                match = episode_key_pattern.match(key)
+                if match and match.group(1).lower() == current_algorithm:
+                    benchmark_episode_keys.append(key)
+            print(f"  Found {len(benchmark_episode_keys)} benchmark episodes matching algorithm '{current_algorithm}'.")
+            if not benchmark_episode_keys:
+                print(f"  No benchmark episodes found for algorithm '{current_algorithm}'. Skipping benchmark.")
+                return {
+                    "benchmark_accuracy": 0.0,
+                    "benchmark_holdout_questions": 0,
+                    "benchmark_correct_count": 0,
+                    "benchmark_comparisons_count": 0,
+                }
+            benchmark_questions_for_algorithm = []
 
         # Create a lookup for human preferences: (alg_name, ep_idx_str, ts_str) -> human_choice_1_based
         human_choices_lookup = {}
@@ -578,24 +631,22 @@ class HumanFeedbackBenchmarkTester(BaseTester):
         num_policies_in_visits = len(visits)
         if num_policies_in_visits == 0:
             print("    Error: Visits data is empty (no policies). Cannot proceed with benchmark.")
-            return {"benchmark_accuracy": 0.0, "benchmark_comparisons_count": 0, "error": "Empty visits data"}
+            return {
+                "benchmark_accuracy": 0.0,
+                "benchmark_holdout_questions": 0,
+                "benchmark_correct_count": 0,
+                "benchmark_comparisons_count": 0,
+                "error": "Empty visits data",
+            }
 
-        for episode_key in benchmark_episode_keys:
-            ep_key_match = episode_key_pattern.match(episode_key)
-            if not ep_key_match:
-                print(f"    Warning: Could not parse benchmark episode key: {episode_key}")
-                continue
-            
-            alg_name_from_key = ep_key_match.group(1)
-            ep_idx_from_key = int(ep_key_match.group(2))
-
-            for h_prefix_len in range(1, env.max_episode_length + 1):
-                lookup_key = (alg_name_from_key, f"{ep_idx_from_key:03d}", f"{h_prefix_len:02d}")
+        if question_entries:
+            for _, ep_idx_from_key, timestep_idx in benchmark_questions_for_algorithm:
+                lookup_key = (current_algorithm, f"{ep_idx_from_key:03d}", f"{timestep_idx:02d}")
                 human_preferred_policy_1_based = human_choices_lookup.get(lookup_key)
 
                 if human_preferred_policy_1_based is None:
                     continue
-                
+
                 human_preferred_policy_0_based = human_preferred_policy_1_based - 1
 
                 comparison_embeddings_list = []
@@ -606,38 +657,121 @@ class HumanFeedbackBenchmarkTester(BaseTester):
                         actions_for_policy_raw = visits[policy_idx][ep_idx_from_key][1]
                         actions_for_policy = list(map(int, actions_for_policy_raw.cpu().tolist() if isinstance(actions_for_policy_raw, torch.Tensor) else actions_for_policy_raw))
 
-                        if h_prefix_len > len(actions_for_policy):
-                            valid_comparison_point = False; break
-                        
-                        truncated_actions = actions_for_policy[:h_prefix_len]
+                        if timestep_idx > len(actions_for_policy):
+                            valid_comparison_point = False
+                            break
+
+                        truncated_actions = actions_for_policy[:timestep_idx]
                         prompt = create_prompt(truncated_actions, env)
                         embedding = self.embedder.embed_text(prompt)
                         comparison_embeddings_list.append(embedding.detach().cpu())
                     except IndexError:
-                        valid_comparison_point = False; break
+                        valid_comparison_point = False
+                        break
                     except Exception as e:
-                        print(f"    Error processing benchmark data for policy {policy_idx}, ep {ep_idx_from_key}, h {h_prefix_len}: {e}")
-                        valid_comparison_point = False; break
-                
+                        print(f"    Error processing benchmark data for policy {policy_idx}, ep {ep_idx_from_key}, h {timestep_idx}: {e}")
+                        valid_comparison_point = False
+                        break
+
                 if not valid_comparison_point or not comparison_embeddings_list or len(comparison_embeddings_list) != num_policies_in_visits:
                     continue
 
                 comparison_embeddings_tensor = torch.cat(comparison_embeddings_list, dim=0)
                 reshaped_embeddings = comparison_embeddings_tensor.unsqueeze(0)
-                
+
                 try:
                     theta = estimator.theta_ml()
                     theta = theta.to(reshaped_embeddings.device)
                     scores = torch.matmul(reshaped_embeddings, theta)
                     estimator_predicted_policy_0_based = torch.argmax(scores.squeeze()).item()
                 except Exception as e:
-                    print(f"    Error during prediction for ep {ep_idx_from_key}, h {h_prefix_len}: {e}")
+                    print(f"    Error during prediction for ep {ep_idx_from_key}, h {timestep_idx}: {e}")
                     continue
 
                 if estimator_predicted_policy_0_based == human_preferred_policy_0_based:
                     correct_predictions += 1
                 total_comparisons += 1
-        
+        else:
+            for episode_key in benchmark_episode_keys:
+                ep_key_match = episode_key_pattern.match(episode_key)
+                if not ep_key_match:
+                    print(f"    Warning: Could not parse benchmark episode key: {episode_key}")
+                    continue
+
+                alg_name_from_key = ep_key_match.group(1)
+                ep_idx_from_key = int(ep_key_match.group(2))
+
+                for h_prefix_len in range(1, env.max_episode_length + 1):
+                    lookup_key = (alg_name_from_key, f"{ep_idx_from_key:03d}", f"{h_prefix_len:02d}")
+                    human_preferred_policy_1_based = human_choices_lookup.get(lookup_key)
+
+                    if human_preferred_policy_1_based is None:
+                        continue
+
+                    human_preferred_policy_0_based = human_preferred_policy_1_based - 1
+
+                    comparison_embeddings_list = []
+                    valid_comparison_point = True
+
+                    for policy_idx in range(num_policies_in_visits):
+                        try:
+                            actions_for_policy_raw = visits[policy_idx][ep_idx_from_key][1]
+                            actions_for_policy = list(map(int, actions_for_policy_raw.cpu().tolist() if isinstance(actions_for_policy_raw, torch.Tensor) else actions_for_policy_raw))
+
+                            if h_prefix_len > len(actions_for_policy):
+                                valid_comparison_point = False
+                                break
+
+                            truncated_actions = actions_for_policy[:h_prefix_len]
+                            prompt = create_prompt(truncated_actions, env)
+                            embedding = self.embedder.embed_text(prompt)
+                            comparison_embeddings_list.append(embedding.detach().cpu())
+                        except IndexError:
+                            valid_comparison_point = False
+                            break
+                        except Exception as e:
+                            print(f"    Error processing benchmark data for policy {policy_idx}, ep {ep_idx_from_key}, h {h_prefix_len}: {e}")
+                            valid_comparison_point = False
+                            break
+
+                    if not valid_comparison_point or not comparison_embeddings_list or len(comparison_embeddings_list) != num_policies_in_visits:
+                        continue
+
+                    comparison_embeddings_tensor = torch.cat(comparison_embeddings_list, dim=0)
+                    reshaped_embeddings = comparison_embeddings_tensor.unsqueeze(0)
+
+                    try:
+                        theta = estimator.theta_ml()
+                        theta = theta.to(reshaped_embeddings.device)
+                        scores = torch.matmul(reshaped_embeddings, theta)
+                        estimator_predicted_policy_0_based = torch.argmax(scores.squeeze()).item()
+                    except Exception as e:
+                        print(f"    Error during prediction for ep {ep_idx_from_key}, h {h_prefix_len}: {e}")
+                        continue
+
+                    if estimator_predicted_policy_0_based == human_preferred_policy_0_based:
+                        correct_predictions += 1
+                    total_comparisons += 1
+
         benchmark_accuracy = (correct_predictions / total_comparisons) if total_comparisons > 0 else 0.0
-        print(f"  Human Feedback Benchmark Accuracy: {benchmark_accuracy:.4f} ({correct_predictions}/{total_comparisons} comparisons)")
-        return {"benchmark_accuracy": benchmark_accuracy, "benchmark_comparisons_count": total_comparisons}
+        print(
+            f"  Human Feedback Benchmark Accuracy: {benchmark_accuracy:.4f} "
+            f"({correct_predictions}/{total_comparisons} holdout questions)"
+        )
+        result = {
+            "benchmark_accuracy": benchmark_accuracy,
+            "benchmark_holdout_questions": total_comparisons,
+            "benchmark_correct_count": correct_predictions,
+            "benchmark_comparisons_count": total_comparisons,
+            "benchmark_episode_keys": benchmark_episode_keys,
+        }
+        if question_entries:
+            result["benchmark_question_keys"] = [
+                {
+                    "algorithm": current_algorithm,
+                    "episode": ep,
+                    "timestep": ts,
+                }
+                for _, ep, ts in benchmark_questions_for_algorithm
+            ]
+        return result

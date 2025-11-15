@@ -4,6 +4,7 @@ from transformers import AutoModel, AutoProcessor, AutoTokenizer
 import os
 import pickle
 import hashlib
+from pathlib import Path
 from omegaconf import DictConfig
 from PIL.Image import Image as PILImage # Use specific import to avoid potential conflicts
 
@@ -19,6 +20,12 @@ class BaseEmbedder(ABC):
         self._model = None
         self._processor = None
         self._tokenizer = None
+        self._text_cache_mem = {}
+        self._text_cache_dir = Path(self.cache_dir) / "text_embeddings"
+        try:
+            self._text_cache_dir.mkdir(parents=True, exist_ok=True)
+        except Exception as e:
+            print(f"Warning: Failed to create text cache directory {self._text_cache_dir}: {e}")
         self._load_model() # Load model during initialization
 
     @abstractmethod
@@ -76,6 +83,44 @@ class BaseEmbedder(ABC):
         # Add other relevant config items if needed in subclasses
         return hasher.hexdigest()
 
+    # --- Text embedding cache helpers ----------------------------------------------------
+    def _text_cache_key(self, text: str) -> str:
+        hasher = hashlib.sha256()
+        hasher.update(self.get_config_hash().encode())
+        hasher.update(text.encode('utf-8'))
+        return hasher.hexdigest()
+
+    def _load_text_embedding_from_cache(self, text: str) -> torch.Tensor | None:
+        cached_tensor = self._text_cache_mem.get(text)
+        if cached_tensor is not None:
+            return cached_tensor.clone()
+
+        cache_path = self._text_cache_dir / f"{self._text_cache_key(text)}.pt"
+        if cache_path.exists():
+            try:
+                tensor = torch.load(cache_path, map_location=self.device)
+                if not isinstance(tensor, torch.Tensor):
+                    raise TypeError("Cached embedding is not a tensor")
+                tensor = tensor.to(torch.float64).to(self.device)
+                self._text_cache_mem[text] = tensor
+                return tensor.clone()
+            except Exception as e:
+                print(f"Warning: Failed to load cached embedding for '{text[:50]}': {e}")
+                try:
+                    cache_path.unlink()
+                except Exception:
+                    pass
+        return None
+
+    def _store_text_embedding_in_cache(self, text: str, embedding: torch.Tensor) -> None:
+        self._text_cache_mem[text] = embedding
+        cache_path = self._text_cache_dir / f"{self._text_cache_key(text)}.pt"
+        try:
+            tensor_cpu = embedding.detach().to('cpu', dtype=torch.float64)
+            torch.save(tensor_cpu, cache_path)
+        except Exception as e:
+            print(f"Warning: Failed to cache embedding for '{text[:50]}': {e}")
+
 
 # --- Concrete Implementation: CLIPEmbedder ---
 
@@ -93,6 +138,10 @@ class CLIPEmbedder(BaseEmbedder):
     @torch.no_grad()
     def embed_text(self, text: str) -> torch.Tensor:
         """Embed text using CLIP."""
+        cached = self._load_text_embedding_from_cache(text)
+        if cached is not None:
+            return cached
+
         text_input = self.tokenizer(
             text,
             padding="max_length",
@@ -113,7 +162,9 @@ class CLIPEmbedder(BaseEmbedder):
         if self.normalize:
             embedding = embedding / torch.norm(embedding, p=2, dim=-1, keepdim=True)
 
-        return embedding.view(1, -1) # Ensure [1, dim] shape
+        embedding = embedding.view(1, -1).to(self.device)
+        self._store_text_embedding_in_cache(text, embedding)
+        return embedding.clone() # Ensure [1, dim] shape
 
     @torch.no_grad()
     def embed_image(self, image: PILImage) -> torch.Tensor:
@@ -201,10 +252,16 @@ class SigLIP2Embedder(BaseEmbedder):
     @torch.no_grad()
     def embed_text(self, text: str) -> torch.Tensor:
         """Embed text using SigLIP 2."""
+        cached = self._load_text_embedding_from_cache(text)
+        if cached is not None:
+            return cached
+
         # Handle the placeholder space character explicitly
         if text == ' ':
             emb_dim = self.get_embedding_dim()
-            return torch.zeros((1, emb_dim), dtype=torch.double, device=self.device)
+            embedding = torch.zeros((1, emb_dim), dtype=torch.double, device=self.device)
+            self._store_text_embedding_in_cache(text, embedding)
+            return embedding.clone()
     
         # Tokenize the text, explicitly requesting attention_mask
         inputs = self.tokenizer(
@@ -230,8 +287,10 @@ class SigLIP2Embedder(BaseEmbedder):
     
         if self.normalize:
             embedding = embedding / torch.norm(embedding, p=2, dim=-1, keepdim=True)
-    
-        return embedding.view(1, -1)  # Ensure [1, dim] shape
+
+        embedding = embedding.view(1, -1).to(self.device)
+        self._store_text_embedding_in_cache(text, embedding)
+        return embedding.clone()  # Ensure [1, dim] shape
 
     @torch.no_grad()
     def embed_image(self, image: PILImage) -> torch.Tensor:
@@ -341,4 +400,3 @@ def create_embedder(embedder_cfg: DictConfig) -> BaseEmbedder:
         return EmbedderClass(**args)
     except Exception as e:
         raise ValueError(f"Failed to instantiate embedder from config {embedder_cfg}: {e}")
-

@@ -5,6 +5,9 @@ import torch.nn.functional as F # Added for cosine_similarity
 import numpy as np
 import datetime
 import sys
+import random
+import hashlib
+from pathlib import Path
 
 import hydra
 from omegaconf import DictConfig, OmegaConf # Added OmegaConf
@@ -134,6 +137,8 @@ class LLMExperiment:
             self.feedbacks.append(feedback)
             self.designs.append(design)
             self.estimators.append(estimator)
+
+        self._estimation_episode_keys = None
 
         # --- Initialize Solver ---
         # The explorer uses the design and feedback from the *first* available set of components.
@@ -668,7 +673,7 @@ class LLMExperiment:
             print(f"Error loading estimator: {e}")
             return False
 
-    def _process_human_feedback(self, visits_data, feedback_data, benchmark_keys_to_exclude=None):
+    def _process_human_feedback(self, visits_data, feedback_data, benchmark_keys_to_exclude=None, estimation_keys_to_include=None):
         """
         Processes human feedback JSON and visits data to generate embeddings and labels
         suitable for training the RegularizedMultinomialEstimator.
@@ -677,14 +682,21 @@ class LLMExperiment:
             visits_data: Loaded visits structure List[List[Tuple(states, actions)]].
             feedback_data: Dictionary loaded from feedback.json.
             benchmark_keys_to_exclude (set): A set of episode keys (e.g., "design-15") to exclude from training.
+            estimation_keys_to_include (set|None): Optional set of episode keys (e.g., "design-5") allowed for training.
         """
         print("Processing human feedback...")
         if benchmark_keys_to_exclude is None:
             benchmark_keys_to_exclude = set()
+        else:
+            benchmark_keys_to_exclude = set(benchmark_keys_to_exclude)
+
+        if estimation_keys_to_include is not None:
+            estimation_keys_to_include = set(estimation_keys_to_include)
 
         collected_comparison_embeddings = []
         collected_labels = []
         num_policies = len(visits_data) # Infer number of policies from visits structure
+        embedding_cache = {}  # Cache prompt embeddings to avoid recomputing duplicates
 
         if num_policies == 0:
              print("Error: Cannot process feedback, visits data has zero policies.")
@@ -699,6 +711,9 @@ class LLMExperiment:
         skipped_count = 0
         error_count = 0
         excluded_for_benchmark_count = 0
+        excluded_for_estimation_count = 0
+        # Only train on feedback that matches the current algorithm for this run
+        current_algorithm = str(self.cfg.algorithm).lower()
 
         # --- Access the 'preferences' list ---
         preferences_list = feedback_data.get("preferences")
@@ -707,11 +722,28 @@ class LLMExperiment:
             return None, None
         # -------------------------------------------------
 
+        # Progress tracking helpers
+        total_preferences = len(preferences_list)
+        progress_bar = None
+        if total_preferences > 0:
+            try:
+                from tqdm.auto import tqdm
+                progress_bar = tqdm(total=total_preferences, desc="Processing feedback", unit="item")
+            except Exception:
+                progress_bar = None
+                print(f"Processing feedback entries: 0/{total_preferences}")
+
         # Iterate through the items in the preferences list
         for preference_entry in preferences_list:
             if not isinstance(preference_entry, dict):
                 print(f"Warning: Skipping invalid preference entry (not a dict): {preference_entry}")
                 skipped_count += 1
+                if progress_bar:
+                    progress_bar.update(1)
+                elif total_preferences:
+                    processed_so_far = processed_count + skipped_count + excluded_for_benchmark_count + excluded_for_estimation_count + error_count
+                    if processed_so_far % 50 == 0:
+                        print(f"Processing feedback entries: {processed_so_far}/{total_preferences}")
                 continue
 
             image_filename = preference_entry.get("filename")
@@ -720,16 +752,38 @@ class LLMExperiment:
             if image_filename is None or preferred_policy_idx_1based is None:
                 print(f"Warning: Skipping preference entry with missing 'filename' or 'preference': {preference_entry}")
                 skipped_count += 1
+                if progress_bar:
+                    progress_bar.update(1)
+                elif total_preferences:
+                    processed_so_far = processed_count + skipped_count + excluded_for_benchmark_count + excluded_for_estimation_count + error_count
+                    if processed_so_far % 50 == 0:
+                        print(f"Processing feedback entries: {processed_so_far}/{total_preferences}")
                 continue
-            
+
             match = filename_pattern.search(image_filename)
             if not match:
                 # print(f"Warning: Skipping feedback entry, could not parse filename: {image_filename}")
                 skipped_count += 1
+                if progress_bar:
+                    progress_bar.update(1)
+                elif total_preferences:
+                    processed_so_far = processed_count + skipped_count + excluded_for_benchmark_count + excluded_for_estimation_count + error_count
+                    if processed_so_far % 50 == 0:
+                        print(f"Processing feedback entries: {processed_so_far}/{total_preferences}")
                 continue
 
             try:
                 alg_name, ep_str, ts_str = match.groups()
+                # Filter out entries that don't match the current algorithm (design/random)
+                if str(alg_name).lower() != current_algorithm:
+                    skipped_count += 1
+                    if progress_bar:
+                        progress_bar.update(1)
+                    elif total_preferences:
+                        processed_so_far = processed_count + skipped_count + excluded_for_benchmark_count + excluded_for_estimation_count + error_count
+                        if processed_so_far % 50 == 0:
+                            print(f"Processing feedback entries: {processed_so_far}/{total_preferences}")
+                    continue
                 episode_idx = int(ep_str)
                 timestep_h = int(ts_str)
 
@@ -738,6 +792,9 @@ class LLMExperiment:
                 if episode_key in benchmark_keys_to_exclude:
                     excluded_for_benchmark_count += 1
                     continue # Skip this entry, it's for benchmarking
+                if estimation_keys_to_include is not None and episode_key not in estimation_keys_to_include:
+                    excluded_for_estimation_count += 1
+                    continue
                 # -------------------------------------------------------------
 
                 # Validate preferred policy index (must be between 1 and num_policies)
@@ -767,8 +824,15 @@ class LLMExperiment:
 
                         # Recreate prompt and embed
                         prompt_k = create_prompt(truncated_actions_policy_k, self.env)
-                        embedding_k = self.embedder.embed_text(prompt_k) # Shape [1, dim]
-                        embeddings_for_this_comparison.append(embedding_k.detach().cpu())
+
+                        if prompt_k in embedding_cache:
+                            embedding_cpu = embedding_cache[prompt_k]
+                        else:
+                            embedding_raw = self.embedder.embed_text(prompt_k) # Shape [1, dim]
+                            embedding_cpu = embedding_raw.detach().cpu()
+                            embedding_cache[prompt_k] = embedding_cpu
+
+                        embeddings_for_this_comparison.append(embedding_cpu)
 
                     except IndexError:
                         print(f"Warning: Missing visit data for policy {k}, episode {episode_idx}.")
@@ -801,8 +865,21 @@ class LLMExperiment:
                  print(f"Error processing feedback entry for {image_filename}: {e}")
                  error_count += 1
                  skipped_count += 1
+            finally:
+                if progress_bar:
+                    progress_bar.update(1)
+                elif total_preferences:
+                    processed_so_far = processed_count + skipped_count + excluded_for_benchmark_count + excluded_for_estimation_count + error_count
+                    if processed_so_far % 50 == 0 or processed_so_far == total_preferences:
+                        print(f"Processing feedback entries: {processed_so_far}/{total_preferences}")
 
-        print(f"Human feedback processing complete. Used for Training: {processed_count}, Excluded for Benchmark: {excluded_for_benchmark_count}, Skipped (other): {skipped_count}, Errors: {error_count}")
+        if progress_bar:
+            progress_bar.close()
+        if estimation_keys_to_include is not None and processed_count == 0:
+            print("Error: Estimation episode specification left no data for training.")
+            return None, None
+
+        print(f"Human feedback processing complete. Used for Training: {processed_count}, Excluded for Benchmark: {excluded_for_benchmark_count}, Excluded by Estimation Spec: {excluded_for_estimation_count}, Skipped (other): {skipped_count}, Errors: {error_count}")
 
         if not collected_comparison_embeddings or not collected_labels:
             print("Error: No valid comparison data generated from human feedback.")
@@ -814,6 +891,230 @@ class LLMExperiment:
 
         print(f"Generated training data shapes: Embeddings {final_comparison_embeddings.shape}, Labels {final_labels.shape}")
         return final_comparison_embeddings, final_labels
+
+    def _parse_benchmark_episode_spec(self, spec: str, available_algorithms) -> dict:
+        """Parse textual benchmark episode specification into per-algorithm episode sets."""
+        if not spec:
+            return {}
+
+        # Normalize available algorithms to lowercase strings for matching
+        available = {str(alg).lower(): set() for alg in available_algorithms}
+        if not available:
+            return {}
+
+        # Split on commas or whitespace, discard empty tokens
+        tokens = [token for token in re.split(r"[\s,]+", spec) if token]
+        if not tokens:
+            return {}
+
+        global_episodes = set()
+
+        for raw_token in tokens:
+            token = raw_token.strip()
+            if not token:
+                continue
+
+            # Strip optional surrounding brackets or parentheses
+            while len(token) > 1 and token[0] in "[(" and token[-1] in ")]":
+                token = token[1:-1].strip()
+            if not token:
+                continue
+
+            algorithm_key = None
+            range_part = token
+            if ':' in token:
+                algorithm_key, range_part = token.split(':', 1)
+                algorithm_key = algorithm_key.strip().lower()
+                range_part = range_part.strip()
+            else:
+                range_part = range_part.strip()
+
+            if not range_part:
+                continue
+
+            values = set()
+            if '-' in range_part:
+                start_str, end_str = range_part.split('-', 1)
+                try:
+                    start = int(start_str)
+                    end = int(end_str)
+                except ValueError:
+                    print(f"Warning: Unable to parse benchmark episode token '{raw_token}'.")
+                    continue
+                if end < start:
+                    start, end = end, start
+                values.update(range(start, end + 1))
+            else:
+                try:
+                    values.add(int(range_part))
+                except ValueError:
+                    print(f"Warning: Unable to parse benchmark episode token '{raw_token}'.")
+                    continue
+
+            if algorithm_key is None or algorithm_key in {'all', '*'}:
+                global_episodes.update(values)
+            else:
+                if algorithm_key not in available:
+                    print(f"Warning: Benchmark episode spec references unknown algorithm '{algorithm_key}'.")
+                    continue
+                available[algorithm_key].update(values)
+
+        # Apply global selections to each algorithm present
+        for alg in available:
+            if global_episodes:
+                available[alg].update(global_episodes)
+
+        # Drop algorithms with no specified episodes
+        return {alg: eps for alg, eps in available.items() if eps}
+
+    def _select_benchmark_episodes(self, feedback_path: str):
+        """Choose benchmark episodes.
+
+        Simplified policy:
+        - If the input feedback already contains 'benchmark_episode_keys', use them verbatim.
+        - Otherwise, select the last N episodes per algorithm present in the preferences
+          (N = cfg.num_benchmark_episodes, default 10), and record only 'benchmark_episode_keys'.
+        """
+        if not getattr(self, 'feedback_data', None):
+            return
+
+        self._estimation_episode_keys = None
+
+        episode_spec = str(self.cfg.get('benchmark_episode_spec') or '').strip()
+        estimation_spec = str(self.cfg.get('estimation_episode_spec') or '').strip()
+
+        stored_keys = self.feedback_data.get('benchmark_episode_keys') if isinstance(self.feedback_data.get('benchmark_episode_keys'), list) else []
+        has_stored_keys = bool(stored_keys)
+
+        preferences = self.feedback_data.get("preferences")
+        if not preferences:
+            if has_stored_keys:
+                stored_sorted = sorted(dict.fromkeys(stored_keys))
+                self.feedback_data['benchmark_episode_keys'] = stored_sorted
+                print(f"Using benchmark_episode_keys from feedback file (count={len(stored_sorted)}).")
+            else:
+                self.feedback_data.pop('benchmark_episode_keys', None)
+            if estimation_spec:
+                print(f"Warning: Estimation episode spec '{estimation_spec}' ignored because no feedback preferences are available.")
+            self.feedback_data.pop('estimation_episode_keys', None)
+            return
+
+        num_benchmark = self.cfg.get('num_benchmark_episodes', 10)
+        try:
+            num_benchmark = int(num_benchmark)
+        except (TypeError, ValueError):
+            num_benchmark = 10
+        if num_benchmark <= 0:
+            self.feedback_data.pop('estimation_episode_keys', None)
+            return
+
+        # Collect unique episodes per algorithm
+        episodes_by_alg = {}
+        for entry in preferences:
+            alg = entry.get('algorithm')
+            ep = entry.get('episode')
+            if alg is None or ep is None:
+                continue
+            try:
+                ep_idx = int(ep)
+            except (TypeError, ValueError):
+                continue
+            episodes_by_alg.setdefault(str(alg).lower(), set()).add(ep_idx)
+
+        if not episodes_by_alg:
+            self.feedback_data.pop('estimation_episode_keys', None)
+            return
+
+        final_benchmark_keys = None
+        benchmark_source = None
+
+        if episode_spec:
+            overrides = self._parse_benchmark_episode_spec(episode_spec, episodes_by_alg.keys())
+            if overrides:
+                specified_keys = []
+                for alg, episodes in overrides.items():
+                    available = episodes_by_alg.get(alg, set())
+                    if not available:
+                        print(f"Warning: Benchmark spec references algorithm '{alg}' with no episodes in data; skipping.")
+                        continue
+                    matching = sorted(ep for ep in episodes if ep in available)
+                    if not matching:
+                        print(f"Warning: Benchmark spec for algorithm '{alg}' did not match available episodes; skipping.")
+                        continue
+                    for ep in matching:
+                        specified_keys.append(f"{alg}-{ep}")
+                specified_keys = sorted(dict.fromkeys(specified_keys))
+                if specified_keys:
+                    final_benchmark_keys = specified_keys
+                    benchmark_source = ('spec', episode_spec)
+                else:
+                    print(f"Warning: Benchmark episode spec '{episode_spec}' did not match any episodes; falling back to automatic selection.")
+            else:
+                print(f"Warning: Benchmark episode spec '{episode_spec}' did not match any episodes; falling back to existing keys or automatic selection.")
+
+        if final_benchmark_keys is None and has_stored_keys:
+            final_benchmark_keys = sorted(dict.fromkeys(stored_keys))
+            benchmark_source = ('stored', len(final_benchmark_keys))
+
+        if final_benchmark_keys is None:
+            benchmark_episode_keys = []
+            for alg, eps in sorted(episodes_by_alg.items()):
+                sorted_eps = sorted(eps)
+                if not sorted_eps:
+                    continue
+                take = min(num_benchmark, len(sorted_eps))
+                last_eps = sorted_eps[-take:]
+                for ep in last_eps:
+                    benchmark_episode_keys.append(f"{alg}-{ep}")
+            final_benchmark_keys = sorted(dict.fromkeys(benchmark_episode_keys))
+            benchmark_source = ('auto', num_benchmark)
+
+        self.feedback_data['benchmark_episode_keys'] = final_benchmark_keys
+        if benchmark_source and benchmark_source[0] == 'spec':
+            print(f"Using benchmark episodes from spec '{episode_spec}': {final_benchmark_keys}")
+        elif benchmark_source and benchmark_source[0] == 'stored':
+            print(f"Using benchmark_episode_keys from feedback file (count={len(final_benchmark_keys)}).")
+        else:
+            print(f"Using last {num_benchmark} episodes per algorithm for benchmarking: {final_benchmark_keys}")
+
+        # Process optional estimation episode specification
+        self.feedback_data.pop('estimation_episode_keys', None)
+        if estimation_spec:
+            overrides = self._parse_benchmark_episode_spec(estimation_spec, episodes_by_alg.keys())
+            if overrides:
+                specified_keys = []
+                for alg, episodes in overrides.items():
+                    available = episodes_by_alg.get(alg, set())
+                    if not available:
+                        print(f"Warning: Estimation spec references algorithm '{alg}' with no episodes in data; skipping.")
+                        continue
+                    matching = sorted(ep for ep in episodes if ep in available)
+                    if not matching:
+                        print(f"Warning: Estimation spec for algorithm '{alg}' did not match available episodes; skipping.")
+                        continue
+                    for ep in matching:
+                        specified_keys.append(f"{alg}-{ep}")
+                specified_keys = sorted(dict.fromkeys(specified_keys))
+                if specified_keys:
+                    estimation_set = set(specified_keys)
+                    benchmark_set = set(final_benchmark_keys)
+                    overlap = estimation_set & benchmark_set
+                    if overlap:
+                        print(f"Warning: Estimation spec includes benchmark episodes {sorted(overlap)}; excluding them from training.")
+                        estimation_set -= overlap
+                    self._estimation_episode_keys = estimation_set
+                    estimation_list = sorted(estimation_set)
+                    self.feedback_data['estimation_episode_keys'] = estimation_list
+                    if estimation_list:
+                        print(f"Using estimation episodes from spec '{estimation_spec}': {estimation_list}")
+                    else:
+                        print(f"Warning: Estimation episode spec '{estimation_spec}' left no episodes after excluding benchmarks.")
+                else:
+                    print(f"Warning: Estimation episode spec '{estimation_spec}' did not match any episodes; using full training set.")
+            else:
+                print(f"Warning: Estimation episode spec '{estimation_spec}' did not match any episodes; using full training set.")
+        else:
+            self._estimation_episode_keys = None
 
     def run_test_only(self, mode: str, estimator_path: str = None, visits_path: str = None, feedback_path: str = None) -> bool:
         """
@@ -846,11 +1147,23 @@ class LLMExperiment:
                 import json
                 with open(abs_feedback_path, 'r') as f:
                     self.feedback_data = json.load(f)
-                # DO NOT modify self.env here. The user_prompt will be passed down.
+                # Feedback metadata (e.g., style_description) is stored for reference only.
+                self._select_benchmark_episodes(abs_feedback_path)
+                if self.feedback_data.get('benchmark_episode_keys'):
+                    override_feedback_path = Path(self.results_dir) / 'feedback_with_benchmarks.json'
+                    try:
+                        with open(override_feedback_path, 'w') as override_file:
+                            json.dump(self.feedback_data, override_file, indent=2)
+                        self.cfg.feedback_path = str(override_feedback_path)
+                        print(f"Saved feedback with benchmark selection to: {override_feedback_path}")
+                    except Exception as e:
+                        print(f"Warning: Failed to persist benchmark-adjusted feedback: {e}")
             except Exception as e:
                 print(f"Error loading or parsing feedback data from {abs_feedback_path}: {e}")
                 return False
         # --- End Centralized Data Loading ---
+        
+        # (Reverted) No secondary visits loading; benchmarking uses the current run's visits
 
         # --- Mode Logic ---
         if mode == "load_estimator":
@@ -943,7 +1256,13 @@ class LLMExperiment:
             benchmark_keys = set(self.feedback_data.get("benchmark_episode_keys", []))
             print(f"Excluding {len(benchmark_keys)} benchmark episodes from training.")
             
-            comparison_embeddings, labels = self._process_human_feedback(self.visits, self.feedback_data, benchmark_keys_to_exclude=benchmark_keys)
+            estimation_keys = getattr(self, '_estimation_episode_keys', None)
+            comparison_embeddings, labels = self._process_human_feedback(
+                self.visits,
+                self.feedback_data,
+                benchmark_keys_to_exclude=benchmark_keys,
+                estimation_keys_to_include=estimation_keys,
+            )
 
             if comparison_embeddings is None or labels is None:
                 print("Error: Failed to process human feedback into training data. Skipping estimator fitting.")
@@ -963,7 +1282,7 @@ class LLMExperiment:
                 print(f"Error fitting estimator with human feedback: {e}")
                 return False
             
-            # Step 2: Proceed to testing, passing feedback_data down so components can use the user_prompt.
+            # Step 2: Proceed to testing, passing feedback_data down so components can use the style description.
             # The environment's base_prompt is NOT modified.
             self.test_and_save(current_mode=mode, feedback_data=self.feedback_data)
             return True
@@ -991,16 +1310,25 @@ class LLMExperiment:
         valid_visits = self.visits and isinstance(self.visits, list) and self.visits[0]
         results.set_visits(self.visits if valid_visits else None) # Set to None if invalid/empty
 
-        # Extract user_prompts list from feedback_data if available
-        user_prompts = []
+        # Extract style_description from feedback_data if available (metadata only)
+        style_description = None
         if feedback_data:
-            # New key is 'user_prompts' (plural list)
-            user_prompts = feedback_data.get("user_prompts", [])
-            if not user_prompts and feedback_data.get("user_prompt"):
-                # Fallback for old format (single prompt)
-                user_prompts = [feedback_data.get("user_prompt")]
-            if user_prompts:
-                results.add_metadata('user_prompts', user_prompts)
+            candidate_description = feedback_data.get("style_description")
+            if isinstance(candidate_description, str) and candidate_description.strip():
+                style_description = candidate_description.strip()
+            else:
+                legacy_prompt = feedback_data.get("user_prompt")
+                if isinstance(legacy_prompt, str) and legacy_prompt.strip():
+                    style_description = legacy_prompt.strip()
+                else:
+                    legacy_prompts = feedback_data.get("user_prompts", [])
+                    if isinstance(legacy_prompts, list):
+                        for prompt in legacy_prompts:
+                            if isinstance(prompt, str) and prompt.strip():
+                                style_description = prompt.strip()
+                                break
+            if style_description:
+                results.add_metadata('style_description', style_description)
 
 
         # --- Pre-run Validation ---
@@ -1173,47 +1501,7 @@ class LLMExperiment:
                     except Exception as e:
                         print(f"  Error running tester {tester_name} for model '{model_name}': {e}")
 
-            # Now handle image generation testers with multiple prompts
-            if image_gen_testers and user_prompts:
-                print(f"\n--- Running Image Generation for {len(user_prompts)} prompts ---")
-                for user_prompt in user_prompts:
-                    print(f"  Processing prompt: '{user_prompt}'")
-                    # We assume image generation is only for the first model/estimator
-                    model_name = self.scorer_model_names[0] if self.num_scorer_models > 0 else "human_feedback"
-                    estimator = self.estimators[0] if self.estimators else None
-                    theta_star = self._theta_stars[0] if self._theta_stars else None
-                    scorer_model = self._scorer_models[0] if self._scorer_models else None
-
-                    for tester in image_gen_testers:
-                        tester_name = type(tester).__name__
-                        print(f"    Running tester: {tester_name}")
-                        try:
-                            test_args = {
-                                'cfg': self.cfg, 'env': self.env, 'estimator': estimator,
-                                'theta_star': theta_star, 'scorer_model': scorer_model,
-                                'training_words_list': self.training_words, 'testing_words_list': self.testing_words,
-                                'visits': self.visits if hasattr(self, 'visits') else None,
-                                'all_estimators': self.estimators, 'all_gt_scorer_models': self._scorer_models,
-                                'override_base_prompt': user_prompt
-                            }
-                            tester_results = tester.run_test(**test_args)
-                            if tester_results:
-                                ig_saver_instance = next((s for s in self.savers if isinstance(s, ImageGenerationSaver)), None)
-                                if ig_saver_instance:
-                                    from components.results import ExperimentResults
-                                    temp_ig_results = ExperimentResults()
-                                    for key, value in tester_results.items(): temp_ig_results.add_metric(key, value)
-                                    temp_ig_results.metadata['current_model_name'] = model_name
-                                    temp_ig_results.metadata['all_gt_scorer_models'] = self._scorer_models
-                                    temp_ig_results.metadata['scorer_model_names'] = self.scorer_model_names
-                                    temp_ig_results.add_metadata('user_prompt', user_prompt) # Pass the specific prompt
-                                    temp_ig_results.estimators = self.estimators
-                                    print(f"    Running ImageGenerationSaver for prompt '{user_prompt}'...")
-                                    ig_saver_instance.save_result(temp_ig_results)
-                                else:
-                                    print(f"    Warning: ImageGenerationSaver not found. Cannot save image generation results for prompt '{user_prompt}'.")
-                        except Exception as e:
-                            print(f"    Error running tester {tester_name} for prompt '{user_prompt}': {e}")
+            # Image generation testers rely on prompts derived from visits; style_description is metadata only.
             print("--------------------------------------\n")
 
         # If there's only one model (or one set of metrics, like in human feedback mode), 

@@ -233,16 +233,8 @@ class ImageGenerationSaver(BaseSaver):
         # Create a base directory for this model's images, e.g., results/images_sunny/
         base_images_dir = os.path.join(self.results_dir, f"images_{current_model_name}")
 
-        # Check for a specific user prompt to create a nested subdirectory
-        user_prompt_for_dir = results.metadata.get('user_prompt')
-        if user_prompt_for_dir:
-            # Sanitize the prompt to create a valid directory name
-            sanitized_prompt = re.sub(r'[^\w\s-]', '', user_prompt_for_dir).strip().replace(' ', '_')
-            sanitized_prompt = sanitized_prompt[:50] # Limit length for filesystem compatibility
-            # The final directory will be nested, e.g., .../images_human_feedback/a_cat_sleeping/
-            output_images_dir = os.path.join(base_images_dir, sanitized_prompt)
-        else:
-            output_images_dir = base_images_dir
+        # Output directory is determined by model name; feedback metadata is kept for reference only.
+        output_images_dir = base_images_dir
 
         os.makedirs(output_images_dir, exist_ok=True)
         
@@ -348,13 +340,9 @@ class ImageGenerationSaver(BaseSaver):
             results: ExperimentResults object, used to access estimator for image scoring
         """
         # Determine the effective base prompt with a clear priority:
-        # 1. user_prompt from results metadata (for human feedback runs)
-        # 2. base_prompt from the saver's own config
-        # 3. base_prompt from the global environment
-        user_prompt_override = results.metadata.get('user_prompt')
-        if user_prompt_override is not None:
-            effective_base_prompt = user_prompt_override
-        elif self.base_prompt is not None:
+        # 1. base_prompt from the saver's own config
+        # 2. base_prompt from the global environment
+        if self.base_prompt is not None:
             effective_base_prompt = self.base_prompt
         else:
             effective_base_prompt = self.env.base_prompt

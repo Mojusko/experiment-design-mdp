@@ -245,6 +245,15 @@ def generate_emissions(unique_elements: List[str], embedder, verbose: bool = Tru
     total_elements = len(unique_elements)
     print_interval = 10  # Print progress every 10 iterations
 
+    progress_bar = None
+    if not verbose and total_elements > 0:
+        try:
+            from tqdm.auto import tqdm  # Local import, tqdm might not be available everywhere
+            progress_bar = tqdm(total=total_elements, desc="Embedding tokens", unit="token")
+        except Exception:
+            progress_bar = None
+            print("Embedding tokens: starting... 0/{}".format(total_elements))
+
     for i, text in enumerate(unique_elements):
         embed_text = text  # Always embed the text as is
         if verbose:
@@ -258,8 +267,17 @@ def generate_emissions(unique_elements: List[str], embedder, verbose: bool = Tru
         # Print progress
         if verbose and ((i + 1) % print_interval == 0 or (i + 1) == total_elements):
             print(f"Generated emission {i + 1}/{total_elements}")
+        elif progress_bar:
+            progress_bar.update(1)
+        elif not verbose and ((i + 1) % print_interval == 0 or (i + 1) == total_elements):
+            print(f"Embedding tokens: {i + 1}/{total_elements}")
+
+    if progress_bar:
+        progress_bar.close()
 
     if verbose: # Print done message only if generating
+        print("Done generating emissions.")
+    elif total_elements > 0:
         print("Done generating emissions.")
     emissions = torch.vstack(emissions)
 

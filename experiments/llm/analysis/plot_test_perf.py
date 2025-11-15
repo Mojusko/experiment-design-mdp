@@ -453,9 +453,9 @@ def plot_feedback_over_episodes(data, episodes_x_axis, error_type_to_plot, model
         }
     }
     
-    font_size_axis = 22  # Increased from 18
-    font_size_title = 24 # Increased from 20
-    font_size_ticks_legend = 20 # Increased from 16
+    font_size_axis = 32  # Larger axes labels for publication-quality readability
+    font_size_title = 34 # Larger title text
+    font_size_ticks_legend = 30 # Larger tick and legend labels
 
     for alg in algorithms:
         means = []
@@ -556,19 +556,25 @@ def plot_feedback_comparison_bar(data, episode_filter, title_suffix="", model_na
     x = np.arange(len(labels))
     width = 0.35
 
+    font_size_axis = 30
+    font_size_title = 34
+    font_size_ticks = 28
+    legend_size = 28
+
     fig, ax = plt.subplots(figsize=(10, 6))
     rects1 = ax.bar(x - width/2, preference_means, width, yerr=preference_sems, capsize=5, label="Preference Error", color='tab:blue')
     rects2 = ax.bar(x + width/2, cosine_means, width, yerr=cosine_sems, capsize=5, label="Cosine Error", color='tab:orange')
 
-    ax.set_xlabel("Algorithm")
-    ax.set_ylabel("Error Rate")
+    ax.set_xlabel("Algorithm", fontsize=font_size_axis)
+    ax.set_ylabel("Error Rate", fontsize=font_size_axis)
     ax.set_xticks(x)
-    ax.set_xticklabels(labels)
+    ax.set_xticklabels(labels, fontsize=font_size_ticks)
+    ax.tick_params(axis='y', labelsize=font_size_ticks)
     title = f"Algorithm Comparison on Error Metrics{title_suffix}"
     if model_name_filter:
         title += f" (Model: {model_name_filter})"
-    ax.set_title(title)
-    ax.legend()
+    ax.set_title(title, fontsize=font_size_title)
+    ax.legend(fontsize=legend_size)
     ax.grid(True, linestyle=':', alpha=0.7, axis='y')
     fig.tight_layout()
     if save_plots:

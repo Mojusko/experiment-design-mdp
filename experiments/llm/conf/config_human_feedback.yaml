@@ -12,9 +12,11 @@ verbose: false
 cache_dir: "${oc.env:HOME}/.cache/huggingface/hub"
 accuracy: 1e-14 # Needed for estimator initialization? Check if required.
 experiment_id: "" # Define top-level key to allow overriding from Makefile
-base_prompt: "" # Will be overridden by user_prompt from feedback.json
+base_prompt: "" # Feedback metadata (style_description) is stored but not injected here
 include_base_prompt_in_first_tokens: false # Add for LLMGrid initialization
-num_benchmark_episodes: 10 # Number of episodes to hold out from training for benchmarking against human feedback.
+num_benchmark_episodes: 10 # Number of episodes to hold out (per algorithm); joint pool is 2*N across algs.
+benchmark_episode_spec: null # Optional explicit episode selection (e.g., "70-79" or "design:60-69")
+estimation_episode_spec: null # Optional explicit training episode selection (e.g., "design:0-39")
 
 # --- Experiment Settings Override ---
 # Inherit from feedback_comparison via defaults, but override prefix and scorer_model
@@ -48,12 +50,12 @@ override_results_dir: false # Default, can be overridden via command line if RES
 tester:
   - _target_: components.tester.HumanFeedbackBenchmarkTester
     params: {} # Compares learned model to held-out human choices
-  - _target_: components.tester.ImageGenerationTester
-    params:
-      take_best_worst_N: 4
-      prompt_ranking_model: "current_iteration_estimator" # Use the newly learned model
-      # base_prompt will be set dynamically from the feedback.json user_prompt
-      beam_width: 20
+  # - _target_: components.tester.ImageGenerationTester
+  #   params:
+  #     take_best_worst_N: 4
+  #     prompt_ranking_model: "current_iteration_estimator" # Use the newly learned model
+  #     # base_prompt remains driven by the configured environment/visits
+  #     beam_width: 20
 
 savers:
   - _target_: components.saver.LearnedEstimatorSaver
@@ -63,10 +65,10 @@ savers:
     params:
       filename: "metrics.json"
       # No keys specified, will save all metrics from testers (e.g., benchmark_accuracy)
-  - _target_: components.saver.ImageGenerationSaver
-    params:
-      take_best_worst_N: 4
-      add_scores: ['prompt'] # Only show prompt scores on summary image
+  # - _target_: components.saver.ImageGenerationSaver
+  #   params:
+  #     take_best_worst_N: 4
+  #     add_scores: ['prompt'] # Only show prompt scores on summary image
   - _target_: components.saver.ConfSaver
     params:
       filename: "config_resolved.yaml"

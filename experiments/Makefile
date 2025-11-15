@@ -623,7 +623,16 @@ llm-find-design-frequency: $(JOBS_LLM_DESIGN_FREQUENCY)
 llm-human-feedback:
 	@$(if $(VISITS_PATH),,$(error VISITS_PATH is required))
 	@$(if $(FEEDBACK_PATH),,$(error FEEDBACK_PATH is required))
-	cd llm && TIMESTAMP=$(TIMESTAMP) OMP_NUM_THREADS=1 MKL_NUM_THREADS=1 $(PYTHONPATH) run_exp.py --config-name=config_human_feedback algorithm=$(ALGORITHM) visits_path="$(VISITS_PATH)" feedback_path="$(FEEDBACK_PATH)" $(if $(RESULTS_DIR),results_dir="$(RESULTS_DIR)" override_results_dir=true,) experiment_id="run-$(shell basename $(VISITS_PATH) .pkl)" seed=1
+	cd llm && TIMESTAMP=$(TIMESTAMP) OMP_NUM_THREADS=1 MKL_NUM_THREADS=1 $(PYTHONPATH) run_exp.py --config-name=config_human_feedback algorithm=$(ALGORITHM) visits_path="$(VISITS_PATH)" feedback_path="$(FEEDBACK_PATH)" $(if $(FEEDBACK_LAMBDA),feedback.lambda=$(FEEDBACK_LAMBDA),) $(if $(EXPERIMENT_EPISODES),experiment.episodes=$(EXPERIMENT_EPISODES),) $(if $(FEEDBACK_NUM_ROUNDS),feedback.num_rounds=$(FEEDBACK_NUM_ROUNDS),) $(if $(NUM_BENCHMARK_EPISODES),num_benchmark_episodes=$(NUM_BENCHMARK_EPISODES),) $(if $(BENCHMARK_EPISODES),benchmark_episode_spec=\"$(BENCHMARK_EPISODES)\",) $(if $(ESTIMATION_EPISODES),estimation_episode_spec=\"$(ESTIMATION_EPISODES)\",) $(if $(RESULTS_DIR),results_dir="$(RESULTS_DIR)" override_results_dir=true,) experiment_id="run-$(shell basename $(VISITS_PATH) .pkl)" seed=1
+
+# Example: make llm-human-feedback-batch FEEDBACK_FILES=1.jsonl,2.jsonl
+# Optional overrides:
+#   RESULTS_ROOT=results/human-feedback-experiments
+#   ALGORITHMS="design random"
+#   DRY_RUN=1
+llm-human-feedback-batch:
+	@$(if $(FEEDBACK_FILES),,$(error FEEDBACK_FILES must be set, e.g., make llm-human-feedback-batch FEEDBACK_FILES=1.jsonl,2.jsonl))
+	cd llm && $(PYTHONPATH) run_human_feedback_batch.py --feedback-files "$(FEEDBACK_FILES)" $(if $(RESULTS_ROOT),--results-root "$(RESULTS_ROOT)",) $(if $(ALGORITHMS),--algorithms "$(ALGORITHMS)",) $(if $(FEEDBACK_NUM_ROUNDS),--feedback-num-rounds $(FEEDBACK_NUM_ROUNDS),) $(if $(NUM_BENCHMARK_EPISODES),--num-benchmark-episodes $(NUM_BENCHMARK_EPISODES),) $(if $(BENCHMARK_EPISODES),--benchmark-episodes "$(BENCHMARK_EPISODES)",) $(if $(ESTIMATION_EPISODES),--estimation-episodes "$(ESTIMATION_EPISODES)",) $(if $(DRY_RUN),--dry-run,)
 
 # Define jobs for inspecting visits using VisitsImageSaver
 JOBS_LLM_INSPECT_VISITS := $(addprefix job-llm-inspect-visit-,$(NUMBERS_LLM))
