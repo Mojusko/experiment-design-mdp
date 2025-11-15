@@ -127,6 +127,107 @@ class StableDiffusionGenerator():
         )
 
     @torch.no_grad()
+    def sample_batch(self, prompts: List[str], embedder: BaseEmbedder) -> List[Tuple[np.ndarray, torch.Tensor]]:
+        """Generates multiple images from text prompts in a batch for efficiency.
+
+        Args:
+            prompts (List[str]): List of text prompts to generate images from.
+            embedder (BaseEmbedder): The embedder instance to use for image embedding.
+
+        Returns:
+            List[Tuple[np.ndarray, torch.Tensor]]: List of (image_array, image_embedding) tuples.
+        """
+        batch_size = len(prompts)
+
+        # Tokenize all prompts together
+        text_input = self._tokenizer(
+            prompts,
+            padding="max_length",
+            max_length=self._tokenizer.model_max_length,
+            truncation=True,
+            return_tensors="pt"
+        )
+
+        # Get text embeddings for all prompts
+        text_embeddings = self._text_encoder(text_input.input_ids.to(self.device))[0]
+
+        # Create unconditioned embeddings for the batch
+        max_length = text_input.input_ids.shape[-1]
+        uncond_input = self._tokenizer(
+            [""] * batch_size,
+            padding="max_length",
+            max_length=max_length,
+            return_tensors="pt"
+        )
+        uncond_embeddings = self._text_encoder(uncond_input.input_ids.to(self.device))[0]
+
+        # Concatenate for classifier-free guidance
+        text_embeddings = torch.cat([uncond_embeddings, text_embeddings])
+
+        # Generate deterministic latents for each prompt based on prompt hash
+        latents_height = self._image_size // 8
+        latents_width = self._image_size // 8
+        in_channels = self._unet.config.in_channels
+
+        # Generate latents for each prompt with its own deterministic seed
+        latents_list = []
+        for prompt in prompts:
+            prompt_seed = _get_seed_from_prompt(prompt)
+            generator = torch.Generator(device=self.device).manual_seed(prompt_seed)
+            latent = torch.randn(
+                (1, in_channels, latents_height, latents_width),
+                generator=generator,
+                device=self.device
+            )
+            latents_list.append(latent)
+
+        # Stack all latents into a batch
+        latents = torch.cat(latents_list, dim=0)
+
+        # Prepare latents
+        self._scheduler.set_timesteps(self.num_inference_steps)
+        latents = latents * self._scheduler.init_noise_sigma
+
+        # Denoising loop
+        for t in self._scheduler.timesteps:
+            # Expand latents for classifier-free guidance
+            latent_model_input = torch.cat([latents] * 2)
+            latent_model_input = self._scheduler.scale_model_input(latent_model_input, timestep=t)
+
+            # Predict noise residual
+            noise_pred = self._unet(
+                latent_model_input,
+                t,
+                encoder_hidden_states=text_embeddings
+            ).sample
+
+            # Perform guidance
+            noise_pred_uncond, noise_pred_text = noise_pred.chunk(2)
+            noise_pred = noise_pred_uncond + self.guidance_scale * (noise_pred_text - noise_pred_uncond)
+
+            # Compute previous noisy sample
+            latents = self._scheduler.step(noise_pred, t, latents).prev_sample
+
+        # Decode latents to images (entire batch at once)
+        latents = 1 / 0.18215 * latents
+        images = self._vae.decode(latents).sample
+
+        # Process images
+        images = (images / 2 + 0.5).clamp(0, 1)
+        images = images.detach().cpu().permute(0, 2, 3, 1).numpy()
+        images = (images * 255).round().astype("uint8")
+
+        # Convert each image to PIL and embed
+        results = []
+        for i in range(batch_size):
+            image_np = images[i]
+            pil_image = PIL.Image.fromarray(image_np)
+            image_embedding = embedder.embed_image(pil_image)
+            results.append((image_np, image_embedding.detach()))
+
+        return results
+
+    @torch.no_grad()
     def sample(self, prompt: str, embedder: BaseEmbedder, raw: bool = False) -> Union[np.ndarray, Tuple[np.ndarray, torch.Tensor]]:
         """Generates an image from a text prompt and embeds it using the provided embedder.
 
@@ -228,203 +329,6 @@ class StableDiffusionGenerator():
         return (self._image_size, self._image_size, 3)
 
 
-class TripleGuidanceStableDiffusionGenerator():
-    """
-    Stable Diffusion generator implementing triple guidance:
-    1. Unconditional
-    2. Text Prompt
-    3. Estimator Vector (Preference Direction)
-    """
-    def __init__(
-        self,
-        stable_diffusion_id: str = DEFAULT_CONFIG['stable_diffusion_id'],
-        num_inference_steps: int = DEFAULT_CONFIG['num_inference_steps'],
-        guidance_scale: float = DEFAULT_CONFIG['guidance_scale'], # Scale for text prompt
-        guidance_scale_2: float = 1.0, # Scale for estimator vector (needs tuning)
-        image_size: int = DEFAULT_CONFIG['image_size'],
-        seed: int = DEFAULT_CONFIG['seed'], # Base seed, but prompt seed overrides in sample
-        MODELS_CACHE_DIR: str = DEFAULT_CONFIG['MODELS_CACHE_DIR'],
-        normalize_estimator: bool = True # Flag to normalize estimator embedding
-    ) -> None:
-        """
-        Args:
-            stable_diffusion_id (str): SD model identifier.
-            num_inference_steps (int): Number of denoising steps.
-            guidance_scale (float): Guidance scale for the text prompt condition.
-            guidance_scale_2 (float): Guidance scale for the estimator vector condition.
-            image_size (int): Size of generated images.
-            seed (int): Base random seed (overridden by prompt-specific seed in sample).
-            MODELS_CACHE_DIR (str): Directory for model cache.
-            normalize_estimator (bool): Whether to L2 normalize the estimator embedding before use.
-        """
-        self.seed = seed
-        self.device = 'cuda' if torch.cuda.is_available() else 'cpu'
-        self.num_inference_steps = num_inference_steps
-        self.guidance_scale = guidance_scale # Text prompt scale
-        self.guidance_scale_2 = guidance_scale_2 # Estimator scale
-        self.normalize_estimator = normalize_estimator # Store normalization flag
-        self.MODELS_CACHE_DIR = MODELS_CACHE_DIR
-        self._image_size = image_size
-
-        # Load SD components (tokenizer, text encoder, unet, vae, scheduler)
-        # This is identical to StableDiffusionGenerator initialization
-        self._tokenizer = CLIPTokenizer.from_pretrained(
-            stable_diffusion_id, subfolder="tokenizer", cache_dir=str(MODELS_CACHE_DIR)
-        )
-        self._text_encoder = CLIPTextModel.from_pretrained(
-            stable_diffusion_id, subfolder="text_encoder", cache_dir=str(MODELS_CACHE_DIR)
-        ).to(self.device)
-        self._unet = UNet2DConditionModel.from_pretrained(
-            stable_diffusion_id, subfolder="unet", cache_dir=str(MODELS_CACHE_DIR)
-        ).to(self.device)
-        self._vae = AutoencoderKL.from_pretrained(
-            stable_diffusion_id, subfolder="vae", cache_dir=str(MODELS_CACHE_DIR)
-        ).to(self.device)
-        self._scheduler = LMSDiscreteScheduler(
-            beta_start=0.00085, beta_end=0.012, beta_schedule="scaled_linear", num_train_timesteps=1000
-        )
-
-        self.seed_generator() # Initialize base generator state
-        self.latents = None # Initialize latents
-
-    def seed_generator(self) -> None:
-        """Sets up the random generator based on the current seed."""
-        if self.seed is not None: # Allow seed to be None for non-deterministic base
-            self._generator = torch.Generator(device=self.device).manual_seed(self.seed)
-        else:
-            self._generator = torch.Generator(device=self.device)
-            self._generator.seed() # Seed with system randomness
-
-    @torch.no_grad()
-    def resample_random(self) -> None:
-        """Generates new random latents for image generation."""
-        latents_height = self._image_size // 8
-        latents_width = self._image_size // 8
-        in_channels = self._unet.config.in_channels
-        # Use the generator initialized/seeded by seed_generator
-        self.latents = torch.randn(
-            (1, in_channels, latents_height, latents_width),
-            generator=self._generator,
-            device=self.device
-        )
-
-    @torch.no_grad()
-    def sample(self, prompt: str, estimator_prompt: str = None, embedder: BaseEmbedder = None, raw: bool = False) -> Union[np.ndarray, Tuple[np.ndarray, torch.Tensor]]:
-        """
-        Generates an image using triple guidance (uncond, prompt, estimator_prompt).
-
-        Args:
-            prompt (str): The main text prompt.
-            estimator_prompt (str, optional): Text prompt for the estimator guidance. Defaults to None.
-            embedder (BaseEmbedder): Embedder instance for final image embedding. Required.
-            raw (bool): If True, return raw image tensor.
-
-        Returns:
-            Union[np.ndarray, Tuple[np.ndarray, torch.Tensor]]:
-                - If raw=False: (numpy image array [H, W, C], image embedding tensor [1, D])
-                - If raw=True: (numpy image array [H, W, C], raw image tensor, image embedding tensor [1, D])
-        """
-        # --- Seeding ---
-        # Set SD seed based on the prompt for deterministic generation per prompt
-        self.seed = _get_seed_from_prompt(prompt)
-        self.seed_generator() # Re-seed the generator for this specific prompt
-
-        # --- Initial Latents ---
-        # Generate initial noise using the prompt-seeded generator
-        self.resample_random() # Generate noise based on the current self._generator state
-        latents = self.latents.to(self.device) # Use the generated noise
-
-        # --- Prepare Embeddings ---
-        # 1. Unconditional Embedding
-        max_length = self._tokenizer.model_max_length
-        uncond_input = self._tokenizer(
-            [""], padding="max_length", max_length=max_length, return_tensors="pt"
-        )
-        uncond_embeddings = self._text_encoder(uncond_input.input_ids.to(self.device))[0] # Shape: [1, 77, 768]
-
-        # 2. Text Prompt Embedding
-        text_input = self._tokenizer(
-            [prompt], padding="max_length", max_length=max_length, truncation=True, return_tensors="pt"
-        )
-        text_embeddings = self._text_encoder(text_input.input_ids.to(self.device))[0] # Shape: [1, 77, 768]
-
-        # 3. Estimator Prompt Embedding (if provided)
-        if estimator_prompt:
-            estimator_input = self._tokenizer(
-                [estimator_prompt], padding="max_length", max_length=max_length, truncation=True, return_tensors="pt"
-            )
-            estimator_embeddings = self._text_encoder(estimator_input.input_ids.to(self.device))[0] # Shape: [1, 77, 768]
-
-            # Normalize estimator embedding if requested
-            if self.normalize_estimator:
-                # Normalize across the embedding dimension (last dimension)
-                estimator_embeddings = torch.nn.functional.normalize(estimator_embeddings, p=2, dim=-1)
-
-            # Concatenate all three embeddings for UNet input
-            # Order: Unconditional, Text, Estimator
-            combined_embeddings = torch.cat([uncond_embeddings, text_embeddings, estimator_embeddings])
-            num_conditions = 3
-        else:
-            # If no estimator prompt, use standard CFG
-            combined_embeddings = torch.cat([uncond_embeddings, text_embeddings])
-            num_conditions = 2
-
-        # --- Denoising Loop ---
-        self._scheduler.set_timesteps(self.num_inference_steps)
-        latents = latents * self._scheduler.init_noise_sigma # Scale initial noise
-
-        for t in self._scheduler.timesteps:
-            # Expand latents for the conditions (2 or 3)
-            latent_model_input = torch.cat([latents] * num_conditions)
-            latent_model_input = self._scheduler.scale_model_input(latent_model_input, timestep=t)
-
-            # Predict noise residual for all conditions (uncond, text, [estimator])
-            noise_pred = self._unet(
-                latent_model_input,
-                t,
-                encoder_hidden_states=combined_embeddings
-            ).sample
-
-            # Perform guidance based on number of conditions
-            if num_conditions == 3:
-                noise_pred_uncond, noise_pred_text, noise_pred_estimator = noise_pred.chunk(3)
-                noise_pred = noise_pred_uncond + \
-                             self.guidance_scale * (noise_pred_text - noise_pred_uncond) + \
-                             self.guidance_scale_2 * (noise_pred_estimator - noise_pred_uncond)
-            else: # num_conditions == 2 (standard CFG)
-                noise_pred_uncond, noise_pred_text = noise_pred.chunk(2)
-                noise_pred = noise_pred_uncond + self.guidance_scale * (noise_pred_text - noise_pred_uncond)
-
-            # Compute previous noisy sample
-            latents = self._scheduler.step(noise_pred, t, latents).prev_sample
-
-        # --- Decode and Post-process ---
-        latents = 1 / 0.18215 * latents
-        image = self._vae.decode(latents).sample
-        image_raw = image.clone() # Keep raw tensor if needed
-
-        image = (image / 2 + 0.5).clamp(0, 1)
-        image = image.detach().cpu().permute(0, 2, 3, 1).numpy()
-        image = (image * 255).round().astype("uint8")[0] # Final numpy image [H, W, C]
-
-        # --- Embed Final Image ---
-        pil_image = PIL.Image.fromarray(image)
-        # --- Embed Final Image ---
-        if embedder is None:
-             raise ValueError("Embedder instance must be provided to TripleGuidanceStableDiffusionGenerator.sample")
-        pil_image = PIL.Image.fromarray(image)
-        image_embedding = embedder.embed_image(pil_image) # Use the passed embedder
-
-        if raw:
-            return image, image_raw.detach().cpu(), image_embedding.detach()
-        return image, image_embedding.detach()
-
-    @property
-    def image_size(self) -> Tuple[int, int, int]:
-        """Returns the output image dimensions."""
-        return (self._image_size, self._image_size, 3)
-
-
 if __name__ == "__main__":
     # Set up argument parser
     parser = argparse.ArgumentParser(description="Generate an image using StableDiffusionGenerator")
@@ -433,9 +337,7 @@ if __name__ == "__main__":
     parser.add_argument("--seed", type=int, default=DEFAULT_CONFIG["seed"], help=f"Random seed for reproducibility (default: {DEFAULT_CONFIG['seed']})") # Note: Seed is derived from prompt internally by generators
     parser.add_argument("--image_size", type=int, default=DEFAULT_CONFIG["image_size"], help=f"Size of the generated image (default: {DEFAULT_CONFIG['image_size']})")
     parser.add_argument("--num_inference_steps", type=int, default=DEFAULT_CONFIG["num_inference_steps"], help=f"Number of inference steps (default: {DEFAULT_CONFIG['num_inference_steps']})")
-    parser.add_argument("--guidance_prompt", type=float, default=DEFAULT_CONFIG["guidance_scale"], help=f"Guidance scale for text prompt (default: {DEFAULT_CONFIG['guidance_scale']})")
-    parser.add_argument("--guidance_estimator", type=float, default=1.0, help="Guidance scale for estimator vector (default: 1.0)")
-    parser.add_argument("--estimator", type=str, default=None, help="Optional estimator: path to .pt file or text to embed for guidance")
+    parser.add_argument("--guidance_scale", type=float, default=DEFAULT_CONFIG["guidance_scale"], help=f"Guidance scale for text prompt (default: {DEFAULT_CONFIG['guidance_scale']})")
     parser.add_argument("--embedder_model_id", type=str, default="openai/clip-vit-large-patch14", help="Model ID for the embedder (e.g., CLIP or SigLIP)")
     parser.add_argument("--embedder_normalize", type=bool, default=True, help="Whether the embedder should normalize features")
 
@@ -443,11 +345,9 @@ if __name__ == "__main__":
     args = parser.parse_args()
 
     # --- Setup Embedder ---
-    # Create a dummy config for the embedder based on args
     from omegaconf import OmegaConf
     embedder_cfg = OmegaConf.create({
-        # Assuming CLIPEmbedder for now, adjust if needed or make configurable
-        "_target_": "experiments.llm.components.embedder.CLIPEmbedder",
+        "_target_": "components.embedder.CLIPEmbedder",
         "model_id": args.embedder_model_id,
         "normalize": args.embedder_normalize,
         "cache_dir": DEFAULT_CONFIG["MODELS_CACHE_DIR"]
@@ -455,97 +355,44 @@ if __name__ == "__main__":
     embedder = create_embedder(embedder_cfg)
     print(f"Initialized Embedder: {embedder.__class__.__name__} with model {embedder.model_id}")
 
-
     # --- Print Configuration ---
     print("Using configuration:")
     print(f"  prompt: '{args.prompt}'")
     print(f"  stable_diffusion_id: {DEFAULT_CONFIG['stable_diffusion_id']}")
     print(f"  num_inference_steps: {args.num_inference_steps}")
-    print(f"  guidance_prompt: {args.guidance_prompt}")
-    print(f"  guidance_estimator: {args.guidance_estimator}")
-    print(f"  estimator: {args.estimator}")
+    print(f"  guidance_scale: {args.guidance_scale}")
     print(f"  image_size: {args.image_size}")
-    print(f"  seed: {args.seed}") # Note: Seed is derived from prompt internally by generators
+    print(f"  seed: {args.seed}")
     print(f"  output_dir: {args.output_dir}")
     print(f"  embedder_model_id: {args.embedder_model_id}")
     print(f"  embedder_normalize: {args.embedder_normalize}")
 
     # --- Initialize Generator and Generate Image ---
-    estimator_prompt_text = None
-    generator_type = "standard"
+    print("Using Standard Stable Diffusion Generator")
+    generator = StableDiffusionGenerator(
+        stable_diffusion_id=DEFAULT_CONFIG["stable_diffusion_id"],
+        num_inference_steps=args.num_inference_steps,
+        guidance_scale=args.guidance_scale,
+        image_size=args.image_size,
+        MODELS_CACHE_DIR=DEFAULT_CONFIG["MODELS_CACHE_DIR"]
+    )
 
-    if args.estimator:
-        print(f"Estimator argument provided: '{args.estimator}'")
-        # Check if it's a path using standard os functions
-        estimator_path = os.path.abspath(args.estimator) # Use os.path.abspath
-        if ('/' in args.estimator or '\\' in args.estimator) and os.path.exists(estimator_path):
-            # Loading tensors is no longer supported for triple guidance
-            print(f"Error: Estimator path provided ('{estimator_path}'), but Triple Guidance requires estimator text, not a pre-computed tensor.")
-            print("Please provide the estimator as text or remove the --estimator argument to use standard generation.")
-            exit(1) # Exit with error
-        else:
-            # Treat as text
-            print(f"Using estimator text for Triple Guidance: '{args.estimator}'")
-            estimator_prompt_text = args.estimator
-            generator_type = "triple_guidance_text"
-
-    # Instantiate the appropriate generator
-    if generator_type == "triple_guidance_text":
-        print("Using Triple Guidance Generator")
-        generator = TripleGuidanceStableDiffusionGenerator(
-            stable_diffusion_id=DEFAULT_CONFIG["stable_diffusion_id"],
-            num_inference_steps=args.num_inference_steps,
-            guidance_scale=args.guidance_prompt, # Text prompt scale
-            guidance_scale_2=args.guidance_estimator, # Estimator scale
-            image_size=args.image_size,
-            # Seed is derived from prompt internally
-            MODELS_CACHE_DIR=DEFAULT_CONFIG["MODELS_CACHE_DIR"],
-            normalize_estimator=True # Keep normalization enabled by default
-        )
-        # Generate image using triple guidance, passing the estimator text
-        image_np, image_embedding = generator.sample(
-            prompt=args.prompt,
-            estimator_prompt=estimator_prompt_text,
-            embedder=embedder
-        )
-    else: # Standard generator
-        print("Using Standard Stable Diffusion Generator (no estimator text provided)")
-        generator = StableDiffusionGenerator(
-            stable_diffusion_id=DEFAULT_CONFIG["stable_diffusion_id"],
-            num_inference_steps=args.num_inference_steps,
-            guidance_scale=args.guidance_prompt, # Standard guidance scale
-            image_size=args.image_size,
-            # Seed is derived from prompt internally
-            MODELS_CACHE_DIR=DEFAULT_CONFIG["MODELS_CACHE_DIR"]
-        )
-        # Generate image using standard guidance
-        image_np, image_embedding = generator.sample(args.prompt, embedder=embedder)
+    # Generate image
+    image_np, image_embedding = generator.sample(args.prompt, embedder=embedder)
 
     print(f"Generated image embedding shape: {image_embedding.shape}, dtype: {image_embedding.dtype}, device: {image_embedding.device}")
 
-    # Create the output directory if it doesn’t exist
+    # Create the output directory if it doesn't exist
     os.makedirs(args.output_dir, exist_ok=True)
 
     # Create a filename that includes prompt and parameters
-    # Sanitize the prompt for filename use
     sanitized_prompt = args.prompt.replace(' ', '_').replace('/', '_').replace('\\', '_')
-    sanitized_prompt = ''.join(c for c in sanitized_prompt if c.isalnum() or c in '_-#')[:50] # Limit length
+    sanitized_prompt = ''.join(c for c in sanitized_prompt if c.isalnum() or c in '_-#')[:50]
 
-    # Determine estimator string for filename
-    estimator_string = "no_est" # Default if no estimator is used
-    if generator_type == "triple_guidance_text":
-        # Sanitize the estimator text itself
-        sanitized_estimator_text = estimator_prompt_text.replace(' ', '_').replace('/', '_').replace('\\', '_')
-        estimator_string = ''.join(c for c in sanitized_estimator_text if c.isalnum() or c in '_-#')[:30] # Limit length
-    # Removed 'saved_est' case as loading tensors is disallowed for triple guidance
+    # Construct filename
+    filename = f"{sanitized_prompt}_g{args.guidance_scale}.png"
 
-    # Construct filename using the new format: {prompt}_{estimator}_gP{guidance_prompt}_gE{guidance_estimator}.png
-    filename = f"{sanitized_prompt}_{estimator_string}_gP{args.guidance_prompt}_gE{args.guidance_estimator}.png"
-
-    # Save the image with the descriptive filename
+    # Save the image
     image_path = os.path.join(args.output_dir, filename)
-    # Use PIL.Image directly
     PIL.Image.fromarray(image_np).save(image_path)
     print(f"Image saved to {image_path}")
-
-    # Removed saving of the generated image's embedding
