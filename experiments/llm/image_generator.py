@@ -26,7 +26,7 @@ def _get_seed_from_prompt(prompt: str) -> int:
 # Default configuration for image generation
 DEFAULT_CONFIG = {
     "stable_diffusion_id": "CompVis/stable-diffusion-v1-4",
-    "num_inference_steps": 100,
+    "num_inference_steps": 50,
     "guidance_scale": 8.0, # Renamed from guidance_base
     "image_size": 512,
     "seed": 0, # Default base seed
