@@ -314,7 +314,7 @@ llm-generate-images-sequential:
 ########################### LLMS
 #REPEATS_LLM=20
 # Parallelization factor for llm-inspect-visits (seeds/jobs)
-REPEATS_LLM=1
+REPEATS_LLM=2
 NUMBERS_LLM := $(shell seq 1 ${REPEATS_LLM})
 
 # Jobs for V comparison (non-adaptive design)
