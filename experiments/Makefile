@@ -288,7 +288,28 @@ STOCH: STOCH1 STOCH2 STOCH3 STOCH0
 
 #
 llm-generate-image:
-	cd llm && TIMESTAMP=$(TIMESTAMP) OMP_NUM_THREADS=1 MKL_NUM_THREADS=1 $(PYTHONPATH) image_generator.py --prompt '$(PROMPT)' $(if $(OUTPUT_DIR),--output_dir '$(OUTPUT_DIR)',) $(if $(SEED),--seed $(SEED),) $(if $(IMAGE_SIZE),--image_size $(IMAGE_SIZE),) $(if $(NUM_STEPS),--num_inference_steps $(NUM_STEPS),) $(if $(GUIDANCE_PROMPT),--guidance_prompt $(GUIDANCE_PROMPT),) $(if $(GUIDANCE_ESTIMATOR),--guidance_estimator $(GUIDANCE_ESTIMATOR),) $(if $(ESTIMATOR),--estimator '$(ESTIMATOR)',)
+	cd llm && TIMESTAMP=$(TIMESTAMP) OMP_NUM_THREADS=1 MKL_NUM_THREADS=1 $(PYTHONPATH) image_generator.py --prompt '$(PROMPT)' $(if $(OUTPUT_DIR),--output_dir '$(OUTPUT_DIR)',) $(if $(SEED),--seed $(SEED),) $(if $(IMAGE_SIZE),--image_size $(IMAGE_SIZE),) $(if $(NUM_STEPS),--num_inference_steps $(NUM_STEPS),) $(if $(GUIDANCE_SCALE),--guidance_scale $(GUIDANCE_SCALE),)
+
+# Batch image generation for benchmarking
+# Usage: make llm-generate-images-batch PROMPTS="prompt1 prompt2 prompt3" [BATCH_SIZE=8] [NUM_STEPS=50]
+llm-generate-images-batch:
+	cd llm && TIMESTAMP=$(TIMESTAMP) OMP_NUM_THREADS=1 MKL_NUM_THREADS=1 $(PYTHONPATH) batch_image_generator.py \
+		--prompts $(PROMPTS) \
+		$(if $(OUTPUT_DIR),--output_dir '$(OUTPUT_DIR)',--output_dir 'generated_images_batch') \
+		$(if $(BATCH_SIZE),--batch_size $(BATCH_SIZE),) \
+		$(if $(NUM_STEPS),--num_inference_steps $(NUM_STEPS),) \
+		$(if $(GUIDANCE_SCALE),--guidance_scale $(GUIDANCE_SCALE),) \
+		$(if $(IMAGE_SIZE),--image_size $(IMAGE_SIZE),)
+
+# Sequential generation for comparison
+llm-generate-images-sequential:
+	cd llm && TIMESTAMP=$(TIMESTAMP) OMP_NUM_THREADS=1 MKL_NUM_THREADS=1 $(PYTHONPATH) batch_image_generator.py \
+		--prompts $(PROMPTS) \
+		--sequential \
+		$(if $(OUTPUT_DIR),--output_dir '$(OUTPUT_DIR)',--output_dir 'generated_images_sequential') \
+		$(if $(NUM_STEPS),--num_inference_steps $(NUM_STEPS),) \
+		$(if $(GUIDANCE_SCALE),--guidance_scale $(GUIDANCE_SCALE),) \
+		$(if $(IMAGE_SIZE),--image_size $(IMAGE_SIZE),)
 
 ########################### LLMS
 #REPEATS_LLM=20
