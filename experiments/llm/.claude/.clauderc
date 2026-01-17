@@ -1,0 +1,15 @@
+# Claude Code Configuration for LLM Experiments
+
+## Documentation
+- **[CLAUDE.md](../CLAUDE.md)**: Quick reference guide for AI assistants
+- **[AGENTS.md](../AGENTS.md)**: Complete workflow and pipeline documentation
+- **[CONVENTIONS.md](../CONVENTIONS.md)**: Coding principles and style guide
+
+## Quick Rules
+1. **KISS**: Keep it simple - less code is better
+2. **Fail Fast**: Meaningful errors over edge case handling
+3. **Modular**: Clear component interfaces
+4. **No Hacks**: Fix infrastructure, don't add workarounds
+5. **Document**: Shared codebase - readability matters
+
+Read CLAUDE.md for full context and development guidelines.

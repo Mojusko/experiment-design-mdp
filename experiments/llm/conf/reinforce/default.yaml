@@ -1,0 +1,25 @@
+# REINFORCE optimizer configuration for vocabulary-free experimental design
+# Use with algorithm: reinforce
+#
+# Note: prompt_prefix is taken from cfg.base_prompt (top-level config)
+# Example: python run_exp.py algorithm=reinforce base_prompt="A photo of"
+
+# GPT-2 model settings
+model_name: "gpt2"  # Can also use "gpt2-medium", "gpt2-large"
+
+# LoRA adapter settings
+lora_rank: 8  # Lower = fewer params, less expressive
+lora_alpha: 16.0  # Scaling factor
+
+# Optimization settings
+learning_rate: 1.0e-4
+num_iterations: 100  # Number of REINFORCE optimization steps
+samples_per_policy: 16  # N samples per policy per iteration
+
+# Generation settings
+max_new_tokens: 20  # Maximum tokens to generate per prompt
+temperature: 1.0  # Sampling temperature (higher = more random)
+stop_at_period: true  # Stop generation at first period
+
+# REINFORCE settings
+use_baseline: false  # Subtract moving average of L for variance reduction

@@ -150,9 +150,10 @@ class LLMExperiment:
         self.explorer = SolverFactory.create(
             cfg,
             self.env,
-            self.designs[0], 
-            self.feedbacks[0], 
-            same_first_action_in_episode=cfg.get('same_first_action_in_episode', False)
+            self.designs[0],
+            self.feedbacks[0],
+            same_first_action_in_episode=cfg.get('same_first_action_in_episode', False),
+            embedder=self.embedder,  # Required for REINFORCE mode
         )
 
         # Note: self.estimator is now self.estimators (a list)

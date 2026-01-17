@@ -1,13 +1,43 @@
 import warnings
+import logging
 from doexpy.convex_solvers.frank_wolfe import FrankWolfe
 from doexpy.mdpexplore import MdpExplore, MdpExploreMultiPolicy
 from doexpy.solvers.dp import DP
 from doexpy.feedback.feedback_base import EmptyFeedback
 from doexpy.policies.summary_policies.density_policy import DensityPolicy
 
+logger = logging.getLogger(__name__)
+
+
 class SolverFactory:
     @staticmethod
-    def create(cfg, env, design, feedback, same_first_action_in_episode: bool = False): # Add flag here
+    def create(cfg, env, design, feedback, same_first_action_in_episode: bool = False, embedder=None):
+        # Check for REINFORCE algorithm (vocabulary-free mode)
+        if cfg.algorithm == "reinforce":
+            logger.info("Using REINFORCE optimizer (vocabulary-free mode)")
+            from components.reinforce_optimizer import REINFORCEOptimizer
+
+            # Get REINFORCE-specific config
+            reinforce_cfg = cfg.get("reinforce", {})
+
+            optimizer = REINFORCEOptimizer(
+                num_policies=cfg.feedback.num_policies,
+                model_name=reinforce_cfg.get("model_name", "gpt2"),
+                lora_rank=reinforce_cfg.get("lora_rank", 8),
+                lora_alpha=reinforce_cfg.get("lora_alpha", 16.0),
+                lambda_reg=cfg.feedback.get("lambda", 1.0),
+                learning_rate=reinforce_cfg.get("learning_rate", 1e-4),
+                device="cuda",
+                embedder=embedder,
+            )
+
+            # Wrap in a compatible interface
+            return REINFORCEExplorerWrapper(
+                optimizer=optimizer,
+                cfg=cfg,
+                reinforce_cfg=reinforce_cfg,
+            )
+
         num_policies = cfg.feedback.num_policies
         adaptive_estimation_start = cfg.feedback.adaptive_estimation_start if cfg.algorithm != 'random' else 0
         total_episodes = cfg.experiment.episodes
@@ -129,3 +159,94 @@ class TwoPhaseExplorer:
         if return_visitations:
             return optimized_results
         return optimized_results[:-1]
+
+
+class REINFORCEExplorerWrapper:
+    """
+    Wrapper that adapts REINFORCEOptimizer to the Explorer interface.
+
+    This allows REINFORCE to be used in place of MdpExplore/MdpExploreMultiPolicy
+    while maintaining a compatible interface for the experiment pipeline.
+
+    Note: REINFORCE is vocabulary-free, so it doesn't use LLMGrid or produce
+    traditional "visits". Instead, it optimizes GPT-2 policies and generates
+    prompts that can be evaluated.
+    """
+
+    def __init__(self, optimizer, cfg, reinforce_cfg):
+        """
+        Initialize the wrapper.
+
+        Args:
+            optimizer: REINFORCEOptimizer instance
+            cfg: Full experiment config
+            reinforce_cfg: REINFORCE-specific config
+        """
+        self.optimizer = optimizer
+        self.cfg = cfg
+        self.reinforce_cfg = reinforce_cfg
+        self.num_policies = cfg.feedback.num_policies
+
+        # Store optimization history
+        self.history = None
+        self.generated_prompts = None
+
+    def run(self, episodes, return_visitations=False, update_callback=None):
+        """
+        Run REINFORCE optimization.
+
+        Note: "episodes" maps to "num_iterations" for REINFORCE.
+        The concept is different but the config interface remains consistent.
+
+        Args:
+            episodes: Number of optimization iterations
+            return_visitations: Whether to return generated prompts (mapped from visitations concept)
+            update_callback: Optional callback for progress updates
+
+        Returns:
+            If return_visitations=True: (history, generated_prompts)
+            Otherwise: history dict
+        """
+        # Map episodes to iterations
+        num_iterations = self.reinforce_cfg.get("num_iterations", episodes)
+
+        # Get generation parameters
+        prompt_prefix = self.cfg.get("base_prompt", "")
+        samples_per_policy = self.reinforce_cfg.get("samples_per_policy", 16)
+        max_new_tokens = self.reinforce_cfg.get("max_new_tokens", 20)
+        temperature = self.reinforce_cfg.get("temperature", 1.0)
+        baseline = self.reinforce_cfg.get("baseline", "per_policy")
+
+        # Run optimization
+        self.history = self.optimizer.optimize(
+            num_iterations=num_iterations,
+            samples_per_policy=samples_per_policy,
+            prompt_prefix=prompt_prefix,
+            max_new_tokens=max_new_tokens,
+            temperature=temperature,
+            baseline=baseline,
+            log_interval=max(1, num_iterations // 10),
+            callback=update_callback,
+        )
+
+        # Generate evaluation prompts (analogous to visits)
+        self.generated_prompts = self.optimizer.generate_evaluation_prompts(
+            num_prompts_per_policy=samples_per_policy,
+            prompt_prefix=prompt_prefix,
+            max_new_tokens=max_new_tokens,
+        )
+
+        if return_visitations:
+            # Return format compatible with existing pipeline
+            # generated_prompts[q] is a list of prompts for policy q
+            return self.history, self.generated_prompts
+
+        return self.history
+
+    def save_policies(self, path: str):
+        """Save trained policies."""
+        self.optimizer.save_policies(path)
+
+    def load_policies(self, path: str):
+        """Load trained policies."""
+        self.optimizer.load_policies(path)

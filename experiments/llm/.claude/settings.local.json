@@ -1,0 +1,34 @@
+{
+  "permissions": {
+    "allow": [
+      "Bash(~/atom/google-cloud-sdk/bin/gcloud billing accounts get-iam-policy 015871-7EFDA1-72ACE2)",
+      "Bash(~/atom/google-cloud-sdk/bin/gcloud beta billing accounts describe 015871-7EFDA1-72ACE2)",
+      "Bash(~/atom/google-cloud-sdk/bin/gcloud services list --enabled)",
+      "Bash(~/atom/google-cloud-sdk/bin/gcloud services list --available)",
+      "Bash(~/atom/google-cloud-sdk/bin/gcloud compute ssh ubuntu@l4-gpu-instance --zone=us-central1-a --command='printf \"\"\\033]52;c;$(echo -n \"\"test from remote\"\" | base64 -w0)\\007\"\"; echo \"\"\"\"; echo \"\"Now try pasting with Ctrl+Shift+V on your host\"\"')",
+      "Bash(~/atom/google-cloud-sdk/bin/gcloud compute ssh ubuntu@l4-gpu-instance --zone=us-central1-a --command='mkdir -p ~/.local/share/nvim/site/pack/plugins/start/nvim-osc52/lua/osc52')",
+      "Bash(~/atom/google-cloud-sdk/bin/gcloud compute scp --recurse /tmp/nvim-osc52/lua ubuntu@l4-gpu-instance:~/.local/share/nvim/site/pack/plugins/start/nvim-osc52/ --zone=us-central1-a)",
+      "Bash(git add:*)",
+      "Bash(git commit:*)",
+      "Bash(git push:*)",
+      "Bash(~/atom/google-cloud-sdk/bin/gcloud compute ssh:*)",
+      "Bash(~/atom/google-cloud-sdk/bin/gcloud compute instances set-machine-type:*)",
+      "Bash(~/atom/google-cloud-sdk/bin/gcloud compute instances start l4-gpu-instance --zone=us-central1-a)",
+      "Bash(~/atom/google-cloud-sdk/bin/gcloud compute instances update l4-gpu-instance --zone=us-central1-a --update-labels=gpu-removed=true --clear-accelerator)",
+      "Bash(~/atom/google-cloud-sdk/bin/gcloud compute instances update l4-gpu-instance --zone=us-central1-a --remove-accelerators)",
+      "Bash(~/atom/google-cloud-sdk/bin/gcloud compute instances --help)",
+      "Bash(~/atom/google-cloud-sdk/bin/gcloud compute instances update l4-gpu-instance --zone=us-central1-a --update-container-env=\"\")",
+      "Bash(~/atom/google-cloud-sdk/bin/gcloud alpha compute instances update l4-gpu-instance --zone=us-central1-a --accelerator=)",
+      "Bash(~/atom/google-cloud-sdk/bin/gcloud compute scp:*)",
+      "Bash(~/atom/google-cloud-sdk/bin/gcloud compute instances describe l4-gpu-instance-b --zone=us-central1-b --format=\"value(status)\")",
+      "Bash(for dir in /home/guy/eth/experiment-design-mdp/experiments/llm/results/human-feedback-post-rebuttal*)",
+      "Bash(do echo '=== $(basename $dir) ===' ls -d $dir/*/)",
+      "Bash(done)",
+      "Bash(python:*)",
+      "WebFetch(domain:docs.openreview.net)",
+      "WebSearch"
+    ],
+    "deny": [],
+    "ask": []
+  }
+}

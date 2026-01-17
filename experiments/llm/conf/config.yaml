@@ -2,6 +2,7 @@ defaults:
   - experiment: feedback_comparison
   - feedback: numerical
   - embedder: clip # Add default embedder configuration
+  - optional reinforce: default  # REINFORCE config (loaded when algorithm=reinforce)
   - _self_ # Ensure this config's values override defaults if needed
 
 seed: 12 # Or keep a default like 1
