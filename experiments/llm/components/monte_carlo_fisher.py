@@ -166,10 +166,10 @@ class MonteCarloFisherObjective:
         # Average log probability
         avg_log_prob = total_log_prob / total_samples
 
-        # REINFORCE loss: -L · avg_log_prob
+        # REINFORCE loss: L · avg_log_prob (flipped sign for sanity check)
         # (We maximize L by minimizing -L · log_prob)
         L_centered = objective - baseline
-        loss = -L_centered.detach() * avg_log_prob
+        loss = L_centered.detach() * avg_log_prob
 
         return loss, objective
 
