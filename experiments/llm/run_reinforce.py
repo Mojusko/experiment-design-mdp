@@ -124,15 +124,15 @@ def main():
     # Sanity check: verify all policies produce similar distributions before optimization
     logger.info("\n--- Sanity Check: Initial Policy Similarity ---")
     with torch.no_grad():
-        test_input = policy_manager.policies[0].tokenizer(
-            args.prompt_prefix if args.prompt_prefix else "A photo of",
-            return_tensors="pt"
-        ).to(args.device)
-
         all_logits = []
         for q, policy in enumerate(policy_manager.policies):
+            # Put input on same device as policy (multi-GPU support)
+            test_input = policy.tokenizer(
+                args.prompt_prefix if args.prompt_prefix else "A photo of",
+                return_tensors="pt"
+            ).to(policy.device)
             outputs = policy.model(**test_input)
-            logits = outputs.logits[0, -1, :]  # Last token logits
+            logits = outputs.logits[0, -1, :].cpu()  # Move to CPU for comparison
             all_logits.append(logits)
 
         # Compare distributions via cosine similarity
@@ -193,8 +193,10 @@ def main():
             all_embeddings.append(embeddings_q)
 
         # Step 3: Compute T Fisher matrices and weighted log_prob sum
+        # Use primary device for accumulation (handles multi-GPU)
+        primary_device = policy_manager.device
         fisher_sum = 0.0
-        weighted_log_prob = torch.tensor(0.0, device=args.device)
+        weighted_log_prob = torch.tensor(0.0, device=primary_device)
 
         for t in range(T):
             # Fisher_t from K embeddings at time t (one per policy)
@@ -203,8 +205,8 @@ def main():
                 L_t = fisher_objective.compute_objective(embeddings_t)
             fisher_sum += L_t.item()
 
-            # log_prob_t = sum of K log_probs at time t
-            log_prob_t = sum(all_log_probs[q][t] for q in range(K))
+            # log_prob_t = sum of K log_probs at time t (move to primary device)
+            log_prob_t = sum(all_log_probs[q][t].to(primary_device) for q in range(K))
 
             # Accumulate weighted log_prob: L_t · log_prob_t
             weighted_log_prob = weighted_log_prob + L_t * log_prob_t
