@@ -55,6 +55,9 @@ def parse_args():
     parser.add_argument("--max-new-tokens", type=int, default=15, help="Max tokens to generate")
     parser.add_argument("--temperature", type=float, default=1.0, help="Sampling temperature")
 
+    # REINFORCE settings
+    parser.add_argument("--num-reinforce-samples", type=int, default=100, help="Inner samples T for REINFORCE gradient estimation")
+
     # Output settings
     parser.add_argument("--output-dir", type=str, default=None, help="Output directory")
     parser.add_argument("--log-interval", type=int, default=10, help="Logging interval")
@@ -151,75 +154,80 @@ def main():
     # Training loop
     logger.info("\n--- Starting Optimization ---")
     logger.info(f"Iterations: {args.num_iterations}")
-    logger.info(f"Samples per policy: {args.samples_per_policy}")
+    logger.info(f"REINFORCE samples per iteration (T): {args.num_reinforce_samples}")
+    logger.info(f"Policies (K): {args.num_policies}")
     logger.info(f"Prompt prefix: '{args.prompt_prefix}'")
     logger.info("Using CLIP text embeddings (fast, no SD during optimization)")
+    logger.info("Each REINFORCE sample: K embeddings (one per policy) → Fisher_t → L_t · ∇log p")
 
     history = {
         "iterations": [],
         "objectives": [],
-        "losses": [],
         "sample_prompts": [],
     }
 
+    # Get all trainable (LoRA) parameters once
+    lora_params = list(policy_manager.get_all_trainable_parameters())
+
     for iteration in range(args.num_iterations):
-        # Step 1: Sample prompts from each policy
-        all_samples = policy_manager.generate_samples(
-            num_samples_per_policy=args.samples_per_policy,
-            prompt_prefix=args.prompt_prefix,
-            max_new_tokens=args.max_new_tokens,
-            temperature=args.temperature,
-        )
+        # Accumulate gradients over T inner samples
+        accumulated_grads = [torch.zeros_like(p) for p in lora_params]
+        fisher_sum = 0.0
 
-        # Extract texts and log_probs
-        all_texts = [[text for text, _ in samples_q] for samples_q in all_samples]
-        all_log_probs = [[log_prob for _, log_prob in samples_q] for samples_q in all_samples]
+        for t in range(args.num_reinforce_samples):
+            # Step 1: Sample ONE prompt from each policy (N=1)
+            all_samples = policy_manager.generate_samples(
+                num_samples_per_policy=1,  # N=1 for proper REINFORCE
+                prompt_prefix=args.prompt_prefix,
+                max_new_tokens=args.max_new_tokens,
+                temperature=args.temperature,
+            )
 
-        # Step 2: Compute CLIP text embeddings (fast!)
-        all_embeddings = []
-        for q in range(args.num_policies):
-            embeddings_q = embed_prompts_with_clip_text(all_texts[q], embedder)
-            all_embeddings.append(embeddings_q)
+            # Extract texts and log_probs
+            all_texts = [[text for text, _ in samples_q] for samples_q in all_samples]
+            all_log_probs = [[log_prob for _, log_prob in samples_q] for samples_q in all_samples]
 
-        # Step 3: Compute Fisher objective and avg_log_prob
-        loss, objective, avg_log_prob = fisher_objective.compute_reinforce_loss(
-            all_embeddings,
-            all_log_probs,
-        )
+            # Step 2: Compute CLIP text embeddings for K prompts
+            all_embeddings = []
+            for q in range(args.num_policies):
+                embeddings_q = embed_prompts_with_clip_text(all_texts[q], embedder)
+                all_embeddings.append(embeddings_q)
 
-        # Step 4: Explicit REINFORCE gradient
-        # Get all trainable (LoRA) parameters
-        lora_params = policy_manager.get_all_trainable_parameters()
+            # Step 3: Compute Fisher_t from these K embeddings
+            with torch.no_grad():
+                L_t = fisher_objective.compute_objective(all_embeddings)
+            fisher_sum += L_t.item()
 
-        # Compute sum of log probs (need gradient through this)
-        total_log_prob = sum(lp for lps in all_log_probs for lp in lps)
+            # Step 4: Compute gradient of log_prob for this sample
+            total_log_prob = sum(lp for lps in all_log_probs for lp in lps)
+            grads_t = torch.autograd.grad(total_log_prob, lora_params, retain_graph=False)
 
-        # Get gradient of log_prob w.r.t. LoRA params
-        grads = torch.autograd.grad(total_log_prob, lora_params)
+            # Accumulate: L_t · ∇log p_t
+            for i, g in enumerate(grads_t):
+                accumulated_grads[i] += L_t.detach() * g
 
-        # REINFORCE: gradient = L * grad_log_prob (for maximizing L)
-        # We want to maximize Fisher, so gradient ascent: θ += lr * L * ∇log_p
-        # Optimizer does gradient descent: θ -= lr * param.grad
-        # So we set param.grad = -L * ∇log_p
+        # Average the accumulated gradients
+        avg_fisher = fisher_sum / args.num_reinforce_samples
+        for i in range(len(accumulated_grads)):
+            accumulated_grads[i] /= args.num_reinforce_samples
+
+        # Apply REINFORCE update: θ += lr * E[L · ∇log p]
+        # Optimizer does descent, so set grad = -accumulated
         optimizer.zero_grad()
-        L = objective.detach()
-        for param, g in zip(lora_params, grads):
-            param.grad = -L * g
+        for param, acc_g in zip(lora_params, accumulated_grads):
+            param.grad = -acc_g  # Negative for ascent
         optimizer.step()
 
         # Record history
         history["iterations"].append(iteration)
-        history["objectives"].append(objective.item())
-        history["losses"].append(loss.item())
+        history["objectives"].append(avg_fisher)
         history["sample_prompts"].append(all_texts[0][0])
 
         # Logging
         if iteration % args.log_interval == 0 or iteration == args.num_iterations - 1:
             logger.info(
                 f"Iteration {iteration:3d}/{args.num_iterations}: "
-                f"Fisher = {objective.item():.4f}, "
-                f"avg_logp = {avg_log_prob.item():.2f}, "
-                f"Loss = {loss.item():.4f}"
+                f"avg Fisher = {avg_fisher:.4f}"
             )
 
     # Save results
