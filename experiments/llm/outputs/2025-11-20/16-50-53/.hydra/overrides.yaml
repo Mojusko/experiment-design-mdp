@@ -1,0 +1,10 @@
+- algorithm=design
+- visits_path=human_feedbacks_post_rebuttal/lambda0.1/visits/visits-feedback-dsn-mult-lambda0.1-1.pkl
+- feedback_path=noir_gpt-4.1-mini_dsn_lambda0_converted_vv2ht9z9.json
+- feedback.lambda=0.1
+- benchmark_episode_spec="40-49"
+- estimation_episode_spec="0-39,50-59"
+- results_dir=results/human-feedback-post-rebuttal/lambda0.1/noir/design/fold1
+- override_results_dir=true
+- experiment_id=run-visits-feedback-dsn-mult-lambda0.1-1
+- seed=1

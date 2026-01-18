@@ -1,0 +1,11 @@
+- algorithm=design
+- visits_path=human_feedback_visits/lam0.1_ep80/visits-feedback-dsn-mult-ep80-1.pkl
+- feedback_path=human_feedbacks/sunny_gpt-4.1-mini-0.1-ep80.jsonl
+- feedback.lambda=0.1
+- experiment.episodes=80
+- benchmark_episode_spec="design:60-79,random:60-79"
+- estimation_episode_spec="design:0-59,random:0-59"
+- results_dir=/home/guy/eth/experiment-design-mdp/experiments/llm/results/human-feedback-curves/holdout60-79/est-60/sunny_gpt-4.1-mini-0.1-ep80/design
+- override_results_dir=true
+- experiment_id=run-visits-feedback-dsn-mult-ep80-1
+- seed=1

@@ -1,0 +1,10 @@
+- algorithm=design
+- visits_path=human_feedback_visits/lam0.1_ep80/visits-feedback-dsn-mult-ep80-1.pkl
+- feedback_path=human_feedbacks/4.1-mini-lam0.1-ep80.jsonl
+- feedback.lambda=0.1
+- experiment.episodes=80
+- benchmark_episode_spec="design:70-79,random:70-79"
+- results_dir=results/human-feedback/4.1-mini-lam0.1-ep80/design
+- override_results_dir=true
+- experiment_id=run-visits-feedback-dsn-mult-ep80-1
+- seed=1

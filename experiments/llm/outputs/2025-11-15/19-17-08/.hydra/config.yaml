@@ -1,0 +1,75 @@
+experiment:
+  name: feedback_comparison
+  id_prefix: feedback
+  episodes: 60
+  vocab_size: 2500
+  vocabulary:
+  - vocabulary3/bases.txt
+  - vocabulary3/ambient.txt
+  - vocabulary3/style.txt
+  - vocabulary3/composition.txt
+  - vocabulary3/lighting.txt
+  - vocabulary3/detail.txt
+  scorer_model:
+  - sunny
+  - medieval
+  - technological
+feedback:
+  name: multinomial
+  num_policies: 4
+  num_components: 2
+  num_rounds: 20
+  lambda: 0.1
+  adaptive_estimation_frequency: 0
+  adaptive_estimation_start: 0
+  adaptive_design_frequency: 0
+  pass_V: true
+  lambda_sparsity: 0
+  objective: A
+embedder:
+  _target_: experiments.llm.components.embedder.CLIPEmbedder
+  model_id: openai/clip-vit-large-patch14
+  normalize: true
+  cache_dir: ${cache_dir}
+seed: 1
+verbose: false
+base_prompt: ''
+include_base_prompt_in_first_tokens: false
+algorithm: design
+cache_dir: ${oc.env:HOME}/.cache/huggingface/hub
+accuracy: 1.0e-08
+dense_feedback: true
+same_first_action_in_episode: false
+handle_duplicate_action: true
+results_dir: results/feedback-comparison-lambdas
+experiment_id: lambda0.1-1
+num_benchmark_episodes: 10
+test_only: false
+explore_only: true
+estimator_path: null
+visits_path: null
+override_results_dir: false
+tester:
+- _target_: components.tester.PreferenceTester
+  params:
+    N_test_prompts: 1000
+    N_pairs_eval: 5000
+- _target_: components.tester.CosineTester
+  params: null
+savers:
+- _target_: components.saver.MetricsSaver
+  params:
+    filename: metrics.json
+- _target_: components.saver.LearnedEstimatorSaver
+  params:
+    filename: estimator.pt
+- _target_: components.saver.VisitsSaver
+  params:
+    filename: visits.pkl
+- _target_: components.saver.ConfSaver
+  params:
+    filename: config_resolved.yaml
+- _target_: components.saver.ReadableVisitsSaver
+  params:
+    output_filename: readable_visits.txt
+    dense_feedback: ${dense_feedback}

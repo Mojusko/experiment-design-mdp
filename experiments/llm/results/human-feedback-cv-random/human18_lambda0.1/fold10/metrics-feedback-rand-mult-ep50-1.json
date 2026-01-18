@@ -1,0 +1,17 @@
+{
+  "benchmark_accuracy": 0.4807692307692308,
+  "benchmark_holdout_questions": 52,
+  "benchmark_correct_count": 25,
+  "benchmark_comparisons_count": 52,
+  "benchmark_episode_keys": [
+    "random-10",
+    "random-11",
+    "random-12",
+    "random-13",
+    "random-14",
+    "random-15",
+    "random-16",
+    "random-17",
+    "random-18"
+  ]
+}

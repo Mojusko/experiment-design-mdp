@@ -1,0 +1,345 @@
+{
+  "benchmark_accuracy": 0.4,
+  "benchmark_holdout_questions": 60,
+  "benchmark_correct_count": 24,
+  "benchmark_comparisons_count": 60,
+  "benchmark_episode_keys": [
+    "random-0",
+    "random-1",
+    "random-10",
+    "random-11",
+    "random-12",
+    "random-13",
+    "random-14",
+    "random-15",
+    "random-16",
+    "random-17",
+    "random-2",
+    "random-20",
+    "random-21",
+    "random-22",
+    "random-24",
+    "random-25",
+    "random-26",
+    "random-27",
+    "random-28",
+    "random-29",
+    "random-30",
+    "random-31",
+    "random-32",
+    "random-33",
+    "random-34",
+    "random-37",
+    "random-38",
+    "random-39",
+    "random-4",
+    "random-46",
+    "random-47",
+    "random-48",
+    "random-49",
+    "random-7",
+    "random-9"
+  ],
+  "benchmark_question_keys": [
+    {
+      "algorithm": "random",
+      "episode": 4,
+      "timestep": 6
+    },
+    {
+      "algorithm": "random",
+      "episode": 11,
+      "timestep": 4
+    },
+    {
+      "algorithm": "random",
+      "episode": 31,
+      "timestep": 4
+    },
+    {
+      "algorithm": "random",
+      "episode": 34,
+      "timestep": 6
+    },
+    {
+      "algorithm": "random",
+      "episode": 39,
+      "timestep": 5
+    },
+    {
+      "algorithm": "random",
+      "episode": 27,
+      "timestep": 1
+    },
+    {
+      "algorithm": "random",
+      "episode": 0,
+      "timestep": 6
+    },
+    {
+      "algorithm": "random",
+      "episode": 46,
+      "timestep": 1
+    },
+    {
+      "algorithm": "random",
+      "episode": 14,
+      "timestep": 2
+    },
+    {
+      "algorithm": "random",
+      "episode": 29,
+      "timestep": 1
+    },
+    {
+      "algorithm": "random",
+      "episode": 1,
+      "timestep": 4
+    },
+    {
+      "algorithm": "random",
+      "episode": 9,
+      "timestep": 6
+    },
+    {
+      "algorithm": "random",
+      "episode": 34,
+      "timestep": 5
+    },
+    {
+      "algorithm": "random",
+      "episode": 10,
+      "timestep": 5
+    },
+    {
+      "algorithm": "random",
+      "episode": 49,
+      "timestep": 1
+    },
+    {
+      "algorithm": "random",
+      "episode": 32,
+      "timestep": 3
+    },
+    {
+      "algorithm": "random",
+      "episode": 7,
+      "timestep": 2
+    },
+    {
+      "algorithm": "random",
+      "episode": 16,
+      "timestep": 3
+    },
+    {
+      "algorithm": "random",
+      "episode": 49,
+      "timestep": 2
+    },
+    {
+      "algorithm": "random",
+      "episode": 33,
+      "timestep": 3
+    },
+    {
+      "algorithm": "random",
+      "episode": 33,
+      "timestep": 2
+    },
+    {
+      "algorithm": "random",
+      "episode": 30,
+      "timestep": 5
+    },
+    {
+      "algorithm": "random",
+      "episode": 28,
+      "timestep": 5
+    },
+    {
+      "algorithm": "random",
+      "episode": 47,
+      "timestep": 5
+    },
+    {
+      "algorithm": "random",
+      "episode": 26,
+      "timestep": 1
+    },
+    {
+      "algorithm": "random",
+      "episode": 29,
+      "timestep": 3
+    },
+    {
+      "algorithm": "random",
+      "episode": 32,
+      "timestep": 1
+    },
+    {
+      "algorithm": "random",
+      "episode": 49,
+      "timestep": 4
+    },
+    {
+      "algorithm": "random",
+      "episode": 29,
+      "timestep": 4
+    },
+    {
+      "algorithm": "random",
+      "episode": 16,
+      "timestep": 6
+    },
+    {
+      "algorithm": "random",
+      "episode": 24,
+      "timestep": 3
+    },
+    {
+      "algorithm": "random",
+      "episode": 22,
+      "timestep": 3
+    },
+    {
+      "algorithm": "random",
+      "episode": 0,
+      "timestep": 3
+    },
+    {
+      "algorithm": "random",
+      "episode": 16,
+      "timestep": 1
+    },
+    {
+      "algorithm": "random",
+      "episode": 0,
+      "timestep": 4
+    },
+    {
+      "algorithm": "random",
+      "episode": 38,
+      "timestep": 3
+    },
+    {
+      "algorithm": "random",
+      "episode": 12,
+      "timestep": 6
+    },
+    {
+      "algorithm": "random",
+      "episode": 15,
+      "timestep": 6
+    },
+    {
+      "algorithm": "random",
+      "episode": 37,
+      "timestep": 2
+    },
+    {
+      "algorithm": "random",
+      "episode": 7,
+      "timestep": 3
+    },
+    {
+      "algorithm": "random",
+      "episode": 12,
+      "timestep": 3
+    },
+    {
+      "algorithm": "random",
+      "episode": 17,
+      "timestep": 5
+    },
+    {
+      "algorithm": "random",
+      "episode": 20,
+      "timestep": 4
+    },
+    {
+      "algorithm": "random",
+      "episode": 32,
+      "timestep": 2
+    },
+    {
+      "algorithm": "random",
+      "episode": 39,
+      "timestep": 6
+    },
+    {
+      "algorithm": "random",
+      "episode": 39,
+      "timestep": 1
+    },
+    {
+      "algorithm": "random",
+      "episode": 1,
+      "timestep": 5
+    },
+    {
+      "algorithm": "random",
+      "episode": 7,
+      "timestep": 4
+    },
+    {
+      "algorithm": "random",
+      "episode": 25,
+      "timestep": 3
+    },
+    {
+      "algorithm": "random",
+      "episode": 9,
+      "timestep": 4
+    },
+    {
+      "algorithm": "random",
+      "episode": 2,
+      "timestep": 1
+    },
+    {
+      "algorithm": "random",
+      "episode": 24,
+      "timestep": 4
+    },
+    {
+      "algorithm": "random",
+      "episode": 21,
+      "timestep": 3
+    },
+    {
+      "algorithm": "random",
+      "episode": 48,
+      "timestep": 4
+    },
+    {
+      "algorithm": "random",
+      "episode": 28,
+      "timestep": 1
+    },
+    {
+      "algorithm": "random",
+      "episode": 30,
+      "timestep": 4
+    },
+    {
+      "algorithm": "random",
+      "episode": 15,
+      "timestep": 4
+    },
+    {
+      "algorithm": "random",
+      "episode": 13,
+      "timestep": 6
+    },
+    {
+      "algorithm": "random",
+      "episode": 47,
+      "timestep": 4
+    },
+    {
+      "algorithm": "random",
+      "episode": 7,
+      "timestep": 6
+    }
+  ]
+}

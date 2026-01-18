@@ -101,27 +101,33 @@ class MonteCarloFisherObjective:
     def compute_objective(
         self,
         all_embeddings: List[List[torch.Tensor]],
+        design: str = "A",
     ) -> torch.Tensor:
         """
-        Compute D-optimal objective: log det(Î).
+        Compute optimal design objective.
 
         Args:
             all_embeddings: Sampled embeddings from all policies.
+            design: "D" for log det(Î), "A" for -tr(Î⁻¹)
 
         Returns:
-            Scalar objective value (log determinant)
+            Scalar objective value (to be maximized)
         """
         I_hat = self.compute_fisher_info(all_embeddings)
 
-        # Log determinant (more numerically stable than det then log)
-        sign, logdet = torch.linalg.slogdet(I_hat)
-
-        if sign <= 0:
-            logger.warning(f"Fisher Information matrix is not positive definite (sign={sign})")
-            # Return a large negative value to penalize this
-            return torch.tensor(float('-inf'), device=self.device)
-
-        return logdet
+        if design == "D":
+            # D-optimal: log det(Î)
+            sign, logdet = torch.linalg.slogdet(I_hat)
+            if sign <= 0:
+                logger.warning(f"Fisher Information matrix is not positive definite (sign={sign})")
+                return torch.tensor(float('-inf'), device=self.device)
+            return logdet
+        elif design == "A":
+            # A-optimal: -tr(Î⁻¹)
+            I_inv = torch.linalg.inv(I_hat)
+            return -torch.trace(I_inv)
+        else:
+            raise ValueError(f"Unknown design: {design}")
 
     def compute_reinforce_loss(
         self,
@@ -166,10 +172,10 @@ class MonteCarloFisherObjective:
         # Average log probability
         avg_log_prob = total_log_prob / total_samples
 
-        # REINFORCE loss: L · avg_log_prob (flipped sign for sanity check)
+        # REINFORCE loss: -L · avg_log_prob
         # (We maximize L by minimizing -L · log_prob)
         L_centered = objective - baseline
-        loss = L_centered.detach() * avg_log_prob
+        loss = -L_centered.detach() * avg_log_prob
 
         return loss, objective
 

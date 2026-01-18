@@ -1,0 +1,7 @@
+- algorithm=design
+- visits_path=human_feedback_visits/mojmir_lambda0.1/visits-feedback-dsn-mult-ep50-1.pkl
+- feedback_path=human_feedbacks/mojmir.jsonl
+- results_dir=results/human-feedback-mojmir-design
+- override_results_dir=true
+- experiment_id=run-visits-feedback-dsn-mult-ep50-1
+- seed=1

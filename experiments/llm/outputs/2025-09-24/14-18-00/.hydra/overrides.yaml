@@ -1,0 +1,11 @@
+- algorithm=design
+- visits_path=human_feedback_visits/lam0.01_ep80/visits-feedback-dsn-mult-ep80-1.pkl
+- feedback_path=human_feedbacks/futuristic_gpt-4.1-mini-0.01-ep80.jsonl
+- feedback.lambda=0.01
+- experiment.episodes=80
+- benchmark_episode_spec="design:65-79,random:65-79"
+- estimation_episode_spec="design:0-49,random:0-49"
+- results_dir=/home/guy/eth/experiment-design-mdp/experiments/llm/results/human-feedback-curves/holdout65-79/est-50/futuristic_gpt-4.1-mini-0.01-ep80/design
+- override_results_dir=true
+- experiment_id=run-visits-feedback-dsn-mult-ep80-1
+- seed=1

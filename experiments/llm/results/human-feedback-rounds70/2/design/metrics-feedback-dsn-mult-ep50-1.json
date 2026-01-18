@@ -1,0 +1,18 @@
+{
+  "benchmark_accuracy": 0.2833333333333333,
+  "benchmark_holdout_questions": 60,
+  "benchmark_correct_count": 17,
+  "benchmark_comparisons_count": 60,
+  "benchmark_episode_keys": [
+    "design-1",
+    "design-11",
+    "design-18",
+    "design-29",
+    "design-32",
+    "design-37",
+    "design-40",
+    "design-44",
+    "design-45",
+    "design-48"
+  ]
+}

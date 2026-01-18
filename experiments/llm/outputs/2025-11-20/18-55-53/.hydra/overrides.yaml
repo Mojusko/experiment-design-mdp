@@ -1,0 +1,10 @@
+- algorithm=design
+- visits_path=human_feedbacks_post_rebuttal/lambda100/visits/visits-feedback-dsn-mult-lambda100-1.pkl
+- feedback_path=forest_gpt-4.1-mini_dsn_lambda100_converted_tuz65s7y.json
+- feedback.lambda=100
+- benchmark_episode_spec="40-49"
+- estimation_episode_spec="0-39,50-59"
+- results_dir=results/human-feedback-post-rebuttal-30ep/lambda100/forest/design/fold1
+- override_results_dir=true
+- experiment_id=run-visits-feedback-dsn-mult-lambda100-1
+- seed=1

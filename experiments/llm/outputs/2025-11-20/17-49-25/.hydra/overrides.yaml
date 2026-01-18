@@ -1,0 +1,10 @@
+- algorithm=random
+- visits_path=human_feedbacks_post_rebuttal/lambda1/visits/visits-feedback-rand-mult-lambda1-1.pkl
+- feedback_path=cyberpunk_gpt-4.1-mini_rand_lambda1_converted_dfsnlmb3.json
+- feedback.lambda=1
+- benchmark_episode_spec="30-39"
+- estimation_episode_spec="0-29,40-59"
+- results_dir=results/human-feedback-post-rebuttal/lambda1/cyberpunk/random/fold2
+- override_results_dir=true
+- experiment_id=run-visits-feedback-rand-mult-lambda1-1
+- seed=1

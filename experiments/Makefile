@@ -708,6 +708,19 @@ llm-human-feedback-batch:
 	@$(if $(FEEDBACK_FILES),,$(error FEEDBACK_FILES must be set, e.g., make llm-human-feedback-batch FEEDBACK_FILES=1.jsonl,2.jsonl))
 	cd llm && $(PYTHONPATH) run_human_feedback_batch.py --feedback-files "$(FEEDBACK_FILES)" $(if $(RESULTS_ROOT),--results-root "$(RESULTS_ROOT)",) $(if $(ALGORITHMS),--algorithms "$(ALGORITHMS)",) $(if $(FEEDBACK_NUM_ROUNDS),--feedback-num-rounds $(FEEDBACK_NUM_ROUNDS),) $(if $(NUM_BENCHMARK_EPISODES),--num-benchmark-episodes $(NUM_BENCHMARK_EPISODES),) $(if $(BENCHMARK_EPISODES),--benchmark-episodes "$(BENCHMARK_EPISODES)",) $(if $(ESTIMATION_EPISODES),--estimation-episodes "$(ESTIMATION_EPISODES)",) $(if $(DRY_RUN),--dry-run,)
 
+# Post-rebuttal batch processing for GPT feedback experiments
+# Example: make llm-human-feedback-post-rebuttal NUM_TRAIN_EPISODES=50 NUM_TEST_EPISODES=10
+# Optional overrides:
+#   LAMBDA_VALUES="10 100"
+#   THEMES="ancient forest"
+#   ALGORITHMS="design random"
+#   NUM_TRAIN_EPISODES=50    # Episodes for training
+#   NUM_TEST_EPISODES=10     # Episodes for testing (rotating windows)
+#   NUM_FOLDS=3              # Limit number of rotating folds
+#   DRY_RUN=1
+llm-human-feedback-post-rebuttal:
+	cd llm && $(PYTHONPATH) run_human_feedback_batch_post_rebuttal.py $(if $(LAMBDA_VALUES),--lambda-values "$(LAMBDA_VALUES)",) $(if $(THEMES),--themes "$(THEMES)",) $(if $(ALGORITHMS),--algorithms "$(ALGORITHMS)",) $(if $(RESULTS_ROOT),--results-root "$(RESULTS_ROOT)",) $(if $(FEEDBACK_NUM_ROUNDS),--feedback-num-rounds $(FEEDBACK_NUM_ROUNDS),) $(if $(NUM_TRAIN_EPISODES),--num-train-episodes $(NUM_TRAIN_EPISODES),) $(if $(NUM_TEST_EPISODES),--num-test-episodes $(NUM_TEST_EPISODES),) $(if $(NUM_FOLDS),--num-folds $(NUM_FOLDS),) $(if $(DRY_RUN),--dry-run,)
+
 # Define jobs for inspecting visits using VisitsImageSaver
 JOBS_LLM_INSPECT_VISITS := $(addprefix job-llm-inspect-visit-,$(NUMBERS_LLM))
 

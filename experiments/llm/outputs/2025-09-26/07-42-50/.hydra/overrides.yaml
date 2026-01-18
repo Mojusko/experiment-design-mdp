@@ -1,0 +1,11 @@
+- algorithm=random
+- visits_path=llm/human_feedback_visits/lam0.01_ep80/visits-feedback-rand-mult-ep80-1.pkl
+- feedback_path=llm/human_feedbacks/minimalist_gpt-4.1-mini-0.01-ep80.jsonl
+- feedback.lambda=0.01
+- experiment.episodes=80
+- benchmark_episode_spec="random:40-49"
+- estimation_episode_spec="random:30-39,random:50-79"
+- results_dir=llm/results/gpt-cv-random/minimalist_lambda0.01/fold40
+- override_results_dir=true
+- experiment_id=run-visits-feedback-rand-mult-ep80-1
+- seed=1

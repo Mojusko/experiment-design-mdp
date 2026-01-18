@@ -1,0 +1,8 @@
+- experiment=feedback_comparison
+- algorithm=design
+- feedback=multinomial
+- feedback.lambda=0.1
+- explore_only=true
+- seed=1
+- results_dir=results/feedback-comparison-lambdas
+- experiment_id=lambda0.1-1

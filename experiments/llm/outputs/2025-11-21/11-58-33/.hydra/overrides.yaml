@@ -1,0 +1,10 @@
+- algorithm=design
+- visits_path=human_feedbacks_post_rebuttal/lambda100/visits/visits-feedback-dsn-mult-lambda100-1.pkl
+- feedback_path=futuristic_gpt-4.1-mini_dsn_lambda100_converted_0p5rjytp.json
+- feedback.lambda=100
+- benchmark_episode_spec="40-49"
+- estimation_episode_spec="0-9"
+- results_dir=results/human-feedback-post-rebuttal-10ep/lambda100/futuristic/design/fold1
+- override_results_dir=true
+- experiment_id=run-visits-feedback-dsn-mult-lambda100-1
+- seed=1

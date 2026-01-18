@@ -1,0 +1,10 @@
+- algorithm=random
+- visits_path=human_feedbacks_post_rebuttal/lambda0.1/visits/visits-feedback-rand-mult-lambda0.1-1.pkl
+- feedback_path=futuristic_gpt-4.1-mini_rand_lambda0_converted_2gjfdv2v.json
+- feedback.lambda=0.1
+- benchmark_episode_spec="40-49"
+- estimation_episode_spec="0-39,50-59"
+- results_dir=results/human-feedback-post-rebuttal/lambda0.1/futuristic/random/fold1
+- override_results_dir=true
+- experiment_id=run-visits-feedback-rand-mult-lambda0.1-1
+- seed=1

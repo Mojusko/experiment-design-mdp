@@ -1,0 +1,62 @@
+experiment:
+  name: feedback_comparison
+  id_prefix: human-feedback
+  episodes: 60
+  vocab_size: 2500
+  vocabulary:
+  - vocabulary3/bases.txt
+  - vocabulary3/ambient.txt
+  - vocabulary3/style.txt
+  - vocabulary3/composition.txt
+  - vocabulary3/lighting.txt
+  - vocabulary3/detail.txt
+  scorer_model: null
+embedder:
+  _target_: components.embedder.CLIPEmbedder
+  model_id: openai/clip-vit-large-patch14
+  normalize: true
+  cache_dir: ${cache_dir}
+feedback:
+  name: multinomial
+  num_policies: 4
+  num_components: 2
+  num_rounds: 20
+  lambda: 100
+  adaptive_estimation_frequency: 0
+  adaptive_estimation_start: 0
+  adaptive_design_frequency: 0
+  pass_V: true
+  lambda_sparsity: 0
+  objective: A
+  use_model_specific_lambda: false
+seed: 1
+verbose: false
+cache_dir: ${oc.env:HOME}/.cache/huggingface/hub
+accuracy: 1.0e-14
+experiment_id: run-visits-feedback-rand-mult-lambda100-1
+base_prompt: ''
+include_base_prompt_in_first_tokens: false
+num_benchmark_episodes: 10
+benchmark_episode_spec: 30-39
+estimation_episode_spec: 0-29,40-59
+test_only: true
+explore_only: false
+algorithm: random
+visits_path: human_feedbacks_post_rebuttal/lambda100/visits/visits-feedback-rand-mult-lambda100-1.pkl
+feedback_path: futuristic_gpt-4.1-mini_rand_lambda100_converted_4196vrre.json
+estimator_path: null
+results_dir: results/human-feedback-post-rebuttal/lambda100/futuristic/random/fold2
+override_results_dir: true
+tester:
+- _target_: components.tester.HumanFeedbackBenchmarkTester
+  params: {}
+savers:
+- _target_: components.saver.LearnedEstimatorSaver
+  params:
+    filename: estimator.pt
+- _target_: components.saver.MetricsSaver
+  params:
+    filename: metrics.json
+- _target_: components.saver.ConfSaver
+  params:
+    filename: config_resolved.yaml

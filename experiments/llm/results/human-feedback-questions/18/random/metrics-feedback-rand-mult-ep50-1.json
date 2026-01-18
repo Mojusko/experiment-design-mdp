@@ -1,0 +1,348 @@
+{
+  "benchmark_accuracy": 0.3,
+  "benchmark_holdout_questions": 60,
+  "benchmark_correct_count": 18,
+  "benchmark_comparisons_count": 60,
+  "benchmark_episode_keys": [
+    "random-0",
+    "random-1",
+    "random-11",
+    "random-12",
+    "random-13",
+    "random-15",
+    "random-16",
+    "random-17",
+    "random-18",
+    "random-2",
+    "random-20",
+    "random-22",
+    "random-23",
+    "random-24",
+    "random-25",
+    "random-26",
+    "random-27",
+    "random-28",
+    "random-3",
+    "random-30",
+    "random-32",
+    "random-34",
+    "random-35",
+    "random-36",
+    "random-37",
+    "random-39",
+    "random-4",
+    "random-42",
+    "random-43",
+    "random-44",
+    "random-45",
+    "random-47",
+    "random-48",
+    "random-49",
+    "random-5",
+    "random-6",
+    "random-7",
+    "random-8"
+  ],
+  "benchmark_question_keys": [
+    {
+      "algorithm": "random",
+      "episode": 42,
+      "timestep": 3
+    },
+    {
+      "algorithm": "random",
+      "episode": 24,
+      "timestep": 5
+    },
+    {
+      "algorithm": "random",
+      "episode": 3,
+      "timestep": 2
+    },
+    {
+      "algorithm": "random",
+      "episode": 49,
+      "timestep": 2
+    },
+    {
+      "algorithm": "random",
+      "episode": 32,
+      "timestep": 4
+    },
+    {
+      "algorithm": "random",
+      "episode": 20,
+      "timestep": 2
+    },
+    {
+      "algorithm": "random",
+      "episode": 18,
+      "timestep": 3
+    },
+    {
+      "algorithm": "random",
+      "episode": 1,
+      "timestep": 2
+    },
+    {
+      "algorithm": "random",
+      "episode": 8,
+      "timestep": 6
+    },
+    {
+      "algorithm": "random",
+      "episode": 23,
+      "timestep": 1
+    },
+    {
+      "algorithm": "random",
+      "episode": 47,
+      "timestep": 4
+    },
+    {
+      "algorithm": "random",
+      "episode": 44,
+      "timestep": 6
+    },
+    {
+      "algorithm": "random",
+      "episode": 15,
+      "timestep": 6
+    },
+    {
+      "algorithm": "random",
+      "episode": 15,
+      "timestep": 3
+    },
+    {
+      "algorithm": "random",
+      "episode": 48,
+      "timestep": 4
+    },
+    {
+      "algorithm": "random",
+      "episode": 0,
+      "timestep": 6
+    },
+    {
+      "algorithm": "random",
+      "episode": 3,
+      "timestep": 5
+    },
+    {
+      "algorithm": "random",
+      "episode": 28,
+      "timestep": 5
+    },
+    {
+      "algorithm": "random",
+      "episode": 25,
+      "timestep": 1
+    },
+    {
+      "algorithm": "random",
+      "episode": 37,
+      "timestep": 2
+    },
+    {
+      "algorithm": "random",
+      "episode": 39,
+      "timestep": 5
+    },
+    {
+      "algorithm": "random",
+      "episode": 13,
+      "timestep": 3
+    },
+    {
+      "algorithm": "random",
+      "episode": 7,
+      "timestep": 5
+    },
+    {
+      "algorithm": "random",
+      "episode": 32,
+      "timestep": 5
+    },
+    {
+      "algorithm": "random",
+      "episode": 44,
+      "timestep": 2
+    },
+    {
+      "algorithm": "random",
+      "episode": 2,
+      "timestep": 4
+    },
+    {
+      "algorithm": "random",
+      "episode": 4,
+      "timestep": 6
+    },
+    {
+      "algorithm": "random",
+      "episode": 26,
+      "timestep": 2
+    },
+    {
+      "algorithm": "random",
+      "episode": 8,
+      "timestep": 3
+    },
+    {
+      "algorithm": "random",
+      "episode": 27,
+      "timestep": 4
+    },
+    {
+      "algorithm": "random",
+      "episode": 12,
+      "timestep": 3
+    },
+    {
+      "algorithm": "random",
+      "episode": 3,
+      "timestep": 4
+    },
+    {
+      "algorithm": "random",
+      "episode": 0,
+      "timestep": 5
+    },
+    {
+      "algorithm": "random",
+      "episode": 28,
+      "timestep": 4
+    },
+    {
+      "algorithm": "random",
+      "episode": 5,
+      "timestep": 2
+    },
+    {
+      "algorithm": "random",
+      "episode": 24,
+      "timestep": 3
+    },
+    {
+      "algorithm": "random",
+      "episode": 4,
+      "timestep": 4
+    },
+    {
+      "algorithm": "random",
+      "episode": 32,
+      "timestep": 6
+    },
+    {
+      "algorithm": "random",
+      "episode": 44,
+      "timestep": 4
+    },
+    {
+      "algorithm": "random",
+      "episode": 42,
+      "timestep": 6
+    },
+    {
+      "algorithm": "random",
+      "episode": 45,
+      "timestep": 4
+    },
+    {
+      "algorithm": "random",
+      "episode": 34,
+      "timestep": 3
+    },
+    {
+      "algorithm": "random",
+      "episode": 25,
+      "timestep": 6
+    },
+    {
+      "algorithm": "random",
+      "episode": 8,
+      "timestep": 2
+    },
+    {
+      "algorithm": "random",
+      "episode": 27,
+      "timestep": 1
+    },
+    {
+      "algorithm": "random",
+      "episode": 49,
+      "timestep": 6
+    },
+    {
+      "algorithm": "random",
+      "episode": 0,
+      "timestep": 1
+    },
+    {
+      "algorithm": "random",
+      "episode": 36,
+      "timestep": 5
+    },
+    {
+      "algorithm": "random",
+      "episode": 20,
+      "timestep": 4
+    },
+    {
+      "algorithm": "random",
+      "episode": 17,
+      "timestep": 2
+    },
+    {
+      "algorithm": "random",
+      "episode": 16,
+      "timestep": 6
+    },
+    {
+      "algorithm": "random",
+      "episode": 6,
+      "timestep": 2
+    },
+    {
+      "algorithm": "random",
+      "episode": 11,
+      "timestep": 1
+    },
+    {
+      "algorithm": "random",
+      "episode": 35,
+      "timestep": 2
+    },
+    {
+      "algorithm": "random",
+      "episode": 4,
+      "timestep": 3
+    },
+    {
+      "algorithm": "random",
+      "episode": 43,
+      "timestep": 2
+    },
+    {
+      "algorithm": "random",
+      "episode": 17,
+      "timestep": 6
+    },
+    {
+      "algorithm": "random",
+      "episode": 22,
+      "timestep": 6
+    },
+    {
+      "algorithm": "random",
+      "episode": 30,
+      "timestep": 6
+    },
+    {
+      "algorithm": "random",
+      "episode": 34,
+      "timestep": 6
+    }
+  ]
+}

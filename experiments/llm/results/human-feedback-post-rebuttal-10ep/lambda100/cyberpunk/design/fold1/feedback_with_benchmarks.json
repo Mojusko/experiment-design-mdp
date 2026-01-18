@@ -1,0 +1,2192 @@
+{
+  "metadata": {
+    "lambda": 100.0,
+    "source": "cyberpunk_gpt-4.1-mini_dsn_lambda100.jsonl"
+  },
+  "preferences": [
+    {
+      "filename": "alg-design_episode_000_timestep_01.png",
+      "preference": 3,
+      "algorithm": "design",
+      "episode": 0
+    },
+    {
+      "filename": "alg-design_episode_000_timestep_02.png",
+      "preference": 2,
+      "algorithm": "design",
+      "episode": 0
+    },
+    {
+      "filename": "alg-design_episode_000_timestep_03.png",
+      "preference": 2,
+      "algorithm": "design",
+      "episode": 0
+    },
+    {
+      "filename": "alg-design_episode_000_timestep_04.png",
+      "preference": 2,
+      "algorithm": "design",
+      "episode": 0
+    },
+    {
+      "filename": "alg-design_episode_000_timestep_05.png",
+      "preference": 2,
+      "algorithm": "design",
+      "episode": 0
+    },
+    {
+      "filename": "alg-design_episode_000_timestep_06.png",
+      "preference": 2,
+      "algorithm": "design",
+      "episode": 0
+    },
+    {
+      "filename": "alg-design_episode_001_timestep_01.png",
+      "preference": 4,
+      "algorithm": "design",
+      "episode": 1
+    },
+    {
+      "filename": "alg-design_episode_001_timestep_02.png",
+      "preference": 4,
+      "algorithm": "design",
+      "episode": 1
+    },
+    {
+      "filename": "alg-design_episode_001_timestep_03.png",
+      "preference": 4,
+      "algorithm": "design",
+      "episode": 1
+    },
+    {
+      "filename": "alg-design_episode_001_timestep_04.png",
+      "preference": 4,
+      "algorithm": "design",
+      "episode": 1
+    },
+    {
+      "filename": "alg-design_episode_001_timestep_06.png",
+      "preference": 3,
+      "algorithm": "design",
+      "episode": 1
+    },
+    {
+      "filename": "alg-design_episode_002_timestep_01.png",
+      "preference": 1,
+      "algorithm": "design",
+      "episode": 2
+    },
+    {
+      "filename": "alg-design_episode_002_timestep_02.png",
+      "preference": 2,
+      "algorithm": "design",
+      "episode": 2
+    },
+    {
+      "filename": "alg-design_episode_002_timestep_03.png",
+      "preference": 2,
+      "algorithm": "design",
+      "episode": 2
+    },
+    {
+      "filename": "alg-design_episode_002_timestep_04.png",
+      "preference": 2,
+      "algorithm": "design",
+      "episode": 2
+    },
+    {
+      "filename": "alg-design_episode_002_timestep_05.png",
+      "preference": 2,
+      "algorithm": "design",
+      "episode": 2
+    },
+    {
+      "filename": "alg-design_episode_002_timestep_06.png",
+      "preference": 2,
+      "algorithm": "design",
+      "episode": 2
+    },
+    {
+      "filename": "alg-design_episode_003_timestep_01.png",
+      "preference": 4,
+      "algorithm": "design",
+      "episode": 3
+    },
+    {
+      "filename": "alg-design_episode_003_timestep_02.png",
+      "preference": 4,
+      "algorithm": "design",
+      "episode": 3
+    },
+    {
+      "filename": "alg-design_episode_003_timestep_03.png",
+      "preference": 3,
+      "algorithm": "design",
+      "episode": 3
+    },
+    {
+      "filename": "alg-design_episode_003_timestep_04.png",
+      "preference": 4,
+      "algorithm": "design",
+      "episode": 3
+    },
+    {
+      "filename": "alg-design_episode_003_timestep_05.png",
+      "preference": 4,
+      "algorithm": "design",
+      "episode": 3
+    },
+    {
+      "filename": "alg-design_episode_003_timestep_06.png",
+      "preference": 4,
+      "algorithm": "design",
+      "episode": 3
+    },
+    {
+      "filename": "alg-design_episode_004_timestep_01.png",
+      "preference": 3,
+      "algorithm": "design",
+      "episode": 4
+    },
+    {
+      "filename": "alg-design_episode_004_timestep_02.png",
+      "preference": 3,
+      "algorithm": "design",
+      "episode": 4
+    },
+    {
+      "filename": "alg-design_episode_004_timestep_03.png",
+      "preference": 4,
+      "algorithm": "design",
+      "episode": 4
+    },
+    {
+      "filename": "alg-design_episode_004_timestep_04.png",
+      "preference": 3,
+      "algorithm": "design",
+      "episode": 4
+    },
+    {
+      "filename": "alg-design_episode_004_timestep_05.png",
+      "preference": 3,
+      "algorithm": "design",
+      "episode": 4
+    },
+    {
+      "filename": "alg-design_episode_004_timestep_06.png",
+      "preference": 3,
+      "algorithm": "design",
+      "episode": 4
+    },
+    {
+      "filename": "alg-design_episode_005_timestep_01.png",
+      "preference": 2,
+      "algorithm": "design",
+      "episode": 5
+    },
+    {
+      "filename": "alg-design_episode_005_timestep_02.png",
+      "preference": 1,
+      "algorithm": "design",
+      "episode": 5
+    },
+    {
+      "filename": "alg-design_episode_005_timestep_03.png",
+      "preference": 1,
+      "algorithm": "design",
+      "episode": 5
+    },
+    {
+      "filename": "alg-design_episode_005_timestep_04.png",
+      "preference": 2,
+      "algorithm": "design",
+      "episode": 5
+    },
+    {
+      "filename": "alg-design_episode_005_timestep_05.png",
+      "preference": 2,
+      "algorithm": "design",
+      "episode": 5
+    },
+    {
+      "filename": "alg-design_episode_005_timestep_06.png",
+      "preference": 2,
+      "algorithm": "design",
+      "episode": 5
+    },
+    {
+      "filename": "alg-design_episode_006_timestep_01.png",
+      "preference": 3,
+      "algorithm": "design",
+      "episode": 6
+    },
+    {
+      "filename": "alg-design_episode_006_timestep_02.png",
+      "preference": 4,
+      "algorithm": "design",
+      "episode": 6
+    },
+    {
+      "filename": "alg-design_episode_006_timestep_03.png",
+      "preference": 4,
+      "algorithm": "design",
+      "episode": 6
+    },
+    {
+      "filename": "alg-design_episode_006_timestep_04.png",
+      "preference": 4,
+      "algorithm": "design",
+      "episode": 6
+    },
+    {
+      "filename": "alg-design_episode_006_timestep_05.png",
+      "preference": 3,
+      "algorithm": "design",
+      "episode": 6
+    },
+    {
+      "filename": "alg-design_episode_006_timestep_06.png",
+      "preference": 3,
+      "algorithm": "design",
+      "episode": 6
+    },
+    {
+      "filename": "alg-design_episode_007_timestep_01.png",
+      "preference": 3,
+      "algorithm": "design",
+      "episode": 7
+    },
+    {
+      "filename": "alg-design_episode_007_timestep_02.png",
+      "preference": 3,
+      "algorithm": "design",
+      "episode": 7
+    },
+    {
+      "filename": "alg-design_episode_007_timestep_03.png",
+      "preference": 3,
+      "algorithm": "design",
+      "episode": 7
+    },
+    {
+      "filename": "alg-design_episode_007_timestep_04.png",
+      "preference": 3,
+      "algorithm": "design",
+      "episode": 7
+    },
+    {
+      "filename": "alg-design_episode_007_timestep_05.png",
+      "preference": 3,
+      "algorithm": "design",
+      "episode": 7
+    },
+    {
+      "filename": "alg-design_episode_007_timestep_06.png",
+      "preference": 3,
+      "algorithm": "design",
+      "episode": 7
+    },
+    {
+      "filename": "alg-design_episode_008_timestep_01.png",
+      "preference": 2,
+      "algorithm": "design",
+      "episode": 8
+    },
+    {
+      "filename": "alg-design_episode_008_timestep_02.png",
+      "preference": 3,
+      "algorithm": "design",
+      "episode": 8
+    },
+    {
+      "filename": "alg-design_episode_008_timestep_03.png",
+      "preference": 3,
+      "algorithm": "design",
+      "episode": 8
+    },
+    {
+      "filename": "alg-design_episode_008_timestep_04.png",
+      "preference": 3,
+      "algorithm": "design",
+      "episode": 8
+    },
+    {
+      "filename": "alg-design_episode_008_timestep_05.png",
+      "preference": 3,
+      "algorithm": "design",
+      "episode": 8
+    },
+    {
+      "filename": "alg-design_episode_008_timestep_06.png",
+      "preference": 3,
+      "algorithm": "design",
+      "episode": 8
+    },
+    {
+      "filename": "alg-design_episode_009_timestep_01.png",
+      "preference": 3,
+      "algorithm": "design",
+      "episode": 9
+    },
+    {
+      "filename": "alg-design_episode_009_timestep_02.png",
+      "preference": 3,
+      "algorithm": "design",
+      "episode": 9
+    },
+    {
+      "filename": "alg-design_episode_009_timestep_03.png",
+      "preference": 3,
+      "algorithm": "design",
+      "episode": 9
+    },
+    {
+      "filename": "alg-design_episode_009_timestep_04.png",
+      "preference": 3,
+      "algorithm": "design",
+      "episode": 9
+    },
+    {
+      "filename": "alg-design_episode_009_timestep_05.png",
+      "preference": 3,
+      "algorithm": "design",
+      "episode": 9
+    },
+    {
+      "filename": "alg-design_episode_009_timestep_06.png",
+      "preference": 3,
+      "algorithm": "design",
+      "episode": 9
+    },
+    {
+      "filename": "alg-design_episode_010_timestep_01.png",
+      "preference": 1,
+      "algorithm": "design",
+      "episode": 10
+    },
+    {
+      "filename": "alg-design_episode_010_timestep_02.png",
+      "preference": 4,
+      "algorithm": "design",
+      "episode": 10
+    },
+    {
+      "filename": "alg-design_episode_010_timestep_03.png",
+      "preference": 4,
+      "algorithm": "design",
+      "episode": 10
+    },
+    {
+      "filename": "alg-design_episode_010_timestep_04.png",
+      "preference": 4,
+      "algorithm": "design",
+      "episode": 10
+    },
+    {
+      "filename": "alg-design_episode_010_timestep_05.png",
+      "preference": 4,
+      "algorithm": "design",
+      "episode": 10
+    },
+    {
+      "filename": "alg-design_episode_010_timestep_06.png",
+      "preference": 1,
+      "algorithm": "design",
+      "episode": 10
+    },
+    {
+      "filename": "alg-design_episode_011_timestep_01.png",
+      "preference": 1,
+      "algorithm": "design",
+      "episode": 11
+    },
+    {
+      "filename": "alg-design_episode_011_timestep_02.png",
+      "preference": 1,
+      "algorithm": "design",
+      "episode": 11
+    },
+    {
+      "filename": "alg-design_episode_011_timestep_03.png",
+      "preference": 2,
+      "algorithm": "design",
+      "episode": 11
+    },
+    {
+      "filename": "alg-design_episode_011_timestep_04.png",
+      "preference": 2,
+      "algorithm": "design",
+      "episode": 11
+    },
+    {
+      "filename": "alg-design_episode_011_timestep_05.png",
+      "preference": 2,
+      "algorithm": "design",
+      "episode": 11
+    },
+    {
+      "filename": "alg-design_episode_011_timestep_06.png",
+      "preference": 2,
+      "algorithm": "design",
+      "episode": 11
+    },
+    {
+      "filename": "alg-design_episode_012_timestep_01.png",
+      "preference": 1,
+      "algorithm": "design",
+      "episode": 12
+    },
+    {
+      "filename": "alg-design_episode_012_timestep_02.png",
+      "preference": 3,
+      "algorithm": "design",
+      "episode": 12
+    },
+    {
+      "filename": "alg-design_episode_012_timestep_03.png",
+      "preference": 3,
+      "algorithm": "design",
+      "episode": 12
+    },
+    {
+      "filename": "alg-design_episode_012_timestep_04.png",
+      "preference": 3,
+      "algorithm": "design",
+      "episode": 12
+    },
+    {
+      "filename": "alg-design_episode_012_timestep_05.png",
+      "preference": 3,
+      "algorithm": "design",
+      "episode": 12
+    },
+    {
+      "filename": "alg-design_episode_012_timestep_06.png",
+      "preference": 3,
+      "algorithm": "design",
+      "episode": 12
+    },
+    {
+      "filename": "alg-design_episode_013_timestep_01.png",
+      "preference": 3,
+      "algorithm": "design",
+      "episode": 13
+    },
+    {
+      "filename": "alg-design_episode_013_timestep_02.png",
+      "preference": 4,
+      "algorithm": "design",
+      "episode": 13
+    },
+    {
+      "filename": "alg-design_episode_013_timestep_03.png",
+      "preference": 3,
+      "algorithm": "design",
+      "episode": 13
+    },
+    {
+      "filename": "alg-design_episode_013_timestep_04.png",
+      "preference": 3,
+      "algorithm": "design",
+      "episode": 13
+    },
+    {
+      "filename": "alg-design_episode_013_timestep_05.png",
+      "preference": 4,
+      "algorithm": "design",
+      "episode": 13
+    },
+    {
+      "filename": "alg-design_episode_013_timestep_06.png",
+      "preference": 3,
+      "algorithm": "design",
+      "episode": 13
+    },
+    {
+      "filename": "alg-design_episode_014_timestep_01.png",
+      "preference": 2,
+      "algorithm": "design",
+      "episode": 14
+    },
+    {
+      "filename": "alg-design_episode_014_timestep_02.png",
+      "preference": 2,
+      "algorithm": "design",
+      "episode": 14
+    },
+    {
+      "filename": "alg-design_episode_014_timestep_03.png",
+      "preference": 2,
+      "algorithm": "design",
+      "episode": 14
+    },
+    {
+      "filename": "alg-design_episode_014_timestep_04.png",
+      "preference": 2,
+      "algorithm": "design",
+      "episode": 14
+    },
+    {
+      "filename": "alg-design_episode_014_timestep_05.png",
+      "preference": 2,
+      "algorithm": "design",
+      "episode": 14
+    },
+    {
+      "filename": "alg-design_episode_014_timestep_06.png",
+      "preference": 2,
+      "algorithm": "design",
+      "episode": 14
+    },
+    {
+      "filename": "alg-design_episode_015_timestep_01.png",
+      "preference": 2,
+      "algorithm": "design",
+      "episode": 15
+    },
+    {
+      "filename": "alg-design_episode_015_timestep_02.png",
+      "preference": 2,
+      "algorithm": "design",
+      "episode": 15
+    },
+    {
+      "filename": "alg-design_episode_015_timestep_03.png",
+      "preference": 2,
+      "algorithm": "design",
+      "episode": 15
+    },
+    {
+      "filename": "alg-design_episode_015_timestep_04.png",
+      "preference": 2,
+      "algorithm": "design",
+      "episode": 15
+    },
+    {
+      "filename": "alg-design_episode_015_timestep_05.png",
+      "preference": 2,
+      "algorithm": "design",
+      "episode": 15
+    },
+    {
+      "filename": "alg-design_episode_015_timestep_06.png",
+      "preference": 2,
+      "algorithm": "design",
+      "episode": 15
+    },
+    {
+      "filename": "alg-design_episode_016_timestep_01.png",
+      "preference": 2,
+      "algorithm": "design",
+      "episode": 16
+    },
+    {
+      "filename": "alg-design_episode_016_timestep_02.png",
+      "preference": 4,
+      "algorithm": "design",
+      "episode": 16
+    },
+    {
+      "filename": "alg-design_episode_016_timestep_03.png",
+      "preference": 2,
+      "algorithm": "design",
+      "episode": 16
+    },
+    {
+      "filename": "alg-design_episode_016_timestep_04.png",
+      "preference": 4,
+      "algorithm": "design",
+      "episode": 16
+    },
+    {
+      "filename": "alg-design_episode_016_timestep_05.png",
+      "preference": 4,
+      "algorithm": "design",
+      "episode": 16
+    },
+    {
+      "filename": "alg-design_episode_016_timestep_06.png",
+      "preference": 2,
+      "algorithm": "design",
+      "episode": 16
+    },
+    {
+      "filename": "alg-design_episode_017_timestep_01.png",
+      "preference": 2,
+      "algorithm": "design",
+      "episode": 17
+    },
+    {
+      "filename": "alg-design_episode_017_timestep_02.png",
+      "preference": 2,
+      "algorithm": "design",
+      "episode": 17
+    },
+    {
+      "filename": "alg-design_episode_017_timestep_03.png",
+      "preference": 2,
+      "algorithm": "design",
+      "episode": 17
+    },
+    {
+      "filename": "alg-design_episode_017_timestep_04.png",
+      "preference": 2,
+      "algorithm": "design",
+      "episode": 17
+    },
+    {
+      "filename": "alg-design_episode_017_timestep_05.png",
+      "preference": 2,
+      "algorithm": "design",
+      "episode": 17
+    },
+    {
+      "filename": "alg-design_episode_017_timestep_06.png",
+      "preference": 2,
+      "algorithm": "design",
+      "episode": 17
+    },
+    {
+      "filename": "alg-design_episode_018_timestep_01.png",
+      "preference": 1,
+      "algorithm": "design",
+      "episode": 18
+    },
+    {
+      "filename": "alg-design_episode_018_timestep_02.png",
+      "preference": 3,
+      "algorithm": "design",
+      "episode": 18
+    },
+    {
+      "filename": "alg-design_episode_018_timestep_03.png",
+      "preference": 3,
+      "algorithm": "design",
+      "episode": 18
+    },
+    {
+      "filename": "alg-design_episode_018_timestep_04.png",
+      "preference": 2,
+      "algorithm": "design",
+      "episode": 18
+    },
+    {
+      "filename": "alg-design_episode_018_timestep_05.png",
+      "preference": 2,
+      "algorithm": "design",
+      "episode": 18
+    },
+    {
+      "filename": "alg-design_episode_018_timestep_06.png",
+      "preference": 1,
+      "algorithm": "design",
+      "episode": 18
+    },
+    {
+      "filename": "alg-design_episode_019_timestep_01.png",
+      "preference": 4,
+      "algorithm": "design",
+      "episode": 19
+    },
+    {
+      "filename": "alg-design_episode_019_timestep_02.png",
+      "preference": 4,
+      "algorithm": "design",
+      "episode": 19
+    },
+    {
+      "filename": "alg-design_episode_019_timestep_03.png",
+      "preference": 1,
+      "algorithm": "design",
+      "episode": 19
+    },
+    {
+      "filename": "alg-design_episode_019_timestep_04.png",
+      "preference": 4,
+      "algorithm": "design",
+      "episode": 19
+    },
+    {
+      "filename": "alg-design_episode_019_timestep_05.png",
+      "preference": 3,
+      "algorithm": "design",
+      "episode": 19
+    },
+    {
+      "filename": "alg-design_episode_019_timestep_06.png",
+      "preference": 4,
+      "algorithm": "design",
+      "episode": 19
+    },
+    {
+      "filename": "alg-design_episode_020_timestep_01.png",
+      "preference": 4,
+      "algorithm": "design",
+      "episode": 20
+    },
+    {
+      "filename": "alg-design_episode_020_timestep_02.png",
+      "preference": 4,
+      "algorithm": "design",
+      "episode": 20
+    },
+    {
+      "filename": "alg-design_episode_020_timestep_03.png",
+      "preference": 4,
+      "algorithm": "design",
+      "episode": 20
+    },
+    {
+      "filename": "alg-design_episode_020_timestep_04.png",
+      "preference": 4,
+      "algorithm": "design",
+      "episode": 20
+    },
+    {
+      "filename": "alg-design_episode_020_timestep_05.png",
+      "preference": 1,
+      "algorithm": "design",
+      "episode": 20
+    },
+    {
+      "filename": "alg-design_episode_020_timestep_06.png",
+      "preference": 1,
+      "algorithm": "design",
+      "episode": 20
+    },
+    {
+      "filename": "alg-design_episode_021_timestep_01.png",
+      "preference": 4,
+      "algorithm": "design",
+      "episode": 21
+    },
+    {
+      "filename": "alg-design_episode_021_timestep_02.png",
+      "preference": 4,
+      "algorithm": "design",
+      "episode": 21
+    },
+    {
+      "filename": "alg-design_episode_021_timestep_03.png",
+      "preference": 4,
+      "algorithm": "design",
+      "episode": 21
+    },
+    {
+      "filename": "alg-design_episode_021_timestep_04.png",
+      "preference": 4,
+      "algorithm": "design",
+      "episode": 21
+    },
+    {
+      "filename": "alg-design_episode_021_timestep_05.png",
+      "preference": 4,
+      "algorithm": "design",
+      "episode": 21
+    },
+    {
+      "filename": "alg-design_episode_021_timestep_06.png",
+      "preference": 4,
+      "algorithm": "design",
+      "episode": 21
+    },
+    {
+      "filename": "alg-design_episode_022_timestep_01.png",
+      "preference": 1,
+      "algorithm": "design",
+      "episode": 22
+    },
+    {
+      "filename": "alg-design_episode_022_timestep_02.png",
+      "preference": 3,
+      "algorithm": "design",
+      "episode": 22
+    },
+    {
+      "filename": "alg-design_episode_022_timestep_03.png",
+      "preference": 3,
+      "algorithm": "design",
+      "episode": 22
+    },
+    {
+      "filename": "alg-design_episode_022_timestep_04.png",
+      "preference": 3,
+      "algorithm": "design",
+      "episode": 22
+    },
+    {
+      "filename": "alg-design_episode_022_timestep_05.png",
+      "preference": 3,
+      "algorithm": "design",
+      "episode": 22
+    },
+    {
+      "filename": "alg-design_episode_022_timestep_06.png",
+      "preference": 3,
+      "algorithm": "design",
+      "episode": 22
+    },
+    {
+      "filename": "alg-design_episode_023_timestep_01.png",
+      "preference": 1,
+      "algorithm": "design",
+      "episode": 23
+    },
+    {
+      "filename": "alg-design_episode_023_timestep_02.png",
+      "preference": 1,
+      "algorithm": "design",
+      "episode": 23
+    },
+    {
+      "filename": "alg-design_episode_023_timestep_03.png",
+      "preference": 1,
+      "algorithm": "design",
+      "episode": 23
+    },
+    {
+      "filename": "alg-design_episode_023_timestep_04.png",
+      "preference": 1,
+      "algorithm": "design",
+      "episode": 23
+    },
+    {
+      "filename": "alg-design_episode_023_timestep_05.png",
+      "preference": 1,
+      "algorithm": "design",
+      "episode": 23
+    },
+    {
+      "filename": "alg-design_episode_023_timestep_06.png",
+      "preference": 1,
+      "algorithm": "design",
+      "episode": 23
+    },
+    {
+      "filename": "alg-design_episode_024_timestep_01.png",
+      "preference": 3,
+      "algorithm": "design",
+      "episode": 24
+    },
+    {
+      "filename": "alg-design_episode_024_timestep_02.png",
+      "preference": 4,
+      "algorithm": "design",
+      "episode": 24
+    },
+    {
+      "filename": "alg-design_episode_024_timestep_03.png",
+      "preference": 4,
+      "algorithm": "design",
+      "episode": 24
+    },
+    {
+      "filename": "alg-design_episode_024_timestep_04.png",
+      "preference": 3,
+      "algorithm": "design",
+      "episode": 24
+    },
+    {
+      "filename": "alg-design_episode_024_timestep_05.png",
+      "preference": 3,
+      "algorithm": "design",
+      "episode": 24
+    },
+    {
+      "filename": "alg-design_episode_024_timestep_06.png",
+      "preference": 3,
+      "algorithm": "design",
+      "episode": 24
+    },
+    {
+      "filename": "alg-design_episode_025_timestep_01.png",
+      "preference": 3,
+      "algorithm": "design",
+      "episode": 25
+    },
+    {
+      "filename": "alg-design_episode_025_timestep_02.png",
+      "preference": 3,
+      "algorithm": "design",
+      "episode": 25
+    },
+    {
+      "filename": "alg-design_episode_025_timestep_03.png",
+      "preference": 3,
+      "algorithm": "design",
+      "episode": 25
+    },
+    {
+      "filename": "alg-design_episode_025_timestep_04.png",
+      "preference": 3,
+      "algorithm": "design",
+      "episode": 25
+    },
+    {
+      "filename": "alg-design_episode_025_timestep_05.png",
+      "preference": 4,
+      "algorithm": "design",
+      "episode": 25
+    },
+    {
+      "filename": "alg-design_episode_025_timestep_06.png",
+      "preference": 4,
+      "algorithm": "design",
+      "episode": 25
+    },
+    {
+      "filename": "alg-design_episode_026_timestep_01.png",
+      "preference": 3,
+      "algorithm": "design",
+      "episode": 26
+    },
+    {
+      "filename": "alg-design_episode_026_timestep_02.png",
+      "preference": 3,
+      "algorithm": "design",
+      "episode": 26
+    },
+    {
+      "filename": "alg-design_episode_026_timestep_03.png",
+      "preference": 3,
+      "algorithm": "design",
+      "episode": 26
+    },
+    {
+      "filename": "alg-design_episode_026_timestep_04.png",
+      "preference": 4,
+      "algorithm": "design",
+      "episode": 26
+    },
+    {
+      "filename": "alg-design_episode_026_timestep_05.png",
+      "preference": 4,
+      "algorithm": "design",
+      "episode": 26
+    },
+    {
+      "filename": "alg-design_episode_026_timestep_06.png",
+      "preference": 3,
+      "algorithm": "design",
+      "episode": 26
+    },
+    {
+      "filename": "alg-design_episode_027_timestep_01.png",
+      "preference": 2,
+      "algorithm": "design",
+      "episode": 27
+    },
+    {
+      "filename": "alg-design_episode_027_timestep_02.png",
+      "preference": 2,
+      "algorithm": "design",
+      "episode": 27
+    },
+    {
+      "filename": "alg-design_episode_027_timestep_03.png",
+      "preference": 2,
+      "algorithm": "design",
+      "episode": 27
+    },
+    {
+      "filename": "alg-design_episode_027_timestep_04.png",
+      "preference": 2,
+      "algorithm": "design",
+      "episode": 27
+    },
+    {
+      "filename": "alg-design_episode_027_timestep_05.png",
+      "preference": 2,
+      "algorithm": "design",
+      "episode": 27
+    },
+    {
+      "filename": "alg-design_episode_027_timestep_06.png",
+      "preference": 2,
+      "algorithm": "design",
+      "episode": 27
+    },
+    {
+      "filename": "alg-design_episode_028_timestep_01.png",
+      "preference": 1,
+      "algorithm": "design",
+      "episode": 28
+    },
+    {
+      "filename": "alg-design_episode_028_timestep_02.png",
+      "preference": 1,
+      "algorithm": "design",
+      "episode": 28
+    },
+    {
+      "filename": "alg-design_episode_028_timestep_03.png",
+      "preference": 1,
+      "algorithm": "design",
+      "episode": 28
+    },
+    {
+      "filename": "alg-design_episode_028_timestep_04.png",
+      "preference": 1,
+      "algorithm": "design",
+      "episode": 28
+    },
+    {
+      "filename": "alg-design_episode_028_timestep_05.png",
+      "preference": 1,
+      "algorithm": "design",
+      "episode": 28
+    },
+    {
+      "filename": "alg-design_episode_028_timestep_06.png",
+      "preference": 1,
+      "algorithm": "design",
+      "episode": 28
+    },
+    {
+      "filename": "alg-design_episode_029_timestep_01.png",
+      "preference": 1,
+      "algorithm": "design",
+      "episode": 29
+    },
+    {
+      "filename": "alg-design_episode_029_timestep_02.png",
+      "preference": 4,
+      "algorithm": "design",
+      "episode": 29
+    },
+    {
+      "filename": "alg-design_episode_029_timestep_03.png",
+      "preference": 1,
+      "algorithm": "design",
+      "episode": 29
+    },
+    {
+      "filename": "alg-design_episode_029_timestep_04.png",
+      "preference": 1,
+      "algorithm": "design",
+      "episode": 29
+    },
+    {
+      "filename": "alg-design_episode_029_timestep_05.png",
+      "preference": 1,
+      "algorithm": "design",
+      "episode": 29
+    },
+    {
+      "filename": "alg-design_episode_029_timestep_06.png",
+      "preference": 1,
+      "algorithm": "design",
+      "episode": 29
+    },
+    {
+      "filename": "alg-design_episode_030_timestep_01.png",
+      "preference": 4,
+      "algorithm": "design",
+      "episode": 30
+    },
+    {
+      "filename": "alg-design_episode_030_timestep_02.png",
+      "preference": 4,
+      "algorithm": "design",
+      "episode": 30
+    },
+    {
+      "filename": "alg-design_episode_030_timestep_03.png",
+      "preference": 4,
+      "algorithm": "design",
+      "episode": 30
+    },
+    {
+      "filename": "alg-design_episode_030_timestep_04.png",
+      "preference": 2,
+      "algorithm": "design",
+      "episode": 30
+    },
+    {
+      "filename": "alg-design_episode_030_timestep_05.png",
+      "preference": 2,
+      "algorithm": "design",
+      "episode": 30
+    },
+    {
+      "filename": "alg-design_episode_030_timestep_06.png",
+      "preference": 2,
+      "algorithm": "design",
+      "episode": 30
+    },
+    {
+      "filename": "alg-design_episode_031_timestep_01.png",
+      "preference": 3,
+      "algorithm": "design",
+      "episode": 31
+    },
+    {
+      "filename": "alg-design_episode_031_timestep_02.png",
+      "preference": 3,
+      "algorithm": "design",
+      "episode": 31
+    },
+    {
+      "filename": "alg-design_episode_031_timestep_03.png",
+      "preference": 3,
+      "algorithm": "design",
+      "episode": 31
+    },
+    {
+      "filename": "alg-design_episode_031_timestep_04.png",
+      "preference": 3,
+      "algorithm": "design",
+      "episode": 31
+    },
+    {
+      "filename": "alg-design_episode_031_timestep_05.png",
+      "preference": 3,
+      "algorithm": "design",
+      "episode": 31
+    },
+    {
+      "filename": "alg-design_episode_031_timestep_06.png",
+      "preference": 3,
+      "algorithm": "design",
+      "episode": 31
+    },
+    {
+      "filename": "alg-design_episode_032_timestep_01.png",
+      "preference": 2,
+      "algorithm": "design",
+      "episode": 32
+    },
+    {
+      "filename": "alg-design_episode_032_timestep_02.png",
+      "preference": 3,
+      "algorithm": "design",
+      "episode": 32
+    },
+    {
+      "filename": "alg-design_episode_032_timestep_03.png",
+      "preference": 3,
+      "algorithm": "design",
+      "episode": 32
+    },
+    {
+      "filename": "alg-design_episode_032_timestep_04.png",
+      "preference": 3,
+      "algorithm": "design",
+      "episode": 32
+    },
+    {
+      "filename": "alg-design_episode_032_timestep_05.png",
+      "preference": 3,
+      "algorithm": "design",
+      "episode": 32
+    },
+    {
+      "filename": "alg-design_episode_032_timestep_06.png",
+      "preference": 2,
+      "algorithm": "design",
+      "episode": 32
+    },
+    {
+      "filename": "alg-design_episode_033_timestep_01.png",
+      "preference": 2,
+      "algorithm": "design",
+      "episode": 33
+    },
+    {
+      "filename": "alg-design_episode_033_timestep_02.png",
+      "preference": 2,
+      "algorithm": "design",
+      "episode": 33
+    },
+    {
+      "filename": "alg-design_episode_033_timestep_03.png",
+      "preference": 2,
+      "algorithm": "design",
+      "episode": 33
+    },
+    {
+      "filename": "alg-design_episode_033_timestep_04.png",
+      "preference": 2,
+      "algorithm": "design",
+      "episode": 33
+    },
+    {
+      "filename": "alg-design_episode_033_timestep_05.png",
+      "preference": 2,
+      "algorithm": "design",
+      "episode": 33
+    },
+    {
+      "filename": "alg-design_episode_033_timestep_06.png",
+      "preference": 2,
+      "algorithm": "design",
+      "episode": 33
+    },
+    {
+      "filename": "alg-design_episode_034_timestep_01.png",
+      "preference": 4,
+      "algorithm": "design",
+      "episode": 34
+    },
+    {
+      "filename": "alg-design_episode_034_timestep_02.png",
+      "preference": 4,
+      "algorithm": "design",
+      "episode": 34
+    },
+    {
+      "filename": "alg-design_episode_034_timestep_03.png",
+      "preference": 4,
+      "algorithm": "design",
+      "episode": 34
+    },
+    {
+      "filename": "alg-design_episode_034_timestep_04.png",
+      "preference": 4,
+      "algorithm": "design",
+      "episode": 34
+    },
+    {
+      "filename": "alg-design_episode_034_timestep_05.png",
+      "preference": 4,
+      "algorithm": "design",
+      "episode": 34
+    },
+    {
+      "filename": "alg-design_episode_034_timestep_06.png",
+      "preference": 4,
+      "algorithm": "design",
+      "episode": 34
+    },
+    {
+      "filename": "alg-design_episode_035_timestep_01.png",
+      "preference": 4,
+      "algorithm": "design",
+      "episode": 35
+    },
+    {
+      "filename": "alg-design_episode_035_timestep_02.png",
+      "preference": 4,
+      "algorithm": "design",
+      "episode": 35
+    },
+    {
+      "filename": "alg-design_episode_035_timestep_03.png",
+      "preference": 4,
+      "algorithm": "design",
+      "episode": 35
+    },
+    {
+      "filename": "alg-design_episode_035_timestep_04.png",
+      "preference": 2,
+      "algorithm": "design",
+      "episode": 35
+    },
+    {
+      "filename": "alg-design_episode_035_timestep_05.png",
+      "preference": 3,
+      "algorithm": "design",
+      "episode": 35
+    },
+    {
+      "filename": "alg-design_episode_035_timestep_06.png",
+      "preference": 3,
+      "algorithm": "design",
+      "episode": 35
+    },
+    {
+      "filename": "alg-design_episode_036_timestep_01.png",
+      "preference": 1,
+      "algorithm": "design",
+      "episode": 36
+    },
+    {
+      "filename": "alg-design_episode_036_timestep_02.png",
+      "preference": 1,
+      "algorithm": "design",
+      "episode": 36
+    },
+    {
+      "filename": "alg-design_episode_036_timestep_03.png",
+      "preference": 3,
+      "algorithm": "design",
+      "episode": 36
+    },
+    {
+      "filename": "alg-design_episode_036_timestep_04.png",
+      "preference": 3,
+      "algorithm": "design",
+      "episode": 36
+    },
+    {
+      "filename": "alg-design_episode_036_timestep_05.png",
+      "preference": 3,
+      "algorithm": "design",
+      "episode": 36
+    },
+    {
+      "filename": "alg-design_episode_036_timestep_06.png",
+      "preference": 3,
+      "algorithm": "design",
+      "episode": 36
+    },
+    {
+      "filename": "alg-design_episode_037_timestep_01.png",
+      "preference": 3,
+      "algorithm": "design",
+      "episode": 37
+    },
+    {
+      "filename": "alg-design_episode_037_timestep_02.png",
+      "preference": 3,
+      "algorithm": "design",
+      "episode": 37
+    },
+    {
+      "filename": "alg-design_episode_037_timestep_03.png",
+      "preference": 3,
+      "algorithm": "design",
+      "episode": 37
+    },
+    {
+      "filename": "alg-design_episode_037_timestep_04.png",
+      "preference": 3,
+      "algorithm": "design",
+      "episode": 37
+    },
+    {
+      "filename": "alg-design_episode_037_timestep_05.png",
+      "preference": 3,
+      "algorithm": "design",
+      "episode": 37
+    },
+    {
+      "filename": "alg-design_episode_037_timestep_06.png",
+      "preference": 3,
+      "algorithm": "design",
+      "episode": 37
+    },
+    {
+      "filename": "alg-design_episode_038_timestep_01.png",
+      "preference": 4,
+      "algorithm": "design",
+      "episode": 38
+    },
+    {
+      "filename": "alg-design_episode_038_timestep_02.png",
+      "preference": 4,
+      "algorithm": "design",
+      "episode": 38
+    },
+    {
+      "filename": "alg-design_episode_038_timestep_03.png",
+      "preference": 4,
+      "algorithm": "design",
+      "episode": 38
+    },
+    {
+      "filename": "alg-design_episode_038_timestep_04.png",
+      "preference": 4,
+      "algorithm": "design",
+      "episode": 38
+    },
+    {
+      "filename": "alg-design_episode_038_timestep_05.png",
+      "preference": 3,
+      "algorithm": "design",
+      "episode": 38
+    },
+    {
+      "filename": "alg-design_episode_038_timestep_06.png",
+      "preference": 3,
+      "algorithm": "design",
+      "episode": 38
+    },
+    {
+      "filename": "alg-design_episode_039_timestep_01.png",
+      "preference": 3,
+      "algorithm": "design",
+      "episode": 39
+    },
+    {
+      "filename": "alg-design_episode_039_timestep_02.png",
+      "preference": 3,
+      "algorithm": "design",
+      "episode": 39
+    },
+    {
+      "filename": "alg-design_episode_039_timestep_03.png",
+      "preference": 3,
+      "algorithm": "design",
+      "episode": 39
+    },
+    {
+      "filename": "alg-design_episode_039_timestep_04.png",
+      "preference": 3,
+      "algorithm": "design",
+      "episode": 39
+    },
+    {
+      "filename": "alg-design_episode_039_timestep_05.png",
+      "preference": 3,
+      "algorithm": "design",
+      "episode": 39
+    },
+    {
+      "filename": "alg-design_episode_039_timestep_06.png",
+      "preference": 3,
+      "algorithm": "design",
+      "episode": 39
+    },
+    {
+      "filename": "alg-design_episode_040_timestep_01.png",
+      "preference": 3,
+      "algorithm": "design",
+      "episode": 40
+    },
+    {
+      "filename": "alg-design_episode_040_timestep_02.png",
+      "preference": 2,
+      "algorithm": "design",
+      "episode": 40
+    },
+    {
+      "filename": "alg-design_episode_040_timestep_03.png",
+      "preference": 2,
+      "algorithm": "design",
+      "episode": 40
+    },
+    {
+      "filename": "alg-design_episode_040_timestep_04.png",
+      "preference": 2,
+      "algorithm": "design",
+      "episode": 40
+    },
+    {
+      "filename": "alg-design_episode_040_timestep_05.png",
+      "preference": 2,
+      "algorithm": "design",
+      "episode": 40
+    },
+    {
+      "filename": "alg-design_episode_040_timestep_06.png",
+      "preference": 3,
+      "algorithm": "design",
+      "episode": 40
+    },
+    {
+      "filename": "alg-design_episode_041_timestep_01.png",
+      "preference": 3,
+      "algorithm": "design",
+      "episode": 41
+    },
+    {
+      "filename": "alg-design_episode_041_timestep_02.png",
+      "preference": 3,
+      "algorithm": "design",
+      "episode": 41
+    },
+    {
+      "filename": "alg-design_episode_041_timestep_03.png",
+      "preference": 3,
+      "algorithm": "design",
+      "episode": 41
+    },
+    {
+      "filename": "alg-design_episode_041_timestep_04.png",
+      "preference": 3,
+      "algorithm": "design",
+      "episode": 41
+    },
+    {
+      "filename": "alg-design_episode_041_timestep_05.png",
+      "preference": 3,
+      "algorithm": "design",
+      "episode": 41
+    },
+    {
+      "filename": "alg-design_episode_041_timestep_06.png",
+      "preference": 3,
+      "algorithm": "design",
+      "episode": 41
+    },
+    {
+      "filename": "alg-design_episode_042_timestep_01.png",
+      "preference": 3,
+      "algorithm": "design",
+      "episode": 42
+    },
+    {
+      "filename": "alg-design_episode_042_timestep_02.png",
+      "preference": 4,
+      "algorithm": "design",
+      "episode": 42
+    },
+    {
+      "filename": "alg-design_episode_042_timestep_03.png",
+      "preference": 4,
+      "algorithm": "design",
+      "episode": 42
+    },
+    {
+      "filename": "alg-design_episode_042_timestep_04.png",
+      "preference": 4,
+      "algorithm": "design",
+      "episode": 42
+    },
+    {
+      "filename": "alg-design_episode_042_timestep_05.png",
+      "preference": 3,
+      "algorithm": "design",
+      "episode": 42
+    },
+    {
+      "filename": "alg-design_episode_042_timestep_06.png",
+      "preference": 3,
+      "algorithm": "design",
+      "episode": 42
+    },
+    {
+      "filename": "alg-design_episode_043_timestep_01.png",
+      "preference": 1,
+      "algorithm": "design",
+      "episode": 43
+    },
+    {
+      "filename": "alg-design_episode_043_timestep_02.png",
+      "preference": 1,
+      "algorithm": "design",
+      "episode": 43
+    },
+    {
+      "filename": "alg-design_episode_043_timestep_03.png",
+      "preference": 1,
+      "algorithm": "design",
+      "episode": 43
+    },
+    {
+      "filename": "alg-design_episode_043_timestep_04.png",
+      "preference": 1,
+      "algorithm": "design",
+      "episode": 43
+    },
+    {
+      "filename": "alg-design_episode_043_timestep_05.png",
+      "preference": 1,
+      "algorithm": "design",
+      "episode": 43
+    },
+    {
+      "filename": "alg-design_episode_043_timestep_06.png",
+      "preference": 1,
+      "algorithm": "design",
+      "episode": 43
+    },
+    {
+      "filename": "alg-design_episode_044_timestep_01.png",
+      "preference": 2,
+      "algorithm": "design",
+      "episode": 44
+    },
+    {
+      "filename": "alg-design_episode_044_timestep_02.png",
+      "preference": 2,
+      "algorithm": "design",
+      "episode": 44
+    },
+    {
+      "filename": "alg-design_episode_044_timestep_03.png",
+      "preference": 2,
+      "algorithm": "design",
+      "episode": 44
+    },
+    {
+      "filename": "alg-design_episode_044_timestep_04.png",
+      "preference": 2,
+      "algorithm": "design",
+      "episode": 44
+    },
+    {
+      "filename": "alg-design_episode_044_timestep_05.png",
+      "preference": 2,
+      "algorithm": "design",
+      "episode": 44
+    },
+    {
+      "filename": "alg-design_episode_044_timestep_06.png",
+      "preference": 2,
+      "algorithm": "design",
+      "episode": 44
+    },
+    {
+      "filename": "alg-design_episode_045_timestep_01.png",
+      "preference": 1,
+      "algorithm": "design",
+      "episode": 45
+    },
+    {
+      "filename": "alg-design_episode_045_timestep_02.png",
+      "preference": 2,
+      "algorithm": "design",
+      "episode": 45
+    },
+    {
+      "filename": "alg-design_episode_045_timestep_03.png",
+      "preference": 1,
+      "algorithm": "design",
+      "episode": 45
+    },
+    {
+      "filename": "alg-design_episode_045_timestep_04.png",
+      "preference": 3,
+      "algorithm": "design",
+      "episode": 45
+    },
+    {
+      "filename": "alg-design_episode_045_timestep_05.png",
+      "preference": 3,
+      "algorithm": "design",
+      "episode": 45
+    },
+    {
+      "filename": "alg-design_episode_046_timestep_01.png",
+      "preference": 1,
+      "algorithm": "design",
+      "episode": 46
+    },
+    {
+      "filename": "alg-design_episode_046_timestep_02.png",
+      "preference": 1,
+      "algorithm": "design",
+      "episode": 46
+    },
+    {
+      "filename": "alg-design_episode_046_timestep_03.png",
+      "preference": 1,
+      "algorithm": "design",
+      "episode": 46
+    },
+    {
+      "filename": "alg-design_episode_046_timestep_04.png",
+      "preference": 1,
+      "algorithm": "design",
+      "episode": 46
+    },
+    {
+      "filename": "alg-design_episode_046_timestep_05.png",
+      "preference": 1,
+      "algorithm": "design",
+      "episode": 46
+    },
+    {
+      "filename": "alg-design_episode_046_timestep_06.png",
+      "preference": 4,
+      "algorithm": "design",
+      "episode": 46
+    },
+    {
+      "filename": "alg-design_episode_047_timestep_01.png",
+      "preference": 3,
+      "algorithm": "design",
+      "episode": 47
+    },
+    {
+      "filename": "alg-design_episode_047_timestep_02.png",
+      "preference": 3,
+      "algorithm": "design",
+      "episode": 47
+    },
+    {
+      "filename": "alg-design_episode_047_timestep_03.png",
+      "preference": 3,
+      "algorithm": "design",
+      "episode": 47
+    },
+    {
+      "filename": "alg-design_episode_047_timestep_04.png",
+      "preference": 3,
+      "algorithm": "design",
+      "episode": 47
+    },
+    {
+      "filename": "alg-design_episode_047_timestep_05.png",
+      "preference": 3,
+      "algorithm": "design",
+      "episode": 47
+    },
+    {
+      "filename": "alg-design_episode_047_timestep_06.png",
+      "preference": 3,
+      "algorithm": "design",
+      "episode": 47
+    },
+    {
+      "filename": "alg-design_episode_048_timestep_01.png",
+      "preference": 3,
+      "algorithm": "design",
+      "episode": 48
+    },
+    {
+      "filename": "alg-design_episode_048_timestep_02.png",
+      "preference": 4,
+      "algorithm": "design",
+      "episode": 48
+    },
+    {
+      "filename": "alg-design_episode_048_timestep_03.png",
+      "preference": 1,
+      "algorithm": "design",
+      "episode": 48
+    },
+    {
+      "filename": "alg-design_episode_048_timestep_04.png",
+      "preference": 3,
+      "algorithm": "design",
+      "episode": 48
+    },
+    {
+      "filename": "alg-design_episode_048_timestep_05.png",
+      "preference": 3,
+      "algorithm": "design",
+      "episode": 48
+    },
+    {
+      "filename": "alg-design_episode_048_timestep_06.png",
+      "preference": 3,
+      "algorithm": "design",
+      "episode": 48
+    },
+    {
+      "filename": "alg-design_episode_049_timestep_01.png",
+      "preference": 2,
+      "algorithm": "design",
+      "episode": 49
+    },
+    {
+      "filename": "alg-design_episode_049_timestep_02.png",
+      "preference": 3,
+      "algorithm": "design",
+      "episode": 49
+    },
+    {
+      "filename": "alg-design_episode_049_timestep_03.png",
+      "preference": 2,
+      "algorithm": "design",
+      "episode": 49
+    },
+    {
+      "filename": "alg-design_episode_049_timestep_04.png",
+      "preference": 2,
+      "algorithm": "design",
+      "episode": 49
+    },
+    {
+      "filename": "alg-design_episode_049_timestep_05.png",
+      "preference": 2,
+      "algorithm": "design",
+      "episode": 49
+    },
+    {
+      "filename": "alg-design_episode_049_timestep_06.png",
+      "preference": 2,
+      "algorithm": "design",
+      "episode": 49
+    },
+    {
+      "filename": "alg-design_episode_050_timestep_01.png",
+      "preference": 3,
+      "algorithm": "design",
+      "episode": 50
+    },
+    {
+      "filename": "alg-design_episode_050_timestep_02.png",
+      "preference": 3,
+      "algorithm": "design",
+      "episode": 50
+    },
+    {
+      "filename": "alg-design_episode_050_timestep_03.png",
+      "preference": 3,
+      "algorithm": "design",
+      "episode": 50
+    },
+    {
+      "filename": "alg-design_episode_050_timestep_04.png",
+      "preference": 3,
+      "algorithm": "design",
+      "episode": 50
+    },
+    {
+      "filename": "alg-design_episode_050_timestep_05.png",
+      "preference": 3,
+      "algorithm": "design",
+      "episode": 50
+    },
+    {
+      "filename": "alg-design_episode_050_timestep_06.png",
+      "preference": 3,
+      "algorithm": "design",
+      "episode": 50
+    },
+    {
+      "filename": "alg-design_episode_051_timestep_01.png",
+      "preference": 1,
+      "algorithm": "design",
+      "episode": 51
+    },
+    {
+      "filename": "alg-design_episode_051_timestep_02.png",
+      "preference": 3,
+      "algorithm": "design",
+      "episode": 51
+    },
+    {
+      "filename": "alg-design_episode_051_timestep_03.png",
+      "preference": 3,
+      "algorithm": "design",
+      "episode": 51
+    },
+    {
+      "filename": "alg-design_episode_051_timestep_04.png",
+      "preference": 1,
+      "algorithm": "design",
+      "episode": 51
+    },
+    {
+      "filename": "alg-design_episode_051_timestep_05.png",
+      "preference": 1,
+      "algorithm": "design",
+      "episode": 51
+    },
+    {
+      "filename": "alg-design_episode_051_timestep_06.png",
+      "preference": 3,
+      "algorithm": "design",
+      "episode": 51
+    },
+    {
+      "filename": "alg-design_episode_052_timestep_01.png",
+      "preference": 4,
+      "algorithm": "design",
+      "episode": 52
+    },
+    {
+      "filename": "alg-design_episode_052_timestep_02.png",
+      "preference": 4,
+      "algorithm": "design",
+      "episode": 52
+    },
+    {
+      "filename": "alg-design_episode_052_timestep_03.png",
+      "preference": 4,
+      "algorithm": "design",
+      "episode": 52
+    },
+    {
+      "filename": "alg-design_episode_052_timestep_04.png",
+      "preference": 4,
+      "algorithm": "design",
+      "episode": 52
+    },
+    {
+      "filename": "alg-design_episode_052_timestep_05.png",
+      "preference": 4,
+      "algorithm": "design",
+      "episode": 52
+    },
+    {
+      "filename": "alg-design_episode_052_timestep_06.png",
+      "preference": 4,
+      "algorithm": "design",
+      "episode": 52
+    },
+    {
+      "filename": "alg-design_episode_053_timestep_01.png",
+      "preference": 4,
+      "algorithm": "design",
+      "episode": 53
+    },
+    {
+      "filename": "alg-design_episode_053_timestep_02.png",
+      "preference": 4,
+      "algorithm": "design",
+      "episode": 53
+    },
+    {
+      "filename": "alg-design_episode_053_timestep_03.png",
+      "preference": 4,
+      "algorithm": "design",
+      "episode": 53
+    },
+    {
+      "filename": "alg-design_episode_053_timestep_04.png",
+      "preference": 4,
+      "algorithm": "design",
+      "episode": 53
+    },
+    {
+      "filename": "alg-design_episode_053_timestep_05.png",
+      "preference": 4,
+      "algorithm": "design",
+      "episode": 53
+    },
+    {
+      "filename": "alg-design_episode_053_timestep_06.png",
+      "preference": 4,
+      "algorithm": "design",
+      "episode": 53
+    },
+    {
+      "filename": "alg-design_episode_054_timestep_01.png",
+      "preference": 4,
+      "algorithm": "design",
+      "episode": 54
+    },
+    {
+      "filename": "alg-design_episode_054_timestep_02.png",
+      "preference": 4,
+      "algorithm": "design",
+      "episode": 54
+    },
+    {
+      "filename": "alg-design_episode_054_timestep_03.png",
+      "preference": 4,
+      "algorithm": "design",
+      "episode": 54
+    },
+    {
+      "filename": "alg-design_episode_054_timestep_04.png",
+      "preference": 4,
+      "algorithm": "design",
+      "episode": 54
+    },
+    {
+      "filename": "alg-design_episode_054_timestep_05.png",
+      "preference": 4,
+      "algorithm": "design",
+      "episode": 54
+    },
+    {
+      "filename": "alg-design_episode_054_timestep_06.png",
+      "preference": 4,
+      "algorithm": "design",
+      "episode": 54
+    },
+    {
+      "filename": "alg-design_episode_055_timestep_01.png",
+      "preference": 4,
+      "algorithm": "design",
+      "episode": 55
+    },
+    {
+      "filename": "alg-design_episode_055_timestep_02.png",
+      "preference": 4,
+      "algorithm": "design",
+      "episode": 55
+    },
+    {
+      "filename": "alg-design_episode_055_timestep_03.png",
+      "preference": 4,
+      "algorithm": "design",
+      "episode": 55
+    },
+    {
+      "filename": "alg-design_episode_055_timestep_04.png",
+      "preference": 4,
+      "algorithm": "design",
+      "episode": 55
+    },
+    {
+      "filename": "alg-design_episode_055_timestep_05.png",
+      "preference": 4,
+      "algorithm": "design",
+      "episode": 55
+    },
+    {
+      "filename": "alg-design_episode_055_timestep_06.png",
+      "preference": 4,
+      "algorithm": "design",
+      "episode": 55
+    },
+    {
+      "filename": "alg-design_episode_056_timestep_01.png",
+      "preference": 1,
+      "algorithm": "design",
+      "episode": 56
+    },
+    {
+      "filename": "alg-design_episode_056_timestep_02.png",
+      "preference": 1,
+      "algorithm": "design",
+      "episode": 56
+    },
+    {
+      "filename": "alg-design_episode_056_timestep_03.png",
+      "preference": 1,
+      "algorithm": "design",
+      "episode": 56
+    },
+    {
+      "filename": "alg-design_episode_056_timestep_04.png",
+      "preference": 1,
+      "algorithm": "design",
+      "episode": 56
+    },
+    {
+      "filename": "alg-design_episode_056_timestep_05.png",
+      "preference": 4,
+      "algorithm": "design",
+      "episode": 56
+    },
+    {
+      "filename": "alg-design_episode_056_timestep_06.png",
+      "preference": 1,
+      "algorithm": "design",
+      "episode": 56
+    },
+    {
+      "filename": "alg-design_episode_057_timestep_01.png",
+      "preference": 1,
+      "algorithm": "design",
+      "episode": 57
+    },
+    {
+      "filename": "alg-design_episode_057_timestep_02.png",
+      "preference": 3,
+      "algorithm": "design",
+      "episode": 57
+    },
+    {
+      "filename": "alg-design_episode_057_timestep_03.png",
+      "preference": 3,
+      "algorithm": "design",
+      "episode": 57
+    },
+    {
+      "filename": "alg-design_episode_057_timestep_04.png",
+      "preference": 3,
+      "algorithm": "design",
+      "episode": 57
+    },
+    {
+      "filename": "alg-design_episode_057_timestep_05.png",
+      "preference": 3,
+      "algorithm": "design",
+      "episode": 57
+    },
+    {
+      "filename": "alg-design_episode_057_timestep_06.png",
+      "preference": 1,
+      "algorithm": "design",
+      "episode": 57
+    },
+    {
+      "filename": "alg-design_episode_058_timestep_01.png",
+      "preference": 4,
+      "algorithm": "design",
+      "episode": 58
+    },
+    {
+      "filename": "alg-design_episode_058_timestep_02.png",
+      "preference": 3,
+      "algorithm": "design",
+      "episode": 58
+    },
+    {
+      "filename": "alg-design_episode_058_timestep_03.png",
+      "preference": 3,
+      "algorithm": "design",
+      "episode": 58
+    },
+    {
+      "filename": "alg-design_episode_058_timestep_04.png",
+      "preference": 3,
+      "algorithm": "design",
+      "episode": 58
+    },
+    {
+      "filename": "alg-design_episode_058_timestep_05.png",
+      "preference": 3,
+      "algorithm": "design",
+      "episode": 58
+    },
+    {
+      "filename": "alg-design_episode_058_timestep_06.png",
+      "preference": 3,
+      "algorithm": "design",
+      "episode": 58
+    },
+    {
+      "filename": "alg-design_episode_059_timestep_01.png",
+      "preference": 4,
+      "algorithm": "design",
+      "episode": 59
+    },
+    {
+      "filename": "alg-design_episode_059_timestep_02.png",
+      "preference": 4,
+      "algorithm": "design",
+      "episode": 59
+    },
+    {
+      "filename": "alg-design_episode_059_timestep_03.png",
+      "preference": 4,
+      "algorithm": "design",
+      "episode": 59
+    },
+    {
+      "filename": "alg-design_episode_059_timestep_04.png",
+      "preference": 4,
+      "algorithm": "design",
+      "episode": 59
+    },
+    {
+      "filename": "alg-design_episode_059_timestep_05.png",
+      "preference": 4,
+      "algorithm": "design",
+      "episode": 59
+    },
+    {
+      "filename": "alg-design_episode_059_timestep_06.png",
+      "preference": 3,
+      "algorithm": "design",
+      "episode": 59
+    },
+    {
+      "filename": "alg-design_episode_001_timestep_05.png",
+      "preference": 4,
+      "algorithm": "design",
+      "episode": 1
+    },
+    {
+      "filename": "alg-design_episode_045_timestep_06.png",
+      "preference": 1,
+      "algorithm": "design",
+      "episode": 45
+    }
+  ],
+  "benchmark_episode_keys": [
+    "design-40",
+    "design-41",
+    "design-42",
+    "design-43",
+    "design-44",
+    "design-45",
+    "design-46",
+    "design-47",
+    "design-48",
+    "design-49"
+  ],
+  "estimation_episode_keys": [
+    "design-0",
+    "design-1",
+    "design-2",
+    "design-3",
+    "design-4",
+    "design-5",
+    "design-6",
+    "design-7",
+    "design-8",
+    "design-9"
+  ]
+}

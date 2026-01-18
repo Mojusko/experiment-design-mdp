@@ -1,0 +1,10 @@
+- algorithm=random
+- visits_path=human_feedbacks_post_rebuttal/lambda1/visits/visits-feedback-rand-mult-lambda1-1.pkl
+- feedback_path=noir_gpt-4.1-mini_rand_lambda1_converted_0c78exf2.json
+- feedback.lambda=1
+- benchmark_episode_spec="40-49"
+- estimation_episode_spec="0-39,50-59"
+- results_dir=results/human-feedback-post-rebuttal/lambda1/noir/random/fold1
+- override_results_dir=true
+- experiment_id=run-visits-feedback-rand-mult-lambda1-1
+- seed=1

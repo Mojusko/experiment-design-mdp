@@ -1,0 +1,11 @@
+- algorithm=random
+- visits_path=human_feedback_visits/lam0.1/visits-feedback-rand-mult-ep50-1.pkl
+- feedback_path=human_feedbacks/human8_lambda0.1.jsonl
+- feedback.lambda=0.1
+- experiment.episodes=50
+- benchmark_episode_spec="random:10-19"
+- estimation_episode_spec="random:0-9,random:20-49"
+- results_dir=results/human-feedback-cv-random/human8_lambda0.1/fold10
+- override_results_dir=true
+- experiment_id=run-visits-feedback-rand-mult-ep50-1
+- seed=1

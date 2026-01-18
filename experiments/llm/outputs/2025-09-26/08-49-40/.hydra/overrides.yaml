@@ -1,0 +1,11 @@
+- algorithm=random
+- visits_path=human_feedback_visits/lam0.1_ep80/visits-feedback-rand-mult-ep80-1.pkl
+- feedback_path=human_feedbacks/watercolor_gpt-4.1-mini-0.1-ep80.jsonl
+- feedback.lambda=0.1
+- experiment.episodes=80
+- benchmark_episode_spec="random:40-49"
+- estimation_episode_spec="random:30-39,random:50-79"
+- results_dir=results/gpt-cv-random/watercolor_lambda0.1/fold40
+- override_results_dir=true
+- experiment_id=run-visits-feedback-rand-mult-ep80-1
+- seed=1
