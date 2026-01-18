@@ -197,6 +197,85 @@ class GPT2GenerativePolicy(nn.Module):
 
         return generated_text, total_log_prob
 
+    def generate_batch_with_log_probs(
+        self,
+        prompt_prefix: str = "",
+        num_samples: int = 16,
+        max_new_tokens: int = 20,
+        temperature: float = 1.0,
+    ) -> Tuple[List[str], List[torch.Tensor]]:
+        """
+        Generate multiple samples in a single batched forward pass.
+
+        Much faster than calling generate_with_log_prob() multiple times.
+
+        Args:
+            prompt_prefix: Starting text (e.g., "A photo of")
+            num_samples: Number of samples to generate
+            max_new_tokens: Maximum tokens to generate per sample
+            temperature: Sampling temperature
+
+        Returns:
+            texts: List of generated texts
+            log_probs: List of log-probability tensors (with gradients)
+        """
+        # Encode prefix
+        if prompt_prefix:
+            input_ids = self.tokenizer.encode(prompt_prefix, return_tensors="pt").to(self.device)
+        else:
+            input_ids = torch.tensor([[self.tokenizer.bos_token_id]], device=self.device)
+
+        # Expand to batch
+        input_ids = input_ids.expand(num_samples, -1)
+        prefix_len = input_ids.shape[1]
+
+        # Use HuggingFace generate() for efficient batched generation
+        with torch.no_grad():
+            outputs = self.model.generate(
+                input_ids,
+                max_new_tokens=max_new_tokens,
+                do_sample=True,
+                temperature=temperature,
+                top_k=50,
+                top_p=0.95,
+                pad_token_id=self.tokenizer.eos_token_id,
+                return_dict_in_generate=True,
+                output_scores=False,  # We'll compute log probs separately
+            )
+        generated_ids = outputs.sequences  # (batch, seq_len)
+
+        # Compute log-probs WITH gradients for each sample
+        # Run forward pass on all generated sequences
+        full_outputs = self.model(generated_ids)
+        full_logits = full_outputs.logits / temperature  # (batch, seq_len, vocab_size)
+
+        texts = []
+        log_probs = []
+
+        for b in range(num_samples):
+            # Find actual length (before padding)
+            seq = generated_ids[b]
+            eos_positions = (seq == self.tokenizer.eos_token_id).nonzero(as_tuple=True)[0]
+            if len(eos_positions) > 0 and eos_positions[0] > prefix_len:
+                actual_len = eos_positions[0].item() + 1
+            else:
+                actual_len = seq.shape[0]
+
+            # Compute log-prob for generated tokens
+            total_log_prob = torch.tensor(0.0, device=self.device)
+            for i in range(prefix_len, actual_len):
+                token_logits = full_logits[b, i - 1, :]
+                lp = F.log_softmax(token_logits, dim=-1)
+                token_id = seq[i]
+                total_log_prob = total_log_prob + lp[token_id]
+
+            # Decode text
+            text = self.tokenizer.decode(seq[:actual_len], skip_special_tokens=True)
+            texts.append(text)
+            log_probs.append(total_log_prob)
+
+        return texts, log_probs
+
     def compute_log_prob(self, text: str, temperature: float = 1.0) -> torch.Tensor:
         """
         Compute log-probability of a given text under this policy.
@@ -291,6 +370,7 @@ class MultiPolicyManager:
         prompt_prefix: str = "",
         max_new_tokens: int = 20,
         temperature: float = 1.0,
+        use_batched: bool = True,
     ) -> List[List[Tuple[str, torch.Tensor]]]:
         """
         Generate samples from all policies.
@@ -300,6 +380,7 @@ class MultiPolicyManager:
             prompt_prefix: Starting text for generation
             max_new_tokens: Maximum tokens to generate
             temperature: Sampling temperature
+            use_batched: If True, use batched generation (much faster)
 
         Returns:
             List of K lists, each containing N (text, log_prob) tuples.
@@ -308,15 +389,25 @@ class MultiPolicyManager:
         all_samples = []
 
         for q, policy in enumerate(self.policies):
-            samples_q = []
-            for j in range(num_samples_per_policy):
-                text, log_prob = policy.generate_with_log_prob(
+            if use_batched:
+                # Batched generation - much faster!
+                texts, log_probs = policy.generate_batch_with_log_probs(
                     prompt_prefix=prompt_prefix,
+                    num_samples=num_samples_per_policy,
                     max_new_tokens=max_new_tokens,
                     temperature=temperature,
                 )
-                samples_q.append((text, log_prob))
-                logger.debug(f"Policy {q}, Sample {j}: '{text[:50]}...' log_prob={log_prob.item():.2f}")
+                samples_q = list(zip(texts, log_probs))
+            else:
+                # Sequential generation (slower, for debugging)
+                samples_q = []
+                for j in range(num_samples_per_policy):
+                    text, log_prob = policy.generate_with_log_prob(
+                        prompt_prefix=prompt_prefix,
+                        max_new_tokens=max_new_tokens,
+                        temperature=temperature,
+                    )
+                    samples_q.append((text, log_prob))
             all_samples.append(samples_q)
 
         return all_samples
