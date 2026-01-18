@@ -192,9 +192,9 @@ def main():
             embeddings_q = embed_prompts_with_clip_text(all_texts[q], embedder)
             all_embeddings.append(embeddings_q)
 
-        # Step 3: Compute T Fisher matrices and accumulate weighted gradients
-        accumulated_grads = [torch.zeros_like(p) for p in lora_params]
+        # Step 3: Compute T Fisher matrices and weighted log_prob sum
         fisher_sum = 0.0
+        weighted_log_prob = torch.tensor(0.0, device=args.device)
 
         for t in range(T):
             # Fisher_t from K embeddings at time t (one per policy)
@@ -206,23 +206,18 @@ def main():
             # log_prob_t = sum of K log_probs at time t
             log_prob_t = sum(all_log_probs[q][t] for q in range(K))
 
-            # Gradient of log_prob_t w.r.t. LoRA params
-            grads_t = torch.autograd.grad(log_prob_t, lora_params, retain_graph=True)
+            # Accumulate weighted log_prob: L_t · log_prob_t
+            weighted_log_prob = weighted_log_prob + L_t * log_prob_t
 
-            # Accumulate: L_t · ∇log p_t
-            for i, g in enumerate(grads_t):
-                accumulated_grads[i] += L_t * g
+        # Single gradient computation: ∇(Σ_t L_t · log_prob_t)
+        # This equals Σ_t L_t · ∇log_prob_t since L_t is detached
+        grads = torch.autograd.grad(weighted_log_prob, lora_params)
 
-        # Average the accumulated gradients
+        # Average and apply
         avg_fisher = fisher_sum / T
-        for i in range(len(accumulated_grads)):
-            accumulated_grads[i] /= T
-
-        # Apply REINFORCE update: θ += lr * E[L · ∇log p]
-        # Optimizer does descent, so set grad = -accumulated
         optimizer.zero_grad()
-        for param, acc_g in zip(lora_params, accumulated_grads):
-            param.grad = -acc_g  # Negative for ascent
+        for param, g in zip(lora_params, grads):
+            param.grad = -g / T  # Negative for ascent, average over T
         optimizer.step()
 
         # Record history
