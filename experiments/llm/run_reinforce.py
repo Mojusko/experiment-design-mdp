@@ -196,6 +196,7 @@ def main():
         # Use primary device for accumulation (handles multi-GPU)
         primary_device = policy_manager.device
         fisher_values = []
+        logprob_values = []
         weighted_log_prob = torch.tensor(0.0, device=primary_device)
 
         for t in range(T):
@@ -207,16 +208,18 @@ def main():
 
             # log_prob_t = sum of K log_probs at time t (move to primary device)
             log_prob_t = sum(all_log_probs[q][t].to(primary_device) for q in range(K))
+            logprob_values.append(log_prob_t.item())
 
             # Accumulate weighted log_prob: L_t · log_prob_t
             weighted_log_prob = weighted_log_prob + L_t * log_prob_t
 
-        # Fisher statistics for this iteration
+        # Statistics for this iteration
         fisher_arr = torch.tensor(fisher_values)
         avg_fisher = fisher_arr.mean().item()
         std_fisher = fisher_arr.std().item()
-        min_fisher = fisher_arr.min().item()
-        max_fisher = fisher_arr.max().item()
+        avg_logprob = sum(logprob_values) / T
+        # Loss = -E[L * log_prob] (what we minimize)
+        loss_val = -(weighted_log_prob.item() / T)
 
         # Single gradient computation: ∇(Σ_t L_t · log_prob_t)
         # This equals Σ_t L_t · ∇log_prob_t since L_t is detached
@@ -233,11 +236,13 @@ def main():
         history["objectives"].append(avg_fisher)
         history["sample_prompts"].append(all_texts[0][0])
 
-        # Logging with Fisher statistics
+        # Logging: Fisher, Loss, logprob table
         if iteration % args.log_interval == 0 or iteration == args.num_iterations - 1:
             logger.info(
-                f"Iteration {iteration:3d}/{args.num_iterations}: "
-                f"Fisher avg={avg_fisher:.4f} std={std_fisher:.4f} [{min_fisher:.4f}, {max_fisher:.4f}]"
+                f"Iter {iteration:3d}/{args.num_iterations} | "
+                f"Fisher={avg_fisher:9.4f} (std={std_fisher:.4f}) | "
+                f"Loss={loss_val:10.2f} | "
+                f"logprob={avg_logprob:8.2f}"
             )
 
     # Save results
