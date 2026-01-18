@@ -181,8 +181,8 @@ def main():
             embeddings_q = embed_prompts_with_clip_text(all_texts[q], embedder)
             all_embeddings.append(embeddings_q)
 
-        # Step 3: Compute REINFORCE loss (returns both loss and objective)
-        loss, objective = fisher_objective.compute_reinforce_loss(
+        # Step 3: Compute REINFORCE loss
+        loss, objective, avg_log_prob = fisher_objective.compute_reinforce_loss(
             all_embeddings,
             all_log_probs,
         )
@@ -203,10 +203,9 @@ def main():
             logger.info(
                 f"Iteration {iteration:3d}/{args.num_iterations}: "
                 f"Fisher = {objective.item():.4f}, "
+                f"avg_logp = {avg_log_prob.item():.2f}, "
                 f"Loss = {loss.item():.4f}"
             )
-            for q in range(min(2, args.num_policies)):  # Show first 2 policies
-                logger.info(f"  Policy {q}: '{all_texts[q][0][:60]}...'")
 
     # Save results
     logger.info("\n--- Saving Results ---")

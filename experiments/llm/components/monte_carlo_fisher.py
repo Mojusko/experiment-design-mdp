@@ -134,7 +134,7 @@ class MonteCarloFisherObjective:
         all_embeddings: List[List[torch.Tensor]],
         all_log_probs: List[List[torch.Tensor]],
         baseline: float = 0.0,
-    ) -> tuple[torch.Tensor, torch.Tensor]:
+    ) -> tuple[torch.Tensor, torch.Tensor, torch.Tensor]:
         """
         Compute REINFORCE loss for policy gradient update.
 
@@ -150,9 +150,10 @@ class MonteCarloFisherObjective:
                      (e.g., moving average of past objectives).
 
         Returns:
-            Tuple of (loss, objective):
+            Tuple of (loss, objective, avg_log_prob):
                 - loss: Scalar loss tensor (with gradients through log_probs)
                 - objective: The D-optimal objective L (for logging)
+                - avg_log_prob: Average log probability (for logging)
         """
         # Compute objective L = log det(Î)
         with torch.no_grad():
@@ -177,7 +178,7 @@ class MonteCarloFisherObjective:
         L_centered = objective - baseline
         loss = -L_centered.detach() * avg_log_prob
 
-        return loss, objective
+        return loss, objective, avg_log_prob.detach()
 
 
 def embed_prompts_with_clip_text(
