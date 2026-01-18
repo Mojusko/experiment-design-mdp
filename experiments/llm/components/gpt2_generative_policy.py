@@ -101,8 +101,8 @@ class GPT2GenerativePolicy(nn.Module):
             with torch.no_grad():
                 for name, param in self.model.named_parameters():
                     if param.requires_grad and 'lora' in name.lower():
-                        # Add small random perturbation scaled by param magnitude
-                        noise = torch.randn_like(param) * 0.01 * param.std().clamp(min=1e-6)
+                        # Add significant random perturbation (0.1 * std is enough to diversify)
+                        noise = torch.randn_like(param) * 0.1
                         param.add_(noise)
             logger.info(f"Applied random perturbation to LoRA weights (seed={seed})")
 
