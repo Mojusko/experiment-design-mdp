@@ -101,7 +101,7 @@ class MonteCarloFisherObjective:
     def compute_objective(
         self,
         all_embeddings: List[List[torch.Tensor]],
-        design: str = "A",
+        design: str = "D",
     ) -> torch.Tensor:
         """
         Compute optimal design objective.
