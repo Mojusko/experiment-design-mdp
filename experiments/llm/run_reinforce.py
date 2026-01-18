@@ -168,48 +168,55 @@ def main():
 
     # Get all trainable (LoRA) parameters once
     lora_params = list(policy_manager.get_all_trainable_parameters())
+    T = args.num_reinforce_samples
+    K = args.num_policies
 
     for iteration in range(args.num_iterations):
-        # Accumulate gradients over T inner samples
+        # Step 1: Generate T samples per policy AT ONCE (batched)
+        # all_samples[q][t] = (text, log_prob) for policy q, sample t
+        all_samples = policy_manager.generate_samples(
+            num_samples_per_policy=T,
+            prompt_prefix=args.prompt_prefix,
+            max_new_tokens=args.max_new_tokens,
+            temperature=args.temperature,
+        )
+
+        # Extract texts and log_probs: all_texts[q][t], all_log_probs[q][t]
+        all_texts = [[text for text, _ in samples_q] for samples_q in all_samples]
+        all_log_probs = [[log_prob for _, log_prob in samples_q] for samples_q in all_samples]
+
+        # Step 2: Compute CLIP embeddings for all K×T prompts (batched)
+        # all_embeddings[q] = list of T embeddings for policy q
+        all_embeddings = []
+        for q in range(K):
+            embeddings_q = embed_prompts_with_clip_text(all_texts[q], embedder)
+            all_embeddings.append(embeddings_q)
+
+        # Step 3: Compute T Fisher matrices and accumulate weighted gradients
         accumulated_grads = [torch.zeros_like(p) for p in lora_params]
         fisher_sum = 0.0
 
-        for t in range(args.num_reinforce_samples):
-            # Step 1: Sample ONE prompt from each policy (N=1)
-            all_samples = policy_manager.generate_samples(
-                num_samples_per_policy=1,  # N=1 for proper REINFORCE
-                prompt_prefix=args.prompt_prefix,
-                max_new_tokens=args.max_new_tokens,
-                temperature=args.temperature,
-            )
-
-            # Extract texts and log_probs
-            all_texts = [[text for text, _ in samples_q] for samples_q in all_samples]
-            all_log_probs = [[log_prob for _, log_prob in samples_q] for samples_q in all_samples]
-
-            # Step 2: Compute CLIP text embeddings for K prompts
-            all_embeddings = []
-            for q in range(args.num_policies):
-                embeddings_q = embed_prompts_with_clip_text(all_texts[q], embedder)
-                all_embeddings.append(embeddings_q)
-
-            # Step 3: Compute Fisher_t from these K embeddings
+        for t in range(T):
+            # Fisher_t from K embeddings at time t (one per policy)
+            embeddings_t = [[all_embeddings[q][t]] for q in range(K)]
             with torch.no_grad():
-                L_t = fisher_objective.compute_objective(all_embeddings)
+                L_t = fisher_objective.compute_objective(embeddings_t)
             fisher_sum += L_t.item()
 
-            # Step 4: Compute gradient of log_prob for this sample
-            total_log_prob = sum(lp for lps in all_log_probs for lp in lps)
-            grads_t = torch.autograd.grad(total_log_prob, lora_params, retain_graph=False)
+            # log_prob_t = sum of K log_probs at time t
+            log_prob_t = sum(all_log_probs[q][t] for q in range(K))
+
+            # Gradient of log_prob_t w.r.t. LoRA params
+            grads_t = torch.autograd.grad(log_prob_t, lora_params, retain_graph=True)
 
             # Accumulate: L_t · ∇log p_t
             for i, g in enumerate(grads_t):
-                accumulated_grads[i] += L_t.detach() * g
+                accumulated_grads[i] += L_t * g
 
         # Average the accumulated gradients
-        avg_fisher = fisher_sum / args.num_reinforce_samples
+        avg_fisher = fisher_sum / T
         for i in range(len(accumulated_grads)):
-            accumulated_grads[i] /= args.num_reinforce_samples
+            accumulated_grads[i] /= T
 
         # Apply REINFORCE update: θ += lr * E[L · ∇log p]
         # Optimizer does descent, so set grad = -accumulated
