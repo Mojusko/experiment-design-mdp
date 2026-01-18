@@ -195,7 +195,7 @@ def main():
         # Step 3: Compute T Fisher matrices and weighted log_prob sum
         # Use primary device for accumulation (handles multi-GPU)
         primary_device = policy_manager.device
-        fisher_sum = 0.0
+        fisher_values = []
         weighted_log_prob = torch.tensor(0.0, device=primary_device)
 
         for t in range(T):
@@ -203,7 +203,7 @@ def main():
             embeddings_t = [[all_embeddings[q][t]] for q in range(K)]
             with torch.no_grad():
                 L_t = fisher_objective.compute_objective(embeddings_t)
-            fisher_sum += L_t.item()
+            fisher_values.append(L_t.item())
 
             # log_prob_t = sum of K log_probs at time t (move to primary device)
             log_prob_t = sum(all_log_probs[q][t].to(primary_device) for q in range(K))
@@ -211,12 +211,18 @@ def main():
             # Accumulate weighted log_prob: L_t · log_prob_t
             weighted_log_prob = weighted_log_prob + L_t * log_prob_t
 
+        # Fisher statistics for this iteration
+        fisher_arr = torch.tensor(fisher_values)
+        avg_fisher = fisher_arr.mean().item()
+        std_fisher = fisher_arr.std().item()
+        min_fisher = fisher_arr.min().item()
+        max_fisher = fisher_arr.max().item()
+
         # Single gradient computation: ∇(Σ_t L_t · log_prob_t)
         # This equals Σ_t L_t · ∇log_prob_t since L_t is detached
         grads = torch.autograd.grad(weighted_log_prob, lora_params)
 
-        # Average and apply
-        avg_fisher = fisher_sum / T
+        # Apply gradients
         optimizer.zero_grad()
         for param, g in zip(lora_params, grads):
             param.grad = -g / T  # Negative for ascent, average over T
@@ -227,11 +233,11 @@ def main():
         history["objectives"].append(avg_fisher)
         history["sample_prompts"].append(all_texts[0][0])
 
-        # Logging
+        # Logging with Fisher statistics
         if iteration % args.log_interval == 0 or iteration == args.num_iterations - 1:
             logger.info(
                 f"Iteration {iteration:3d}/{args.num_iterations}: "
-                f"avg Fisher = {avg_fisher:.4f}"
+                f"Fisher avg={avg_fisher:.4f} std={std_fisher:.4f} [{min_fisher:.4f}, {max_fisher:.4f}]"
             )
 
     # Save results
