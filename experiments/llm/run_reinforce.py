@@ -49,6 +49,7 @@ def parse_args():
     parser.add_argument("--samples-per-policy", type=int, default=16, help="Samples per policy (N)")
     parser.add_argument("--learning-rate", type=float, default=1e-4, help="Learning rate")
     parser.add_argument("--lambda-reg", type=float, default=1.0, help="Fisher regularization")
+    parser.add_argument("--diverse-init", action="store_true", help="Use different random seeds for each policy's LoRA")
 
     # Generation settings
     parser.add_argument("--prompt-prefix", type=str, default="", help="Prompt prefix (maps to base_prompt in config)")
@@ -99,6 +100,7 @@ def main():
         lora_rank=args.lora_rank,
         lora_alpha=args.lora_alpha,
         device=args.device,
+        diverse_init=args.diverse_init,
     )
 
     # 2. Create optimizer

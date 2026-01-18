@@ -43,6 +43,7 @@ class GPT2GenerativePolicy(nn.Module):
         lora_dropout: float = 0.0,
         target_modules: Optional[List[str]] = None,
         device: str = "cuda",
+        seed: Optional[int] = None,
     ):
         """
         Initialize GPT-2 policy with LoRA adapter.
@@ -54,10 +55,16 @@ class GPT2GenerativePolicy(nn.Module):
             lora_dropout: Dropout probability for LoRA layers
             target_modules: Which modules to apply LoRA to (default: c_attn, c_proj)
             device: Device to place model on
+            seed: Random seed for LoRA initialization (different seeds = different init)
         """
         super().__init__()
         self.device = device
         self.model_name = model_name
+
+        # Set seed for LoRA initialization if provided
+        if seed is not None:
+            torch.manual_seed(seed)
+            logger.info(f"LoRA init with seed {seed}")
 
         # Default target modules for GPT-2
         if target_modules is None:
@@ -329,6 +336,8 @@ class MultiPolicyManager:
         lora_alpha: float = 16.0,
         device: str = "cuda",
         multi_gpu: bool = True,
+        diverse_init: bool = False,
+        base_seed: int = 42,
     ):
         """
         Initialize K policies.
@@ -340,6 +349,8 @@ class MultiPolicyManager:
             lora_alpha: LoRA alpha for each policy
             device: Device to place models on (used if multi_gpu=False)
             multi_gpu: If True and multiple GPUs available, distribute policies across GPUs
+            diverse_init: If True, use different random seeds for each policy's LoRA
+            base_seed: Base seed for diverse initialization (policy q gets seed base_seed + q*1000)
         """
         self.num_policies = num_policies
 
@@ -353,7 +364,10 @@ class MultiPolicyManager:
             self.devices = [device] * num_policies
         self.device = self.devices[0]  # Primary device for compatibility
 
-        logger.info(f"Creating {num_policies} GPT-2 policies with LoRA adapters")
+        if diverse_init:
+            logger.info(f"Creating {num_policies} GPT-2 policies with DIVERSE LoRA init (base_seed={base_seed})")
+        else:
+            logger.info(f"Creating {num_policies} GPT-2 policies with LoRA adapters")
 
         self.policies = [
             GPT2GenerativePolicy(
@@ -361,6 +375,7 @@ class MultiPolicyManager:
                 lora_rank=lora_rank,
                 lora_alpha=lora_alpha,
                 device=self.devices[q],
+                seed=(base_seed + q * 1000) if diverse_init else None,
             )
             for q in range(num_policies)
         ]
