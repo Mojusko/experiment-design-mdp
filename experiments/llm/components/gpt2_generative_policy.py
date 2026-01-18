@@ -328,6 +328,7 @@ class MultiPolicyManager:
         lora_rank: int = 8,
         lora_alpha: float = 16.0,
         device: str = "cuda",
+        multi_gpu: bool = True,
     ):
         """
         Initialize K policies.
@@ -337,10 +338,20 @@ class MultiPolicyManager:
             model_name: GPT-2 model name
             lora_rank: LoRA rank for each policy
             lora_alpha: LoRA alpha for each policy
-            device: Device to place models on
+            device: Device to place models on (used if multi_gpu=False)
+            multi_gpu: If True and multiple GPUs available, distribute policies across GPUs
         """
         self.num_policies = num_policies
-        self.device = device
+
+        # Determine devices for each policy
+        num_gpus = torch.cuda.device_count() if torch.cuda.is_available() else 0
+        if multi_gpu and num_gpus > 1:
+            # Distribute policies across available GPUs
+            self.devices = [f"cuda:{i % num_gpus}" for i in range(num_policies)]
+            logger.info(f"Multi-GPU mode: distributing {num_policies} policies across {num_gpus} GPUs")
+        else:
+            self.devices = [device] * num_policies
+        self.device = self.devices[0]  # Primary device for compatibility
 
         logger.info(f"Creating {num_policies} GPT-2 policies with LoRA adapters")
 
@@ -349,13 +360,14 @@ class MultiPolicyManager:
                 model_name=model_name,
                 lora_rank=lora_rank,
                 lora_alpha=lora_alpha,
-                device=device,
+                device=self.devices[q],
             )
-            for _ in range(num_policies)
+            for q in range(num_policies)
         ]
 
         total_params = sum(p.num_trainable_params() for p in self.policies)
         logger.info(f"Total trainable parameters across all policies: {total_params:,}")
+        logger.info(f"Policy devices: {self.devices}")
 
     def get_all_trainable_parameters(self) -> List[nn.Parameter]:
         """Get all trainable parameters from all policies."""
