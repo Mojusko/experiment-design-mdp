@@ -15,6 +15,8 @@ from transformers import GPT2LMHeadModel, GPT2Tokenizer
 from peft import get_peft_model, LoraConfig, TaskType
 from typing import List, Tuple, Optional
 import logging
+import random
+import numpy as np
 
 logger = logging.getLogger(__name__)
 
@@ -62,8 +64,12 @@ class GPT2GenerativePolicy(nn.Module):
         self.model_name = model_name
 
         # Set seed for LoRA initialization if provided
+        # Must set ALL random seeds (torch, numpy, random) as PEFT may use any of them
         if seed is not None:
             torch.manual_seed(seed)
+            torch.cuda.manual_seed_all(seed)
+            np.random.seed(seed)
+            random.seed(seed)
             logger.info(f"LoRA init with seed {seed}")
 
         # Default target modules for GPT-2
@@ -87,6 +93,18 @@ class GPT2GenerativePolicy(nn.Module):
         # Apply LoRA
         self.model = get_peft_model(base_model, lora_config)
         self.model.print_trainable_parameters()
+
+        # If seed provided, perturb LoRA weights to ensure diversity
+        # (PEFT may not respect torch.manual_seed during init)
+        if seed is not None:
+            torch.manual_seed(seed)  # Reset seed for perturbation
+            with torch.no_grad():
+                for name, param in self.model.named_parameters():
+                    if param.requires_grad and 'lora' in name.lower():
+                        # Add small random perturbation scaled by param magnitude
+                        noise = torch.randn_like(param) * 0.01 * param.std().clamp(min=1e-6)
+                        param.add_(noise)
+            logger.info(f"Applied random perturbation to LoRA weights (seed={seed})")
 
         # Load tokenizer
         self.tokenizer = GPT2Tokenizer.from_pretrained(model_name)
