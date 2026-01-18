@@ -181,15 +181,30 @@ def main():
             embeddings_q = embed_prompts_with_clip_text(all_texts[q], embedder)
             all_embeddings.append(embeddings_q)
 
-        # Step 3: Compute REINFORCE loss
+        # Step 3: Compute Fisher objective and avg_log_prob
         loss, objective, avg_log_prob = fisher_objective.compute_reinforce_loss(
             all_embeddings,
             all_log_probs,
         )
 
-        # Step 4: Update policies
+        # Step 4: Explicit REINFORCE gradient
+        # Get all trainable (LoRA) parameters
+        lora_params = policy_manager.get_all_trainable_parameters()
+
+        # Compute sum of log probs (need gradient through this)
+        total_log_prob = sum(lp for lps in all_log_probs for lp in lps)
+
+        # Get gradient of log_prob w.r.t. LoRA params
+        grads = torch.autograd.grad(total_log_prob, lora_params)
+
+        # REINFORCE: gradient = L * grad_log_prob (for maximizing L)
+        # We want to maximize Fisher, so gradient ascent: θ += lr * L * ∇log_p
+        # Optimizer does gradient descent: θ -= lr * param.grad
+        # So we set param.grad = -L * ∇log_p
         optimizer.zero_grad()
-        loss.backward()
+        L = objective.detach()
+        for param, g in zip(lora_params, grads):
+            param.grad = -L * g
         optimizer.step()
 
         # Record history
