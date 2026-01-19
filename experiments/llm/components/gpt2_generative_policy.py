@@ -17,6 +17,7 @@ from typing import List, Tuple, Optional
 import logging
 import random
 import numpy as np
+from concurrent.futures import ThreadPoolExecutor
 
 logger = logging.getLogger(__name__)
 
@@ -110,6 +111,7 @@ class GPT2GenerativePolicy(nn.Module):
         self.tokenizer = GPT2Tokenizer.from_pretrained(model_name)
         if self.tokenizer.pad_token is None:
             self.tokenizer.pad_token = self.tokenizer.eos_token
+        self.tokenizer.padding_side = "left"  # Required for decoder-only models
 
         # Move to device
         self.to(device)
@@ -416,6 +418,7 @@ class MultiPolicyManager:
         max_new_tokens: int = 20,
         temperature: float = 1.0,
         use_batched: bool = True,
+        parallel: bool = True,
     ) -> List[List[Tuple[str, torch.Tensor]]]:
         """
         Generate samples from all policies.
@@ -426,11 +429,53 @@ class MultiPolicyManager:
             max_new_tokens: Maximum tokens to generate
             temperature: Sampling temperature
             use_batched: If True, use batched generation (much faster)
+            parallel: If True, generate from all policies in parallel (multi-GPU)
 
         Returns:
             List of K lists, each containing N (text, log_prob) tuples.
             all_samples[q][j] = (text, log_prob) for policy q, sample j
         """
+        def generate_for_policy(policy):
+            """Generate samples for a single policy (runs on policy's GPU)."""
+            if use_batched:
+                texts, log_probs = policy.generate_batch_with_log_probs(
+                    prompt_prefix=prompt_prefix,
+                    num_samples=num_samples_per_policy,
+                    max_new_tokens=max_new_tokens,
+                    temperature=temperature,
+                )
+                return list(zip(texts, log_probs))
+            else:
+                samples = []
+                for _ in range(num_samples_per_policy):
+                    text, log_prob = policy.generate_with_log_prob(
+                        prompt_prefix=prompt_prefix,
+                        max_new_tokens=max_new_tokens,
+                        temperature=temperature,
+                    )
+                    samples.append((text, log_prob))
+                return samples
+
+        if parallel and len(self.policies) > 1:
+            # Parallel generation across GPUs using ThreadPoolExecutor
+            # GPU operations release the GIL, so threads work well here
+            with ThreadPoolExecutor(max_workers=len(self.policies)) as executor:
+                all_samples = list(executor.map(generate_for_policy, self.policies))
+        else:
+            # Sequential generation
+            all_samples = [generate_for_policy(p) for p in self.policies]
+
+        return all_samples
+
+    def _generate_samples_sequential(
+        self,
+        num_samples_per_policy: int,
+        prompt_prefix: str = "",
+        max_new_tokens: int = 20,
+        temperature: float = 1.0,
+        use_batched: bool = True,
+    ) -> List[List[Tuple[str, torch.Tensor]]]:
+        """Sequential version kept for reference/debugging."""
         all_samples = []
 
         for q, policy in enumerate(self.policies):
