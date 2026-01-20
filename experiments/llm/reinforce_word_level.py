@@ -306,13 +306,14 @@ def main():
     TEMPERATURE = 1.0
     LR = 1e-4  # Larger LR
     PROMPT_PREFIX = ""  # No prefix
+    DESIGN = "D"  # "D" for logdet, "A" for -tr(I^-1)
 
     print("=" * 60)
-    print("REINFORCE with Word-Level Intermediate Embeddings (A-optimal)")
+    print(f"REINFORCE with Word-Level Intermediate Embeddings ({DESIGN}-optimal)")
     print("=" * 60)
     print(f"K={K} policies, H={H} words per prompt, T={T} Fisher samples")
     print(f"Each Fisher from K×H = {K*H} embeddings")
-    print(f"Objective: -tr(I^{-1}) (A-optimal)")
+    print(f"Objective: {'logdet(I)' if DESIGN == 'D' else '-tr(I^-1)'} ({DESIGN}-optimal)")
     print(f"λ={LAMBDA_REG}, lr={LR}")
     print("=" * 60)
 
@@ -380,13 +381,22 @@ def main():
             # Compute Fisher_t with regularization
             fisher_t = compute_fisher_from_embeddings(embeddings_t, K, H, lambda_reg=LAMBDA_REG)
 
-            # Compute A-optimal objective: L_t = -tr(Fisher_t^{-1})
-            try:
-                fisher_inv = torch.linalg.inv(fisher_t)
-                L_t = -torch.trace(fisher_inv)
-            except RuntimeError:
-                print(f"Warning: Fisher_t not invertible at iter {iteration}, sample {t}")
-                continue
+            # Compute objective based on design
+            if DESIGN == "D":
+                # D-optimal: logdet(I)
+                sign, logdet = torch.linalg.slogdet(fisher_t)
+                if sign <= 0:
+                    print(f"Warning: Fisher_t not positive definite at iter {iteration}, sample {t}")
+                    continue
+                L_t = logdet
+            else:
+                # A-optimal: -tr(I^{-1})
+                try:
+                    fisher_inv = torch.linalg.inv(fisher_t)
+                    L_t = -torch.trace(fisher_inv)
+                except RuntimeError:
+                    print(f"Warning: Fisher_t not invertible at iter {iteration}, sample {t}")
+                    continue
             L_values.append(L_t.item())
 
             # Compute gradient for this sample: L_t * ∇log π_t
