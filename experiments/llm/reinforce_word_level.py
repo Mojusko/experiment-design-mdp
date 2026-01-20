@@ -281,7 +281,7 @@ def main():
     K = 4  # policies
     H = 6  # words per prompt (after prefix)
     NUM_ITERATIONS = 500
-    LAMBDA_REG = 10.0
+    LAMBDA_REG = 0.1
     TEMPERATURE = 1.0
     LR = 5e-6  # Halved from 1e-5
     PROMPT_PREFIX = ""  # No prefix
