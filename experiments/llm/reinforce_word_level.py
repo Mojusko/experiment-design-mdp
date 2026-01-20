@@ -393,7 +393,8 @@ def main():
             logprobs_t = all_policy_samples[policy_to_update][t][1]
             total_logprob_t = sum(logprobs_t)
 
-            grads_t = torch.autograd.grad(total_logprob_t, policy_params, retain_graph=False)
+            # retain_graph=True needed since batched generation shares computation graph
+            grads_t = torch.autograd.grad(total_logprob_t, policy_params, retain_graph=(t < T - 1))
 
             # Accumulate: L_t * grad / num_tokens_t
             policy_device = policy_manager.devices[policy_to_update]
