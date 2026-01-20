@@ -66,7 +66,7 @@ class WordLevelPolicy:
             with torch.no_grad():
                 for name, param in self.model.named_parameters():
                     if param.requires_grad and 'lora' in name.lower():
-                        noise = torch.randn_like(param) * 0.1
+                        noise = torch.randn_like(param) * 0.01  # Reduced from 0.1 to preserve coherence
                         param.add_(noise)
 
         self.model.to(device)
@@ -82,24 +82,33 @@ class WordLevelPolicy:
         h_words: int = 6,
         max_tokens: int = 30,
         temperature: float = 1.0,
+        prompt_prefix: str = "",
     ) -> Tuple[str, List[float], List[int]]:
         """
         Generate tokens until we have h_words complete words (spaces as delimiter).
 
         Returns:
-            prompt: The generated text
-            token_logprobs: Log-prob for each token (with gradients)
+            prompt: The generated text (including prefix)
+            token_logprobs: Log-prob for each generated token (with gradients)
             word_boundaries: Token indices where each word ends
         """
-        # Start with BOS
-        input_ids = torch.tensor([[self.tokenizer.bos_token_id]], device=self.device)
+        # Start with prefix or BOS
+        if prompt_prefix:
+            input_ids = self.tokenizer.encode(prompt_prefix, return_tensors="pt").to(self.device)
+            current_text = prompt_prefix
+            num_spaces = prompt_prefix.count(" ")
+        else:
+            input_ids = torch.tensor([[self.tokenizer.bos_token_id]], device=self.device)
+            current_text = ""
+            num_spaces = 0
 
         generated_tokens = []
         token_logprobs = []
         word_boundaries = []  # Token index where each word ends
 
-        current_text = ""
-        num_spaces = 0
+        # Count words needed after prefix
+        prefix_words = len(prompt_prefix.split()) if prompt_prefix else 0
+        target_spaces = prefix_words + h_words  # Total words we want
 
         for step in range(max_tokens):
             # Forward pass
@@ -128,12 +137,12 @@ class WordLevelPolicy:
             if new_spaces > 0:
                 # Mark word boundary at this token
                 for _ in range(new_spaces):
-                    if num_spaces < h_words:
+                    if len(word_boundaries) < h_words:
                         word_boundaries.append(len(generated_tokens))
                 num_spaces += new_spaces
 
-            # Check if we have enough words
-            if num_spaces >= h_words:
+            # Check if we have enough words (prefix + h_words)
+            if num_spaces >= target_spaces:
                 break
 
             # Check for EOS
@@ -175,11 +184,12 @@ class MultiGPUPolicyManager:
         self,
         h_words: int = 6,
         temperature: float = 1.0,
+        prompt_prefix: str = "",
     ) -> List[Tuple[str, List, List]]:
         """Generate from all policies in parallel."""
 
         def gen_one(policy):
-            return policy.generate_until_h_words(h_words=h_words, temperature=temperature)
+            return policy.generate_until_h_words(h_words=h_words, temperature=temperature, prompt_prefix=prompt_prefix)
 
         with ThreadPoolExecutor(max_workers=len(self.policies)) as executor:
             results = list(executor.map(gen_one, self.policies))
@@ -226,7 +236,15 @@ def compute_fisher_from_embeddings(
     """
     Compute Fisher Information from K×H embeddings.
 
-    Structure: K policies, each with H word-level embeddings.
+    Structure matches ED-PBRL paper:
+        I = Σ_h I_h + λI
+
+    where I_h is the Fisher contribution at timestep h:
+        I_h = (1/K) Σ_q φ_{q,h} φ_{q,h}ᵀ - μ_h μ_hᵀ
+        μ_h = (1/K) Σ_q φ_{q,h}
+
+    Each timestep h has K embeddings (one per policy).
+    The total Fisher is the SUM over timesteps (not average).
     """
     d = embeddings.shape[1]
     device = embeddings.device
@@ -234,24 +252,26 @@ def compute_fisher_from_embeddings(
     # Reshape to (K, H, d)
     embeddings = embeddings.view(k, h, d)
 
-    # Per-policy second moments and means
-    # Σ_q = (1/H) Σ_h φ_{q,h} φ_{q,h}^T
-    second_moments = []
-    means = []
+    # Compute I_h for each timestep h, then sum
+    fisher = torch.zeros(d, d, device=device, dtype=embeddings.dtype)
 
-    for q in range(k):
-        emb_q = embeddings[q]  # (H, d)
-        mean_q = emb_q.mean(dim=0)  # (d,)
-        second_q = (emb_q.T @ emb_q) / h  # (d, d)
-        means.append(mean_q)
-        second_moments.append(second_q)
+    for t in range(h):
+        # Get K embeddings at timestep t: (K, d)
+        emb_t = embeddings[:, t, :]  # (K, d)
 
-    # Average across policies
-    avg_second = sum(second_moments) / k
-    grand_mean = sum(means) / k
+        # Mean across K policies at this timestep
+        mu_t = emb_t.mean(dim=0)  # (d,)
 
-    # Fisher = avg_second - grand_mean @ grand_mean^T + λI
-    fisher = avg_second - torch.outer(grand_mean, grand_mean)
+        # Second moment: (1/K) Σ_q φ_{q,t} φ_{q,t}ᵀ
+        second_t = (emb_t.T @ emb_t) / k  # (d, d)
+
+        # I_t = second_t - μ_t μ_tᵀ
+        I_t = second_t - torch.outer(mu_t, mu_t)
+
+        # Accumulate
+        fisher = fisher + I_t
+
+    # Add regularization
     fisher = fisher + lambda_reg * torch.eye(d, device=device, dtype=fisher.dtype)
 
     return fisher
@@ -259,16 +279,18 @@ def compute_fisher_from_embeddings(
 
 def main():
     K = 4  # policies
-    H = 6  # words per prompt
-    NUM_ITERATIONS = 50
+    H = 6  # words per prompt (after prefix)
+    NUM_ITERATIONS = 500
     LAMBDA_REG = 1.0
     TEMPERATURE = 1.0
-    LR = 1e-4
+    LR = 5e-6  # Halved from 1e-5
+    PROMPT_PREFIX = ""  # No prefix
 
     print("=" * 60)
     print("REINFORCE with Word-Level Intermediate Embeddings")
     print("=" * 60)
     print(f"K={K} policies, H={H} words per prompt")
+    print(f"Prompt prefix: '{PROMPT_PREFIX}'")
     print(f"Fisher from K×H = {K*H} embeddings")
     print(f"λ={LAMBDA_REG}, lr={LR}")
     print("=" * 60)
@@ -299,7 +321,7 @@ def main():
         policy_to_update = iteration % K
 
         # Step 1: Generate prompts in parallel (multi-GPU)
-        results = policy_manager.generate_all_parallel(h_words=H, temperature=TEMPERATURE)
+        results = policy_manager.generate_all_parallel(h_words=H, temperature=TEMPERATURE, prompt_prefix=PROMPT_PREFIX)
 
         prompts = [r[0] for r in results]
         all_token_logprobs = [r[1] for r in results]
@@ -332,8 +354,10 @@ def main():
 
         # Apply gradients
         optimizers[policy_to_update].zero_grad()
+        policy_device = policy_manager.devices[policy_to_update]
+        L_scaled = L.detach().to(policy_device) / len(logprobs)
         for param, g in zip(policy_params, grads):
-            param.grad = -g * L.detach() / len(logprobs)  # Negative for ascent
+            param.grad = -g * L_scaled  # Negative for ascent
         optimizers[policy_to_update].step()
 
         iter_time = time.perf_counter() - iter_start
@@ -346,7 +370,7 @@ def main():
     print("=" * 60)
     print("Final prompts:")
     for q, policy in enumerate(policy_manager.policies):
-        prompt, _, _ = policy.generate_until_h_words(h_words=H, temperature=0.7)
+        prompt, _, _ = policy.generate_until_h_words(h_words=H, temperature=0.7, prompt_prefix=PROMPT_PREFIX)
         print(f"  Policy {q}: {prompt}")
     print("=" * 60)
 
