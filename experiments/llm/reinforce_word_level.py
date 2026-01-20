@@ -209,22 +209,36 @@ def build_word_prefixes(prompt: str, h_words: int) -> List[str]:
     return prefixes
 
 
-def embed_all_prefixes_batched(
-    all_prefixes: List[List[str]],  # K lists of H prefixes each
+def embed_texts_batched(
+    texts: List[str],
     embedder: CLIPEmbedder,
+    batch_size: int = 64,
 ) -> torch.Tensor:
-    """Batch embed all K×H prefixes."""
-    # Flatten
-    flat_prefixes = [p for prefixes in all_prefixes for p in prefixes]
-
-    # Batch embed
+    """Batch embed a list of texts efficiently."""
     embeddings = []
-    for prefix in flat_prefixes:
-        emb = embedder.embed_text(prefix)  # (1, 768)
-        embeddings.append(emb.squeeze(0))
+    for i in range(0, len(texts), batch_size):
+        batch = texts[i:i+batch_size]
+        # Tokenize batch
+        text_inputs = embedder.tokenizer(
+            batch,
+            padding="max_length",
+            max_length=embedder.tokenizer.model_max_length,
+            truncation=True,
+            return_tensors="pt",
+        )
+        text_inputs = {k: v.to(embedder.device) for k, v in text_inputs.items()}
 
-    # Stack: (K×H, 768)
-    return torch.stack(embeddings)
+        with torch.no_grad():
+            if hasattr(embedder.model, 'text_model'):
+                emb = embedder.model.text_model(**text_inputs).pooler_output
+            else:
+                emb = embedder.model.get_text_features(**text_inputs)
+
+        if embedder.normalize:
+            emb = emb / emb.norm(dim=-1, keepdim=True)
+        embeddings.append(emb)
+
+    return torch.cat(embeddings, dim=0)
 
 
 def compute_fisher_from_embeddings(
@@ -337,27 +351,33 @@ def main():
             all_policy_samples = list(executor.map(gen_t_samples, range(K)))
         # all_policy_samples[q][t] = (prompt, logprobs, boundaries) for policy q, sample t
 
-        # Compute L_t for each sample and accumulate weighted gradients
-        sample_prompts = []
+        # Step 2: Collect ALL prefixes from all T samples (T×K×H total)
+        all_prefixes_flat = []  # Will have T×K×H strings
+        sample_prompts = [all_policy_samples[q][0][0] for q in range(K)]  # First sample for logging
+
+        for t in range(T):
+            for q in range(K):
+                prompt = all_policy_samples[q][t][0]
+                prefixes = build_word_prefixes(prompt, H)
+                all_prefixes_flat.extend(prefixes)
+
+        # Step 3: Batch embed ALL T×K×H prefixes at once
+        all_embeddings = embed_texts_batched(all_prefixes_flat, embedder, batch_size=128)
+        # Shape: (T×K×H, d)
+
+        # Step 4: Compute L_t for each sample and accumulate weighted gradients
         L_values = []
         policy_params = list(policy_manager.policies[policy_to_update].get_trainable_parameters())
         grad_accum = [torch.zeros_like(p) for p in policy_params]
 
         for t in range(T):
-            prompts = [all_policy_samples[q][t][0] for q in range(K)]
-            all_token_logprobs = [all_policy_samples[q][t][1] for q in range(K)]
+            # Extract embeddings for sample t: K×H embeddings
+            start_idx = t * K * H
+            end_idx = start_idx + K * H
+            embeddings_t = all_embeddings[start_idx:end_idx]
 
-            if t == 0:
-                sample_prompts = prompts
-
-            # Step 2: Build word-level prefixes
-            all_prefixes = [build_word_prefixes(p, H) for p in prompts]
-
-            # Step 3: Embed all K×H prefixes
-            embeddings = embed_all_prefixes_batched(all_prefixes, embedder)
-
-            # Step 4: Compute Fisher_t with regularization
-            fisher_t = compute_fisher_from_embeddings(embeddings, K, H, lambda_reg=LAMBDA_REG)
+            # Compute Fisher_t with regularization
+            fisher_t = compute_fisher_from_embeddings(embeddings_t, K, H, lambda_reg=LAMBDA_REG)
 
             # Compute A-optimal objective: L_t = -tr(Fisher_t^{-1})
             try:
@@ -369,7 +389,7 @@ def main():
             L_values.append(L_t.item())
 
             # Compute gradient for this sample: L_t * ∇log π_t
-            logprobs_t = all_token_logprobs[policy_to_update]
+            logprobs_t = all_policy_samples[policy_to_update][t][1]
             total_logprob_t = sum(logprobs_t)
 
             grads_t = torch.autograd.grad(total_logprob_t, policy_params, retain_graph=False)
