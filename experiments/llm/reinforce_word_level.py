@@ -68,6 +68,8 @@ class WordLevelPolicy:
                     if param.requires_grad and 'lora' in name.lower():
                         noise = torch.randn_like(param) * 0.01  # Reduced from 0.1 to preserve coherence
                         param.add_(noise)
+            # Reset RNG to random state after init (so sampling is stochastic)
+            torch.seed()
 
         self.model.to(device)
 
