@@ -397,7 +397,7 @@ def main():
         # Log
         if iteration % 5 == 0 or iteration == NUM_ITERATIONS - 1:
             prompt_preview = sample_prompts[0][:40] + "..." if len(sample_prompts[0]) > 40 else sample_prompts[0]
-            print(f"{iteration:>5} | {L.item():>12.4f} | {iter_time:>7.2f}s | {prompt_preview}")
+            print(f"{iteration:>5} | {L:>12.4f} | {iter_time:>7.2f}s | {prompt_preview}")
 
     print("=" * 60)
     print("Final prompts:")
