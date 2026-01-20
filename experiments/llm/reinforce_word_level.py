@@ -304,7 +304,7 @@ def main():
     NUM_ITERATIONS = 200
     LAMBDA_REG = 1.0
     TEMPERATURE = 1.0
-    LR = 1e-2  # Very large LR to test effect
+    LR = 1e-3  # Medium LR
     PROMPT_PREFIX = ""  # No prefix
     DESIGN = "D"  # "D" for logdet, "A" for -tr(I^-1)
 
