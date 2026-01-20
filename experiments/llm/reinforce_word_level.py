@@ -337,10 +337,11 @@ def main():
             all_policy_samples = list(executor.map(gen_t_samples, range(K)))
         # all_policy_samples[q][t] = (prompt, logprobs, boundaries) for policy q, sample t
 
-        # Reorganize: for each t, collect K prompts
-        fisher_sum = None
-        all_logprobs_for_policy = []
+        # Compute L_t for each sample and accumulate weighted gradients
         sample_prompts = []
+        L_values = []
+        policy_params = list(policy_manager.policies[policy_to_update].get_trainable_parameters())
+        grad_accum = [torch.zeros_like(p) for p in policy_params]
 
         for t in range(T):
             prompts = [all_policy_samples[q][t][0] for q in range(K)]
@@ -355,45 +356,41 @@ def main():
             # Step 3: Embed all K×H prefixes
             embeddings = embed_all_prefixes_batched(all_prefixes, embedder)
 
-            # Step 4: Compute Fisher_t
-            fisher_t = compute_fisher_from_embeddings(embeddings, K, H, lambda_reg=0.0)
+            # Step 4: Compute Fisher_t with regularization
+            fisher_t = compute_fisher_from_embeddings(embeddings, K, H, lambda_reg=LAMBDA_REG)
 
-            if fisher_sum is None:
-                fisher_sum = fisher_t
-            else:
-                fisher_sum = fisher_sum + fisher_t
+            # Compute objective L_t for this sample
+            sign, logdet = torch.linalg.slogdet(fisher_t)
+            if sign <= 0:
+                print(f"Warning: Fisher_t not positive definite at iter {iteration}, sample {t}")
+                continue
 
-            # Collect log-probs for the policy being updated
-            all_logprobs_for_policy.append(all_token_logprobs[policy_to_update])
+            L_t = logdet
+            L_values.append(L_t.item())
 
-        # Average Fisher and add regularization
-        d = fisher_sum.shape[0]
-        fisher_avg = fisher_sum / T + LAMBDA_REG * torch.eye(d, device=fisher_sum.device, dtype=fisher_sum.dtype)
+            # Compute gradient for this sample: L_t * ∇log π_t
+            logprobs_t = all_token_logprobs[policy_to_update]
+            total_logprob_t = sum(logprobs_t)
 
-        sign, logdet = torch.linalg.slogdet(fisher_avg)
+            grads_t = torch.autograd.grad(total_logprob_t, policy_params, retain_graph=False)
 
-        if sign <= 0:
-            print(f"Warning: Fisher not positive definite at iter {iteration}")
+            # Accumulate: L_t * grad / num_tokens_t
+            policy_device = policy_manager.devices[policy_to_update]
+            L_t_scaled = L_t.detach().to(policy_device) / len(logprobs_t)
+            for i, g in enumerate(grads_t):
+                grad_accum[i] = grad_accum[i] + g * L_t_scaled
+
+        if len(L_values) == 0:
+            print(f"Warning: All Fishers singular at iter {iteration}")
             continue
 
-        L = logdet
-
-        # Step 5: Compute gradient for one policy (alternating)
-        # Sum all log-probs from T samples for the policy being updated
-        total_logprob = sum(lp for logprobs in all_logprobs_for_policy for lp in logprobs)
-
-        # REINFORCE: gradient = L * ∇log p
-        policy_params = list(policy_manager.policies[policy_to_update].get_trainable_parameters())
-        grads = torch.autograd.grad(total_logprob, policy_params)
-
-        # Apply gradients (scale by 1/(T * num_tokens))
+        # Average gradient over T samples
         optimizers[policy_to_update].zero_grad()
-        policy_device = policy_manager.devices[policy_to_update]
-        num_tokens = sum(len(logprobs) for logprobs in all_logprobs_for_policy)
-        L_scaled = L.detach().to(policy_device) / num_tokens
-        for param, g in zip(policy_params, grads):
-            param.grad = -g * L_scaled  # Negative for ascent
+        for param, g_acc in zip(policy_params, grad_accum):
+            param.grad = -g_acc / T  # Negative for ascent, average over T
         optimizers[policy_to_update].step()
+
+        L = sum(L_values) / len(L_values)  # Average objective for logging
 
         iter_time = time.perf_counter() - iter_start
 
