@@ -77,86 +77,92 @@ class WordLevelPolicy:
             self.tokenizer.pad_token = self.tokenizer.eos_token
         self.tokenizer.padding_side = "left"
 
-    def generate_until_h_words(
+    def generate_until_h_words_batched(
         self,
+        batch_size: int = 10,
         h_words: int = 6,
         max_tokens: int = 30,
         temperature: float = 1.0,
         prompt_prefix: str = "",
-    ) -> Tuple[str, List[float], List[int]]:
+    ) -> List[Tuple[str, List, List[int]]]:
         """
-        Generate tokens until we have h_words complete words (spaces as delimiter).
+        Generate batch_size prompts in parallel until each has h_words complete words.
 
         Returns:
-            prompt: The generated text (including prefix)
-            token_logprobs: Log-prob for each generated token (with gradients)
-            word_boundaries: Token indices where each word ends
+            List of (prompt, token_logprobs, word_boundaries) tuples
         """
-        # Start with prefix or BOS
+        # Initialize batch
         if prompt_prefix:
-            input_ids = self.tokenizer.encode(prompt_prefix, return_tensors="pt").to(self.device)
-            current_text = prompt_prefix
-            num_spaces = prompt_prefix.count(" ")
+            single_ids = self.tokenizer.encode(prompt_prefix, return_tensors="pt")
+            input_ids = single_ids.repeat(batch_size, 1).to(self.device)
+            current_texts = [prompt_prefix] * batch_size
+            num_spaces = [prompt_prefix.count(" ")] * batch_size
         else:
-            input_ids = torch.tensor([[self.tokenizer.bos_token_id]], device=self.device)
-            current_text = ""
-            num_spaces = 0
+            input_ids = torch.tensor([[self.tokenizer.bos_token_id]] * batch_size, device=self.device)
+            current_texts = [""] * batch_size
+            num_spaces = [0] * batch_size
 
-        generated_tokens = []
-        token_logprobs = []
-        word_boundaries = []  # Token index where each word ends
-
-        # Count words needed after prefix
         prefix_words = len(prompt_prefix.split()) if prompt_prefix else 0
-        target_spaces = prefix_words + h_words  # Total words we want
+        target_spaces = prefix_words + h_words
+
+        # Track per-sequence state
+        token_logprobs_batch = [[] for _ in range(batch_size)]
+        word_boundaries_batch = [[] for _ in range(batch_size)]
+        finished = [False] * batch_size
 
         for step in range(max_tokens):
-            # Forward pass
+            if all(finished):
+                break
+
+            # Forward pass for entire batch
             outputs = self.model(input_ids)
-            logits = outputs.logits[0, -1, :] / temperature
+            logits = outputs.logits[:, -1, :] / temperature  # (batch, vocab)
 
-            # Sample
+            # Sample for all sequences
             probs = torch.softmax(logits, dim=-1)
-            next_token = torch.multinomial(probs, num_samples=1)
+            next_tokens = torch.multinomial(probs, num_samples=1).squeeze(-1)  # (batch,)
 
-            # Log prob (with gradient)
-            log_probs = torch.log_softmax(logits, dim=-1)
-            token_logprob = log_probs[next_token]
+            # Log probs (with gradient)
+            log_probs = torch.log_softmax(logits, dim=-1)  # (batch, vocab)
 
-            # Decode token
-            token_text = self.tokenizer.decode([next_token.item()])
+            for b in range(batch_size):
+                if finished[b]:
+                    continue
 
-            generated_tokens.append(next_token.item())
-            token_logprobs.append(token_logprob)
+                token_id = next_tokens[b]
+                token_logprob = log_probs[b, token_id]
+                token_text = self.tokenizer.decode([token_id.item()])
 
-            # Update text
-            current_text += token_text
+                token_logprobs_batch[b].append(token_logprob)
+                current_texts[b] += token_text
 
-            # Count spaces (word boundaries)
-            new_spaces = token_text.count(" ")
-            if new_spaces > 0:
-                # Mark word boundary at this token
-                for _ in range(new_spaces):
-                    if len(word_boundaries) < h_words:
-                        word_boundaries.append(len(generated_tokens))
-                num_spaces += new_spaces
+                # Count spaces
+                new_spaces = token_text.count(" ")
+                if new_spaces > 0:
+                    for _ in range(new_spaces):
+                        if len(word_boundaries_batch[b]) < h_words:
+                            word_boundaries_batch[b].append(len(token_logprobs_batch[b]))
+                    num_spaces[b] += new_spaces
 
-            # Check if we have enough words (prefix + h_words)
-            if num_spaces >= target_spaces:
-                break
+                # Check completion
+                if num_spaces[b] >= target_spaces or token_id.item() == self.tokenizer.eos_token_id:
+                    finished[b] = True
 
-            # Check for EOS
-            if next_token.item() == self.tokenizer.eos_token_id:
-                break
+            # Append tokens for next iteration
+            input_ids = torch.cat([input_ids, next_tokens.unsqueeze(1)], dim=1)
 
-            # Append for next iteration
-            input_ids = torch.cat([input_ids, next_token.unsqueeze(0)], dim=1)
+        # Pad word boundaries and build results
+        results = []
+        for b in range(batch_size):
+            while len(word_boundaries_batch[b]) < h_words:
+                word_boundaries_batch[b].append(len(token_logprobs_batch[b]))
+            results.append((
+                current_texts[b].strip(),
+                token_logprobs_batch[b],
+                word_boundaries_batch[b][:h_words]
+            ))
 
-        # If we didn't get enough words, pad word_boundaries
-        while len(word_boundaries) < h_words:
-            word_boundaries.append(len(generated_tokens))
-
-        return current_text.strip(), token_logprobs, word_boundaries[:h_words]
+        return results
 
     def get_trainable_parameters(self):
         return [p for p in self.model.parameters() if p.requires_grad]
@@ -335,20 +341,15 @@ def main():
         iter_start = time.perf_counter()
         policy_to_update = iteration % K
 
-        # Step 1: Generate T×K prompts in parallel
-        # Each policy generates T prompts concurrently
-        def gen_t_samples(policy_idx):
+        # Step 1: Generate T×K prompts in parallel (batched generation per policy)
+        def gen_t_samples_batched(policy_idx):
             policy = policy_manager.policies[policy_idx]
-            samples = []
-            for _ in range(T):
-                prompt, logprobs, boundaries = policy.generate_until_h_words(
-                    h_words=H, temperature=TEMPERATURE, prompt_prefix=PROMPT_PREFIX
-                )
-                samples.append((prompt, logprobs, boundaries))
-            return samples
+            return policy.generate_until_h_words_batched(
+                batch_size=T, h_words=H, temperature=TEMPERATURE, prompt_prefix=PROMPT_PREFIX
+            )
 
         with ThreadPoolExecutor(max_workers=K) as executor:
-            all_policy_samples = list(executor.map(gen_t_samples, range(K)))
+            all_policy_samples = list(executor.map(gen_t_samples_batched, range(K)))
         # all_policy_samples[q][t] = (prompt, logprobs, boundaries) for policy q, sample t
 
         # Step 2: Collect ALL prefixes from all T samples (T×K×H total)
@@ -422,8 +423,8 @@ def main():
     print("=" * 60)
     print("Final prompts:")
     for q, policy in enumerate(policy_manager.policies):
-        prompt, _, _ = policy.generate_until_h_words(h_words=H, temperature=0.7, prompt_prefix=PROMPT_PREFIX)
-        print(f"  Policy {q}: {prompt}")
+        results = policy.generate_until_h_words_batched(batch_size=1, h_words=H, temperature=0.7, prompt_prefix=PROMPT_PREFIX)
+        print(f"  Policy {q}: {results[0][0]}")
     print("=" * 60)
 
 
