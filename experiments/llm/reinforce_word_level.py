@@ -280,18 +280,19 @@ def compute_fisher_from_embeddings(
 def main():
     K = 4  # policies
     H = 6  # words per prompt (after prefix)
-    NUM_ITERATIONS = 500
-    LAMBDA_REG = 0.1
+    T = 10  # Fisher samples to average for stability
+    NUM_ITERATIONS = 200
+    LAMBDA_REG = 1.0
     TEMPERATURE = 1.0
-    LR = 5e-6  # Halved from 1e-5
+    LR = 5e-6
     PROMPT_PREFIX = ""  # No prefix
 
     print("=" * 60)
     print("REINFORCE with Word-Level Intermediate Embeddings")
     print("=" * 60)
-    print(f"K={K} policies, H={H} words per prompt")
-    print(f"Prompt prefix: '{PROMPT_PREFIX}'")
-    print(f"Fisher from K×H = {K*H} embeddings")
+    print(f"K={K} policies, H={H} words per prompt, T={T} Fisher samples")
+    print(f"Each Fisher from K×H = {K*H} embeddings")
+    print(f"Averaged Fisher from T×K×H = {T*K*H} embeddings")
     print(f"λ={LAMBDA_REG}, lr={LR}")
     print("=" * 60)
 
@@ -320,22 +321,56 @@ def main():
         iter_start = time.perf_counter()
         policy_to_update = iteration % K
 
-        # Step 1: Generate prompts in parallel (multi-GPU)
-        results = policy_manager.generate_all_parallel(h_words=H, temperature=TEMPERATURE, prompt_prefix=PROMPT_PREFIX)
+        # Step 1: Generate T×K prompts in parallel
+        # Each policy generates T prompts concurrently
+        def gen_t_samples(policy_idx):
+            policy = policy_manager.policies[policy_idx]
+            samples = []
+            for _ in range(T):
+                prompt, logprobs, boundaries = policy.generate_until_h_words(
+                    h_words=H, temperature=TEMPERATURE, prompt_prefix=PROMPT_PREFIX
+                )
+                samples.append((prompt, logprobs, boundaries))
+            return samples
 
-        prompts = [r[0] for r in results]
-        all_token_logprobs = [r[1] for r in results]
-        all_word_boundaries = [r[2] for r in results]
+        with ThreadPoolExecutor(max_workers=K) as executor:
+            all_policy_samples = list(executor.map(gen_t_samples, range(K)))
+        # all_policy_samples[q][t] = (prompt, logprobs, boundaries) for policy q, sample t
 
-        # Step 2: Build word-level prefixes
-        all_prefixes = [build_word_prefixes(p, H) for p in prompts]
+        # Reorganize: for each t, collect K prompts
+        fisher_sum = None
+        all_logprobs_for_policy = []
+        sample_prompts = []
 
-        # Step 3: Embed all K×H prefixes (batched)
-        embeddings = embed_all_prefixes_batched(all_prefixes, embedder)
+        for t in range(T):
+            prompts = [all_policy_samples[q][t][0] for q in range(K)]
+            all_token_logprobs = [all_policy_samples[q][t][1] for q in range(K)]
 
-        # Step 4: Compute Fisher and objective
-        fisher = compute_fisher_from_embeddings(embeddings, K, H, LAMBDA_REG)
-        sign, logdet = torch.linalg.slogdet(fisher)
+            if t == 0:
+                sample_prompts = prompts
+
+            # Step 2: Build word-level prefixes
+            all_prefixes = [build_word_prefixes(p, H) for p in prompts]
+
+            # Step 3: Embed all K×H prefixes
+            embeddings = embed_all_prefixes_batched(all_prefixes, embedder)
+
+            # Step 4: Compute Fisher_t
+            fisher_t = compute_fisher_from_embeddings(embeddings, K, H, lambda_reg=0.0)
+
+            if fisher_sum is None:
+                fisher_sum = fisher_t
+            else:
+                fisher_sum = fisher_sum + fisher_t
+
+            # Collect log-probs for the policy being updated
+            all_logprobs_for_policy.append(all_token_logprobs[policy_to_update])
+
+        # Average Fisher and add regularization
+        d = fisher_sum.shape[0]
+        fisher_avg = fisher_sum / T + LAMBDA_REG * torch.eye(d, device=fisher_sum.device, dtype=fisher_sum.dtype)
+
+        sign, logdet = torch.linalg.slogdet(fisher_avg)
 
         if sign <= 0:
             print(f"Warning: Fisher not positive definite at iter {iteration}")
@@ -344,18 +379,18 @@ def main():
         L = logdet
 
         # Step 5: Compute gradient for one policy (alternating)
-        # Sum log-probs for the policy being updated
-        logprobs = all_token_logprobs[policy_to_update]
-        total_logprob = sum(logprobs)
+        # Sum all log-probs from T samples for the policy being updated
+        total_logprob = sum(lp for logprobs in all_logprobs_for_policy for lp in logprobs)
 
         # REINFORCE: gradient = L * ∇log p
         policy_params = list(policy_manager.policies[policy_to_update].get_trainable_parameters())
         grads = torch.autograd.grad(total_logprob, policy_params)
 
-        # Apply gradients
+        # Apply gradients (scale by 1/(T * num_tokens))
         optimizers[policy_to_update].zero_grad()
         policy_device = policy_manager.devices[policy_to_update]
-        L_scaled = L.detach().to(policy_device) / len(logprobs)
+        num_tokens = sum(len(logprobs) for logprobs in all_logprobs_for_policy)
+        L_scaled = L.detach().to(policy_device) / num_tokens
         for param, g in zip(policy_params, grads):
             param.grad = -g * L_scaled  # Negative for ascent
         optimizers[policy_to_update].step()
@@ -364,7 +399,7 @@ def main():
 
         # Log
         if iteration % 5 == 0 or iteration == NUM_ITERATIONS - 1:
-            prompt_preview = prompts[0][:40] + "..." if len(prompts[0]) > 40 else prompts[0]
+            prompt_preview = sample_prompts[0][:40] + "..." if len(sample_prompts[0]) > 40 else sample_prompts[0]
             print(f"{iteration:>5} | {L.item():>12.4f} | {iter_time:>7.2f}s | {prompt_preview}")
 
     print("=" * 60)
