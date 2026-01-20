@@ -288,11 +288,11 @@ def main():
     PROMPT_PREFIX = ""  # No prefix
 
     print("=" * 60)
-    print("REINFORCE with Word-Level Intermediate Embeddings")
+    print("REINFORCE with Word-Level Intermediate Embeddings (A-optimal)")
     print("=" * 60)
     print(f"K={K} policies, H={H} words per prompt, T={T} Fisher samples")
     print(f"Each Fisher from K×H = {K*H} embeddings")
-    print(f"Averaged Fisher from T×K×H = {T*K*H} embeddings")
+    print(f"Objective: -tr(I^{-1}) (A-optimal)")
     print(f"λ={LAMBDA_REG}, lr={LR}")
     print("=" * 60)
 
@@ -359,13 +359,13 @@ def main():
             # Step 4: Compute Fisher_t with regularization
             fisher_t = compute_fisher_from_embeddings(embeddings, K, H, lambda_reg=LAMBDA_REG)
 
-            # Compute objective L_t for this sample
-            sign, logdet = torch.linalg.slogdet(fisher_t)
-            if sign <= 0:
-                print(f"Warning: Fisher_t not positive definite at iter {iteration}, sample {t}")
+            # Compute A-optimal objective: L_t = -tr(Fisher_t^{-1})
+            try:
+                fisher_inv = torch.linalg.inv(fisher_t)
+                L_t = -torch.trace(fisher_inv)
+            except RuntimeError:
+                print(f"Warning: Fisher_t not invertible at iter {iteration}, sample {t}")
                 continue
-
-            L_t = logdet
             L_values.append(L_t.item())
 
             # Compute gradient for this sample: L_t * ∇log π_t
