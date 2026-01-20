@@ -431,6 +431,13 @@ def main():
             prompt_preview = sample_prompts[0][:40] + "..." if len(sample_prompts[0]) > 40 else sample_prompts[0]
             print(f"{iteration:>5} | {L:>12.4f} | {iter_time:>7.2f}s | {prompt_preview}")
 
+        # Print all K prompts at iteration 0
+        if iteration == 0:
+            print("\n  Initial K prompts:")
+            for q, prompt in enumerate(sample_prompts):
+                print(f"    Policy {q}: {prompt[:60]}...")
+            print()
+
     print("=" * 60)
     print("Final prompts:")
     for q, policy in enumerate(policy_manager.policies):
