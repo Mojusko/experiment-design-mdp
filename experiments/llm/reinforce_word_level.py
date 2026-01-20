@@ -300,11 +300,11 @@ def compute_fisher_from_embeddings(
 def main():
     K = 4  # policies
     H = 6  # words per prompt (after prefix)
-    T = 10  # Fisher samples to average for stability
+    T = 50  # Fisher samples to average for stability
     NUM_ITERATIONS = 200
     LAMBDA_REG = 1.0
     TEMPERATURE = 1.0
-    LR = 5e-6
+    LR = 1e-4  # Larger LR
     PROMPT_PREFIX = ""  # No prefix
 
     print("=" * 60)
