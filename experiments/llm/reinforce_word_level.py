@@ -302,7 +302,7 @@ def main():
     H = 6  # words per prompt (after prefix)
     T = 10  # Fisher samples to average for stability
     NUM_ITERATIONS = 20
-    LAMBDA_REG = 1.0
+    LAMBDA_REG = 0.1
     TEMPERATURE = 1.0
     LR = 1e-4  # Lower LR
     PROMPT_PREFIX = ""  # No prefix
