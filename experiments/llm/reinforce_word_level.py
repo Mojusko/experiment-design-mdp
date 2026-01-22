@@ -301,12 +301,12 @@ def main():
     K = 4  # policies
     H = 6  # words per prompt (after prefix)
     T = 10  # Fisher samples to average for stability
-    NUM_ITERATIONS = 200
+    NUM_ITERATIONS = 20
     LAMBDA_REG = 1.0
     TEMPERATURE = 1.0
     LR = 1e-3  # Medium LR
-    PROMPT_PREFIX = "A photo of"  # Image generation prefix
-    DESIGN = "D"  # "D" for logdet, "A" for -tr(I^-1)
+    PROMPT_PREFIX = ""  # No prefix
+    DESIGN = "A"  # "D" for logdet, "A" for -tr(I^-1)
 
     print("=" * 60)
     print(f"REINFORCE with Word-Level Intermediate Embeddings ({DESIGN}-optimal)")
@@ -426,8 +426,8 @@ def main():
 
         iter_time = time.perf_counter() - iter_start
 
-        # Log
-        if iteration % 5 == 0 or iteration == NUM_ITERATIONS - 1:
+        # Log every iteration
+        if True:
             prompt_preview = sample_prompts[0][:40] + "..." if len(sample_prompts[0]) > 40 else sample_prompts[0]
             print(f"{iteration:>5} | {L:>12.4f} | {iter_time:>7.2f}s | {prompt_preview}")
 
