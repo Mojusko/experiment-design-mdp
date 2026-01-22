@@ -285,12 +285,12 @@ def compute_fisher_from_embeddings(
 
 def main():
     K = 4  # policies
-    H = 10  # words per prompt (after prefix)
+    H = 14  # words per prompt (after prefix)
     T = 10  # Fisher samples to average for stability
     NUM_ITERATIONS = 20
-    LAMBDA_REG = 0.1
+    LAMBDA_REG = 0.01
     TEMPERATURE = 1.0
-    LR = 1e-4  # Moderate LR
+    LR = 1e-5  # Lower LR
     PROMPT_PREFIX = ""  # No prefix
     DESIGN = "A"  # "D" for logdet, "A" for -tr(I^-1)
 
