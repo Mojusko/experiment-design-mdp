@@ -51,8 +51,8 @@ class WordLevelPolicy:
         # LoRA config
         lora_config = LoraConfig(
             task_type=TaskType.CAUSAL_LM,
-            r=8,
-            lora_alpha=16.0,
+            r=32,
+            lora_alpha=64.0,
             lora_dropout=0.0,
             target_modules=["c_attn", "c_proj"],
             bias="none",
@@ -304,7 +304,7 @@ def main():
     NUM_ITERATIONS = 20
     LAMBDA_REG = 0.1
     TEMPERATURE = 1.0
-    LR = 1e-7  # Very low LR
+    LR = 1e-4  # Moderate LR
     PROMPT_PREFIX = ""  # No prefix
     DESIGN = "A"  # "D" for logdet, "A" for -tr(I^-1)
 
