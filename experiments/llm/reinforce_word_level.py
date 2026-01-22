@@ -386,15 +386,31 @@ def main():
             L_values.append(L_t.item())
 
             # Compute gradient for this sample: L_t * ∇log π_t
+            # Weight tokens by how many embeddings they affect:
+            # Token in word w (0-indexed) affects embeddings w, w+1, ..., H-1 = (H - w) embeddings
             logprobs_t = all_policy_samples[policy_to_update][t][1]
-            total_logprob_t = sum(logprobs_t)
+            word_boundaries = all_policy_samples[policy_to_update][t][2]
+
+            # Compute weighted sum of log-probs
+            weighted_logprob = 0
+            prev_boundary = 0
+            for w in range(len(word_boundaries)):
+                boundary = word_boundaries[w]
+                weight = H - w  # word w affects (H - w) embeddings
+                for token_idx in range(prev_boundary, boundary):
+                    if token_idx < len(logprobs_t):
+                        weighted_logprob = weighted_logprob + logprobs_t[token_idx] * weight
+                prev_boundary = boundary
+
+            # Normalize by total weight: H + (H-1) + ... + 1 = H*(H+1)/2
+            total_weight = H * (H + 1) / 2
 
             # retain_graph=True needed since batched generation shares computation graph
-            grads_t = torch.autograd.grad(total_logprob_t, policy_params, retain_graph=(t < T - 1))
+            grads_t = torch.autograd.grad(weighted_logprob, policy_params, retain_graph=(t < T - 1))
 
-            # Accumulate: L_t * grad / num_tokens_t
+            # Accumulate: L_t * grad (already normalized by total_weight implicitly)
             policy_device = policy_manager.devices[policy_to_update]
-            L_t_scaled = L_t.detach().to(policy_device) / len(logprobs_t)
+            L_t_scaled = L_t.detach().to(policy_device) / total_weight
             for i, g in enumerate(grads_t):
                 grad_accum[i] = grad_accum[i] + g * L_t_scaled
 
