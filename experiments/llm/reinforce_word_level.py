@@ -51,8 +51,8 @@ class WordLevelPolicy:
         # LoRA config
         lora_config = LoraConfig(
             task_type=TaskType.CAUSAL_LM,
-            r=128,
-            lora_alpha=256.0,
+            r=512,
+            lora_alpha=1024.0,
             lora_dropout=0.0,
             target_modules=["c_attn", "c_proj"],
             bias="none",
