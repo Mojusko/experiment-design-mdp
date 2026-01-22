@@ -32,42 +32,28 @@ class WordLevelPolicy:
 
     def __init__(self, model_name: str = "gpt2", device: str = "cuda:0", seed: int = None):
         from transformers import GPT2LMHeadModel, GPT2Tokenizer
-        from peft import get_peft_model, LoraConfig, TaskType
         import numpy as np
         import random
 
         self.device = device
 
-        # Set seed for diverse LoRA init
+        # Set seed for diverse init
         if seed is not None:
             torch.manual_seed(seed)
             torch.cuda.manual_seed_all(seed)
             np.random.seed(seed)
             random.seed(seed)
 
-        # Load base model
-        base_model = GPT2LMHeadModel.from_pretrained(model_name)
+        # Load base model (full fine-tuning, no LoRA)
+        self.model = GPT2LMHeadModel.from_pretrained(model_name)
 
-        # LoRA config
-        lora_config = LoraConfig(
-            task_type=TaskType.CAUSAL_LM,
-            r=512,
-            lora_alpha=1024.0,
-            lora_dropout=0.0,
-            target_modules=["c_attn", "c_proj"],
-            bias="none",
-        )
-
-        self.model = get_peft_model(base_model, lora_config)
-
-        # Perturb LoRA weights for diversity
+        # Perturb weights for diversity between policies
         if seed is not None:
             torch.manual_seed(seed)
             with torch.no_grad():
                 for name, param in self.model.named_parameters():
-                    if param.requires_grad and 'lora' in name.lower():
-                        noise = torch.randn_like(param) * 0.01  # Reduced from 0.1 to preserve coherence
-                        param.add_(noise)
+                    noise = torch.randn_like(param) * 0.001  # Small perturbation
+                    param.add_(noise)
 
         self.model.to(device)
 
@@ -165,7 +151,7 @@ class WordLevelPolicy:
         return results
 
     def get_trainable_parameters(self):
-        return [p for p in self.model.parameters() if p.requires_grad]
+        return list(self.model.parameters())
 
 
 class MultiGPUPolicyManager:
