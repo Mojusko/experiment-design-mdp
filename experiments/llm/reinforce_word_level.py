@@ -294,7 +294,7 @@ def main():
     TEMPERATURE = 1.0
     LR = 1e-7  # Very low LR
     PROMPT_PREFIX = "A photo of"  # Prefix for image generation
-    DESIGN = "D"  # "D" for logdet, "A" for -tr(I^-1)
+    DESIGN = "A"  # "D" for logdet, "A" for -tr(I^-1)
 
     print("=" * 60)
     print(f"REINFORCE with Word-Level Intermediate Embeddings ({DESIGN}-optimal)")
