@@ -290,7 +290,7 @@ def main():
     M = 10  # Fisher samples for gradient
     T = 10  # T coefficient in Fisher (scales data, not λ) - from ED-PBRL
     NUM_ITERATIONS = 200
-    LAMBDA_REG = 0.01
+    LAMBDA_REG = 0.001
     TEMPERATURE = 1.0
     LR = 1e-7  # Very low LR
     PROMPT_PREFIX = "A photo of"  # Prefix for image generation
