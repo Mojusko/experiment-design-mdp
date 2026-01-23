@@ -287,7 +287,7 @@ def compute_fisher_from_embeddings(
 def main():
     K = 4  # policies
     H = 14  # words per prompt (after prefix)
-    M = 1  # Fisher samples for gradient (was T=10, now single Fisher per step)
+    M = 5  # Fisher samples for gradient
     T = 10  # T coefficient in Fisher (scales data, not λ) - from ED-PBRL
     NUM_ITERATIONS = 200
     LAMBDA_REG = 0.01
