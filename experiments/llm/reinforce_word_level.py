@@ -293,7 +293,7 @@ def main():
     LAMBDA_REG = 0.01
     TEMPERATURE = 1.0
     LR = 1e-7  # Very low LR
-    PROMPT_PREFIX = ""  # No prefix
+    PROMPT_PREFIX = "A photo of"  # Prefix for image generation
     DESIGN = "D"  # "D" for logdet, "A" for -tr(I^-1)
 
     print("=" * 60)
