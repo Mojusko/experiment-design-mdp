@@ -233,6 +233,48 @@ def embed_texts_batched(
     return torch.cat(embeddings, dim=0)
 
 
+def compute_V_matrix(
+    embeddings: torch.Tensor,  # (K×H, d)
+    k: int,
+    h: int,
+) -> torch.Tensor:
+    """
+    Compute V matrix for V-design from K×H embeddings.
+
+    At each timestep h, we have K policy embeddings.
+    V_h = Σᵢⱼ (φᵢ - φⱼ)(φᵢ - φⱼ)ᵀ = 2K·(X.T @ X) - 2·(S @ S.T)
+
+    where X is (K, d) matrix of embeddings at timestep h,
+    and S = X.sum(dim=0).
+
+    Total V = Σ_h V_h
+    """
+    d = embeddings.shape[1]
+    device = embeddings.device
+
+    # Reshape to (K, H, d)
+    embeddings = embeddings.view(k, h, d)
+
+    V = torch.zeros(d, d, device=device, dtype=embeddings.dtype)
+
+    for t in range(h):
+        # Get K embeddings at timestep t: (K, d)
+        X_t = embeddings[:, t, :]  # (K, d)
+
+        # X.T @ X = Σᵢ φᵢφᵢᵀ
+        XTX = X_t.T @ X_t  # (d, d)
+
+        # S = Σᵢ φᵢ
+        S = X_t.sum(dim=0)  # (d,)
+
+        # V_t = 2K·XTX - 2·S@S.T
+        V_t = 2 * k * XTX - 2 * torch.outer(S, S)
+
+        V = V + V_t
+
+    return V
+
+
 def compute_fisher_from_embeddings(
     embeddings: torch.Tensor,  # (K×H, d)
     k: int,
@@ -294,14 +336,15 @@ def main():
     TEMPERATURE = 1.0
     LR = 1e-7  # Very low LR
     PROMPT_PREFIX = "A photo of"  # Prefix for image generation
-    DESIGN = "A"  # "D" for logdet, "A" for -tr(I^-1)
+    DESIGN = "V"  # "D" for logdet, "A" for -tr(I^-1), "V" for -tr(V @ I^-1)
 
     print("=" * 60)
     print(f"REINFORCE with Word-Level Intermediate Embeddings ({DESIGN}-optimal)")
     print("=" * 60)
     print(f"K={K} policies, H={H} words per prompt, M={M} Fisher samples")
     print(f"Each Fisher from K×H = {K*H} embeddings")
-    print(f"Objective: {'logdet(I)' if DESIGN == 'D' else '-tr(I^-1)'} ({DESIGN}-optimal)")
+    obj_desc = {"D": "logdet(I)", "A": "-tr(I^-1)", "V": "-tr(V @ I^-1)"}[DESIGN]
+    print(f"Objective: {obj_desc} ({DESIGN}-optimal)")
     print(f"T={T}, λ={LAMBDA_REG}, lr={LR}")
     print("=" * 60)
 
@@ -377,11 +420,20 @@ def main():
                     print(f"Warning: Fisher not positive definite at iter {iteration}, sample {m_idx}")
                     continue
                 L_m = logdet
-            else:
+            elif DESIGN == "A":
                 # A-optimal: -tr(I^{-1})
                 try:
                     fisher_inv = torch.linalg.inv(fisher_m)
                     L_m = -torch.trace(fisher_inv)
+                except RuntimeError:
+                    print(f"Warning: Fisher not invertible at iter {iteration}, sample {m_idx}")
+                    continue
+            else:
+                # V-optimal: -tr(V @ I^{-1})
+                try:
+                    V_m = compute_V_matrix(embeddings_m, K, H)
+                    fisher_inv = torch.linalg.inv(fisher_m)
+                    L_m = -torch.trace(V_m @ fisher_inv)
                 except RuntimeError:
                     print(f"Warning: Fisher not invertible at iter {iteration}, sample {m_idx}")
                     continue
