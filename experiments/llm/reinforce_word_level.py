@@ -238,6 +238,7 @@ def compute_fisher_from_embeddings(
     k: int,
     h: int,
     lambda_reg: float = 1.0,
+    t_coef: float = 1.0,  # T coefficient from ED-PBRL (scales data, not λ)
 ) -> torch.Tensor:
     """
     Compute Fisher Information from K×H embeddings.
@@ -277,8 +278,8 @@ def compute_fisher_from_embeddings(
         # Accumulate
         fisher = fisher + I_t
 
-    # Add regularization
-    fisher = fisher + lambda_reg * torch.eye(d, device=device, dtype=fisher.dtype)
+    # Scale data part by T coefficient, then add regularization (λ not scaled by T)
+    fisher = t_coef * fisher + lambda_reg * torch.eye(d, device=device, dtype=fisher.dtype)
 
     return fisher
 
@@ -287,6 +288,7 @@ def main():
     K = 4  # policies
     H = 14  # words per prompt (after prefix)
     T = 10  # Fisher samples to average for stability
+    T_COEF = 10  # T coefficient in Fisher (scales data, not λ) - from ED-PBRL
     NUM_ITERATIONS = 20
     LAMBDA_REG = 0.01
     TEMPERATURE = 1.0
@@ -300,7 +302,7 @@ def main():
     print(f"K={K} policies, H={H} words per prompt, T={T} Fisher samples")
     print(f"Each Fisher from K×H = {K*H} embeddings")
     print(f"Objective: {'logdet(I)' if DESIGN == 'D' else '-tr(I^-1)'} ({DESIGN}-optimal)")
-    print(f"λ={LAMBDA_REG}, lr={LR}")
+    print(f"T_coef={T_COEF}, λ={LAMBDA_REG}, lr={LR}")
     print("=" * 60)
 
     # Initialize
@@ -365,7 +367,7 @@ def main():
             embeddings_t = all_embeddings[start_idx:end_idx]
 
             # Compute Fisher_t with regularization
-            fisher_t = compute_fisher_from_embeddings(embeddings_t, K, H, lambda_reg=LAMBDA_REG)
+            fisher_t = compute_fisher_from_embeddings(embeddings_t, K, H, lambda_reg=LAMBDA_REG, t_coef=T_COEF)
 
             # Compute objective based on design
             if DESIGN == "D":
