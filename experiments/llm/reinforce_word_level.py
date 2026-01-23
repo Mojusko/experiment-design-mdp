@@ -292,7 +292,7 @@ def main():
     NUM_ITERATIONS = 20
     LAMBDA_REG = 0.01
     TEMPERATURE = 1.0
-    LR = 1e-3  # Higher LR (100x)
+    LR = 1e-7  # Very low LR
     PROMPT_PREFIX = ""  # No prefix
     DESIGN = "D"  # "D" for logdet, "A" for -tr(I^-1)
 
