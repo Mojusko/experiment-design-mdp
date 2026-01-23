@@ -417,6 +417,28 @@ make <target> --dry-run | \
 - Conda env: `doexpy-gpu` on remote, `doexpy-local` on local
 - Default embedder: CLIP (override with `embedder=siglip2`)
 
+### GCP 4-GPU Instance (l4-4gpu-instance)
+
+**SSH Connection:**
+```bash
+ssh -i ~/atom/l4gpu-key l4gpuuser@<EXTERNAL_IP>
+```
+
+**Running experiments:**
+```bash
+ssh -i ~/atom/l4gpu-key l4gpuuser@<EXTERNAL_IP> \
+  "source /home/ubuntu/miniconda3/etc/profile.d/conda.sh && \
+   conda activate doexpy-gpu && \
+   cd /home/ubuntu/experiment-design-mdp/experiments/llm && \
+   python -u reinforce_word_level.py"
+```
+
+**Notes:**
+- Key: `~/atom/l4gpu-key` (user: `l4gpuuser`)
+- Conda is installed under `/home/ubuntu/miniconda3`
+- Repo is at `/home/ubuntu/experiment-design-mdp`
+- May need: `git config --global --add safe.directory /home/ubuntu/experiment-design-mdp`
+
 ---
 
 ## Debugging Tips
