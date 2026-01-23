@@ -289,7 +289,7 @@ def main():
     H = 14  # words per prompt (after prefix)
     M = 1  # Fisher samples for gradient (was T=10, now single Fisher per step)
     T = 10  # T coefficient in Fisher (scales data, not λ) - from ED-PBRL
-    NUM_ITERATIONS = 20
+    NUM_ITERATIONS = 200
     LAMBDA_REG = 0.01
     TEMPERATURE = 1.0
     LR = 1e-7  # Very low LR
