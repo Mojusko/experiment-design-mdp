@@ -292,7 +292,7 @@ def main():
     TEMPERATURE = 1.0
     LR = 1e-5  # Lower LR
     PROMPT_PREFIX = ""  # No prefix
-    DESIGN = "A"  # "D" for logdet, "A" for -tr(I^-1)
+    DESIGN = "D"  # "D" for logdet, "A" for -tr(I^-1)
 
     print("=" * 60)
     print(f"REINFORCE with Word-Level Intermediate Embeddings ({DESIGN}-optimal)")
