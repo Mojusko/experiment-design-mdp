@@ -334,7 +334,7 @@ def main():
     NUM_ITERATIONS = 200
     LAMBDA_REG = 0.001
     TEMPERATURE = 1.0
-    LR = 1e-7  # Very low LR
+    LR = 1e-8  # Very low LR
     PROMPT_PREFIX = "A photo of"  # Prefix for image generation
     DESIGN = "V"  # "D" for logdet, "A" for -tr(I^-1), "V" for -tr(V @ I^-1)
 
