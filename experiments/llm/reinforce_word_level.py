@@ -292,7 +292,7 @@ def main():
     NUM_ITERATIONS = 20
     LAMBDA_REG = 0.01
     TEMPERATURE = 1.0
-    LR = 1e-5  # Lower LR
+    LR = 1e-3  # Higher LR (100x)
     PROMPT_PREFIX = ""  # No prefix
     DESIGN = "D"  # "D" for logdet, "A" for -tr(I^-1)
 
@@ -328,6 +328,7 @@ def main():
 
     for iteration in range(NUM_ITERATIONS):
         iter_start = time.perf_counter()
+        policy_to_update = iteration % K
 
         # Step 1: Generate T×K prompts in parallel (batched generation per policy)
         def gen_t_samples_batched(policy_idx):
@@ -354,13 +355,10 @@ def main():
         all_embeddings = embed_texts_batched(all_prefixes_flat, embedder, batch_size=128)
         # Shape: (T×K×H, d)
 
-        # Step 4: Compute L_t for each sample and accumulate weighted gradients for ALL K policies
+        # Step 4: Compute L_t for each sample and accumulate weighted gradients
         L_values = []
-
-        # Initialize grad accumulators for all K policies
-        all_policy_params = [list(policy_manager.policies[q].get_trainable_parameters()) for q in range(K)]
-        all_grad_accum = [[torch.zeros_like(p) for p in params] for params in all_policy_params]
-        total_weight = H * (H + 1) / 2
+        policy_params = list(policy_manager.policies[policy_to_update].get_trainable_parameters())
+        grad_accum = [torch.zeros_like(p) for p in policy_params]
 
         for t in range(T):
             # Extract embeddings for sample t: K×H embeddings
@@ -389,42 +387,44 @@ def main():
                     continue
             L_values.append(L_t.item())
 
-            # Compute gradients for ALL K policies in parallel
-            for q in range(K):
-                logprobs_t = all_policy_samples[q][t][1]
-                word_boundaries = all_policy_samples[q][t][2]
+            # Compute gradient for this sample: L_t * ∇log π_t
+            # Weight tokens by how many embeddings they affect:
+            # Token in word w (0-indexed) affects embeddings w, w+1, ..., H-1 = (H - w) embeddings
+            logprobs_t = all_policy_samples[policy_to_update][t][1]
+            word_boundaries = all_policy_samples[policy_to_update][t][2]
 
-                # Compute weighted sum of log-probs
-                weighted_logprob = 0
-                prev_boundary = 0
-                for w in range(len(word_boundaries)):
-                    boundary = word_boundaries[w]
-                    weight = H - w  # word w affects (H - w) embeddings
-                    for token_idx in range(prev_boundary, boundary):
-                        if token_idx < len(logprobs_t):
-                            weighted_logprob = weighted_logprob + logprobs_t[token_idx] * weight
-                    prev_boundary = boundary
+            # Compute weighted sum of log-probs
+            weighted_logprob = 0
+            prev_boundary = 0
+            for w in range(len(word_boundaries)):
+                boundary = word_boundaries[w]
+                weight = H - w  # word w affects (H - w) embeddings
+                for token_idx in range(prev_boundary, boundary):
+                    if token_idx < len(logprobs_t):
+                        weighted_logprob = weighted_logprob + logprobs_t[token_idx] * weight
+                prev_boundary = boundary
 
-                # retain_graph=True for all but last (policy, sample) pair
-                is_last = (t == T - 1) and (q == K - 1)
-                grads_t = torch.autograd.grad(weighted_logprob, all_policy_params[q], retain_graph=not is_last)
+            # Normalize by total weight: H + (H-1) + ... + 1 = H*(H+1)/2
+            total_weight = H * (H + 1) / 2
 
-                # Accumulate: L_t * grad
-                policy_device = policy_manager.devices[q]
-                L_t_scaled = L_t.detach().to(policy_device) / total_weight
-                for i, g in enumerate(grads_t):
-                    all_grad_accum[q][i] = all_grad_accum[q][i] + g * L_t_scaled
+            # retain_graph=True needed since batched generation shares computation graph
+            grads_t = torch.autograd.grad(weighted_logprob, policy_params, retain_graph=(t < T - 1))
+
+            # Accumulate: L_t * grad (already normalized by total_weight implicitly)
+            policy_device = policy_manager.devices[policy_to_update]
+            L_t_scaled = L_t.detach().to(policy_device) / total_weight
+            for i, g in enumerate(grads_t):
+                grad_accum[i] = grad_accum[i] + g * L_t_scaled
 
         if len(L_values) == 0:
             print(f"Warning: All Fishers singular at iter {iteration}")
             continue
 
-        # Update ALL K policies
-        for q in range(K):
-            optimizers[q].zero_grad()
-            for param, g_acc in zip(all_policy_params[q], all_grad_accum[q]):
-                param.grad = -g_acc / T  # Negative for ascent, average over T
-            optimizers[q].step()
+        # Average gradient over T samples
+        optimizers[policy_to_update].zero_grad()
+        for param, g_acc in zip(policy_params, grad_accum):
+            param.grad = -g_acc / T  # Negative for ascent, average over T
+        optimizers[policy_to_update].step()
 
         L = sum(L_values) / len(L_values)  # Average objective for logging
 
