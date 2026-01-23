@@ -287,8 +287,8 @@ def compute_fisher_from_embeddings(
 def main():
     K = 4  # policies
     H = 14  # words per prompt (after prefix)
-    T = 10  # Fisher samples to average for stability
-    T_COEF = 10  # T coefficient in Fisher (scales data, not λ) - from ED-PBRL
+    M = 1  # Fisher samples for gradient (was T=10, now single Fisher per step)
+    T = 10  # T coefficient in Fisher (scales data, not λ) - from ED-PBRL
     NUM_ITERATIONS = 20
     LAMBDA_REG = 0.01
     TEMPERATURE = 1.0
@@ -299,10 +299,10 @@ def main():
     print("=" * 60)
     print(f"REINFORCE with Word-Level Intermediate Embeddings ({DESIGN}-optimal)")
     print("=" * 60)
-    print(f"K={K} policies, H={H} words per prompt, T={T} Fisher samples")
+    print(f"K={K} policies, H={H} words per prompt, M={M} Fisher samples")
     print(f"Each Fisher from K×H = {K*H} embeddings")
     print(f"Objective: {'logdet(I)' if DESIGN == 'D' else '-tr(I^-1)'} ({DESIGN}-optimal)")
-    print(f"T_coef={T_COEF}, λ={LAMBDA_REG}, lr={LR}")
+    print(f"T={T}, λ={LAMBDA_REG}, lr={LR}")
     print("=" * 60)
 
     # Initialize
@@ -330,68 +330,68 @@ def main():
         iter_start = time.perf_counter()
         policy_to_update = iteration % K
 
-        # Step 1: Generate T×K prompts in parallel (batched generation per policy)
-        def gen_t_samples_batched(policy_idx):
+        # Step 1: Generate M×K prompts in parallel (batched generation per policy)
+        def gen_m_samples_batched(policy_idx):
             policy = policy_manager.policies[policy_idx]
             return policy.generate_until_h_words_batched(
-                batch_size=T, h_words=H, temperature=TEMPERATURE, prompt_prefix=PROMPT_PREFIX
+                batch_size=M, h_words=H, temperature=TEMPERATURE, prompt_prefix=PROMPT_PREFIX
             )
 
         with ThreadPoolExecutor(max_workers=K) as executor:
-            all_policy_samples = list(executor.map(gen_t_samples_batched, range(K)))
-        # all_policy_samples[q][t] = (prompt, logprobs, boundaries) for policy q, sample t
+            all_policy_samples = list(executor.map(gen_m_samples_batched, range(K)))
+        # all_policy_samples[q][m] = (prompt, logprobs, boundaries) for policy q, sample m
 
-        # Step 2: Collect ALL prefixes from all T samples (T×K×H total)
-        all_prefixes_flat = []  # Will have T×K×H strings
+        # Step 2: Collect ALL prefixes from all M samples (M×K×H total)
+        all_prefixes_flat = []  # Will have M×K×H strings
         sample_prompts = [all_policy_samples[q][0][0] for q in range(K)]  # First sample for logging
 
-        for t in range(T):
+        for m in range(M):
             for q in range(K):
-                prompt = all_policy_samples[q][t][0]
+                prompt = all_policy_samples[q][m][0]
                 prefixes = build_word_prefixes(prompt, H)
                 all_prefixes_flat.extend(prefixes)
 
-        # Step 3: Batch embed ALL T×K×H prefixes at once
+        # Step 3: Batch embed ALL M×K×H prefixes at once
         all_embeddings = embed_texts_batched(all_prefixes_flat, embedder, batch_size=128)
-        # Shape: (T×K×H, d)
+        # Shape: (M×K×H, d)
 
-        # Step 4: Compute L_t for each sample and accumulate weighted gradients
+        # Step 4: Compute L_m for each sample and accumulate weighted gradients
         L_values = []
         policy_params = list(policy_manager.policies[policy_to_update].get_trainable_parameters())
         grad_accum = [torch.zeros_like(p) for p in policy_params]
 
-        for t in range(T):
-            # Extract embeddings for sample t: K×H embeddings
-            start_idx = t * K * H
+        for m_idx in range(M):
+            # Extract embeddings for sample m: K×H embeddings
+            start_idx = m_idx * K * H
             end_idx = start_idx + K * H
-            embeddings_t = all_embeddings[start_idx:end_idx]
+            embeddings_m = all_embeddings[start_idx:end_idx]
 
-            # Compute Fisher_t with regularization
-            fisher_t = compute_fisher_from_embeddings(embeddings_t, K, H, lambda_reg=LAMBDA_REG, t_coef=T_COEF)
+            # Compute Fisher_m with regularization (T scales data, not λ)
+            fisher_m = compute_fisher_from_embeddings(embeddings_m, K, H, lambda_reg=LAMBDA_REG, t_coef=T)
 
             # Compute objective based on design
             if DESIGN == "D":
                 # D-optimal: logdet(I)
-                sign, logdet = torch.linalg.slogdet(fisher_t)
+                sign, logdet = torch.linalg.slogdet(fisher_m)
                 if sign <= 0:
-                    print(f"Warning: Fisher_t not positive definite at iter {iteration}, sample {t}")
+                    print(f"Warning: Fisher not positive definite at iter {iteration}, sample {m_idx}")
                     continue
-                L_t = logdet
+                L_m = logdet
             else:
                 # A-optimal: -tr(I^{-1})
                 try:
-                    fisher_inv = torch.linalg.inv(fisher_t)
-                    L_t = -torch.trace(fisher_inv)
+                    fisher_inv = torch.linalg.inv(fisher_m)
+                    L_m = -torch.trace(fisher_inv)
                 except RuntimeError:
-                    print(f"Warning: Fisher_t not invertible at iter {iteration}, sample {t}")
+                    print(f"Warning: Fisher not invertible at iter {iteration}, sample {m_idx}")
                     continue
-            L_values.append(L_t.item())
+            L_values.append(L_m.item())
 
-            # Compute gradient for this sample: L_t * ∇log π_t
+            # Compute gradient for this sample: L_m * ∇log π_m
             # Weight tokens by how many embeddings they affect:
             # Token in word w (0-indexed) affects embeddings w, w+1, ..., H-1 = (H - w) embeddings
-            logprobs_t = all_policy_samples[policy_to_update][t][1]
-            word_boundaries = all_policy_samples[policy_to_update][t][2]
+            logprobs_m = all_policy_samples[policy_to_update][m_idx][1]
+            word_boundaries = all_policy_samples[policy_to_update][m_idx][2]
 
             # Compute weighted sum of log-probs
             weighted_logprob = 0
@@ -400,30 +400,30 @@ def main():
                 boundary = word_boundaries[w]
                 weight = H - w  # word w affects (H - w) embeddings
                 for token_idx in range(prev_boundary, boundary):
-                    if token_idx < len(logprobs_t):
-                        weighted_logprob = weighted_logprob + logprobs_t[token_idx] * weight
+                    if token_idx < len(logprobs_m):
+                        weighted_logprob = weighted_logprob + logprobs_m[token_idx] * weight
                 prev_boundary = boundary
 
             # Normalize by total weight: H + (H-1) + ... + 1 = H*(H+1)/2
             total_weight = H * (H + 1) / 2
 
             # retain_graph=True needed since batched generation shares computation graph
-            grads_t = torch.autograd.grad(weighted_logprob, policy_params, retain_graph=(t < T - 1))
+            grads_m = torch.autograd.grad(weighted_logprob, policy_params, retain_graph=(m_idx < M - 1))
 
-            # Accumulate: L_t * grad (already normalized by total_weight implicitly)
+            # Accumulate: L_m * grad (already normalized by total_weight implicitly)
             policy_device = policy_manager.devices[policy_to_update]
-            L_t_scaled = L_t.detach().to(policy_device) / total_weight
-            for i, g in enumerate(grads_t):
-                grad_accum[i] = grad_accum[i] + g * L_t_scaled
+            L_m_scaled = L_m.detach().to(policy_device) / total_weight
+            for i, g in enumerate(grads_m):
+                grad_accum[i] = grad_accum[i] + g * L_m_scaled
 
         if len(L_values) == 0:
             print(f"Warning: All Fishers singular at iter {iteration}")
             continue
 
-        # Average gradient over T samples
+        # Average gradient over M samples
         optimizers[policy_to_update].zero_grad()
         for param, g_acc in zip(policy_params, grad_accum):
-            param.grad = -g_acc / T  # Negative for ascent, average over T
+            param.grad = -g_acc / M  # Negative for ascent, average over M
         optimizers[policy_to_update].step()
 
         L = sum(L_values) / len(L_values)  # Average objective for logging
