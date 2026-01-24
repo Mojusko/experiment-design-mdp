@@ -634,12 +634,51 @@ def main():
         print(f"LR Scheduler: {LR_DECAY}")
 
     print("\n--- Starting Optimization ---")
-    print(f"{'Iter':>5} | {'Objective':>12} | {'Time':>8} | Prompts")
-    print("-" * 70)
+    print(f"{'Iter':>5} | {'Objective':>12} | {'Eval Obj':>12} | {'Time':>8} | Prompts")
+    print("-" * 80)
+
+    # Evaluation settings
+    T_EVAL = 10  # Number of real trajectories for evaluation
+    EVAL_EVERY = 5  # Evaluate every N iterations
 
     for iteration in range(NUM_ITERATIONS):
         iter_start = time.perf_counter()
         policy_to_update = iteration % K
+
+        # === EVALUATION (every EVAL_EVERY iterations) ===
+        eval_obj_str = ""
+        if iteration % EVAL_EVERY == 0:
+            with torch.no_grad():
+                # Sample T_EVAL prompts from each policy
+                def gen_eval_samples(policy_idx):
+                    policy = policy_manager.policies[policy_idx]
+                    return policy.generate_until_h_words_batched(
+                        batch_size=T_EVAL, h_words=H, temperature=TEMPERATURE, prompt_prefix=PROMPT_PREFIX
+                    )
+
+                with ThreadPoolExecutor(max_workers=K) as executor:
+                    eval_samples = list(executor.map(gen_eval_samples, range(K)))
+
+                # Build all prefixes: T_EVAL × K × H embeddings
+                eval_prefixes_flat = []
+                for t in range(T_EVAL):
+                    for q in range(K):
+                        prompt = eval_samples[q][t][0]
+                        prefixes = build_word_prefixes(prompt, H)
+                        eval_prefixes_flat.extend(prefixes)
+
+                eval_embeddings = embed_texts_batched(eval_prefixes_flat, embedder, batch_size=128)
+                # Shape: (T_EVAL × K × H, d)
+
+                # Compute Fisher with t_coef=1 (no multiplier, real T samples)
+                # Reshape: treat as K policies × (T_EVAL × H) timesteps
+                eval_fisher = compute_fisher_from_embeddings(
+                    eval_embeddings, k=K, h=T_EVAL * H, lambda_reg=LAMBDA_REG, t_coef=1.0
+                )
+
+                sign, logdet = torch.linalg.slogdet(eval_fisher)
+                eval_obj = logdet.item() if sign > 0 else float('-inf')
+                eval_obj_str = f"{eval_obj:12.4f}"
 
         # Select prefix for this iteration (random if using prefix_list)
         if prefix_list:
@@ -803,7 +842,7 @@ def main():
         if True:
             clean_prompt = sample_prompts[0].replace("<|endoftext|>", "").strip()
             prompt_preview = clean_prompt[:40] + "..." if len(clean_prompt) > 40 else clean_prompt
-            print(f"{iteration:>5} | {L:>12.4f} | {iter_time:>7.2f}s | {prompt_preview}")
+            print(f"{iteration:>5} | {L:>12.4f} | {eval_obj_str:>12} | {iter_time:>7.2f}s | {prompt_preview}")
 
         # Print all K prompts at iteration 0
         if iteration == 0:
