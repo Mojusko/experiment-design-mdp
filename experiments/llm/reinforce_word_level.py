@@ -423,6 +423,8 @@ def main():
                         help="Design objective: D (logdet), A (-tr(I^-1)), V (-tr(V@I^-1))")
     parser.add_argument("--iterations", type=int, default=20,
                         help="Number of optimization iterations (default: 20)")
+    parser.add_argument("--lambda-reg", type=float, default=0.01,
+                        help="Regularization lambda (default: 0.01)")
     args = parser.parse_args()
 
     K = 4  # policies
@@ -430,7 +432,7 @@ def main():
     M = 10  # Fisher samples for gradient
     T = 10  # T coefficient in Fisher (scales data, not λ) - from ED-PBRL
     NUM_ITERATIONS = args.iterations
-    LAMBDA_REG = 0.01
+    LAMBDA_REG = args.lambda_reg
     TEMPERATURE = 1.0
     LR = args.lr  # From command line
     PROMPT_PREFIX = args.prefix  # From command line
