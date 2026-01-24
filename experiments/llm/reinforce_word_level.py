@@ -813,16 +813,13 @@ def main():
             print()
 
     print("=" * 60)
-    print("Final prompts:")
-    # Use a few different prefixes for final demo if using prefix_list
-    final_prefixes = prefix_list[:3] if prefix_list else [PROMPT_PREFIX]
-    for prefix in final_prefixes:
-        if prefix:
-            print(f"\n  Prefix: '{prefix}'")
-        for q, policy in enumerate(policy_manager.policies):
-            results = policy.generate_until_h_words_batched(batch_size=1, h_words=H, temperature=0.7, prompt_prefix=prefix)
-            clean_prompt = results[0][0].replace("<|endoftext|>", "").strip()
-            print(f"    Policy {q}: {clean_prompt}")
+    print("Final prompts (prefix: 'A photo of'):")
+    # Always use fixed prefix for final prompts to enable fair comparison
+    final_prefix = "A photo of"
+    for q, policy in enumerate(policy_manager.policies):
+        results = policy.generate_until_h_words_batched(batch_size=1, h_words=H, temperature=0.7, prompt_prefix=final_prefix)
+        clean_prompt = results[0][0].replace("<|endoftext|>", "").strip()
+        print(f"    Policy {q}: {clean_prompt}")
     print("=" * 60)
 
 
