@@ -508,11 +508,13 @@ def main():
                         help="Regularization lambda (default: 0.01)")
     parser.add_argument("--per-word-baseline", action="store_true",
                         help="Use per-word objectives for proper credit assignment")
+    parser.add_argument("-M", "--samples", type=int, default=10,
+                        help="Number of Fisher samples for gradient (default: 10)")
     args = parser.parse_args()
 
     K = 4  # policies
     H = 14  # words per prompt (after prefix)
-    M = 10  # Fisher samples for gradient
+    M = args.samples  # Fisher samples for gradient
     T = 10  # T coefficient in Fisher (scales data, not λ) - from ED-PBRL
     NUM_ITERATIONS = args.iterations
     LAMBDA_REG = args.lambda_reg
