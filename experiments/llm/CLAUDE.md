@@ -547,9 +547,9 @@ python reinforce_word_level.py \
     --model magicprompt \      # Model: gpt2, magicprompt, distilgpt2-sd
     --samples 10 \             # M: Fisher samples for gradient estimation
     --horizon 8 \              # H: Words per prompt
-    --iterations 100 \         # Number of optimization iterations
-    --lambda-reg 0.5 \         # λ: Regularization strength
-    --lr 1e-6 \                # Learning rate
+    --iterations 60 \          # Number of optimization iterations
+    --lambda-reg 100 \         # λ: Regularization strength (100 = stable, 0.5 = more Fisher)
+    --lr 1e-8 \                # Learning rate (1e-8 for λ=100, 1e-6 for λ=0.5)
     --baseline none \          # Baseline: none, weighted, per-word
     --design D \               # Design: D (logdet), A (-tr(I⁻¹)), V
     --optimizer sgd \          # Optimizer: sgd, adam, adamw
@@ -557,26 +557,26 @@ python reinforce_word_level.py \
     --init-noise 0             # Std of noise added to init weights (0 = identical policies)
 ```
 
-### Best Hyperparameters (as of 2025-01)
+### Best Hyperparameters (as of 2026-01)
 
-**Smooth trajectory (recommended for stability)**:
+**Recommended (stable, grad/eval objectives match)**:
 ```bash
 python reinforce_word_level.py \
-    --model magicprompt --samples 10 --horizon 8 --iterations 100 \
-    --lambda-reg 0.5 --lr 1e-6 --baseline none --optimizer sgd \
+    --model magicprompt --samples 10 --horizon 8 --iterations 60 \
+    --lambda-reg 100 --lr 1e-8 --baseline none --optimizer sgd \
     --seed 123 --init-noise 0
 ```
-- Monotone convergence in ~10 iterations
-- Fluctuation: ±2.5 around optimum (most iterations near-best)
-- Stable: can stop at almost any iteration after convergence
+- Very stable: objectives fluctuate ±0.03 around 3537.2
+- Gradient and eval objectives match (high λ dominates)
+- Best eval objective around iter 30
 
-**More Fisher learning (noisier)**:
+**Lower regularization (noisier, more Fisher learning)**:
 ```bash
---lambda-reg 0.1 --lr 1e-6 --baseline none --optimizer sgd --init-noise 0
+--lambda-reg 0.5 --lr 1e-6 --baseline none --optimizer sgd --init-noise 0
 ```
-- Faster initial convergence (4 iterations to plateau)
-- Fluctuation: ±10 around optimum
-- Fisher term dominates more → more diversity learning
+- Objectives around -508 (gradient) and -479 (eval)
+- ~30 point gap is expected (different aggregation methods)
+- Eval fluctuates ±2 without clear improvement trend
 
 ### Key Findings
 
@@ -584,11 +584,12 @@ python reinforce_word_level.py \
 |-----------|---------|
 | `--init-noise 0` | Start with identical policies; let optimization create diversity |
 | `--baseline none` | Fastest convergence (simple L×sum(logprob)) |
-| `--baseline weighted` | Slower, similar stability |
-| `--lambda-reg` | Higher = smoother but less Fisher learning; 0.5 good balance |
-| `--lr 1e-6` (SGD) | Good for D-optimal; 1e-7 too slow |
-| `--lr 1e-5` (Adam) | Adam needs higher LR but not notably better than SGD |
+| `--lambda-reg 100` | Very stable; grad/eval match; λI dominates Fisher |
+| `--lambda-reg 0.5` | More Fisher learning but noisier; 30pt grad/eval gap |
+| `--lr 1e-8` (λ=100) | Stable with high regularization |
+| `--lr 1e-6` (λ=0.5) | Works with lower regularization |
 | `--optimizer sgd` | Faster convergence than Adam for this problem |
+| Random sampling | Already achieves near-optimal Fisher info (eval doesn't improve much) |
 
 ### `<|endoftext|>` Handling
 
