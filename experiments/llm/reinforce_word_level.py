@@ -421,13 +421,15 @@ def main():
                         help="Learning rate (default: 1e-7)")
     parser.add_argument("--design", type=str, default="D", choices=["D", "A", "V"],
                         help="Design objective: D (logdet), A (-tr(I^-1)), V (-tr(V@I^-1))")
+    parser.add_argument("--iterations", type=int, default=20,
+                        help="Number of optimization iterations (default: 20)")
     args = parser.parse_args()
 
     K = 4  # policies
     H = 14  # words per prompt (after prefix)
     M = 10  # Fisher samples for gradient
     T = 10  # T coefficient in Fisher (scales data, not λ) - from ED-PBRL
-    NUM_ITERATIONS = 20
+    NUM_ITERATIONS = args.iterations
     LAMBDA_REG = 0.01
     TEMPERATURE = 1.0
     LR = args.lr  # From command line
