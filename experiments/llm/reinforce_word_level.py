@@ -659,9 +659,11 @@ def main():
                 with ThreadPoolExecutor(max_workers=K) as executor:
                     eval_samples = list(executor.map(gen_eval_samples, range(K)))
 
-                # Build all prefixes for each trajectory, compute Fisher per trajectory, average
-                # This is the correct approach: average T_EVAL Fisher estimates
-                eval_fishers = []
+                # Build all prefixes for each trajectory, sum Fisher data terms, add λI once
+                d = 768  # CLIP embedding dimension
+                device = embedder.device
+                eval_fisher_data = torch.zeros(d, d, device=device)
+
                 for t in range(T_EVAL):
                     # Collect K×H embeddings for trajectory t (same order as gradient computation)
                     traj_prefixes = []
@@ -673,14 +675,14 @@ def main():
                     traj_embeddings = embed_texts_batched(traj_prefixes, embedder, batch_size=128)
                     # Shape: (K × H, d)
 
-                    # Compute Fisher for this trajectory (t_coef=1, we're averaging T_EVAL samples)
+                    # Compute Fisher data term only (lambda_reg=0)
                     fisher_t = compute_fisher_from_embeddings(
-                        traj_embeddings, k=K, h=H, lambda_reg=LAMBDA_REG, t_coef=1.0
+                        traj_embeddings, k=K, h=H, lambda_reg=0.0, t_coef=1.0
                     )
-                    eval_fishers.append(fisher_t)
+                    eval_fisher_data = eval_fisher_data + fisher_t
 
-                # Average Fisher over T_EVAL trajectories
-                eval_fisher = torch.stack(eval_fishers).mean(dim=0)
+                # Add λI once at the end
+                eval_fisher = eval_fisher_data + LAMBDA_REG * torch.eye(d, device=device)
 
                 sign, logdet = torch.linalg.slogdet(eval_fisher)
                 eval_obj = logdet.item() if sign > 0 else float('-inf')
