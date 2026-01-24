@@ -415,6 +415,12 @@ def main():
                         help="Prompt prefix (e.g., 'A photo of')")
     parser.add_argument("--prefix-file", type=str, default=None,
                         help="File with prompt prefixes (one per line, randomly sampled)")
+    parser.add_argument("--optimizer", type=str, default="sgd", choices=["sgd", "adam", "adamw"],
+                        help="Optimizer: sgd (default, stable), adam, adamw")
+    parser.add_argument("--lr", type=float, default=1e-7,
+                        help="Learning rate (default: 1e-7)")
+    parser.add_argument("--design", type=str, default="D", choices=["D", "A", "V"],
+                        help="Design objective: D (logdet), A (-tr(I^-1)), V (-tr(V@I^-1))")
     args = parser.parse_args()
 
     K = 4  # policies
@@ -424,10 +430,11 @@ def main():
     NUM_ITERATIONS = 20
     LAMBDA_REG = 0.01
     TEMPERATURE = 1.0
-    LR = 1e-7  # Best performing LR
+    LR = args.lr  # From command line
     PROMPT_PREFIX = args.prefix  # From command line
     MODEL_NAME = args.model  # From command line
-    DESIGN = "D"  # "D" for logdet, "A" for -tr(I^-1), "V" for -tr(V @ I^-1)
+    DESIGN = args.design  # From command line
+    OPTIMIZER = args.optimizer  # From command line
 
     # Load prefixes from file if provided
     prefix_list = None
@@ -445,7 +452,7 @@ def main():
     print(f"Each Fisher from K×H = {K*H} embeddings")
     obj_desc = {"D": "logdet(I)", "A": "-tr(I^-1)", "V": "-tr(V @ I^-1)"}[DESIGN]
     print(f"Objective: {obj_desc} ({DESIGN}-optimal)")
-    print(f"T={T}, λ={LAMBDA_REG}, lr={LR}")
+    print(f"T={T}, λ={LAMBDA_REG}, lr={LR}, optimizer={OPTIMIZER}")
     if PROMPT_PREFIX:
         print(f"Prompt prefix: '{PROMPT_PREFIX}'")
     elif prefix_list:
@@ -464,10 +471,22 @@ def main():
     )
 
     # Optimizers (one per policy for alternating updates)
-    optimizers = [
-        torch.optim.AdamW(policy.get_trainable_parameters(), lr=LR)
-        for policy in policy_manager.policies
-    ]
+    if OPTIMIZER == "sgd":
+        optimizers = [
+            torch.optim.SGD(policy.get_trainable_parameters(), lr=LR)
+            for policy in policy_manager.policies
+        ]
+    elif OPTIMIZER == "adam":
+        optimizers = [
+            torch.optim.Adam(policy.get_trainable_parameters(), lr=LR)
+            for policy in policy_manager.policies
+        ]
+    else:  # adamw
+        optimizers = [
+            torch.optim.AdamW(policy.get_trainable_parameters(), lr=LR)
+            for policy in policy_manager.policies
+        ]
+    print(f"Optimizer: {OPTIMIZER.upper()}, LR: {LR}")
 
     print("\n--- Starting Optimization ---")
     print(f"{'Iter':>5} | {'Objective':>12} | {'Time':>8} | Prompts")
