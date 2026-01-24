@@ -405,6 +405,87 @@ def compute_fisher_from_embeddings(
     return fisher
 
 
+def compute_per_word_objectives(
+    embeddings: torch.Tensor,  # (K×H, d)
+    k: int,
+    h: int,
+    lambda_reg: float = 1.0,
+    t_coef: float = 1.0,
+    design: str = "D",
+) -> Tuple[List[float], float]:
+    """
+    Compute per-word objectives L_w for proper credit assignment.
+
+    For word w, L_w = f(S_w + λI) where S_w = Σ_{t=w}^{H-1} I_t
+    This gives word w credit only for the Fisher terms it causally affects.
+
+    Returns:
+        L_w_list: List of H objective values, one per word position
+        L_full: The full objective (same as L_0) for logging
+    """
+    d = embeddings.shape[1]
+    device = embeddings.device
+    dtype = embeddings.dtype
+
+    # Reshape to (K, H, d)
+    embeddings = embeddings.view(k, h, d)
+
+    # Step 1: Compute all I_t matrices
+    I_list = []
+    for t in range(h):
+        emb_t = embeddings[:, t, :]  # (K, d)
+        mu_t = emb_t.mean(dim=0)
+        second_t = (emb_t.T @ emb_t) / k
+        I_t = second_t - torch.outer(mu_t, mu_t)
+        I_list.append(I_t)
+
+    # Step 2: Compute cumulative sums from the end (reverse cumsum)
+    # S_w = Σ_{t=w}^{H-1} I_t
+    # S_{H-1} = I_{H-1}
+    # S_{H-2} = I_{H-2} + S_{H-1}
+    # ...
+    # S_0 = I_0 + I_1 + ... + I_{H-1} (full Fisher, minus regularization)
+    S_list = [None] * h
+    S_list[h - 1] = I_list[h - 1].clone()
+    for w in range(h - 2, -1, -1):
+        S_list[w] = I_list[w] + S_list[w + 1]
+
+    # Step 3: Compute L_w for each word position
+    reg_matrix = lambda_reg * torch.eye(d, device=device, dtype=dtype)
+    L_w_list = []
+
+    for w in range(h):
+        # Fisher for word w: T * S_w + λI
+        fisher_w = t_coef * S_list[w] + reg_matrix
+
+        if design == "D":
+            sign, logdet = torch.linalg.slogdet(fisher_w)
+            if sign <= 0:
+                L_w = torch.tensor(float('-inf'), device=device)
+            else:
+                L_w = logdet
+        elif design == "A":
+            try:
+                fisher_inv = torch.linalg.inv(fisher_w)
+                L_w = -torch.trace(fisher_inv)
+            except RuntimeError:
+                L_w = torch.tensor(float('-inf'), device=device)
+        else:  # V-optimal - use full embeddings for V matrix
+            try:
+                V_w = compute_V_matrix(embeddings.view(k * h, d), k, h)
+                fisher_inv = torch.linalg.inv(fisher_w)
+                L_w = -torch.trace(V_w @ fisher_inv)
+            except RuntimeError:
+                L_w = torch.tensor(float('-inf'), device=device)
+
+        L_w_list.append(L_w.item())
+
+    # L_full = L_0 (the objective for the full trajectory)
+    L_full = L_w_list[0]
+
+    return L_w_list, L_full
+
+
 def main():
     import argparse
 
@@ -425,6 +506,8 @@ def main():
                         help="Number of optimization iterations (default: 20)")
     parser.add_argument("--lambda-reg", type=float, default=0.01,
                         help="Regularization lambda (default: 0.01)")
+    parser.add_argument("--per-word-baseline", action="store_true",
+                        help="Use per-word objectives for proper credit assignment")
     args = parser.parse_args()
 
     K = 4  # policies
@@ -439,6 +522,7 @@ def main():
     MODEL_NAME = args.model  # From command line
     DESIGN = args.design  # From command line
     OPTIMIZER = args.optimizer  # From command line
+    PER_WORD_BASELINE = args.per_word_baseline  # From command line
 
     # Load prefixes from file if provided
     prefix_list = None
@@ -456,7 +540,8 @@ def main():
     print(f"Each Fisher from K×H = {K*H} embeddings")
     obj_desc = {"D": "logdet(I)", "A": "-tr(I^-1)", "V": "-tr(V @ I^-1)"}[DESIGN]
     print(f"Objective: {obj_desc} ({DESIGN}-optimal)")
-    print(f"T={T}, λ={LAMBDA_REG}, lr={LR}, optimizer={OPTIMIZER}")
+    baseline_str = "per-word" if PER_WORD_BASELINE else "weighted"
+    print(f"T={T}, λ={LAMBDA_REG}, lr={LR}, optimizer={OPTIMIZER}, baseline={baseline_str}")
     if PROMPT_PREFIX:
         print(f"Prompt prefix: '{PROMPT_PREFIX}'")
     elif prefix_list:
@@ -542,64 +627,110 @@ def main():
             end_idx = start_idx + K * H
             embeddings_m = all_embeddings[start_idx:end_idx]
 
-            # Compute Fisher_m with regularization (T scales data, not λ)
-            fisher_m = compute_fisher_from_embeddings(embeddings_m, K, H, lambda_reg=LAMBDA_REG, t_coef=T)
-
-            # Compute objective based on design
-            if DESIGN == "D":
-                # D-optimal: logdet(I)
-                sign, logdet = torch.linalg.slogdet(fisher_m)
-                if sign <= 0:
-                    print(f"Warning: Fisher not positive definite at iter {iteration}, sample {m_idx}")
-                    continue
-                L_m = logdet
-            elif DESIGN == "A":
-                # A-optimal: -tr(I^{-1})
-                try:
-                    fisher_inv = torch.linalg.inv(fisher_m)
-                    L_m = -torch.trace(fisher_inv)
-                except RuntimeError:
-                    print(f"Warning: Fisher not invertible at iter {iteration}, sample {m_idx}")
-                    continue
-            else:
-                # V-optimal: -tr(V @ I^{-1})
-                try:
-                    V_m = compute_V_matrix(embeddings_m, K, H)
-                    fisher_inv = torch.linalg.inv(fisher_m)
-                    L_m = -torch.trace(V_m @ fisher_inv)
-                except RuntimeError:
-                    print(f"Warning: Fisher not invertible at iter {iteration}, sample {m_idx}")
-                    continue
-            L_values.append(L_m.item())
-
-            # Compute gradient for this sample: L_m * ∇log π_m
-            # Weight tokens by how many embeddings they affect:
-            # Token in word w (0-indexed) affects embeddings w, w+1, ..., H-1 = (H - w) embeddings
             logprobs_m = all_policy_samples[policy_to_update][m_idx][1]
             word_boundaries = all_policy_samples[policy_to_update][m_idx][2]
-
-            # Compute weighted sum of log-probs
-            weighted_logprob = 0
-            prev_boundary = 0
-            for w in range(len(word_boundaries)):
-                boundary = word_boundaries[w]
-                weight = H - w  # word w affects (H - w) embeddings
-                for token_idx in range(prev_boundary, boundary):
-                    if token_idx < len(logprobs_m):
-                        weighted_logprob = weighted_logprob + logprobs_m[token_idx] * weight
-                prev_boundary = boundary
-
-            # Normalize by total weight: H + (H-1) + ... + 1 = H*(H+1)/2
-            total_weight = H * (H + 1) / 2
-
-            # retain_graph=True needed since batched generation shares computation graph
-            grads_m = torch.autograd.grad(weighted_logprob, policy_params, retain_graph=(m_idx < M - 1))
-
-            # Accumulate: L_m * grad (already normalized by total_weight implicitly)
             policy_device = policy_manager.devices[policy_to_update]
-            L_m_scaled = L_m.detach().to(policy_device) / total_weight
-            for i, g in enumerate(grads_m):
-                grad_accum[i] = grad_accum[i] + g * L_m_scaled
+
+            if PER_WORD_BASELINE:
+                # Per-word baseline: each word w gets its own objective L_w
+                # L_w = f(S_w + λI) where S_w = Σ_{t=w}^{H-1} I_t
+                L_w_list, L_full = compute_per_word_objectives(
+                    embeddings_m, K, H, lambda_reg=LAMBDA_REG, t_coef=T, design=DESIGN
+                )
+
+                if L_full == float('-inf'):
+                    print(f"Warning: Fisher not valid at iter {iteration}, sample {m_idx}")
+                    continue
+
+                L_values.append(L_full)
+
+                # Compute gradient: Σ_w L_w * ∇log π(word_w)
+                prev_boundary = 0
+                for w in range(min(len(word_boundaries), H)):
+                    boundary = word_boundaries[w]
+                    L_w = L_w_list[w]
+
+                    if L_w == float('-inf'):
+                        prev_boundary = boundary
+                        continue
+
+                    # Sum log-probs for tokens in word w
+                    word_logprob = 0
+                    for token_idx in range(prev_boundary, boundary):
+                        if token_idx < len(logprobs_m):
+                            word_logprob = word_logprob + logprobs_m[token_idx]
+
+                    if word_logprob != 0:
+                        # Gradient for this word
+                        grads_w = torch.autograd.grad(
+                            word_logprob, policy_params,
+                            retain_graph=(m_idx < M - 1 or w < len(word_boundaries) - 1)
+                        )
+
+                        # Accumulate: L_w * grad, normalized by H
+                        L_w_scaled = L_w / H
+                        for i, g in enumerate(grads_w):
+                            grad_accum[i] = grad_accum[i] + g * L_w_scaled
+
+                    prev_boundary = boundary
+
+            else:
+                # Original weighted approach
+                # Compute Fisher_m with regularization (T scales data, not λ)
+                fisher_m = compute_fisher_from_embeddings(embeddings_m, K, H, lambda_reg=LAMBDA_REG, t_coef=T)
+
+                # Compute objective based on design
+                if DESIGN == "D":
+                    # D-optimal: logdet(I)
+                    sign, logdet = torch.linalg.slogdet(fisher_m)
+                    if sign <= 0:
+                        print(f"Warning: Fisher not positive definite at iter {iteration}, sample {m_idx}")
+                        continue
+                    L_m = logdet
+                elif DESIGN == "A":
+                    # A-optimal: -tr(I^{-1})
+                    try:
+                        fisher_inv = torch.linalg.inv(fisher_m)
+                        L_m = -torch.trace(fisher_inv)
+                    except RuntimeError:
+                        print(f"Warning: Fisher not invertible at iter {iteration}, sample {m_idx}")
+                        continue
+                else:
+                    # V-optimal: -tr(V @ I^{-1})
+                    try:
+                        V_m = compute_V_matrix(embeddings_m, K, H)
+                        fisher_inv = torch.linalg.inv(fisher_m)
+                        L_m = -torch.trace(V_m @ fisher_inv)
+                    except RuntimeError:
+                        print(f"Warning: Fisher not invertible at iter {iteration}, sample {m_idx}")
+                        continue
+                L_values.append(L_m.item())
+
+                # Compute gradient for this sample: L_m * ∇log π_m
+                # Weight tokens by how many embeddings they affect:
+                # Token in word w (0-indexed) affects embeddings w, w+1, ..., H-1 = (H - w) embeddings
+
+                # Compute weighted sum of log-probs
+                weighted_logprob = 0
+                prev_boundary = 0
+                for w in range(len(word_boundaries)):
+                    boundary = word_boundaries[w]
+                    weight = H - w  # word w affects (H - w) embeddings
+                    for token_idx in range(prev_boundary, boundary):
+                        if token_idx < len(logprobs_m):
+                            weighted_logprob = weighted_logprob + logprobs_m[token_idx] * weight
+                    prev_boundary = boundary
+
+                # Normalize by total weight: H + (H-1) + ... + 1 = H*(H+1)/2
+                total_weight = H * (H + 1) / 2
+
+                # retain_graph=True needed since batched generation shares computation graph
+                grads_m = torch.autograd.grad(weighted_logprob, policy_params, retain_graph=(m_idx < M - 1))
+
+                # Accumulate: L_m * grad (already normalized by total_weight implicitly)
+                L_m_scaled = L_m.detach().to(policy_device) / total_weight
+                for i, g in enumerate(grads_m):
+                    grad_accum[i] = grad_accum[i] + g * L_m_scaled
 
         if len(L_values) == 0:
             print(f"Warning: All Fishers singular at iter {iteration}")
