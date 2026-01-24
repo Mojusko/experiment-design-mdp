@@ -9,33 +9,96 @@ Key idea:
 - Log-probs at BPE level, aggregated per word
 
 Multi-GPU: Each policy generates on its own GPU in parallel.
+
+Supported base models:
+- gpt2: Standard GPT-2 (default)
+- microsoft/Promptist: GPT-2 fine-tuned with RL for SD prompt optimization
+- Gustavosta/MagicPrompt-Stable-Diffusion: GPT-2 trained on Lexica.art prompts
 """
 
 import os
+import random
 import sys
 import time
 import torch
 import warnings
 from concurrent.futures import ThreadPoolExecutor
-from typing import List, Tuple
+from typing import List, Tuple, Optional
 
 warnings.filterwarnings("ignore", message=".*right-padding.*")
 warnings.filterwarnings("ignore", message=".*attention mask.*")
 
 sys.path.insert(0, os.path.dirname(os.path.abspath(__file__)))
 
+
+# =============================================================================
+# Model Registry: Supported base models for prompt generation
+# =============================================================================
+MODEL_REGISTRY = {
+    "gpt2": {
+        "model_id": "gpt2",
+        "tokenizer_id": "gpt2",
+        "description": "Standard GPT-2 (124M params)",
+    },
+    "gpt2-medium": {
+        "model_id": "gpt2-medium",
+        "tokenizer_id": "gpt2-medium",
+        "description": "GPT-2 Medium (355M params)",
+    },
+    "promptist": {
+        "model_id": "microsoft/Promptist",
+        "tokenizer_id": "gpt2",  # Promptist uses GPT-2 tokenizer
+        "description": "Microsoft Promptist: GPT-2 fine-tuned with RL for SD v1.4",
+    },
+    "magicprompt": {
+        "model_id": "Gustavosta/MagicPrompt-Stable-Diffusion",
+        "tokenizer_id": "Gustavosta/MagicPrompt-Stable-Diffusion",
+        "description": "MagicPrompt: GPT-2 trained on 80k Lexica.art prompts",
+    },
+    "distilgpt2-sd": {
+        "model_id": "FredZhang7/distilgpt2-stable-diffusion",
+        "tokenizer_id": "FredZhang7/distilgpt2-stable-diffusion",
+        "description": "DistilGPT2 trained on 2M SD prompts (fast, lightweight)",
+    },
+}
+
+
+def get_model_config(model_name: str) -> dict:
+    """Get model configuration from registry, or treat as HuggingFace model ID."""
+    if model_name in MODEL_REGISTRY:
+        return MODEL_REGISTRY[model_name]
+    # Assume it's a direct HuggingFace model ID
+    return {
+        "model_id": model_name,
+        "tokenizer_id": model_name,
+        "description": f"Custom model: {model_name}",
+    }
+
 from components.embedder import CLIPEmbedder
 
 
 class WordLevelPolicy:
-    """GPT-2 policy that generates until H complete words."""
+    """GPT-2 policy that generates until H complete words.
+
+    Supports multiple base models via MODEL_REGISTRY:
+    - gpt2: Standard GPT-2
+    - promptist: Microsoft Promptist (RL-tuned for SD)
+    - magicprompt: MagicPrompt-Stable-Diffusion
+    - distilgpt2-sd: Lightweight DistilGPT2 for SD
+    """
 
     def __init__(self, model_name: str = "gpt2", device: str = "cuda:0", seed: int = None):
-        from transformers import GPT2LMHeadModel, GPT2Tokenizer
+        from transformers import AutoModelForCausalLM, AutoTokenizer
         import numpy as np
         import random
 
         self.device = device
+        self.model_name = model_name
+
+        # Get model config from registry
+        config = get_model_config(model_name)
+        model_id = config["model_id"]
+        tokenizer_id = config["tokenizer_id"]
 
         # Set seed for diverse init
         if seed is not None:
@@ -45,7 +108,9 @@ class WordLevelPolicy:
             random.seed(seed)
 
         # Load base model (full fine-tuning, no LoRA)
-        self.model = GPT2LMHeadModel.from_pretrained(model_name)
+        # Use AutoModelForCausalLM for broader compatibility (Promptist, etc.)
+        print(f"Loading model: {model_id} ({config['description']})")
+        self.model = AutoModelForCausalLM.from_pretrained(model_id)
 
         # Perturb weights for diversity between policies
         if seed is not None:
@@ -57,8 +122,8 @@ class WordLevelPolicy:
 
         self.model.to(device)
 
-        # Tokenizer
-        self.tokenizer = GPT2Tokenizer.from_pretrained(model_name)
+        # Tokenizer - use AutoTokenizer for compatibility
+        self.tokenizer = AutoTokenizer.from_pretrained(tokenizer_id)
         if self.tokenizer.pad_token is None:
             self.tokenizer.pad_token = self.tokenizer.eos_token
         self.tokenizer.padding_side = "left"
@@ -155,13 +220,27 @@ class WordLevelPolicy:
 
 
 class MultiGPUPolicyManager:
-    """Manages K policies across multiple GPUs."""
+    """Manages K policies across multiple GPUs.
+
+    Args:
+        k: Number of policies
+        model_name: Model identifier (see MODEL_REGISTRY for options):
+            - "gpt2": Standard GPT-2
+            - "promptist": Microsoft Promptist (RL-tuned for SD prompts)
+            - "magicprompt": MagicPrompt-Stable-Diffusion
+            - "distilgpt2-sd": Lightweight DistilGPT2 for SD
+            - Or any HuggingFace model ID
+    """
 
     def __init__(self, k: int = 4, model_name: str = "gpt2"):
         num_gpus = torch.cuda.device_count()
         self.devices = [f"cuda:{i % num_gpus}" for i in range(k)]
+        self.model_name = model_name
 
-        print(f"Initializing {k} policies across {num_gpus} GPUs...")
+        config = get_model_config(model_name)
+        print(f"Initializing {k} policies with: {config['description']}")
+        print(f"Distributing across {num_gpus} GPUs...")
+
         self.policies = [
             WordLevelPolicy(
                 model_name=model_name,
@@ -327,6 +406,17 @@ def compute_fisher_from_embeddings(
 
 
 def main():
+    import argparse
+
+    parser = argparse.ArgumentParser(description="REINFORCE with word-level embeddings")
+    parser.add_argument("--model", type=str, default="gpt2",
+                        help="Base model: gpt2, promptist, magicprompt, distilgpt2-sd, or HF model ID")
+    parser.add_argument("--prefix", type=str, default="",
+                        help="Prompt prefix (e.g., 'A photo of')")
+    parser.add_argument("--prefix-file", type=str, default=None,
+                        help="File with prompt prefixes (one per line, randomly sampled)")
+    args = parser.parse_args()
+
     K = 4  # policies
     H = 14  # words per prompt (after prefix)
     M = 10  # Fisher samples for gradient
@@ -335,23 +425,37 @@ def main():
     LAMBDA_REG = 0.01
     TEMPERATURE = 1.0
     LR = 1e-7  # Best performing LR
-    PROMPT_PREFIX = ""  # No prefix
+    PROMPT_PREFIX = args.prefix  # From command line
+    MODEL_NAME = args.model  # From command line
     DESIGN = "D"  # "D" for logdet, "A" for -tr(I^-1), "V" for -tr(V @ I^-1)
+
+    # Load prefixes from file if provided
+    prefix_list = None
+    if args.prefix_file:
+        with open(args.prefix_file, "r") as f:
+            prefix_list = [line.strip() for line in f if line.strip()]
+        print(f"Loaded {len(prefix_list)} prefixes from {args.prefix_file}")
 
     print("=" * 60)
     print(f"REINFORCE with Word-Level Intermediate Embeddings ({DESIGN}-optimal)")
     print("=" * 60)
+    config = get_model_config(MODEL_NAME)
+    print(f"Base model: {config['description']}")
     print(f"K={K} policies, H={H} words per prompt, M={M} Fisher samples")
     print(f"Each Fisher from K×H = {K*H} embeddings")
     obj_desc = {"D": "logdet(I)", "A": "-tr(I^-1)", "V": "-tr(V @ I^-1)"}[DESIGN]
     print(f"Objective: {obj_desc} ({DESIGN}-optimal)")
     print(f"T={T}, λ={LAMBDA_REG}, lr={LR}")
+    if PROMPT_PREFIX:
+        print(f"Prompt prefix: '{PROMPT_PREFIX}'")
+    elif prefix_list:
+        print(f"Using {len(prefix_list)} prefixes from file (randomly sampled)")
     print("=" * 60)
 
     # Initialize
     print("\n--- Initialization ---")
 
-    policy_manager = MultiGPUPolicyManager(k=K)
+    policy_manager = MultiGPUPolicyManager(k=K, model_name=MODEL_NAME)
 
     embedder = CLIPEmbedder(
         model_id="openai/clip-vit-large-patch14",
@@ -373,11 +477,17 @@ def main():
         iter_start = time.perf_counter()
         policy_to_update = iteration % K
 
+        # Select prefix for this iteration (random if using prefix_list)
+        if prefix_list:
+            current_prefix = random.choice(prefix_list)
+        else:
+            current_prefix = PROMPT_PREFIX
+
         # Step 1: Generate M×K prompts in parallel (batched generation per policy)
-        def gen_m_samples_batched(policy_idx):
+        def gen_m_samples_batched(policy_idx, prefix=current_prefix):
             policy = policy_manager.policies[policy_idx]
             return policy.generate_until_h_words_batched(
-                batch_size=M, h_words=H, temperature=TEMPERATURE, prompt_prefix=PROMPT_PREFIX
+                batch_size=M, h_words=H, temperature=TEMPERATURE, prompt_prefix=prefix
             )
 
         with ThreadPoolExecutor(max_workers=K) as executor:
@@ -496,9 +606,14 @@ def main():
 
     print("=" * 60)
     print("Final prompts:")
-    for q, policy in enumerate(policy_manager.policies):
-        results = policy.generate_until_h_words_batched(batch_size=1, h_words=H, temperature=0.7, prompt_prefix=PROMPT_PREFIX)
-        print(f"  Policy {q}: {results[0][0]}")
+    # Use a few different prefixes for final demo if using prefix_list
+    final_prefixes = prefix_list[:3] if prefix_list else [PROMPT_PREFIX]
+    for prefix in final_prefixes:
+        if prefix:
+            print(f"\n  Prefix: '{prefix}'")
+        for q, policy in enumerate(policy_manager.policies):
+            results = policy.generate_until_h_words_batched(batch_size=1, h_words=H, temperature=0.7, prompt_prefix=prefix)
+            print(f"    Policy {q}: {results[0][0]}")
     print("=" * 60)
 
 
