@@ -2,17 +2,23 @@
 """Quick script to evaluate Fisher objective on prompts."""
 
 import torch
-import sys
-sys.path.insert(0, '.')
+from transformers import CLIPModel, CLIPProcessor
 
-from components.embedder import CLIPEmbedder
+def get_clip_embedding(text, model, processor, device="cuda"):
+    """Get CLIP text embedding."""
+    inputs = processor(text=text, return_tensors="pt", padding=True, truncation=True)
+    inputs = {k: v.to(device) for k, v in inputs.items()}
+    with torch.no_grad():
+        emb = model.get_text_features(**inputs)
+    emb = emb / emb.norm(dim=-1, keepdim=True)  # normalize
+    return emb.squeeze(0)
 
-def compute_fisher_objective(prompts, embedder, lambda_reg=0.01):
+def compute_fisher_objective(prompts, model, processor, device="cuda", lambda_reg=0.01):
     """Compute D-optimal (logdet) objective for K prompts."""
     # Get embeddings
     embeddings = []
     for p in prompts:
-        emb = embedder.embed_text(p)
+        emb = get_clip_embedding(p, model, processor, device)
         embeddings.append(emb)
 
     embeddings = torch.stack(embeddings)  # (K, d)
@@ -29,12 +35,10 @@ def compute_fisher_objective(prompts, embedder, lambda_reg=0.01):
     return logdet.item()
 
 def main():
-    print("Loading CLIP embedder...")
-    embedder = CLIPEmbedder(
-        model_id="openai/clip-vit-large-patch14",
-        normalize=True,
-        cache_dir="~/.cache/huggingface/hub",
-    )
+    device = "cuda" if torch.cuda.is_available() else "cpu"
+    print(f"Loading CLIP model on {device}...")
+    model = CLIPModel.from_pretrained("openai/clip-vit-large-patch14").to(device)
+    processor = CLIPProcessor.from_pretrained("openai/clip-vit-large-patch14")
 
     # Final prompts from experiment (with EOS collapse)
     original_prompts = [
@@ -56,14 +60,14 @@ def main():
     for i, p in enumerate(original_prompts):
         print(f"  Policy {i}: {p[:60]}...")
 
-    obj_original = compute_fisher_objective(original_prompts, embedder)
+    obj_original = compute_fisher_objective(original_prompts, model, processor, device)
     print(f"\nFisher objective (logdet): {obj_original:.4f}")
 
     print("\n=== Fixed prompts (EOS replaced) ===")
     for i, p in enumerate(fixed_prompts):
         print(f"  Policy {i}: {p[:60]}...")
 
-    obj_fixed = compute_fisher_objective(fixed_prompts, embedder)
+    obj_fixed = compute_fisher_objective(fixed_prompts, model, processor, device)
     print(f"\nFisher objective (logdet): {obj_fixed:.4f}")
 
     print(f"\n=== Improvement: {obj_fixed - obj_original:.4f} ===")
