@@ -512,6 +512,8 @@ def main():
                         help="Number of Fisher samples for gradient (default: 10)")
     parser.add_argument("-H", "--horizon", type=int, default=14,
                         help="Number of words per prompt (default: 14)")
+    parser.add_argument("--lr-decay", type=str, default="none", choices=["none", "step", "exponential", "cosine"],
+                        help="LR decay schedule: none, step (0.5x every 50 iter), exponential (0.99x per iter), cosine")
     args = parser.parse_args()
 
     K = 4  # policies
@@ -527,6 +529,7 @@ def main():
     DESIGN = args.design  # From command line
     OPTIMIZER = args.optimizer  # From command line
     BASELINE = args.baseline  # From command line
+    LR_DECAY = args.lr_decay  # From command line
 
     # Load prefixes from file if provided
     prefix_list = None
@@ -544,7 +547,7 @@ def main():
     print(f"Each Fisher from K×H = {K*H} embeddings")
     obj_desc = {"D": "logdet(I)", "A": "-tr(I^-1)", "V": "-tr(V @ I^-1)"}[DESIGN]
     print(f"Objective: {obj_desc} ({DESIGN}-optimal)")
-    print(f"T={T}, λ={LAMBDA_REG}, lr={LR}, optimizer={OPTIMIZER}, baseline={BASELINE}")
+    print(f"T={T}, λ={LAMBDA_REG}, lr={LR}, optimizer={OPTIMIZER}, baseline={BASELINE}, lr_decay={LR_DECAY}")
     if PROMPT_PREFIX:
         print(f"Prompt prefix: '{PROMPT_PREFIX}'")
     elif prefix_list:
@@ -579,6 +582,29 @@ def main():
             for policy in policy_manager.policies
         ]
     print(f"Optimizer: {OPTIMIZER.upper()}, LR: {LR}")
+
+    # Learning rate schedulers
+    schedulers = None
+    if LR_DECAY != "none":
+        if LR_DECAY == "step":
+            # Halve LR every 50 iterations
+            schedulers = [
+                torch.optim.lr_scheduler.StepLR(opt, step_size=50, gamma=0.5)
+                for opt in optimizers
+            ]
+        elif LR_DECAY == "exponential":
+            # Decay by 0.99 each iteration
+            schedulers = [
+                torch.optim.lr_scheduler.ExponentialLR(opt, gamma=0.99)
+                for opt in optimizers
+            ]
+        elif LR_DECAY == "cosine":
+            # Cosine annealing to 0 over all iterations
+            schedulers = [
+                torch.optim.lr_scheduler.CosineAnnealingLR(opt, T_max=NUM_ITERATIONS)
+                for opt in optimizers
+            ]
+        print(f"LR Scheduler: {LR_DECAY}")
 
     print("\n--- Starting Optimization ---")
     print(f"{'Iter':>5} | {'Objective':>12} | {'Time':>8} | Prompts")
@@ -728,6 +754,8 @@ def main():
         for param, g_acc in zip(policy_params, grad_accum):
             param.grad = -g_acc / M  # Negative for ascent, average over M
         optimizers[policy_to_update].step()
+        if schedulers is not None:
+            schedulers[policy_to_update].step()
 
         L = sum(L_values) / len(L_values)  # Average objective for logging
 
