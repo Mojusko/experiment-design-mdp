@@ -85,6 +85,26 @@ MODEL_REGISTRY = {
         "tokenizer_id": "FredZhang7/distilgpt2-stable-diffusion",
         "description": "DistilGPT2 trained on 2M SD prompts (fast, lightweight)",
     },
+    "phi-2": {
+        "model_id": "microsoft/phi-2",
+        "tokenizer_id": "microsoft/phi-2",
+        "description": "Microsoft Phi-2 (2.7B params, excellent quality for size)",
+    },
+    "stablelm-3b": {
+        "model_id": "stabilityai/stablelm-3b-4e1t",
+        "tokenizer_id": "stabilityai/stablelm-3b-4e1t",
+        "description": "StableLM 3B trained on 4T tokens (Stability AI)",
+    },
+    "llama2-7b": {
+        "model_id": "meta-llama/Llama-2-7b-hf",
+        "tokenizer_id": "meta-llama/Llama-2-7b-hf",
+        "description": "LLaMA 2 7B (Meta, trained on 2T tokens)",
+    },
+    "mistral-7b": {
+        "model_id": "mistralai/Mistral-7B-v0.1",
+        "tokenizer_id": "mistralai/Mistral-7B-v0.1",
+        "description": "Mistral 7B (high quality, sliding window attention)",
+    },
 }
 
 
