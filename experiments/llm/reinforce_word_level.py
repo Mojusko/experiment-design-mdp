@@ -45,6 +45,31 @@ MODEL_REGISTRY = {
         "tokenizer_id": "gpt2-medium",
         "description": "GPT-2 Medium (355M params)",
     },
+    "gpt2-large": {
+        "model_id": "gpt2-large",
+        "tokenizer_id": "gpt2-large",
+        "description": "GPT-2 Large (774M params)",
+    },
+    "gpt2-xl": {
+        "model_id": "gpt2-xl",
+        "tokenizer_id": "gpt2-xl",
+        "description": "GPT-2 XL (1.5B params)",
+    },
+    "gpt-neo-125m": {
+        "model_id": "EleutherAI/gpt-neo-125m",
+        "tokenizer_id": "EleutherAI/gpt-neo-125m",
+        "description": "GPT-Neo 125M (EleutherAI, similar to GPT-2)",
+    },
+    "gpt-neo-1.3b": {
+        "model_id": "EleutherAI/gpt-neo-1.3B",
+        "tokenizer_id": "EleutherAI/gpt-neo-1.3B",
+        "description": "GPT-Neo 1.3B (EleutherAI, ~10x GPT-2)",
+    },
+    "gpt-neo-2.7b": {
+        "model_id": "EleutherAI/gpt-neo-2.7B",
+        "tokenizer_id": "EleutherAI/gpt-neo-2.7B",
+        "description": "GPT-Neo 2.7B (EleutherAI, larger)",
+    },
     "promptist": {
         "model_id": "microsoft/Promptist",
         "tokenizer_id": "gpt2",  # Promptist uses GPT-2 tokenizer
