@@ -33,6 +33,7 @@ def main():
     embedder = CLIPEmbedder(
         model_id="openai/clip-vit-large-patch14",
         normalize=True,
+        cache_dir="~/.cache/huggingface/hub",
     )
 
     # Final prompts from experiment (with EOS collapse)
