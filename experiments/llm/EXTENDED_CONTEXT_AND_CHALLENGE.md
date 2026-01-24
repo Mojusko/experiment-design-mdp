@@ -135,6 +135,21 @@ where R(τ) measures how prompt τ's embedding contributes to the Fisher Informa
 
 ---
 
+## 6. Reviewer Feedback (ICLR 2025 Submission)
+
+Key criticisms that motivate the vocabulary-free extension:
+
+| Concern | Reviewer | Our Response |
+|---------|----------|--------------|
+| "State visitation measures very data hungry for high-dim" | EPjt | No state visitation—sample directly from LLM |
+| "Policy extraction computationally intensive for LLMs" | GKit | Direct REINFORCE on LLM weights, no Convex-RL |
+| "Simple baseline could learn distribution over vocabulary" | mNCP | LLM captures richer correlations than independent attributes |
+| "Independence assumptions between design attributes" | mNCP | LLM naturally models attribute correlations |
+
+The vocabulary-free approach directly addresses scalability concerns raised by reviewers.
+
+---
+
 ## References
 
 - **ED-PBRL Paper**: Schacht et al. "Efficient Personalization of Generative Models via Optimal Experimental Design" (2025). arXiv:2512.19057v1

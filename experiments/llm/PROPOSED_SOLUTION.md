@@ -300,6 +300,47 @@ $$\log p_{\theta}(\tau) = \sum_{t=1}^{|\tau|} \log p_{\theta}(w_t | w_{1:t-1})$$
 
 ---
 
+## 11. Implementation Findings (January 2025)
+
+### 11.1 Word-Level Intermediate Embeddings
+
+**Key enhancement**: Instead of embedding only the final prompt, embed at each word position:
+
+```
+Prompt: "a cyberpunk city at night glowing neon"
+        ↓
+Prefixes: ["a", "a cyberpunk", "a cyberpunk city", ..., full prompt]
+        ↓
+Embeddings: φ₁, φ₂, ..., φ_H  (H embeddings per prompt)
+```
+
+This gives K×H embeddings per iteration instead of just K, providing richer gradient signal.
+
+### 11.2 Best Hyperparameters
+
+| Parameter | Value | Notes |
+|-----------|-------|-------|
+| λ (regularization) | 0.5 | Smooth trajectory; paper uses λ=100 but scales differ |
+| Learning rate | 1e-6 | For SGD; Adam needs ~1e-5 |
+| Optimizer | SGD | Faster convergence than Adam for this problem |
+| Baseline | none | Simple L×Σlogprob; fastest convergence |
+| Init noise | 0 | Start identical; let optimization create diversity |
+| M (samples) | 10 | Fisher samples per iteration |
+| H (horizon) | 8 | Words per prompt |
+
+### 11.3 `<|endoftext|>` Handling
+
+MagicPrompt expects input prefixes, but we use it prefix-free. Special handling:
+1. **Block at start**: Mask `<|endoftext|>` logit for first 3 tokens
+2. **Allow natural endings**: After 3 tokens, allow EOS for proper completion
+3. **Strip for embedding**: Remove `<|endoftext|>` before CLIP embedding
+
+### 11.4 Model Choice
+
+**MagicPrompt** (GPT-2 fine-tuned on 80k Lexica.art prompts) works better than base GPT-2 for generating Stable Diffusion prompts.
+
+---
+
 ## References
 
 - **ED-PBRL**: Schacht et al. (2025), arXiv:2512.19057v1
@@ -307,6 +348,7 @@ $$\log p_{\theta}(\tau) = \sum_{t=1}^{|\tau|} \log p_{\theta}(w_t | w_{1:t-1})$$
 - **GPT-2**: Radford et al. (2019)
 - **LoRA**: Hu et al. (2021)
 - **CLIP**: Radford et al. (2021)
+- **MagicPrompt**: Gustavosta/MagicPrompt-Stable-Diffusion (HuggingFace)
 
 ---
 

@@ -87,13 +87,14 @@ class WordLevelPolicy:
     - distilgpt2-sd: Lightweight DistilGPT2 for SD
     """
 
-    def __init__(self, model_name: str = "gpt2", device: str = "cuda:0", seed: int = None):
+    def __init__(self, model_name: str = "gpt2", device: str = "cuda:0", seed: int = None, init_noise: float = 0.01):
         from transformers import AutoModelForCausalLM, AutoTokenizer
         import numpy as np
         import random
 
         self.device = device
         self.model_name = model_name
+        self.seed = seed
 
         # Get model config from registry
         config = get_model_config(model_name)
@@ -113,14 +114,19 @@ class WordLevelPolicy:
         self.model = AutoModelForCausalLM.from_pretrained(model_id)
 
         # Perturb weights for diversity between policies
-        if seed is not None:
+        if seed is not None and init_noise > 0:
             torch.manual_seed(seed)
             with torch.no_grad():
                 for name, param in self.model.named_parameters():
-                    noise = torch.randn_like(param) * 0.01  # Larger perturbation for diversity
+                    noise = torch.randn_like(param) * init_noise
                     param.add_(noise)
 
         self.model.to(device)
+
+        # Create per-policy random generator for sampling diversity
+        self.generator = torch.Generator(device=device)
+        if seed is not None:
+            self.generator.manual_seed(seed)
 
         # Tokenizer - use AutoTokenizer for compatibility
         self.tokenizer = AutoTokenizer.from_pretrained(tokenizer_id)
@@ -169,9 +175,15 @@ class WordLevelPolicy:
             outputs = self.model(input_ids)
             logits = outputs.logits[:, -1, :] / temperature  # (batch, vocab)
 
-            # Sample for all sequences
+            # Mask out <|endoftext|> only at the start to prevent empty generation
+            # After a few tokens, allow natural endings
+            eos_id = self.tokenizer.eos_token_id
+            if eos_id is not None and step < 3:
+                logits[:, eos_id] = float('-inf')
+
+            # Sample for all sequences (using per-policy generator for diversity)
             probs = torch.softmax(logits, dim=-1)
-            next_tokens = torch.multinomial(probs, num_samples=1).squeeze(-1)  # (batch,)
+            next_tokens = torch.multinomial(probs, num_samples=1, generator=self.generator).squeeze(-1)  # (batch,)
 
             # Log probs (with gradient)
             log_probs = torch.log_softmax(logits, dim=-1)  # (batch, vocab)
@@ -232,7 +244,7 @@ class MultiGPUPolicyManager:
             - Or any HuggingFace model ID
     """
 
-    def __init__(self, k: int = 4, model_name: str = "gpt2"):
+    def __init__(self, k: int = 4, model_name: str = "gpt2", base_seed: int = 42, init_noise: float = 0.01):
         num_gpus = torch.cuda.device_count()
         self.devices = [f"cuda:{i % num_gpus}" for i in range(k)]
         self.model_name = model_name
@@ -245,7 +257,8 @@ class MultiGPUPolicyManager:
             WordLevelPolicy(
                 model_name=model_name,
                 device=self.devices[q],
-                seed=42 + q * 1000,
+                seed=base_seed + q * 1000,
+                init_noise=init_noise,
             )
             for q in range(k)
         ]
@@ -270,6 +283,8 @@ class MultiGPUPolicyManager:
 
 def build_word_prefixes(prompt: str, h_words: int) -> List[str]:
     """Build H prefixes at word boundaries."""
+    # Strip special tokens before embedding
+    prompt = prompt.replace("<|endoftext|>", "").strip()
     words = prompt.split()[:h_words]
     prefixes = []
     for i in range(1, len(words) + 1):
@@ -516,6 +531,10 @@ def main():
                         help="LR decay schedule: none, step (0.5x every 50 iter), exponential (0.99x per iter), cosine")
     parser.add_argument("--no-intermediate", action="store_true",
                         help="Only embed final prompts, not intermediate prefixes (K embeddings instead of K×H)")
+    parser.add_argument("--seed", type=int, default=42,
+                        help="Base random seed for initialization (default: 42)")
+    parser.add_argument("--init-noise", type=float, default=0.01,
+                        help="Std of Gaussian noise added to weights for policy diversity (default: 0.01)")
     args = parser.parse_args()
 
     K = 4  # policies
@@ -533,6 +552,8 @@ def main():
     BASELINE = args.baseline  # From command line
     LR_DECAY = args.lr_decay  # From command line
     NO_INTERMEDIATE = args.no_intermediate  # From command line
+    BASE_SEED = args.seed  # From command line
+    INIT_NOISE = args.init_noise  # From command line
 
     # Load prefixes from file if provided
     prefix_list = None
@@ -553,7 +574,7 @@ def main():
         print(f"Each Fisher from K×H = {K*H} embeddings")
     obj_desc = {"D": "logdet(I)", "A": "-tr(I^-1)", "V": "-tr(V @ I^-1)"}[DESIGN]
     print(f"Objective: {obj_desc} ({DESIGN}-optimal)")
-    print(f"T={T}, λ={LAMBDA_REG}, lr={LR}, optimizer={OPTIMIZER}, baseline={BASELINE}, lr_decay={LR_DECAY}")
+    print(f"T={T}, λ={LAMBDA_REG}, lr={LR}, optimizer={OPTIMIZER}, baseline={BASELINE}, lr_decay={LR_DECAY}, seed={BASE_SEED}, init_noise={INIT_NOISE}")
     if PROMPT_PREFIX:
         print(f"Prompt prefix: '{PROMPT_PREFIX}'")
     elif prefix_list:
@@ -563,7 +584,7 @@ def main():
     # Initialize
     print("\n--- Initialization ---")
 
-    policy_manager = MultiGPUPolicyManager(k=K, model_name=MODEL_NAME)
+    policy_manager = MultiGPUPolicyManager(k=K, model_name=MODEL_NAME, base_seed=BASE_SEED, init_noise=INIT_NOISE)
 
     embedder = CLIPEmbedder(
         model_id="openai/clip-vit-large-patch14",
@@ -780,7 +801,8 @@ def main():
 
         # Log every iteration
         if True:
-            prompt_preview = sample_prompts[0][:40] + "..." if len(sample_prompts[0]) > 40 else sample_prompts[0]
+            clean_prompt = sample_prompts[0].replace("<|endoftext|>", "").strip()
+            prompt_preview = clean_prompt[:40] + "..." if len(clean_prompt) > 40 else clean_prompt
             print(f"{iteration:>5} | {L:>12.4f} | {iter_time:>7.2f}s | {prompt_preview}")
 
         # Print all K prompts at iteration 0
@@ -799,7 +821,8 @@ def main():
             print(f"\n  Prefix: '{prefix}'")
         for q, policy in enumerate(policy_manager.policies):
             results = policy.generate_until_h_words_batched(batch_size=1, h_words=H, temperature=0.7, prompt_prefix=prefix)
-            print(f"    Policy {q}: {results[0][0]}")
+            clean_prompt = results[0][0].replace("<|endoftext|>", "").strip()
+            print(f"    Policy {q}: {clean_prompt}")
     print("=" * 60)
 
 

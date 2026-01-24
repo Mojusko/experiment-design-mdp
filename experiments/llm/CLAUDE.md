@@ -68,6 +68,23 @@ P(i | images) = exp(r(image_i)) / Σⱼ exp(r(image_j))
 - **Image Generator**: Stable Diffusion 1.4
 - **Optimization**: Frank-Wolfe with Convex-RL for policy computation
 
+### Vocabulary-Free Extension (REINFORCE)
+
+The main paper uses a **fixed vocabulary** (~2500 words). ICLR reviewers raised scalability concerns:
+- "State visitation measures very data hungry for high-dimensional state spaces"
+- "Policy extraction computationally intensive for LLMs"
+
+The `reinforce_word_level.py` script addresses this by replacing the fixed vocabulary with an LLM (MagicPrompt/GPT-2) that can generate **any prompt**:
+
+| Fixed Vocabulary | Vocabulary-Free |
+|------------------|-----------------|
+| d_q ∈ ℝ^{2500} explicit | p_θ(prompt) via LLM |
+| Frank-Wolfe (convex) | REINFORCE (policy gradient) |
+| Pre-computed Φ matrix | On-the-fly CLIP embeddings |
+| Convex-RL policy extraction | Direct LLM fine-tuning |
+
+See `EXTENDED_CONTEXT_AND_CHALLENGE.md` and `PROPOSED_SOLUTION.md` for details.
+
 ---
 
 ## Core Principles
@@ -508,6 +525,97 @@ cd experiments/llm && python run_exp.py \
 | `components/embedder.py` | Image encoders |
 | `Makefile` | Job definitions and targets |
 | `conf/*.yaml` | Hydra configurations |
+
+---
+
+## REINFORCE Word-Level Prompt Optimization
+
+The `reinforce_word_level.py` script optimizes K=4 prompt-generating policies using REINFORCE to maximize Fisher information (D-optimal design).
+
+### How It Works
+
+1. **K=4 policies**: Each policy is a fine-tuned MagicPrompt (GPT-2 trained on Lexica.art prompts)
+2. **Word-level embeddings**: For each policy, embed prefixes at each word position (K×H total embeddings)
+3. **Fisher information**: Compute I = Σ_h I_h + λI where I_h captures embedding diversity
+4. **D-optimal objective**: Maximize logdet(I)
+5. **REINFORCE gradient**: ∇E[L] = E[L · Σ_w ∇log π(word_w)]
+
+### CLI Arguments
+
+```bash
+python reinforce_word_level.py \
+    --model magicprompt \      # Model: gpt2, magicprompt, distilgpt2-sd
+    --samples 10 \             # M: Fisher samples for gradient estimation
+    --horizon 8 \              # H: Words per prompt
+    --iterations 100 \         # Number of optimization iterations
+    --lambda-reg 0.5 \         # λ: Regularization strength
+    --lr 1e-6 \                # Learning rate
+    --baseline none \          # Baseline: none, weighted, per-word
+    --design D \               # Design: D (logdet), A (-tr(I⁻¹)), V
+    --optimizer sgd \          # Optimizer: sgd, adam, adamw
+    --seed 123 \               # Base random seed
+    --init-noise 0             # Std of noise added to init weights (0 = identical policies)
+```
+
+### Best Hyperparameters (as of 2025-01)
+
+**Smooth trajectory (recommended for stability)**:
+```bash
+python reinforce_word_level.py \
+    --model magicprompt --samples 10 --horizon 8 --iterations 100 \
+    --lambda-reg 0.5 --lr 1e-6 --baseline none --optimizer sgd \
+    --seed 123 --init-noise 0
+```
+- Monotone convergence in ~10 iterations
+- Fluctuation: ±2.5 around optimum (most iterations near-best)
+- Stable: can stop at almost any iteration after convergence
+
+**More Fisher learning (noisier)**:
+```bash
+--lambda-reg 0.1 --lr 1e-6 --baseline none --optimizer sgd --init-noise 0
+```
+- Faster initial convergence (4 iterations to plateau)
+- Fluctuation: ±10 around optimum
+- Fisher term dominates more → more diversity learning
+
+### Key Findings
+
+| Parameter | Finding |
+|-----------|---------|
+| `--init-noise 0` | Start with identical policies; let optimization create diversity |
+| `--baseline none` | Fastest convergence (simple L×sum(logprob)) |
+| `--baseline weighted` | Slower, similar stability |
+| `--lambda-reg` | Higher = smoother but less Fisher learning; 0.5 good balance |
+| `--lr 1e-6` (SGD) | Good for D-optimal; 1e-7 too slow |
+| `--lr 1e-5` (Adam) | Adam needs higher LR but not notably better than SGD |
+| `--optimizer sgd` | Faster convergence than Adam for this problem |
+
+### `<|endoftext|>` Handling
+
+MagicPrompt is designed as a **prompt expander** (input: "Landscape of" → output: "Landscape of mountains, highly detailed..."). When used prefix-free, it generates from `<|endoftext|>` (GPT-2's BOS/EOS token).
+
+**Current handling:**
+1. **Block at start**: `<|endoftext|>` is masked (logit=-inf) for first 3 tokens to prevent empty generation
+2. **Allow natural endings**: After 3 tokens, allow `<|endoftext|>` so prompts can end naturally
+3. **Strip for CLIP**: `<|endoftext|>` is stripped before CLIP embedding (in `build_word_prefixes`)
+4. **Clean display**: Stripped from printed output for readability
+
+### GCP Instance
+
+```bash
+# SSH to l4-4gpu-instance
+ssh -i ~/atom/l4gpu-key l4gpuuser@<EXTERNAL_IP>
+
+# Run experiment
+ssh -i ~/atom/l4gpu-key l4gpuuser@<IP> \
+  "source /home/ubuntu/miniconda3/etc/profile.d/conda.sh && \
+   conda activate doexpy-gpu && \
+   cd /home/ubuntu/experiment-design-mdp/experiments/llm && \
+   python -u reinforce_word_level.py --model magicprompt ..."
+
+# Find current IP
+~/atom/google-cloud-sdk/bin/gcloud compute instances list
+```
 
 ---
 
