@@ -659,11 +659,8 @@ def main():
                 with ThreadPoolExecutor(max_workers=K) as executor:
                     eval_samples = list(executor.map(gen_eval_samples, range(K)))
 
-                # Build all prefixes for each trajectory, sum Fisher data terms, add λI once
-                d = 768  # CLIP embedding dimension
-                device = embedder.device
-                eval_fisher_data = torch.zeros(d, d, device=device)
-
+                # Compute same objective as gradient: logdet(T × D_t + λI), averaged over T_EVAL samples
+                eval_logdets = []
                 for t in range(T_EVAL):
                     # Collect K×H embeddings for trajectory t (same order as gradient computation)
                     traj_prefixes = []
@@ -675,17 +672,16 @@ def main():
                     traj_embeddings = embed_texts_batched(traj_prefixes, embedder, batch_size=128)
                     # Shape: (K × H, d)
 
-                    # Compute Fisher data term only (lambda_reg=0)
+                    # Compute Fisher same as gradient: T × data + λI
                     fisher_t = compute_fisher_from_embeddings(
-                        traj_embeddings, k=K, h=H, lambda_reg=0.0, t_coef=1.0
+                        traj_embeddings, k=K, h=H, lambda_reg=LAMBDA_REG, t_coef=T
                     )
-                    eval_fisher_data = eval_fisher_data + fisher_t
+                    sign, logdet = torch.linalg.slogdet(fisher_t)
+                    if sign > 0:
+                        eval_logdets.append(logdet.item())
 
-                # Add λI once at the end
-                eval_fisher = eval_fisher_data + LAMBDA_REG * torch.eye(d, device=device)
-
-                sign, logdet = torch.linalg.slogdet(eval_fisher)
-                eval_obj = logdet.item() if sign > 0 else float('-inf')
+                # Average logdet over T_EVAL samples (same as gradient averaging over M)
+                eval_obj = sum(eval_logdets) / len(eval_logdets) if eval_logdets else float('-inf')
                 eval_obj_str = f"{eval_obj:12.4f}"
 
         # Select prefix for this iteration (random if using prefix_list)
