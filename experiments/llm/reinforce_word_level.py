@@ -514,6 +514,8 @@ def main():
                         help="Number of words per prompt (default: 14)")
     parser.add_argument("--lr-decay", type=str, default="none", choices=["none", "step", "exponential", "cosine"],
                         help="LR decay schedule: none, step (0.5x every 50 iter), exponential (0.99x per iter), cosine")
+    parser.add_argument("--no-intermediate", action="store_true",
+                        help="Only embed final prompts, not intermediate prefixes (K embeddings instead of K×H)")
     args = parser.parse_args()
 
     K = 4  # policies
@@ -530,6 +532,7 @@ def main():
     OPTIMIZER = args.optimizer  # From command line
     BASELINE = args.baseline  # From command line
     LR_DECAY = args.lr_decay  # From command line
+    NO_INTERMEDIATE = args.no_intermediate  # From command line
 
     # Load prefixes from file if provided
     prefix_list = None
@@ -544,7 +547,10 @@ def main():
     config = get_model_config(MODEL_NAME)
     print(f"Base model: {config['description']}")
     print(f"K={K} policies, H={H} words per prompt, M={M} Fisher samples")
-    print(f"Each Fisher from K×H = {K*H} embeddings")
+    if NO_INTERMEDIATE:
+        print(f"Each Fisher from K = {K} final embeddings (no intermediate)")
+    else:
+        print(f"Each Fisher from K×H = {K*H} embeddings")
     obj_desc = {"D": "logdet(I)", "A": "-tr(I^-1)", "V": "-tr(V @ I^-1)"}[DESIGN]
     print(f"Objective: {obj_desc} ({DESIGN}-optimal)")
     print(f"T={T}, λ={LAMBDA_REG}, lr={LR}, optimizer={OPTIMIZER}, baseline={BASELINE}, lr_decay={LR_DECAY}")
@@ -631,19 +637,30 @@ def main():
             all_policy_samples = list(executor.map(gen_m_samples_batched, range(K)))
         # all_policy_samples[q][m] = (prompt, logprobs, boundaries) for policy q, sample m
 
-        # Step 2: Collect ALL prefixes from all M samples (M×K×H total)
-        all_prefixes_flat = []  # Will have M×K×H strings
+        # Step 2: Collect prompts/prefixes for embedding
         sample_prompts = [all_policy_samples[q][0][0] for q in range(K)]  # First sample for logging
 
-        for m in range(M):
-            for q in range(K):
-                prompt = all_policy_samples[q][m][0]
-                prefixes = build_word_prefixes(prompt, H)
-                all_prefixes_flat.extend(prefixes)
-
-        # Step 3: Batch embed ALL M×K×H prefixes at once
-        all_embeddings = embed_texts_batched(all_prefixes_flat, embedder, batch_size=128)
-        # Shape: (M×K×H, d)
+        if NO_INTERMEDIATE:
+            # Only embed final prompts: M×K total
+            all_texts_flat = []
+            for m in range(M):
+                for q in range(K):
+                    prompt = all_policy_samples[q][m][0]
+                    all_texts_flat.append(prompt)
+            all_embeddings = embed_texts_batched(all_texts_flat, embedder, batch_size=128)
+            # Shape: (M×K, d)
+            H_eff = 1  # Effective H for Fisher computation
+        else:
+            # Embed all prefixes: M×K×H total
+            all_prefixes_flat = []
+            for m in range(M):
+                for q in range(K):
+                    prompt = all_policy_samples[q][m][0]
+                    prefixes = build_word_prefixes(prompt, H)
+                    all_prefixes_flat.extend(prefixes)
+            all_embeddings = embed_texts_batched(all_prefixes_flat, embedder, batch_size=128)
+            # Shape: (M×K×H, d)
+            H_eff = H
 
         # Step 4: Compute L_m for each sample and accumulate weighted gradients
         L_values = []
@@ -651,9 +668,9 @@ def main():
         grad_accum = [torch.zeros_like(p) for p in policy_params]
 
         for m_idx in range(M):
-            # Extract embeddings for sample m: K×H embeddings
-            start_idx = m_idx * K * H
-            end_idx = start_idx + K * H
+            # Extract embeddings for sample m: K×H_eff embeddings
+            start_idx = m_idx * K * H_eff
+            end_idx = start_idx + K * H_eff
             embeddings_m = all_embeddings[start_idx:end_idx]
 
             logprobs_m = all_policy_samples[policy_to_update][m_idx][1]
@@ -661,7 +678,7 @@ def main():
             policy_device = policy_manager.devices[policy_to_update]
 
             # Compute Fisher and objective (shared across all baseline types except per-word)
-            fisher_m = compute_fisher_from_embeddings(embeddings_m, K, H, lambda_reg=LAMBDA_REG, t_coef=T)
+            fisher_m = compute_fisher_from_embeddings(embeddings_m, K, H_eff, lambda_reg=LAMBDA_REG, t_coef=T)
 
             # Compute objective based on design
             if DESIGN == "D":
@@ -679,7 +696,7 @@ def main():
                     continue
             else:  # V-optimal
                 try:
-                    V_m = compute_V_matrix(embeddings_m, K, H)
+                    V_m = compute_V_matrix(embeddings_m, K, H_eff)
                     fisher_inv = torch.linalg.inv(fisher_m)
                     L_m = -torch.trace(V_m @ fisher_inv)
                 except RuntimeError:
@@ -688,15 +705,15 @@ def main():
 
             L_values.append(L_m.item())
 
-            if BASELINE == "per-word":
+            if BASELINE == "per-word" and not NO_INTERMEDIATE:
                 # Per-word baseline: each word w gets its own objective L_w
                 L_w_list, _ = compute_per_word_objectives(
-                    embeddings_m, K, H, lambda_reg=LAMBDA_REG, t_coef=T, design=DESIGN
+                    embeddings_m, K, H_eff, lambda_reg=LAMBDA_REG, t_coef=T, design=DESIGN
                 )
 
                 # Compute gradient: Σ_w L_w * ∇log π(word_w)
                 prev_boundary = 0
-                for w in range(min(len(word_boundaries), H)):
+                for w in range(min(len(word_boundaries), H_eff)):
                     boundary = word_boundaries[w]
                     L_w = L_w_list[w]
 
@@ -719,25 +736,25 @@ def main():
 
                     prev_boundary = boundary
 
-            elif BASELINE == "weighted":
+            elif BASELINE == "weighted" and not NO_INTERMEDIATE:
                 # Weighted approach: weight by how many embeddings each word affects
                 weighted_logprob = 0
                 prev_boundary = 0
                 for w in range(len(word_boundaries)):
                     boundary = word_boundaries[w]
-                    weight = H - w  # word w affects (H - w) embeddings
+                    weight = H_eff - w  # word w affects (H_eff - w) embeddings
                     for token_idx in range(prev_boundary, boundary):
                         if token_idx < len(logprobs_m):
                             weighted_logprob = weighted_logprob + logprobs_m[token_idx] * weight
                     prev_boundary = boundary
 
-                total_weight = H * (H + 1) / 2
+                total_weight = H_eff * (H_eff + 1) / 2
                 grads_m = torch.autograd.grad(weighted_logprob, policy_params, retain_graph=(m_idx < M - 1))
                 L_m_scaled = L_m.detach().to(policy_device) / total_weight
                 for i, g in enumerate(grads_m):
                     grad_accum[i] = grad_accum[i] + g * L_m_scaled
 
-            else:  # BASELINE == "none"
+            else:  # BASELINE == "none" or NO_INTERMEDIATE
                 # Simple: L * sum(logprobs) - no weighting
                 total_logprob = sum(logprobs_m)
                 grads_m = torch.autograd.grad(total_logprob, policy_params, retain_graph=(m_idx < M - 1))
