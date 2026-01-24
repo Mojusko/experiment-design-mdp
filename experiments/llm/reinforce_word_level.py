@@ -659,22 +659,28 @@ def main():
                 with ThreadPoolExecutor(max_workers=K) as executor:
                     eval_samples = list(executor.map(gen_eval_samples, range(K)))
 
-                # Build all prefixes: T_EVAL × K × H embeddings
-                eval_prefixes_flat = []
+                # Build all prefixes for each trajectory, compute Fisher per trajectory, average
+                # This is the correct approach: average T_EVAL Fisher estimates
+                eval_fishers = []
                 for t in range(T_EVAL):
+                    # Collect K×H embeddings for trajectory t (same order as gradient computation)
+                    traj_prefixes = []
                     for q in range(K):
                         prompt = eval_samples[q][t][0]
                         prefixes = build_word_prefixes(prompt, H)
-                        eval_prefixes_flat.extend(prefixes)
+                        traj_prefixes.extend(prefixes)
 
-                eval_embeddings = embed_texts_batched(eval_prefixes_flat, embedder, batch_size=128)
-                # Shape: (T_EVAL × K × H, d)
+                    traj_embeddings = embed_texts_batched(traj_prefixes, embedder, batch_size=128)
+                    # Shape: (K × H, d)
 
-                # Compute Fisher with t_coef=1 (no multiplier, real T samples)
-                # Reshape: treat as K policies × (T_EVAL × H) timesteps
-                eval_fisher = compute_fisher_from_embeddings(
-                    eval_embeddings, k=K, h=T_EVAL * H, lambda_reg=LAMBDA_REG, t_coef=1.0
-                )
+                    # Compute Fisher for this trajectory (t_coef=1, we're averaging T_EVAL samples)
+                    fisher_t = compute_fisher_from_embeddings(
+                        traj_embeddings, k=K, h=H, lambda_reg=LAMBDA_REG, t_coef=1.0
+                    )
+                    eval_fishers.append(fisher_t)
+
+                # Average Fisher over T_EVAL trajectories
+                eval_fisher = torch.stack(eval_fishers).mean(dim=0)
 
                 sign, logdet = torch.linalg.slogdet(eval_fisher)
                 eval_obj = logdet.item() if sign > 0 else float('-inf')
