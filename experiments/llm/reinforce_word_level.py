@@ -852,11 +852,9 @@ def main():
             print()
 
     print("=" * 60)
-    print("Final prompts (prefix: 'A photo of'):")
-    # Always use fixed prefix for final prompts to enable fair comparison
-    final_prefix = "A photo of"
+    print("Final prompts (no prefix):")
     for q, policy in enumerate(policy_manager.policies):
-        results = policy.generate_until_h_words_batched(batch_size=1, h_words=H, temperature=1.0, prompt_prefix=final_prefix)
+        results = policy.generate_until_h_words_batched(batch_size=1, h_words=H, temperature=1.0, prompt_prefix="")
         clean_prompt = results[0][0].replace("<|endoftext|>", "").strip()
         print(f"    Policy {q}: {clean_prompt}")
     print("=" * 60)
