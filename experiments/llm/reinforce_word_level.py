@@ -85,6 +85,11 @@ MODEL_REGISTRY = {
         "tokenizer_id": "FredZhang7/distilgpt2-stable-diffusion",
         "description": "DistilGPT2 trained on 2M SD prompts (fast, lightweight)",
     },
+    "gpt2-650k-sd": {
+        "model_id": "Ar4ikov/gpt2-650k-stable-diffusion-prompt-generator",
+        "tokenizer_id": "Ar4ikov/gpt2-650k-stable-diffusion-prompt-generator",
+        "description": "GPT-2 trained on 650k SD prompts",
+    },
     "phi-2": {
         "model_id": "microsoft/phi-2",
         "tokenizer_id": "microsoft/phi-2",
