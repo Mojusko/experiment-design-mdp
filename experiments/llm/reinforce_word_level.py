@@ -510,10 +510,12 @@ def main():
                         help="Use per-word objectives for proper credit assignment")
     parser.add_argument("-M", "--samples", type=int, default=10,
                         help="Number of Fisher samples for gradient (default: 10)")
+    parser.add_argument("-H", "--horizon", type=int, default=14,
+                        help="Number of words per prompt (default: 14)")
     args = parser.parse_args()
 
     K = 4  # policies
-    H = 14  # words per prompt (after prefix)
+    H = args.horizon  # words per prompt (after prefix)
     M = args.samples  # Fisher samples for gradient
     T = 10  # T coefficient in Fisher (scales data, not λ) - from ED-PBRL
     NUM_ITERATIONS = args.iterations
