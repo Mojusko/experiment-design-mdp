@@ -667,10 +667,9 @@ def main():
                             retain_graph=(m_idx < M - 1 or w < len(word_boundaries) - 1)
                         )
 
-                        # Accumulate: L_w * grad, normalized by H
-                        L_w_scaled = L_w / H
+                        # Accumulate: L_w * grad (no normalization)
                         for i, g in enumerate(grads_w):
-                            grad_accum[i] = grad_accum[i] + g * L_w_scaled
+                            grad_accum[i] = grad_accum[i] + g * L_w
 
                     prev_boundary = boundary
 
