@@ -117,7 +117,7 @@ class WordLevelPolicy:
             torch.manual_seed(seed)
             with torch.no_grad():
                 for name, param in self.model.named_parameters():
-                    noise = torch.randn_like(param) * 0.001  # Small perturbation
+                    noise = torch.randn_like(param) * 0.01  # Larger perturbation for diversity
                     param.add_(noise)
 
         self.model.to(device)
