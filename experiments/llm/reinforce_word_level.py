@@ -589,12 +589,14 @@ def main():
                         help="Update all K policies together instead of round-robin (default: False)")
     parser.add_argument("--sum-trajectories", action="store_true",
                         help="Sum T trajectory Fishers instead of scaling single trajectory by T. Aligns training with eval objective.")
+    parser.add_argument("-T", "--num-trajectories", type=int, default=10,
+                        help="Number of trajectories T for Fisher computation (default: 10)")
     args = parser.parse_args()
 
     K = 4  # policies
     H = args.horizon  # words per prompt (after prefix)
     M = args.samples  # Fisher samples for gradient
-    T = 10  # T coefficient in Fisher (scales data, not λ) - from ED-PBRL
+    T = args.num_trajectories  # Number of trajectories for Fisher
     NUM_ITERATIONS = args.iterations
     LAMBDA_REG = args.lambda_reg
     TEMPERATURE = 1.0
@@ -694,7 +696,7 @@ def main():
     print("-" * 80)
 
     # Evaluation settings
-    T_EVAL = 10  # Number of real trajectories for evaluation
+    T_EVAL = T  # Number of real trajectories for evaluation (same as T)
     EVAL_EVERY = 5  # Evaluate every N iterations
 
     # Moving average baseline for REINFORCE variance reduction
