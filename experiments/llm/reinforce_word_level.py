@@ -571,8 +571,8 @@ def main():
                         help="Number of optimization iterations (default: 20)")
     parser.add_argument("--lambda-reg", type=float, default=0.01,
                         help="Regularization lambda (default: 0.01)")
-    parser.add_argument("--baseline", type=str, default="none", choices=["none", "weighted", "per-word"],
-                        help="Baseline type: none (simple L*sum(logprob)), weighted (position weighting), per-word (reward-to-go)")
+    parser.add_argument("--baseline", type=str, default="none", choices=["none", "weighted", "per-word", "moving_avg"],
+                        help="Baseline type: none (simple L*sum(logprob)), weighted (position weighting), per-word (reward-to-go), moving_avg (subtract EMA of L)")
     parser.add_argument("-M", "--samples", type=int, default=10,
                         help="Number of Fisher samples for gradient (default: 10)")
     parser.add_argument("-H", "--horizon", type=int, default=14,
@@ -690,6 +690,10 @@ def main():
     # Evaluation settings
     T_EVAL = 10  # Number of real trajectories for evaluation
     EVAL_EVERY = 5  # Evaluate every N iterations
+
+    # Moving average baseline for REINFORCE variance reduction
+    L_moving_avg = None  # Will be initialized on first iteration
+    L_EMA_ALPHA = 0.1  # Exponential moving average decay (0.1 = slow adaptation)
 
     for iteration in range(NUM_ITERATIONS):
         iter_start = time.perf_counter()
@@ -872,6 +876,20 @@ def main():
                 for i, g in enumerate(grads_m):
                     grad_accum[i] = grad_accum[i] + g * L_m_scaled
 
+            elif BASELINE == "moving_avg" and not NO_INTERMEDIATE:
+                # Moving average baseline: (L - L_avg) * sum(logprobs)
+                # This centers rewards so gradient has discriminative signal
+                total_logprob = sum(logprobs_m)
+                grads_m = torch.autograd.grad(total_logprob, policy_params, retain_graph=(m_idx < M - 1))
+                L_m_val = L_m.detach().to(policy_device)
+                # Subtract baseline (if available) to center the reward
+                if L_moving_avg is not None:
+                    L_centered = L_m_val - L_moving_avg
+                else:
+                    L_centered = L_m_val  # First iteration: no baseline yet
+                for i, g in enumerate(grads_m):
+                    grad_accum[i] = grad_accum[i] + g * L_centered
+
             else:  # BASELINE == "none" or NO_INTERMEDIATE
                 # Simple: L * sum(logprobs) - no weighting
                 total_logprob = sum(logprobs_m)
@@ -893,6 +911,13 @@ def main():
             schedulers[policy_to_update].step()
 
         L = sum(L_values) / len(L_values)  # Average objective for logging
+
+        # Update moving average baseline (for moving_avg baseline type)
+        if BASELINE == "moving_avg":
+            if L_moving_avg is None:
+                L_moving_avg = L  # Initialize with first observation
+            else:
+                L_moving_avg = L_EMA_ALPHA * L + (1 - L_EMA_ALPHA) * L_moving_avg
 
         iter_time = time.perf_counter() - iter_start
 
