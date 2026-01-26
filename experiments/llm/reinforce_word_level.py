@@ -585,6 +585,8 @@ def main():
                         help="Base random seed for initialization (default: 42)")
     parser.add_argument("--init-noise", type=float, default=0.01,
                         help="Std of Gaussian noise added to weights for policy diversity (default: 0.01)")
+    parser.add_argument("--joint-update", action="store_true",
+                        help="Update all K policies together instead of round-robin (default: False)")
     args = parser.parse_args()
 
     K = 4  # policies
@@ -601,6 +603,7 @@ def main():
     OPTIMIZER = args.optimizer  # From command line
     BASELINE = args.baseline  # From command line
     LR_DECAY = args.lr_decay  # From command line
+    JOINT_UPDATE = args.joint_update  # From command line
     NO_INTERMEDIATE = args.no_intermediate  # From command line
     BASE_SEED = args.seed  # From command line
     INIT_NOISE = args.init_noise  # From command line
@@ -624,7 +627,7 @@ def main():
         print(f"Each Fisher from K×H = {K*H} embeddings")
     obj_desc = {"D": "logdet(I)", "A": "-tr(I^-1)", "V": "-tr(V @ I^-1)"}[DESIGN]
     print(f"Objective: {obj_desc} ({DESIGN}-optimal)")
-    print(f"T={T}, λ={LAMBDA_REG}, lr={LR}, optimizer={OPTIMIZER}, baseline={BASELINE}, lr_decay={LR_DECAY}, seed={BASE_SEED}, init_noise={INIT_NOISE}")
+    print(f"T={T}, λ={LAMBDA_REG}, lr={LR}, optimizer={OPTIMIZER}, baseline={BASELINE}, lr_decay={LR_DECAY}, seed={BASE_SEED}, init_noise={INIT_NOISE}, joint_update={JOINT_UPDATE}")
     if PROMPT_PREFIX:
         print(f"Prompt prefix: '{PROMPT_PREFIX}'")
     elif prefix_list:
@@ -695,7 +698,12 @@ def main():
 
     for iteration in range(NUM_ITERATIONS):
         iter_start = time.perf_counter()
-        policy_to_update = iteration % K
+
+        # Round-robin or joint update
+        if JOINT_UPDATE:
+            policies_to_update = list(range(K))  # Update all K policies
+        else:
+            policies_to_update = [iteration % K]  # Update one policy
 
         # === EVALUATION (every EVAL_EVERY iterations) ===
         eval_obj_str = ""
@@ -785,8 +793,13 @@ def main():
         # Step 4: Compute L_m for each sample and accumulate weighted gradients
         L_values = []
         valid_sample_indices = []  # Track which samples had valid Fisher
-        policy_params = list(policy_manager.policies[policy_to_update].get_trainable_parameters())
-        grad_accum = [torch.zeros_like(p) for p in policy_params]
+
+        # Create grad_accum for each policy to update
+        all_policy_params = {}
+        all_grad_accum = {}
+        for q in policies_to_update:
+            all_policy_params[q] = list(policy_manager.policies[q].get_trainable_parameters())
+            all_grad_accum[q] = [torch.zeros_like(p) for p in all_policy_params[q]]
 
         for m_idx in range(M):
             # Extract embeddings for sample m: K×H_eff embeddings
@@ -794,9 +807,14 @@ def main():
             end_idx = start_idx + K * H_eff
             embeddings_m = all_embeddings[start_idx:end_idx]
 
-            logprobs_m = all_policy_samples[policy_to_update][m_idx][1]
-            word_boundaries = all_policy_samples[policy_to_update][m_idx][2]
-            policy_device = policy_manager.devices[policy_to_update]
+            # For backward compatibility with old baselines (per-word, weighted, none)
+            # Use first policy from policies_to_update
+            _compat_policy = policies_to_update[0]
+            logprobs_m = all_policy_samples[_compat_policy][m_idx][1]
+            word_boundaries = all_policy_samples[_compat_policy][m_idx][2]
+            policy_device = policy_manager.devices[_compat_policy]
+            policy_params = all_policy_params[_compat_policy]
+            grad_accum = all_grad_accum[_compat_policy]
 
             # Compute Fisher and objective (shared across all baseline types except per-word)
             fisher_m = compute_fisher_from_embeddings(embeddings_m, K, H_eff, lambda_reg=LAMBDA_REG, t_coef=T)
@@ -897,25 +915,34 @@ def main():
         if BASELINE == "moving_avg" and not NO_INTERMEDIATE:
             L_avg = sum(L_values) / len(L_values)
 
-            # Need to re-sample to get logprobs with gradients (previous ones were detached during continue)
-            # Actually we can use the stored all_policy_samples - logprobs still have gradients
-            for idx, m_idx in enumerate(valid_sample_indices):
-                logprobs_m = all_policy_samples[policy_to_update][m_idx][1]
-                policy_device = policy_manager.devices[policy_to_update]
-                L_m_centered = L_values[idx] - L_avg  # Center by subtracting batch mean
+            # Compute gradients for each policy to update
+            for q in policies_to_update:
+                policy_params = all_policy_params[q]
+                grad_accum = all_grad_accum[q]
 
-                total_logprob = sum(logprobs_m)
-                grads_m = torch.autograd.grad(total_logprob, policy_params, retain_graph=(idx < len(valid_sample_indices) - 1))
-                for i, g in enumerate(grads_m):
-                    grad_accum[i] = grad_accum[i] + g * L_m_centered
+                for idx, m_idx in enumerate(valid_sample_indices):
+                    logprobs_m = all_policy_samples[q][m_idx][1]
+                    L_m_centered = L_values[idx] - L_avg  # Center by subtracting batch mean
 
-        # Average gradient over M samples
-        optimizers[policy_to_update].zero_grad()
-        for param, g_acc in zip(policy_params, grad_accum):
-            param.grad = -g_acc / M  # Negative for ascent, average over M
-        optimizers[policy_to_update].step()
-        if schedulers is not None:
-            schedulers[policy_to_update].step()
+                    total_logprob = sum(logprobs_m)
+                    # Need to retain graph for: other samples AND other policies
+                    is_last_sample = (idx == len(valid_sample_indices) - 1)
+                    is_last_policy = (q == policies_to_update[-1])
+                    retain = not (is_last_sample and is_last_policy)
+                    grads_m = torch.autograd.grad(total_logprob, policy_params, retain_graph=retain)
+                    for i, g in enumerate(grads_m):
+                        grad_accum[i] = grad_accum[i] + g * L_m_centered
+
+        # Update all policies
+        for q in policies_to_update:
+            policy_params = all_policy_params[q]
+            grad_accum = all_grad_accum[q]
+            optimizers[q].zero_grad()
+            for param, g_acc in zip(policy_params, grad_accum):
+                param.grad = -g_acc / M  # Negative for ascent, average over M
+            optimizers[q].step()
+            if schedulers is not None:
+                schedulers[q].step()
 
         L = sum(L_values) / len(L_values)  # Average objective for logging
 
