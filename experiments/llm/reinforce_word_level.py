@@ -587,6 +587,8 @@ def main():
                         help="Std of Gaussian noise added to weights for policy diversity (default: 0.01)")
     parser.add_argument("--joint-update", action="store_true",
                         help="Update all K policies together instead of round-robin (default: False)")
+    parser.add_argument("--sum-trajectories", action="store_true",
+                        help="Sum T trajectory Fishers instead of scaling single trajectory by T. Aligns training with eval objective.")
     args = parser.parse_args()
 
     K = 4  # policies
@@ -604,6 +606,7 @@ def main():
     BASELINE = args.baseline  # From command line
     LR_DECAY = args.lr_decay  # From command line
     JOINT_UPDATE = args.joint_update  # From command line
+    SUM_TRAJECTORIES = args.sum_trajectories  # From command line
     NO_INTERMEDIATE = args.no_intermediate  # From command line
     BASE_SEED = args.seed  # From command line
     INIT_NOISE = args.init_noise  # From command line
@@ -627,7 +630,7 @@ def main():
         print(f"Each Fisher from K×H = {K*H} embeddings")
     obj_desc = {"D": "logdet(I)", "A": "-tr(I^-1)", "V": "-tr(V @ I^-1)"}[DESIGN]
     print(f"Objective: {obj_desc} ({DESIGN}-optimal)")
-    print(f"T={T}, λ={LAMBDA_REG}, lr={LR}, optimizer={OPTIMIZER}, baseline={BASELINE}, lr_decay={LR_DECAY}, seed={BASE_SEED}, init_noise={INIT_NOISE}, joint_update={JOINT_UPDATE}")
+    print(f"T={T}, λ={LAMBDA_REG}, lr={LR}, optimizer={OPTIMIZER}, baseline={BASELINE}, lr_decay={LR_DECAY}, seed={BASE_SEED}, init_noise={INIT_NOISE}, joint_update={JOINT_UPDATE}, sum_traj={SUM_TRAJECTORIES}")
     if PROMPT_PREFIX:
         print(f"Prompt prefix: '{PROMPT_PREFIX}'")
     elif prefix_list:
@@ -754,40 +757,46 @@ def main():
         else:
             current_prefix = PROMPT_PREFIX
 
-        # Step 1: Generate M×K prompts in parallel (batched generation per policy)
-        def gen_m_samples_batched(policy_idx, prefix=current_prefix):
+        # Step 1: Generate prompts in parallel (batched generation per policy)
+        # With SUM_TRAJECTORIES: generate M×T×K prompts (M meta-samples, T trajectories each)
+        # Without: generate M×K prompts (M samples, 1 trajectory each)
+        num_traj_per_sample = T if SUM_TRAJECTORIES else 1
+        total_prompts_per_policy = M * num_traj_per_sample
+
+        def gen_samples_batched(policy_idx, prefix=current_prefix):
             policy = policy_manager.policies[policy_idx]
             return policy.generate_until_h_words_batched(
-                batch_size=M, h_words=H, temperature=TEMPERATURE, prompt_prefix=prefix
+                batch_size=total_prompts_per_policy, h_words=H, temperature=TEMPERATURE, prompt_prefix=prefix
             )
 
         with ThreadPoolExecutor(max_workers=K) as executor:
-            all_policy_samples = list(executor.map(gen_m_samples_batched, range(K)))
-        # all_policy_samples[q][m] = (prompt, logprobs, boundaries) for policy q, sample m
+            all_policy_samples = list(executor.map(gen_samples_batched, range(K)))
+        # all_policy_samples[q][i] = (prompt, logprobs, boundaries) for policy q, sample i
+        # With SUM_TRAJECTORIES: i = m*T + t (meta-sample m, trajectory t)
 
         # Step 2: Collect prompts/prefixes for embedding
         sample_prompts = [all_policy_samples[q][0][0] for q in range(K)]  # First sample for logging
 
         if NO_INTERMEDIATE:
-            # Only embed final prompts: M×K total
+            # Only embed final prompts
             all_texts_flat = []
-            for m in range(M):
+            for i in range(total_prompts_per_policy):
                 for q in range(K):
-                    prompt = all_policy_samples[q][m][0]
+                    prompt = all_policy_samples[q][i][0]
                     all_texts_flat.append(prompt)
             all_embeddings = embed_texts_batched(all_texts_flat, embedder, batch_size=128)
-            # Shape: (M×K, d)
+            # Shape: (M×T×K, d) with SUM_TRAJECTORIES, else (M×K, d)
             H_eff = 1  # Effective H for Fisher computation
         else:
-            # Embed all prefixes: M×K×H total
+            # Embed all prefixes
             all_prefixes_flat = []
-            for m in range(M):
+            for i in range(total_prompts_per_policy):
                 for q in range(K):
-                    prompt = all_policy_samples[q][m][0]
+                    prompt = all_policy_samples[q][i][0]
                     prefixes = build_word_prefixes(prompt, H)
                     all_prefixes_flat.extend(prefixes)
             all_embeddings = embed_texts_batched(all_prefixes_flat, embedder, batch_size=128)
-            # Shape: (M×K×H, d)
+            # Shape: (M×T×K×H, d) with SUM_TRAJECTORIES, else (M×K×H, d)
             H_eff = H
 
         # Step 4: Compute L_m for each sample and accumulate weighted gradients
@@ -802,22 +811,45 @@ def main():
             all_grad_accum[q] = [torch.zeros_like(p) for p in all_policy_params[q]]
 
         for m_idx in range(M):
-            # Extract embeddings for sample m: K×H_eff embeddings
-            start_idx = m_idx * K * H_eff
-            end_idx = start_idx + K * H_eff
-            embeddings_m = all_embeddings[start_idx:end_idx]
-
-            # For backward compatibility with old baselines (per-word, weighted, none)
-            # Use first policy from policies_to_update
+            # For backward compatibility variables
             _compat_policy = policies_to_update[0]
-            logprobs_m = all_policy_samples[_compat_policy][m_idx][1]
-            word_boundaries = all_policy_samples[_compat_policy][m_idx][2]
             policy_device = policy_manager.devices[_compat_policy]
             policy_params = all_policy_params[_compat_policy]
             grad_accum = all_grad_accum[_compat_policy]
 
-            # Compute Fisher and objective (shared across all baseline types except per-word)
-            fisher_m = compute_fisher_from_embeddings(embeddings_m, K, H_eff, lambda_reg=LAMBDA_REG, t_coef=T)
+            if SUM_TRAJECTORIES:
+                # Sum T trajectory Fishers for meta-sample m
+                d = 768  # CLIP embedding dimension
+                fisher_m = torch.zeros(d, d, device=embedder.device)
+                for t in range(T):
+                    # Index: m*T + t gives the trajectory index
+                    traj_idx = m_idx * T + t
+                    start_idx = traj_idx * K * H_eff
+                    end_idx = start_idx + K * H_eff
+                    embeddings_t = all_embeddings[start_idx:end_idx]
+                    # Compute Fisher for this trajectory (no T scaling, no lambda)
+                    fisher_t = compute_fisher_from_embeddings(embeddings_t, K, H_eff, lambda_reg=0.0, t_coef=1.0)
+                    fisher_m = fisher_m + fisher_t
+                # Add lambda regularization once at the end
+                fisher_m = fisher_m + LAMBDA_REG * torch.eye(d, device=embedder.device)
+
+                # Collect logprobs from all T trajectories for gradient
+                logprobs_m = []
+                word_boundaries = []
+                for t in range(T):
+                    traj_idx = m_idx * T + t
+                    logprobs_m.extend(all_policy_samples[_compat_policy][traj_idx][1])
+                    # Word boundaries only from first trajectory (for compatibility)
+                    if t == 0:
+                        word_boundaries = all_policy_samples[_compat_policy][traj_idx][2]
+            else:
+                # Original: single trajectory scaled by T
+                start_idx = m_idx * K * H_eff
+                end_idx = start_idx + K * H_eff
+                embeddings_m = all_embeddings[start_idx:end_idx]
+                fisher_m = compute_fisher_from_embeddings(embeddings_m, K, H_eff, lambda_reg=LAMBDA_REG, t_coef=T)
+                logprobs_m = all_policy_samples[_compat_policy][m_idx][1]
+                word_boundaries = all_policy_samples[_compat_policy][m_idx][2]
 
             # Compute objective based on design
             if DESIGN == "D":
@@ -921,10 +953,19 @@ def main():
                 grad_accum = all_grad_accum[q]
 
                 for idx, m_idx in enumerate(valid_sample_indices):
-                    logprobs_m = all_policy_samples[q][m_idx][1]
                     L_m_centered = L_values[idx] - L_avg  # Center by subtracting batch mean
 
-                    total_logprob = sum(logprobs_m)
+                    # Collect logprobs: all T trajectories if SUM_TRAJECTORIES, else single
+                    if SUM_TRAJECTORIES:
+                        all_logprobs = []
+                        for t in range(T):
+                            traj_idx = m_idx * T + t
+                            all_logprobs.extend(all_policy_samples[q][traj_idx][1])
+                        total_logprob = sum(all_logprobs)
+                    else:
+                        logprobs_m = all_policy_samples[q][m_idx][1]
+                        total_logprob = sum(logprobs_m)
+
                     # Need to retain graph for: other samples AND other policies
                     is_last_sample = (idx == len(valid_sample_indices) - 1)
                     is_last_policy = (q == policies_to_update[-1])
