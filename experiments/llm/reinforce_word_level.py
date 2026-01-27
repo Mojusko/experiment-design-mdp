@@ -18,6 +18,8 @@ Supported base models:
 - Gustavosta/MagicPrompt-Stable-Diffusion: GPT-2 trained on Lexica.art prompts
 """
 
+import csv
+import json
 import os
 import random
 import sys
@@ -736,6 +738,16 @@ def main():
     BASE_SEED = args.seed  # From command line
     INIT_NOISE = args.init_noise  # From command line
 
+    # Resolve output directory early so we can save both weights and history
+    if args.output_dir:
+        output_dir = args.output_dir
+    else:
+        timestamp = datetime.now().strftime("%Y%m%d-%H%M%S")
+        output_dir = os.path.join("results", f"reinforce-wordlevel-{timestamp}")
+    os.makedirs(output_dir, exist_ok=True)
+    history_csv_path = os.path.join(output_dir, "history.csv")
+    history_json_path = os.path.join(output_dir, "history.json")
+
     # Preserve prior schedule defaults unless gamma is explicitly provided
     if args.lr_decay_gamma is None:
         if LR_DECAY == "step":
@@ -771,6 +783,7 @@ def main():
         f"lr_decay={LR_DECAY}, seed={BASE_SEED}, init_noise={INIT_NOISE}, "
         f"joint_update={JOINT_UPDATE}, sum_traj={SUM_TRAJECTORIES}"
     )
+    print(f"Output dir: {output_dir}")
     if PROMPT_PREFIX:
         print(f"Prompt prefix: '{PROMPT_PREFIX}'")
     elif prefix_list:
@@ -847,6 +860,7 @@ def main():
     EVAL_EVERY = 5  # Evaluate every N iterations
 
     # Moving average baseline for REINFORCE variance reduction
+    iteration_history = []
 
     for iteration in range(NUM_ITERATIONS):
         iter_start = time.perf_counter()
@@ -859,6 +873,7 @@ def main():
 
         # === EVALUATION (every EVAL_EVERY iterations) ===
         eval_obj_str = ""
+        eval_obj_value = None
         if iteration % EVAL_EVERY == 0:
             with torch.no_grad():
                 # Sample T_EVAL prompts from each policy
@@ -899,6 +914,7 @@ def main():
                 sign, logdet = torch.linalg.slogdet(eval_fisher)
                 eval_obj = logdet.item() if sign > 0 else float('-inf')
                 eval_obj_str = f"{eval_obj:12.4f}"
+                eval_obj_value = eval_obj
 
         # Select prefix for this iteration (random if using prefix_list)
         if prefix_list:
@@ -1137,6 +1153,16 @@ def main():
         L = sum(L_values) / len(L_values)  # Average objective for logging
 
         iter_time = time.perf_counter() - iter_start
+        lr_current = optimizers[policies_to_update[0]].param_groups[0]["lr"]
+
+        # Record history for later analysis/plotting
+        iteration_history.append({
+            "iteration": int(iteration),
+            "objective": float(L),
+            "eval_objective": (float(eval_obj_value) if eval_obj_value is not None else None),
+            "time_sec": float(iter_time),
+            "lr": float(lr_current),
+        })
 
         # Log every iteration
         if True:
@@ -1166,15 +1192,19 @@ def main():
         print(f"    Policy {q}: {clean_prompt}")
     print("=" * 60)
 
+    # Save full optimization history for later plotting/analysis
+    print(f"Saving history to: {history_csv_path}")
+    history_fieldnames = ["iteration", "objective", "eval_objective", "time_sec", "lr"]
+    with open(history_csv_path, "w", newline="") as f_csv:
+        writer = csv.DictWriter(f_csv, fieldnames=history_fieldnames)
+        writer.writeheader()
+        writer.writerows(iteration_history)
+    with open(history_json_path, "w") as f_json:
+        json.dump(iteration_history, f_json)
+    print("Saved optimization history.")
+
     # Save optimized policies so they can be sampled later without retraining
     if not args.no_save:
-        if args.output_dir:
-            output_dir = args.output_dir
-        else:
-            timestamp = datetime.now().strftime("%Y%m%d-%H%M%S")
-            output_dir = os.path.join("results", f"reinforce-wordlevel-{timestamp}")
-        os.makedirs(output_dir, exist_ok=True)
-
         policy_path = os.path.join(output_dir, args.save_name)
         print(f"Saving optimized policies to: {policy_path}")
 
