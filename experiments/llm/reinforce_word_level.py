@@ -681,6 +681,12 @@ def main():
                         help="Number of words per prompt (default: 14)")
     parser.add_argument("--lr-decay", type=str, default="none", choices=["none", "step", "exponential", "cosine"],
                         help="LR decay schedule: none, step (0.5x every 50 iter), exponential (0.99x per iter), cosine")
+    parser.add_argument("--lr-decay-step-size", type=int, default=50,
+                        help="StepLR step size in iterations (default: 50)")
+    parser.add_argument("--lr-decay-gamma", type=float, default=None,
+                        help="Decay factor gamma for step/exponential schedules (defaults: step=0.5, exponential=0.99)")
+    parser.add_argument("--lr-min", type=float, default=0.0,
+                        help="Minimum LR for cosine annealing (eta_min, default: 0.0)")
     parser.add_argument("--no-intermediate", action="store_true",
                         help="Only embed final prompts, not intermediate prefixes (K embeddings instead of K×H)")
     parser.add_argument("--seed", type=int, default=42,
@@ -709,11 +715,24 @@ def main():
     OPTIMIZER = args.optimizer  # From command line
     BASELINE = args.baseline  # From command line
     LR_DECAY = args.lr_decay  # From command line
+    LR_DECAY_STEP_SIZE = args.lr_decay_step_size  # From command line
+    LR_MIN = args.lr_min  # From command line
     JOINT_UPDATE = args.joint_update  # From command line
     SUM_TRAJECTORIES = args.sum_trajectories  # From command line
     NO_INTERMEDIATE = args.no_intermediate  # From command line
     BASE_SEED = args.seed  # From command line
     INIT_NOISE = args.init_noise  # From command line
+
+    # Preserve prior schedule defaults unless gamma is explicitly provided
+    if args.lr_decay_gamma is None:
+        if LR_DECAY == "step":
+            LR_DECAY_GAMMA = 0.5
+        elif LR_DECAY == "exponential":
+            LR_DECAY_GAMMA = 0.99
+        else:
+            LR_DECAY_GAMMA = 1.0
+    else:
+        LR_DECAY_GAMMA = args.lr_decay_gamma
 
     # Load prefixes from file if provided
     prefix_list = None
@@ -734,7 +753,11 @@ def main():
         print(f"Each Fisher from K×H = {K*H} embeddings")
     obj_desc = {"D": "logdet(I)", "A": "-tr(I^-1)", "V": "-tr(V @ I^-1)"}[DESIGN]
     print(f"Objective: {obj_desc} ({DESIGN}-optimal)")
-    print(f"T={T}, λ={LAMBDA_REG}, lr={LR}, optimizer={OPTIMIZER}, baseline={BASELINE}, lr_decay={LR_DECAY}, seed={BASE_SEED}, init_noise={INIT_NOISE}, joint_update={JOINT_UPDATE}, sum_traj={SUM_TRAJECTORIES}")
+    print(
+        f"T={T}, λ={LAMBDA_REG}, lr={LR}, optimizer={OPTIMIZER}, baseline={BASELINE}, "
+        f"lr_decay={LR_DECAY}, seed={BASE_SEED}, init_noise={INIT_NOISE}, "
+        f"joint_update={JOINT_UPDATE}, sum_traj={SUM_TRAJECTORIES}"
+    )
     if PROMPT_PREFIX:
         print(f"Prompt prefix: '{PROMPT_PREFIX}'")
     elif prefix_list:
@@ -774,24 +797,33 @@ def main():
     schedulers = None
     if LR_DECAY != "none":
         if LR_DECAY == "step":
-            # Halve LR every 50 iterations
+            # Decay LR by gamma every step_size iterations
             schedulers = [
-                torch.optim.lr_scheduler.StepLR(opt, step_size=50, gamma=0.5)
+                torch.optim.lr_scheduler.StepLR(
+                    opt, step_size=LR_DECAY_STEP_SIZE, gamma=LR_DECAY_GAMMA
+                )
                 for opt in optimizers
             ]
         elif LR_DECAY == "exponential":
-            # Decay by 0.99 each iteration
+            # Decay by gamma each iteration
             schedulers = [
-                torch.optim.lr_scheduler.ExponentialLR(opt, gamma=0.99)
+                torch.optim.lr_scheduler.ExponentialLR(opt, gamma=LR_DECAY_GAMMA)
                 for opt in optimizers
             ]
         elif LR_DECAY == "cosine":
             # Cosine annealing to 0 over all iterations
             schedulers = [
-                torch.optim.lr_scheduler.CosineAnnealingLR(opt, T_max=NUM_ITERATIONS)
+                torch.optim.lr_scheduler.CosineAnnealingLR(
+                    opt, T_max=NUM_ITERATIONS, eta_min=LR_MIN
+                )
                 for opt in optimizers
             ]
-        print(f"LR Scheduler: {LR_DECAY}")
+        if LR_DECAY == "step":
+            print(f"LR Scheduler: step (gamma={LR_DECAY_GAMMA}, step_size={LR_DECAY_STEP_SIZE})")
+        elif LR_DECAY == "exponential":
+            print(f"LR Scheduler: exponential (gamma={LR_DECAY_GAMMA})")
+        else:
+            print(f"LR Scheduler: cosine (eta_min={LR_MIN})")
 
     print("\n--- Starting Optimization ---")
     print(f"{'Iter':>5} | {'Objective':>12} | {'Eval Obj':>12} | {'Time':>8} | Prompts")
