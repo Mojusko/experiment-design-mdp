@@ -16,12 +16,15 @@ Supported base models:
 - Gustavosta/MagicPrompt-Stable-Diffusion: GPT-2 trained on Lexica.art prompts
 """
 
+import csv
+import json
 import os
 import random
 import sys
 import time
 import torch
 import warnings
+from datetime import datetime
 from concurrent.futures import ThreadPoolExecutor
 from typing import List, Tuple, Optional
 
@@ -295,13 +298,19 @@ class MultiGPUPolicyManager:
     """
 
     def __init__(self, k: int = 4, model_name: str = "gpt2", base_seed: int = 42, init_noise: float = 0.01):
-        num_gpus = torch.cuda.device_count()
-        self.devices = [f"cuda:{i % num_gpus}" for i in range(k)]
+        num_gpus = torch.cuda.device_count() if torch.cuda.is_available() else 0
+        if num_gpus > 0:
+            self.devices = [f"cuda:{i % num_gpus}" for i in range(k)]
+        else:
+            self.devices = ["cpu"] * k
         self.model_name = model_name
 
         config = get_model_config(model_name)
         print(f"Initializing {k} policies with: {config['description']}")
-        print(f"Distributing across {num_gpus} GPUs...")
+        if num_gpus > 0:
+            print(f"Distributing across {num_gpus} GPUs...")
+        else:
+            print("No CUDA devices found; using CPU.")
 
         self.policies = [
             WordLevelPolicy(
@@ -579,6 +588,12 @@ def main():
                         help="Number of words per prompt (default: 14)")
     parser.add_argument("--lr-decay", type=str, default="none", choices=["none", "step", "exponential", "cosine"],
                         help="LR decay schedule: none, step (0.5x every 50 iter), exponential (0.99x per iter), cosine")
+    parser.add_argument("--lr-decay-step-size", type=int, default=50,
+                        help="StepLR step size in iterations (default: 50)")
+    parser.add_argument("--lr-decay-gamma", type=float, default=None,
+                        help="Decay factor gamma for step/exponential schedules (defaults: step=0.5, exponential=0.99)")
+    parser.add_argument("--lr-min", type=float, default=0.0,
+                        help="Minimum LR for cosine annealing (eta_min, default: 0.0)")
     parser.add_argument("--no-intermediate", action="store_true",
                         help="Only embed final prompts, not intermediate prefixes (K embeddings instead of K×H)")
     parser.add_argument("--seed", type=int, default=42,
@@ -591,6 +606,12 @@ def main():
                         help="Sum T trajectory Fishers instead of scaling single trajectory by T. Aligns training with eval objective.")
     parser.add_argument("-T", "--num-trajectories", type=int, default=10,
                         help="Number of trajectories T for Fisher computation (default: 10)")
+    parser.add_argument("--output-dir", type=str, default=None,
+                        help="Directory to save optimized policy weights (default: results/reinforce-wordlevel-<timestamp>)")
+    parser.add_argument("--save-name", type=str, default="policies.pt",
+                        help="Filename for saved policy checkpoint within output-dir (default: policies.pt)")
+    parser.add_argument("--no-save", action="store_true",
+                        help="Disable saving optimized policy weights at the end")
     args = parser.parse_args()
 
     K = 4  # policies
@@ -607,11 +628,34 @@ def main():
     OPTIMIZER = args.optimizer  # From command line
     BASELINE = args.baseline  # From command line
     LR_DECAY = args.lr_decay  # From command line
+    LR_DECAY_STEP_SIZE = args.lr_decay_step_size  # From command line
+    LR_MIN = args.lr_min  # From command line
     JOINT_UPDATE = args.joint_update  # From command line
     SUM_TRAJECTORIES = args.sum_trajectories  # From command line
     NO_INTERMEDIATE = args.no_intermediate  # From command line
     BASE_SEED = args.seed  # From command line
     INIT_NOISE = args.init_noise  # From command line
+
+    # Resolve output directory early so we can save both weights and history
+    if args.output_dir:
+        output_dir = args.output_dir
+    else:
+        timestamp = datetime.now().strftime("%Y%m%d-%H%M%S")
+        output_dir = os.path.join("results", f"reinforce-wordlevel-{timestamp}")
+    os.makedirs(output_dir, exist_ok=True)
+    history_csv_path = os.path.join(output_dir, "history.csv")
+    history_json_path = os.path.join(output_dir, "history.json")
+
+    # Preserve prior schedule defaults unless gamma is explicitly provided
+    if args.lr_decay_gamma is None:
+        if LR_DECAY == "step":
+            LR_DECAY_GAMMA = 0.5
+        elif LR_DECAY == "exponential":
+            LR_DECAY_GAMMA = 0.99
+        else:
+            LR_DECAY_GAMMA = 1.0
+    else:
+        LR_DECAY_GAMMA = args.lr_decay_gamma
 
     # Load prefixes from file if provided
     prefix_list = None
@@ -632,7 +676,12 @@ def main():
         print(f"Each Fisher from K×H = {K*H} embeddings")
     obj_desc = {"D": "logdet(I)", "A": "-tr(I^-1)", "V": "-tr(V @ I^-1)"}[DESIGN]
     print(f"Objective: {obj_desc} ({DESIGN}-optimal)")
-    print(f"T={T}, λ={LAMBDA_REG}, lr={LR}, optimizer={OPTIMIZER}, baseline={BASELINE}, lr_decay={LR_DECAY}, seed={BASE_SEED}, init_noise={INIT_NOISE}, joint_update={JOINT_UPDATE}, sum_traj={SUM_TRAJECTORIES}")
+    print(
+        f"T={T}, λ={LAMBDA_REG}, lr={LR}, optimizer={OPTIMIZER}, baseline={BASELINE}, "
+        f"lr_decay={LR_DECAY}, seed={BASE_SEED}, init_noise={INIT_NOISE}, "
+        f"joint_update={JOINT_UPDATE}, sum_traj={SUM_TRAJECTORIES}"
+    )
+    print(f"Output dir: {output_dir}")
     if PROMPT_PREFIX:
         print(f"Prompt prefix: '{PROMPT_PREFIX}'")
     elif prefix_list:
@@ -672,24 +721,33 @@ def main():
     schedulers = None
     if LR_DECAY != "none":
         if LR_DECAY == "step":
-            # Halve LR every 50 iterations
+            # Decay LR by gamma every step_size iterations
             schedulers = [
-                torch.optim.lr_scheduler.StepLR(opt, step_size=50, gamma=0.5)
+                torch.optim.lr_scheduler.StepLR(
+                    opt, step_size=LR_DECAY_STEP_SIZE, gamma=LR_DECAY_GAMMA
+                )
                 for opt in optimizers
             ]
         elif LR_DECAY == "exponential":
-            # Decay by 0.99 each iteration
+            # Decay by gamma each iteration
             schedulers = [
-                torch.optim.lr_scheduler.ExponentialLR(opt, gamma=0.99)
+                torch.optim.lr_scheduler.ExponentialLR(opt, gamma=LR_DECAY_GAMMA)
                 for opt in optimizers
             ]
         elif LR_DECAY == "cosine":
             # Cosine annealing to 0 over all iterations
             schedulers = [
-                torch.optim.lr_scheduler.CosineAnnealingLR(opt, T_max=NUM_ITERATIONS)
+                torch.optim.lr_scheduler.CosineAnnealingLR(
+                    opt, T_max=NUM_ITERATIONS, eta_min=LR_MIN
+                )
                 for opt in optimizers
             ]
-        print(f"LR Scheduler: {LR_DECAY}")
+        if LR_DECAY == "step":
+            print(f"LR Scheduler: step (gamma={LR_DECAY_GAMMA}, step_size={LR_DECAY_STEP_SIZE})")
+        elif LR_DECAY == "exponential":
+            print(f"LR Scheduler: exponential (gamma={LR_DECAY_GAMMA})")
+        else:
+            print(f"LR Scheduler: cosine (eta_min={LR_MIN})")
 
     print("\n--- Starting Optimization ---")
     print(f"{'Iter':>5} | {'Objective':>12} | {'Eval Obj':>12} | {'Time':>8} | Prompts")
@@ -700,6 +758,7 @@ def main():
     EVAL_EVERY = 5  # Evaluate every N iterations
 
     # Moving average baseline for REINFORCE variance reduction
+    iteration_history = []
 
     for iteration in range(NUM_ITERATIONS):
         iter_start = time.perf_counter()
@@ -712,6 +771,7 @@ def main():
 
         # === EVALUATION (every EVAL_EVERY iterations) ===
         eval_obj_str = ""
+        eval_obj_value = None
         if iteration % EVAL_EVERY == 0:
             with torch.no_grad():
                 # Sample T_EVAL prompts from each policy
@@ -752,6 +812,7 @@ def main():
                 sign, logdet = torch.linalg.slogdet(eval_fisher)
                 eval_obj = logdet.item() if sign > 0 else float('-inf')
                 eval_obj_str = f"{eval_obj:12.4f}"
+                eval_obj_value = eval_obj
 
         # Select prefix for this iteration (random if using prefix_list)
         if prefix_list:
@@ -990,6 +1051,16 @@ def main():
         L = sum(L_values) / len(L_values)  # Average objective for logging
 
         iter_time = time.perf_counter() - iter_start
+        lr_current = optimizers[policies_to_update[0]].param_groups[0]["lr"]
+
+        # Record history for later analysis/plotting
+        iteration_history.append({
+            "iteration": int(iteration),
+            "objective": float(L),
+            "eval_objective": (float(eval_obj_value) if eval_obj_value is not None else None),
+            "time_sec": float(iter_time),
+            "lr": float(lr_current),
+        })
 
         # Log every iteration
         if True:
@@ -1004,13 +1075,53 @@ def main():
                 print(f"    Policy {q}: {prompt[:60]}...")
             print()
 
+    # Generate final prompts once for both printing and checkpoint metadata
+    final_prompts: List[str] = []
+    for policy in policy_manager.policies:
+        results = policy.generate_until_h_words_batched(
+            batch_size=1, h_words=H, temperature=1.0, prompt_prefix=""
+        )
+        clean_prompt = results[0][0].replace("<|endoftext|>", "").strip()
+        final_prompts.append(clean_prompt)
+
     print("=" * 60)
     print("Final prompts (no prefix):")
-    for q, policy in enumerate(policy_manager.policies):
-        results = policy.generate_until_h_words_batched(batch_size=1, h_words=H, temperature=1.0, prompt_prefix="")
-        clean_prompt = results[0][0].replace("<|endoftext|>", "").strip()
+    for q, clean_prompt in enumerate(final_prompts):
         print(f"    Policy {q}: {clean_prompt}")
     print("=" * 60)
+
+    # Save full optimization history for later plotting/analysis
+    print(f"Saving history to: {history_csv_path}")
+    history_fieldnames = ["iteration", "objective", "eval_objective", "time_sec", "lr"]
+    with open(history_csv_path, "w", newline="") as f_csv:
+        writer = csv.DictWriter(f_csv, fieldnames=history_fieldnames)
+        writer.writeheader()
+        writer.writerows(iteration_history)
+    with open(history_json_path, "w") as f_json:
+        json.dump(iteration_history, f_json)
+    print("Saved optimization history.")
+
+    # Save optimized policies so they can be sampled later without retraining
+    if not args.no_save:
+        policy_path = os.path.join(output_dir, args.save_name)
+        print(f"Saving optimized policies to: {policy_path}")
+
+        policies_state = []
+        for policy in policy_manager.policies:
+            # Save on CPU to reduce GPU memory pressure and make loading flexible
+            state_dict_cpu = {k: v.detach().cpu() for k, v in policy.model.state_dict().items()}
+            policies_state.append(state_dict_cpu)
+
+        state = {
+            "policies": policies_state,
+            "args": vars(args),
+            "model_name": MODEL_NAME,
+            "horizon": H,
+            "num_policies": K,
+            "final_prompts": final_prompts,
+        }
+        torch.save(state, policy_path)
+        print("Saved optimized policies.")
 
 
 if __name__ == "__main__":
