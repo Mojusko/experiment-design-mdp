@@ -355,7 +355,6 @@ class MultiPolicyManager:
         lora_rank: int = 8,
         lora_alpha: float = 16.0,
         device: str = "cuda",
-        multi_gpu: bool = True,
         diverse_init: bool = False,
         base_seed: int = 42,
     ):
@@ -367,22 +366,12 @@ class MultiPolicyManager:
             model_name: GPT-2 model name
             lora_rank: LoRA rank for each policy
             lora_alpha: LoRA alpha for each policy
-            device: Device to place models on (used if multi_gpu=False)
-            multi_gpu: If True and multiple GPUs available, distribute policies across GPUs
+            device: Device to place models on
             diverse_init: If True, use different random seeds for each policy's LoRA
             base_seed: Base seed for diverse initialization (policy q gets seed base_seed + q*1000)
         """
         self.num_policies = num_policies
-
-        # Determine devices for each policy
-        num_gpus = torch.cuda.device_count() if torch.cuda.is_available() else 0
-        if multi_gpu and num_gpus > 1:
-            # Distribute policies across available GPUs
-            self.devices = [f"cuda:{i % num_gpus}" for i in range(num_policies)]
-            logger.info(f"Multi-GPU mode: distributing {num_policies} policies across {num_gpus} GPUs")
-        else:
-            self.devices = [device] * num_policies
-        self.device = self.devices[0]  # Primary device for compatibility
+        self.device = device
 
         if diverse_init:
             logger.info(f"Creating {num_policies} GPT-2 policies with DIVERSE LoRA init (base_seed={base_seed})")
@@ -394,7 +383,7 @@ class MultiPolicyManager:
                 model_name=model_name,
                 lora_rank=lora_rank,
                 lora_alpha=lora_alpha,
-                device=self.devices[q],
+                device=device,
                 seed=(base_seed + q * 1000) if diverse_init else None,
             )
             for q in range(num_policies)
@@ -402,7 +391,6 @@ class MultiPolicyManager:
 
         total_params = sum(p.num_trainable_params() for p in self.policies)
         logger.info(f"Total trainable parameters across all policies: {total_params:,}")
-        logger.info(f"Policy devices: {self.devices}")
 
     def get_all_trainable_parameters(self) -> List[nn.Parameter]:
         """Get all trainable parameters from all policies."""
