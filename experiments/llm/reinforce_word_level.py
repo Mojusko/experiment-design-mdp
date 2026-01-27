@@ -24,6 +24,7 @@ import sys
 import time
 import torch
 import warnings
+from datetime import datetime
 from concurrent.futures import ThreadPoolExecutor
 from typing import List, Tuple, Optional
 
@@ -429,13 +430,19 @@ class MultiGPUPolicyManager:
     """
 
     def __init__(self, k: int = 4, model_name: str = "gpt2", base_seed: int = 42, init_noise: float = 0.01):
-        num_gpus = torch.cuda.device_count()
-        self.devices = [f"cuda:{i % num_gpus}" for i in range(k)]
+        num_gpus = torch.cuda.device_count() if torch.cuda.is_available() else 0
+        if num_gpus > 0:
+            self.devices = [f"cuda:{i % num_gpus}" for i in range(k)]
+        else:
+            self.devices = ["cpu"] * k
         self.model_name = model_name
 
         config = get_model_config(model_name)
         print(f"Initializing {k} policies with: {config['description']}")
-        print(f"Distributing across {num_gpus} GPUs...")
+        if num_gpus > 0:
+            print(f"Distributing across {num_gpus} GPUs...")
+        else:
+            print("No CUDA devices found; using CPU.")
 
         self.policies = [
             WordLevelPolicy(
@@ -699,6 +706,12 @@ def main():
                         help="Sum T trajectory Fishers instead of scaling single trajectory by T. Aligns training with eval objective.")
     parser.add_argument("-T", "--num-trajectories", type=int, default=10,
                         help="Number of trajectories T for Fisher computation (default: 10)")
+    parser.add_argument("--output-dir", type=str, default=None,
+                        help="Directory to save optimized policy weights (default: results/reinforce-wordlevel-<timestamp>)")
+    parser.add_argument("--save-name", type=str, default="policies.pt",
+                        help="Filename for saved policy checkpoint within output-dir (default: policies.pt)")
+    parser.add_argument("--no-save", action="store_true",
+                        help="Disable saving optimized policy weights at the end")
     args = parser.parse_args()
 
     K = 4  # policies
@@ -1138,13 +1151,49 @@ def main():
                 print(f"    Policy {q}: {prompt[:60]}...")
             print()
 
+    # Generate final prompts once for both printing and checkpoint metadata
+    final_prompts: List[str] = []
+    for policy in policy_manager.policies:
+        results = policy.generate_until_h_words_batched(
+            batch_size=1, h_words=H, temperature=1.0, prompt_prefix=""
+        )
+        clean_prompt = results[0][0].replace("<|endoftext|>", "").strip()
+        final_prompts.append(clean_prompt)
+
     print("=" * 60)
     print("Final prompts (no prefix):")
-    for q, policy in enumerate(policy_manager.policies):
-        results = policy.generate_until_h_words_batched(batch_size=1, h_words=H, temperature=1.0, prompt_prefix="")
-        clean_prompt = results[0][0].replace("<|endoftext|>", "").strip()
+    for q, clean_prompt in enumerate(final_prompts):
         print(f"    Policy {q}: {clean_prompt}")
     print("=" * 60)
+
+    # Save optimized policies so they can be sampled later without retraining
+    if not args.no_save:
+        if args.output_dir:
+            output_dir = args.output_dir
+        else:
+            timestamp = datetime.now().strftime("%Y%m%d-%H%M%S")
+            output_dir = os.path.join("results", f"reinforce-wordlevel-{timestamp}")
+        os.makedirs(output_dir, exist_ok=True)
+
+        policy_path = os.path.join(output_dir, args.save_name)
+        print(f"Saving optimized policies to: {policy_path}")
+
+        policies_state = []
+        for policy in policy_manager.policies:
+            # Save on CPU to reduce GPU memory pressure and make loading flexible
+            state_dict_cpu = {k: v.detach().cpu() for k, v in policy.model.state_dict().items()}
+            policies_state.append(state_dict_cpu)
+
+        state = {
+            "policies": policies_state,
+            "args": vars(args),
+            "model_name": MODEL_NAME,
+            "horizon": H,
+            "num_policies": K,
+            "final_prompts": final_prompts,
+        }
+        torch.save(state, policy_path)
+        print("Saved optimized policies.")
 
 
 if __name__ == "__main__":
