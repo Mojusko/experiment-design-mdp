@@ -1092,9 +1092,11 @@ def main():
                         logprobs_m = all_policy_samples[q][m_idx][1]
                         total_logprob = sum(logprobs_m)
 
-                    # Each sample's graph is used exactly once per policy, so we
-                    # do not need retain_graph=True here.
-                    grads_m = torch.autograd.grad(total_logprob, policy_params, retain_graph=False)
+                    # Generation is batched, so samples within a policy share
+                    # a single autograd graph. We must retain it until the
+                    # last sample for this policy.
+                    retain = idx < (len(valid_sample_indices) - 1)
+                    grads_m = torch.autograd.grad(total_logprob, policy_params, retain_graph=retain)
                     for i, g in enumerate(grads_m):
                         grad_accum_local[i] = grad_accum_local[i] + g * L_m_centered
 
