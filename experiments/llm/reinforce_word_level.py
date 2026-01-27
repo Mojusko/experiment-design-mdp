@@ -329,74 +329,76 @@ class WordLevelPolicy:
         """
         Generate batch_size prompts in parallel until each has h_words complete words.
 
+        Uses CUDA streams for true multi-GPU parallelism - all GPU work runs
+        without synchronization until the end.
+
         Returns:
             List of (prompt, token_logprobs, word_boundaries) tuples
         """
-        # Initialize batch
-        if prompt_prefix:
-            single_ids = self.tokenizer.encode(prompt_prefix, return_tensors="pt")
-            input_ids = single_ids.repeat(batch_size, 1).to(self.device)
-            current_texts = [prompt_prefix] * batch_size
-            num_spaces = [prompt_prefix.count(" ")] * batch_size
-        else:
-            input_ids = torch.tensor([[self.tokenizer.bos_token_id]] * batch_size, device=self.device)
-            current_texts = [""] * batch_size
-            num_spaces = [0] * batch_size
+        # Use dedicated CUDA stream for this policy to enable true parallelism
+        stream = torch.cuda.Stream(device=self.device)
 
-        prefix_words = len(prompt_prefix.split()) if prompt_prefix else 0
-        target_spaces = prefix_words + h_words
+        with torch.cuda.stream(stream):
+            # Initialize batch
+            if prompt_prefix:
+                single_ids = self.tokenizer.encode(prompt_prefix, return_tensors="pt")
+                input_ids = single_ids.repeat(batch_size, 1).to(self.device, non_blocking=True)
+                current_texts = [prompt_prefix] * batch_size
+            else:
+                input_ids = torch.tensor([[self.tokenizer.bos_token_id]] * batch_size, device=self.device)
+                current_texts = [""] * batch_size
 
-        # Track per-sequence state
-        token_logprobs_batch = [[] for _ in range(batch_size)]
-        word_boundaries_batch = [[] for _ in range(batch_size)]
-        finished = [False] * batch_size
+            # Track per-sequence state - keep everything on GPU
+            token_logprobs_batch = [[] for _ in range(batch_size)]
+            all_token_ids = [[] for _ in range(batch_size)]
 
-        for step in range(max_tokens):
-            if all(finished):
-                break
-
-            # Forward pass for entire batch
-            outputs = self.model(input_ids)
-            logits = outputs.logits[:, -1, :] / temperature  # (batch, vocab)
-
-            # Mask out <|endoftext|> only at the start to prevent empty generation
-            # After a few tokens, allow natural endings
             eos_id = self.tokenizer.eos_token_id
-            if eos_id is not None and step < 3:
-                logits[:, eos_id] = float('-inf')
 
-            # Sample for all sequences (using per-policy generator for diversity)
-            probs = torch.softmax(logits, dim=-1)
-            next_tokens = torch.multinomial(probs, num_samples=1, generator=self.generator).squeeze(-1)  # (batch,)
+            for step in range(max_tokens):
+                # Forward pass for entire batch
+                outputs = self.model(input_ids)
+                logits = outputs.logits[:, -1, :] / temperature  # (batch, vocab)
 
-            # Log probs (with gradient)
-            log_probs = torch.log_softmax(logits, dim=-1)  # (batch, vocab)
+                # Mask out <|endoftext|> only at the start to prevent empty generation
+                if eos_id is not None and step < 3:
+                    logits[:, eos_id] = float('-inf')
 
-            for b in range(batch_size):
-                if finished[b]:
-                    continue
+                # Sample for all sequences
+                probs = torch.softmax(logits, dim=-1)
+                next_tokens = torch.multinomial(probs, num_samples=1, generator=self.generator).squeeze(-1)
 
-                token_id = next_tokens[b]
-                token_logprob = log_probs[b, token_id]
-                token_text = self.tokenizer.decode([token_id.item()])
+                # Log probs (with gradient) - keep on GPU
+                log_probs = torch.log_softmax(logits, dim=-1)
 
-                token_logprobs_batch[b].append(token_logprob)
+                # Gather log probs for selected tokens (batched, no sync)
+                selected_log_probs = log_probs.gather(1, next_tokens.unsqueeze(1)).squeeze(1)
+
+                for b in range(batch_size):
+                    token_logprobs_batch[b].append(selected_log_probs[b])
+                    all_token_ids[b].append(next_tokens[b])
+
+                # Append tokens for next iteration
+                input_ids = torch.cat([input_ids, next_tokens.unsqueeze(1)], dim=1)
+
+        # Synchronize stream before CPU operations
+        stream.synchronize()
+
+        # Now decode tokens on CPU (after all GPU work is done)
+        # Build word boundaries based on space characters
+        word_boundaries_batch = [[] for _ in range(batch_size)]
+
+        for b in range(batch_size):
+            token_ids_cpu = [t.item() for t in all_token_ids[b]]
+            for i, token_id in enumerate(token_ids_cpu):
+                token_text = self.tokenizer.decode([token_id])
                 current_texts[b] += token_text
 
-                # Count spaces
-                new_spaces = token_text.count(" ")
-                if new_spaces > 0:
-                    for _ in range(new_spaces):
+                # Track word boundaries (positions after spaces)
+                if " " in token_text:
+                    space_count = token_text.count(" ")
+                    for _ in range(space_count):
                         if len(word_boundaries_batch[b]) < h_words:
-                            word_boundaries_batch[b].append(len(token_logprobs_batch[b]))
-                    num_spaces[b] += new_spaces
-
-                # Check completion
-                if num_spaces[b] >= target_spaces or token_id.item() == self.tokenizer.eos_token_id:
-                    finished[b] = True
-
-            # Append tokens for next iteration
-            input_ids = torch.cat([input_ids, next_tokens.unsqueeze(1)], dim=1)
+                            word_boundaries_batch[b].append(i + 1)
 
         # Pad word boundaries and build results
         results = []
