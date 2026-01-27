@@ -8,7 +8,9 @@ Key idea:
 - Fisher from K×H embeddings (much better than K=4)
 - Log-probs at BPE level, aggregated per word
 
-Multi-GPU: Each policy generates on its own GPU in parallel.
+Multi-GPU support:
+- Policy generation: Each of K policies on its own GPU, generate in parallel
+- CLIP embedding: Texts distributed across all GPUs, embed in parallel
 
 Supported base models:
 - gpt2: Standard GPT-2 (default)
@@ -125,6 +127,138 @@ def get_model_config(model_name: str) -> dict:
     }
 
 from components.embedder import CLIPEmbedder
+
+
+class MultiGPUEmbedder:
+    """Manages multiple CLIPEmbedder instances across GPUs for parallel embedding.
+
+    Distributes text embedding across all available GPUs and returns results
+    on cuda:0. Mathematically equivalent to single-GPU embedding.
+    """
+
+    def __init__(
+        self,
+        model_id: str,
+        normalize: bool,
+        cache_dir: str,
+        num_gpus: int = None,
+    ):
+        if num_gpus is None:
+            num_gpus = torch.cuda.device_count()
+
+        self.num_gpus = num_gpus
+        print(f"Initializing {num_gpus} CLIP embedders across GPUs...")
+
+        self.embedders = [
+            CLIPEmbedder(
+                model_id=model_id,
+                normalize=normalize,
+                cache_dir=cache_dir,
+                device=f"cuda:{i}",
+            )
+            for i in range(num_gpus)
+        ]
+        print(f"CLIP embedders on devices: {[f'cuda:{i}' for i in range(num_gpus)]}")
+
+        # Expose properties from first embedder for compatibility
+        self.device = self.embedders[0].device  # cuda:0
+        self.tokenizer = self.embedders[0].tokenizer
+        self.model = self.embedders[0].model
+        self.normalize = normalize
+
+
+def _embed_texts_on_device(
+    texts: List[str],
+    embedder: CLIPEmbedder,
+    batch_size: int = 64,
+) -> torch.Tensor:
+    """Embed texts using a single embedder on its device."""
+    if not texts:
+        return None
+
+    embeddings = []
+    for i in range(0, len(texts), batch_size):
+        batch = texts[i : i + batch_size]
+        text_inputs = embedder.tokenizer(
+            batch,
+            padding="max_length",
+            max_length=embedder.tokenizer.model_max_length,
+            truncation=True,
+            return_tensors="pt",
+        )
+        text_inputs = {k: v.to(embedder.device) for k, v in text_inputs.items()}
+
+        with torch.no_grad():
+            if hasattr(embedder.model, "text_model"):
+                emb = embedder.model.text_model(**text_inputs).pooler_output
+            else:
+                emb = embedder.model.get_text_features(**text_inputs)
+
+        if embedder.normalize:
+            emb = emb / emb.norm(dim=-1, keepdim=True)
+        embeddings.append(emb)
+
+    return torch.cat(embeddings, dim=0)
+
+
+def embed_texts_batched_multigpu(
+    texts: List[str],
+    multi_embedder: MultiGPUEmbedder,
+    batch_size: int = 64,
+) -> torch.Tensor:
+    """Embed texts in parallel across multiple GPUs.
+
+    Splits texts evenly across GPUs, embeds in parallel, and concatenates
+    results on cuda:0. Order is preserved.
+
+    Args:
+        texts: List of strings to embed
+        multi_embedder: MultiGPUEmbedder instance
+        batch_size: Batch size per GPU
+
+    Returns:
+        Tensor of shape (len(texts), embed_dim) on cuda:0
+    """
+    if not texts:
+        d = multi_embedder.embedders[0].get_embedding_dim()
+        return torch.empty(0, d, device=multi_embedder.device)
+
+    n = len(texts)
+    num_gpus = multi_embedder.num_gpus
+
+    # Split texts into chunks for each GPU (preserving order)
+    chunk_size = (n + num_gpus - 1) // num_gpus
+    chunks = []
+    for i in range(num_gpus):
+        start = i * chunk_size
+        end = min(start + chunk_size, n)
+        if start < n:
+            chunks.append((i, texts[start:end]))
+        else:
+            chunks.append((i, []))
+
+    def embed_chunk(args):
+        gpu_idx, chunk_texts = args
+        if not chunk_texts:
+            return None
+        embedder = multi_embedder.embedders[gpu_idx]
+        return _embed_texts_on_device(chunk_texts, embedder, batch_size)
+
+    # Embed in parallel across GPUs
+    with ThreadPoolExecutor(max_workers=num_gpus) as executor:
+        results = list(executor.map(embed_chunk, chunks))
+
+    # Gather results on cuda:0 in order
+    valid_results = []
+    for r in results:
+        if r is not None:
+            valid_results.append(r.to(multi_embedder.device))
+
+    if not valid_results:
+        d = multi_embedder.embedders[0].get_embedding_dim()
+        return torch.empty(0, d, device=multi_embedder.device)
+
+    return torch.cat(valid_results, dim=0)
 
 
 class WordLevelPolicy:
@@ -343,38 +477,6 @@ def build_word_prefixes(prompt: str, h_words: int) -> List[str]:
     while len(prefixes) < h_words:
         prefixes.append(prefixes[-1] if prefixes else "")
     return prefixes
-
-
-def embed_texts_batched(
-    texts: List[str],
-    embedder: CLIPEmbedder,
-    batch_size: int = 64,
-) -> torch.Tensor:
-    """Batch embed a list of texts efficiently."""
-    embeddings = []
-    for i in range(0, len(texts), batch_size):
-        batch = texts[i:i+batch_size]
-        # Tokenize batch
-        text_inputs = embedder.tokenizer(
-            batch,
-            padding="max_length",
-            max_length=embedder.tokenizer.model_max_length,
-            truncation=True,
-            return_tensors="pt",
-        )
-        text_inputs = {k: v.to(embedder.device) for k, v in text_inputs.items()}
-
-        with torch.no_grad():
-            if hasattr(embedder.model, 'text_model'):
-                emb = embedder.model.text_model(**text_inputs).pooler_output
-            else:
-                emb = embedder.model.get_text_features(**text_inputs)
-
-        if embedder.normalize:
-            emb = emb / emb.norm(dim=-1, keepdim=True)
-        embeddings.append(emb)
-
-    return torch.cat(embeddings, dim=0)
 
 
 def compute_V_matrix(
@@ -644,7 +746,7 @@ def main():
 
     policy_manager = MultiGPUPolicyManager(k=K, model_name=MODEL_NAME, base_seed=BASE_SEED, init_noise=INIT_NOISE)
 
-    embedder = CLIPEmbedder(
+    embedder = MultiGPUEmbedder(
         model_id="openai/clip-vit-large-patch14",
         normalize=True,
         cache_dir=os.path.expanduser("~/.cache/huggingface/hub"),
@@ -738,7 +840,7 @@ def main():
                         prefixes = build_word_prefixes(prompt, H)
                         traj_prefixes.extend(prefixes)
 
-                    traj_embeddings = embed_texts_batched(traj_prefixes, embedder, batch_size=128)
+                    traj_embeddings = embed_texts_batched_multigpu(traj_prefixes, embedder, batch_size=128)
                     # Shape: (K × H, d)
 
                     # Compute Fisher data term only (lambda_reg=0, t_coef=1)
@@ -786,7 +888,7 @@ def main():
                 for q in range(K):
                     prompt = all_policy_samples[q][i][0]
                     all_texts_flat.append(prompt)
-            all_embeddings = embed_texts_batched(all_texts_flat, embedder, batch_size=128)
+            all_embeddings = embed_texts_batched_multigpu(all_texts_flat, embedder, batch_size=128)
             # Shape: (M×T×K, d) with SUM_TRAJECTORIES, else (M×K, d)
             H_eff = 1  # Effective H for Fisher computation
         else:
@@ -797,7 +899,7 @@ def main():
                     prompt = all_policy_samples[q][i][0]
                     prefixes = build_word_prefixes(prompt, H)
                     all_prefixes_flat.extend(prefixes)
-            all_embeddings = embed_texts_batched(all_prefixes_flat, embedder, batch_size=128)
+            all_embeddings = embed_texts_batched_multigpu(all_prefixes_flat, embedder, batch_size=128)
             # Shape: (M×T×K×H, d) with SUM_TRAJECTORIES, else (M×K×H, d)
             H_eff = H
 
