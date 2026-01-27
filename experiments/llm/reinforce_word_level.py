@@ -176,6 +176,11 @@ def _embed_texts_on_device(
     if not texts:
         return None
 
+    # Ensure this worker thread is bound to the embedder's device.
+    # This avoids accidental use of cuda:0 as the "current device" in
+    # multi-threaded contexts.
+    torch.cuda.set_device(torch.device(embedder.device))
+
     embeddings = []
     for i in range(0, len(texts), batch_size):
         batch = texts[i : i + batch_size]
@@ -335,8 +340,14 @@ class WordLevelPolicy:
         Returns:
             List of (prompt, token_logprobs, word_boundaries) tuples
         """
-        # Use dedicated CUDA stream for this policy to enable true parallelism
-        stream = torch.cuda.Stream(device=self.device)
+        device = torch.device(self.device)
+
+        # Bind this worker thread to the policy device so the CUDA stream
+        # context applies to the correct GPU.
+        torch.cuda.set_device(device)
+
+        # Use a dedicated CUDA stream for this policy to enable true parallelism
+        stream = torch.cuda.Stream(device=device)
 
         with torch.cuda.stream(stream):
             # Initialize batch
@@ -1053,10 +1064,19 @@ def main():
         if BASELINE == "moving_avg" and not NO_INTERMEDIATE:
             L_avg = sum(L_values) / len(L_values)
 
-            # Compute gradients for each policy to update
-            for q in policies_to_update:
+            def _compute_policy_grads(q: int) -> Tuple[int, List[torch.Tensor]]:
+                """
+                Compute gradient accumulation for a single policy.
+
+                This preserves the exact same estimator:
+                    Σ_m (L_m - L_avg) * ∇ log π_q(τ_m)
+                but runs each policy's backward pass on its own thread/GPU.
+                """
+                policy_device = torch.device(policy_manager.devices[q])
+                torch.cuda.set_device(policy_device)
+
                 policy_params = all_policy_params[q]
-                grad_accum = all_grad_accum[q]
+                grad_accum_local = [torch.zeros_like(p) for p in policy_params]
 
                 for idx, m_idx in enumerate(valid_sample_indices):
                     L_m_centered = L_values[idx] - L_avg  # Center by subtracting batch mean
@@ -1072,13 +1092,22 @@ def main():
                         logprobs_m = all_policy_samples[q][m_idx][1]
                         total_logprob = sum(logprobs_m)
 
-                    # Need to retain graph for: other samples AND other policies
-                    is_last_sample = (idx == len(valid_sample_indices) - 1)
-                    is_last_policy = (q == policies_to_update[-1])
-                    retain = not (is_last_sample and is_last_policy)
-                    grads_m = torch.autograd.grad(total_logprob, policy_params, retain_graph=retain)
+                    # Each sample's graph is used exactly once per policy, so we
+                    # do not need retain_graph=True here.
+                    grads_m = torch.autograd.grad(total_logprob, policy_params, retain_graph=False)
                     for i, g in enumerate(grads_m):
-                        grad_accum[i] = grad_accum[i] + g * L_m_centered
+                        grad_accum_local[i] = grad_accum_local[i] + g * L_m_centered
+
+                return q, grad_accum_local
+
+            # Compute gradients for each policy in parallel so all policy GPUs
+            # can be utilized simultaneously during the backward pass.
+            with ThreadPoolExecutor(max_workers=len(policies_to_update)) as executor:
+                grad_results = list(executor.map(_compute_policy_grads, policies_to_update))
+
+            # Write results back to the shared accumulators
+            for q, grad_accum_local in grad_results:
+                all_grad_accum[q] = grad_accum_local
 
         # Update all policies
         for q in policies_to_update:
